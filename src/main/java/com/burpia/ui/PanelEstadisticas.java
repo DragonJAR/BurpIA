@@ -105,6 +105,7 @@ public class PanelEstadisticas extends JPanel {
             EstilosUI.FUENTE_NEGRITA
         ));
 
+<<<<<<< ours
         JPanel panelHallazgosCompleto = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
         panelHallazgosCompleto.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -122,14 +123,54 @@ public class PanelEstadisticas extends JPanel {
         // Niveles de severidad (misma línea)
         etiquetaResumenSeveridad.setFont(EstilosUI.FUENTE_MONO);
         panelHallazgosCompleto.add(etiquetaResumenSeveridad);
+=======
+        JPanel panelHallazgosCompleto = new JPanel();
+        panelHallazgosCompleto.setOpaque(false);
+        panelHallazgosCompleto.setLayout(new BoxLayout(panelHallazgosCompleto, BoxLayout.Y_AXIS));
+        panelHallazgosCompleto.setBorder(BorderFactory.createEmptyBorder(2, 8, 6, 8));
 
+        JPanel filaPrincipal = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        filaPrincipal.setOpaque(false);
+        etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
+        etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204)); // Azul destacado
+        filaPrincipal.add(etiquetaResumenPrincipal);
+
+        JPanel filaSeveridades = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 2));
+        filaSeveridades.setOpaque(false);
+        etiquetaResumenSeveridad.setFont(EstilosUI.FUENTE_MONO);
+        etiquetaResumenSeveridad.setForeground(new Color(70, 70, 70));
+        filaSeveridades.add(etiquetaResumenSeveridad);
+>>>>>>> theirs
+
+        panelHallazgosCompleto.add(filaPrincipal);
+        panelHallazgosCompleto.add(Box.createVerticalStrut(4));
+        panelHallazgosCompleto.add(filaSeveridades);
         panel.add(panelHallazgosCompleto);
         return panel;
     }
 
     private JPanel crearPanelOperativo() {
+<<<<<<< ours
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+=======
+        JPanel panel = crearPanelSeccion("📊 DETALLES OPERATIVOS");
+        JPanel panelOperativo = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        panelOperativo.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+        panelOperativo.setOpaque(false);
+
+        etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
+        etiquetaResumenOperativo.setForeground(new Color(100, 100, 100)); // Gris suave
+        panelOperativo.add(etiquetaResumenOperativo);
+        panel.add(panelOperativo);
+
+        return panel;
+    }
+
+    private JPanel crearPanelSeccion(String titulo) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+>>>>>>> theirs
         panel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
             "📊 DETALLES OPERATIVOS",
@@ -190,13 +231,21 @@ public class PanelEstadisticas extends JPanel {
         SwingUtilities.invokeLater(() -> {
             // Total de hallazgos (compacto, misma línea que severidades)
             etiquetaResumenPrincipal.setText(
+<<<<<<< ours
                 String.format("🔍 Total: %d",
+=======
+                String.format("🔎 Total hallazgos: %d",
+>>>>>>> theirs
                     estadisticas.obtenerHallazgosCreados())
             );
 
             // Niveles de severidad (misma línea que total de hallazgos)
             etiquetaResumenSeveridad.setText(
+<<<<<<< ours
                 String.format("🟣 %d | 🔴 %d | 🟠 %d | 🟢 %d | 🔵 %d",
+=======
+                String.format("🟣 Critical: %d   |   🔴 High: %d   |   🟠 Medium: %d   |   🟢 Low: %d   |   🔵 Info: %d",
+>>>>>>> theirs
                     estadisticas.obtenerHallazgosCritical(),
                     estadisticas.obtenerHallazgosHigh(),
                     estadisticas.obtenerHallazgosMedium(),

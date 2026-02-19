@@ -4,14 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ConfiguracionAPI {
-    private String urlApi;
-    private String claveApi;
-    private String modelo;
     private int retrasoSegundos;
     private int maximoConcurrente;
     private boolean detallado;
     private String proveedorAI;
-    private int maxTokens;
     private int tiempoEsperaAI;
     private String tema;
     private boolean escaneoPasivoHabilitado;
@@ -19,14 +15,12 @@ public class ConfiguracionAPI {
 
     private Map<String, String> apiKeysPorProveedor;
     private Map<String, String> urlsBasePorProveedor;
+    private Map<String, String> modelosPorProveedor;
     private Map<String, Integer> maxTokensPorProveedor;
     private boolean promptModificado;
 
     public ConfiguracionAPI() {
         this.proveedorAI = "Z.ai";
-        this.urlApi = "https://api.z.ai/api/paas/v4/chat/completions";
-        this.modelo = "glm-5";
-        this.maxTokens = 16384;
         this.retrasoSegundos = 5;
         this.maximoConcurrente = 3;
         this.tiempoEsperaAI = 60;
@@ -35,22 +29,42 @@ public class ConfiguracionAPI {
         this.escaneoPasivoHabilitado = true;
         this.promptModificado = false;
 
-        // CORRECCIÓN: Inicializar promptConfigurable con valor por defecto para prevenir NullPointerException
         this.promptConfigurable = obtenerPromptPorDefecto();
 
         this.apiKeysPorProveedor = new HashMap<>();
         this.urlsBasePorProveedor = new HashMap<>();
+        this.modelosPorProveedor = new HashMap<>();
         this.maxTokensPorProveedor = new HashMap<>();
     }
 
-    public String obtenerUrlApi() { return urlApi; }
-    public void establecerUrlApi(String urlApi) { this.urlApi = urlApi; }
+    public String obtenerUrlApi() {
+        String proveedor = obtenerProveedorAI();
+        return construirUrlApiProveedor(
+            proveedor,
+            obtenerUrlBaseParaProveedor(proveedor),
+            obtenerModeloParaProveedor(proveedor)
+        );
+    }
 
-    public String obtenerClaveApi() { return claveApi; }
-    public void establecerClaveApi(String claveApi) { this.claveApi = claveApi; }
+    public void establecerUrlApi(String urlApi) {
+        establecerUrlBaseParaProveedor(obtenerProveedorAI(), extraerUrlBase(urlApi));
+    }
 
-    public String obtenerModelo() { return modelo; }
-    public void establecerModelo(String modelo) { this.modelo = modelo; }
+    public String obtenerClaveApi() {
+        return obtenerApiKeyParaProveedor(obtenerProveedorAI());
+    }
+
+    public void establecerClaveApi(String claveApi) {
+        establecerApiKeyParaProveedor(obtenerProveedorAI(), claveApi);
+    }
+
+    public String obtenerModelo() {
+        return obtenerModeloParaProveedor(obtenerProveedorAI());
+    }
+
+    public void establecerModelo(String modelo) {
+        establecerModeloParaProveedor(obtenerProveedorAI(), modelo);
+    }
 
     public int obtenerRetrasoSegundos() { return retrasoSegundos; }
     public void establecerRetrasoSegundos(int retrasoSegundos) { this.retrasoSegundos = retrasoSegundos; }
@@ -62,10 +76,18 @@ public class ConfiguracionAPI {
     public void establecerDetallado(boolean detallado) { this.detallado = detallado; }
 
     public String obtenerProveedorAI() { return proveedorAI; }
-    public void establecerProveedorAI(String proveedorAI) { this.proveedorAI = proveedorAI; }
+    public void establecerProveedorAI(String proveedorAI) {
+        this.proveedorAI = (proveedorAI != null && ProveedorAI.existeProveedor(proveedorAI)) ? proveedorAI : "Z.ai";
+        asegurarMapas();
+    }
 
-    public int obtenerMaxTokens() { return maxTokens; }
-    public void establecerMaxTokens(int maxTokens) { this.maxTokens = maxTokens; }
+    public int obtenerMaxTokens() {
+        return obtenerMaxTokensParaProveedor(obtenerProveedorAI());
+    }
+
+    public void establecerMaxTokens(int maxTokens) {
+        establecerMaxTokensParaProveedor(obtenerProveedorAI(), maxTokens);
+    }
 
     public int obtenerTiempoEsperaAI() { return tiempoEsperaAI; }
     public void establecerTiempoEsperaAI(int tiempoEsperaAI) { this.tiempoEsperaAI = tiempoEsperaAI; }
@@ -80,13 +102,6 @@ public class ConfiguracionAPI {
 
     public boolean esPromptModificado() { return promptModificado; }
     public void establecerPromptModificado(boolean modificado) { this.promptModificado = modificado; }
-
-    public void actualizarUrlParaProveedor() {
-        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedorAI);
-        if (config != null) {
-            this.urlApi = construirUrlApiProveedor(proveedorAI, config.obtenerUrlApi(), modelo);
-        }
-    }
 
     public static String construirUrlApiProveedor(String proveedor, String urlBase, String modelo) {
         String baseNormalizada = normalizarUrlBase(urlBase);
@@ -137,53 +152,81 @@ public class ConfiguracionAPI {
         return base;
     }
 
-    public String obtenerUrlApiBase() {
-        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedorAI);
-        if (config != null) {
-            return config.obtenerUrlApi();
-        }
-        return urlApi;
-    }
-
     public String obtenerApiKeyParaProveedor(String proveedor) {
-        if (apiKeysPorProveedor != null && apiKeysPorProveedor.containsKey(proveedor)) {
-            return apiKeysPorProveedor.get(proveedor);
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return "";
         }
-        return claveApi;
+        String key = apiKeysPorProveedor.get(proveedor);
+        return key != null ? key : "";
     }
 
     public void establecerApiKeyParaProveedor(String proveedor, String apiKey) {
-        // OPTIMIZACIÓN: Eliminar verificación de null redundante
-        // apiKeysPorProveedor siempre se inicializa en el constructor
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return;
+        }
         apiKeysPorProveedor.put(proveedor, apiKey);
     }
 
     public String obtenerUrlBaseParaProveedor(String proveedor) {
-        if (urlsBasePorProveedor != null && urlsBasePorProveedor.containsKey(proveedor)) {
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return "";
+        }
+        if (urlsBasePorProveedor.containsKey(proveedor)) {
             return urlsBasePorProveedor.get(proveedor);
         }
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
-        return config != null ? config.obtenerUrlApi() : urlApi;
+        return config != null ? config.obtenerUrlApi() : "";
     }
 
     public void establecerUrlBaseParaProveedor(String proveedor, String urlBase) {
-        // OPTIMIZACIÓN: Eliminar verificación de null redundante
-        // urlsBasePorProveedor siempre se inicializa en el constructor
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return;
+        }
         urlsBasePorProveedor.put(proveedor, urlBase);
     }
 
+    public String obtenerModeloParaProveedor(String proveedor) {
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return "";
+        }
+        if (modelosPorProveedor.containsKey(proveedor)) {
+            String modelo = modelosPorProveedor.get(proveedor);
+            return modelo != null ? modelo : "";
+        }
+        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
+        return config != null ? config.obtenerModeloPorDefecto() : "";
+    }
+
+    public void establecerModeloParaProveedor(String proveedor, String modelo) {
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return;
+        }
+        modelosPorProveedor.put(proveedor, modelo != null ? modelo : "");
+    }
+
     public int obtenerMaxTokensParaProveedor(String proveedor) {
-        if (maxTokensPorProveedor != null && maxTokensPorProveedor.containsKey(proveedor)) {
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return 4096;
+        }
+        if (maxTokensPorProveedor.containsKey(proveedor)) {
             return maxTokensPorProveedor.get(proveedor);
         }
-        // Retornar valor por defecto del proveedor
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
         return config != null ? config.obtenerMaxTokensPorDefecto() : 4096;
     }
 
     public void establecerMaxTokensParaProveedor(String proveedor, int maxTokens) {
-        // OPTIMIZACIÓN: Eliminar verificación de null redundante
-        // maxTokensPorProveedor siempre se inicializa en el constructor
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return;
+        }
         maxTokensPorProveedor.put(proveedor, maxTokens);
     }
 
@@ -204,7 +247,7 @@ public class ConfiguracionAPI {
             }
         }
 
-        if (modelo == null || modelo.trim().isEmpty()) {
+        if (obtenerModelo().trim().isEmpty()) {
             errores.put("modelo", "Modelo es requerido");
         }
 
@@ -288,12 +331,67 @@ public class ConfiguracionAPI {
     }
 
     public boolean esConfiguracionValida() {
-        return urlApi != null && !urlApi.isEmpty() &&
-               modelo != null && !modelo.isEmpty() &&
-               proveedorAI != null && !proveedorAI.isEmpty();
+        return !obtenerUrlApi().isEmpty() &&
+               !obtenerModelo().isEmpty() &&
+               obtenerProveedorAI() != null && !obtenerProveedorAI().isEmpty();
     }
 
     public boolean tieneApiKey() {
-        return claveApi != null && !claveApi.trim().isEmpty();
+        String apiKey = obtenerClaveApi();
+        return apiKey != null && !apiKey.trim().isEmpty();
+    }
+
+    public Map<String, String> obtenerApiKeysPorProveedor() {
+        asegurarMapas();
+        return apiKeysPorProveedor;
+    }
+
+    public void establecerApiKeysPorProveedor(Map<String, String> apiKeysPorProveedor) {
+        this.apiKeysPorProveedor = apiKeysPorProveedor != null ? apiKeysPorProveedor : new HashMap<>();
+    }
+
+    public Map<String, String> obtenerUrlsBasePorProveedor() {
+        asegurarMapas();
+        return urlsBasePorProveedor;
+    }
+
+    public void establecerUrlsBasePorProveedor(Map<String, String> urlsBasePorProveedor) {
+        this.urlsBasePorProveedor = urlsBasePorProveedor != null ? urlsBasePorProveedor : new HashMap<>();
+    }
+
+    public Map<String, String> obtenerModelosPorProveedor() {
+        asegurarMapas();
+        return modelosPorProveedor;
+    }
+
+    public void establecerModelosPorProveedor(Map<String, String> modelosPorProveedor) {
+        this.modelosPorProveedor = modelosPorProveedor != null ? modelosPorProveedor : new HashMap<>();
+    }
+
+    public Map<String, Integer> obtenerMaxTokensPorProveedor() {
+        asegurarMapas();
+        return maxTokensPorProveedor;
+    }
+
+    public void establecerMaxTokensPorProveedor(Map<String, Integer> maxTokensPorProveedor) {
+        this.maxTokensPorProveedor = maxTokensPorProveedor != null ? maxTokensPorProveedor : new HashMap<>();
+    }
+
+    private void asegurarMapas() {
+        if (apiKeysPorProveedor == null) {
+            apiKeysPorProveedor = new HashMap<>();
+        }
+        if (urlsBasePorProveedor == null) {
+            urlsBasePorProveedor = new HashMap<>();
+        }
+        if (modelosPorProveedor == null) {
+            modelosPorProveedor = new HashMap<>();
+        }
+        if (maxTokensPorProveedor == null) {
+            maxTokensPorProveedor = new HashMap<>();
+        }
+        if (proveedorAI == null || proveedorAI.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedorAI)) {
+            proveedorAI = "Z.ai";
+        }
     }
 }

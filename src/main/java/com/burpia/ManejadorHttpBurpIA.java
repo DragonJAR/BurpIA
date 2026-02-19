@@ -25,10 +25,13 @@ import com.burpia.util.DeduplicadorSolicitudes;
 import javax.swing.*;
 import java.io.PrintWriter;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ManejadorHttpBurpIA implements HttpHandler {
@@ -39,7 +42,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final DeduplicadorSolicitudes deduplicador;
     private final PrintWriter stdout;
     private final PrintWriter stderr;
-    private final ExecutorService executorService;
+    private final ThreadPoolExecutor executorService;
     private final Object logLock;
 
     private static final Set<String> EXTENSIONES_ESTATICAS;
@@ -84,12 +87,21 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.modeloTablaHallazgos = modeloTablaHallazgos;
 
         int maxThreads = config.obtenerMaximoConcurrente() > 0 ? config.obtenerMaximoConcurrente() : 10;
-        this.executorService = Executors.newFixedThreadPool(maxThreads, runnable -> {
+        int capacidadCola = Math.max(50, maxThreads * 20);
+        this.executorService = new ThreadPoolExecutor(
+            maxThreads,
+            maxThreads,
+            60L,
+            java.util.concurrent.TimeUnit.SECONDS,
+            new ArrayBlockingQueue<>(capacidadCola),
+            runnable -> {
             Thread thread = new Thread(runnable);
             thread.setDaemon(true);
-            thread.setName("BurpIA-Analysis-" + thread.getId());
+            thread.setName("BurpIA-" + thread.getId());
             return thread;
-        });
+            },
+            new ThreadPoolExecutor.AbortPolicy()
+        );
 
         this.logLock = new Object();
 
@@ -256,7 +268,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         SwingUtilities.invokeLater(() -> {
             if (pestaniaPrincipal != null) {
-                pestaniaPrincipal.establecerEstado("Analizando: " + url);
                 pestaniaPrincipal.registrar("Iniciando analisis para: " + url);
             }
         });
@@ -290,14 +301,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                     }
 
                     if (resultado != null && resultado.obtenerHallazgos() != null) {
+                        List<Hallazgo> hallazgosValidos = new ArrayList<>();
                         for (Hallazgo hallazgo : resultado.obtenerHallazgos()) {
                             if (hallazgo == null) {
                                 continue;
                             }
 
-                            if (modeloTablaHallazgos != null) {
-                                SwingUtilities.invokeLater(() -> modeloTablaHallazgos.agregarHallazgo(hallazgo));
-                            }
+                            hallazgosValidos.add(hallazgo);
 
                             if (estadisticas != null) {
                                 String severidad = hallazgo.obtenerSeveridad();
@@ -307,22 +317,30 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                             }
 
                             if (respuestaCapturada != null) {
-                                executorService.submit(() -> {
-                                    try {
-                                        AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(
-                                            hallazgo,
-                                            respuestaCapturada
-                                        );
-                                        if (auditIssue != null && api != null && api.siteMap() != null) {
-                                            api.siteMap().add(auditIssue);
-                                            rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
+                                try {
+                                    executorService.submit(() -> {
+                                        try {
+                                            AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(
+                                                hallazgo,
+                                                respuestaCapturada
+                                            );
+                                            if (auditIssue != null && api != null && api.siteMap() != null) {
+                                                api.siteMap().add(auditIssue);
+                                                rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
+                                            }
+                                        } catch (Exception e) {
+                                            registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
+                                            rastrear("Stack trace:", e);
                                         }
-                                    } catch (Exception e) {
-                                        registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
-                                        rastrear("Stack trace:", e);
-                                    }
-                                });
+                                    });
+                                } catch (RejectedExecutionException ex) {
+                                    registrarError("No se pudo encolar AuditIssue por saturación de cola: " + hallazgo.obtenerHallazgo());
+                                }
                             }
+                        }
+
+                        if (modeloTablaHallazgos != null && !hallazgosValidos.isEmpty()) {
+                            modeloTablaHallazgos.agregarHallazgos(hallazgosValidos);
                         }
                     }
 
@@ -335,7 +353,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                     SwingUtilities.invokeLater(() -> {
                         if (pestaniaPrincipal != null) {
                             pestaniaPrincipal.actualizarEstadisticas();
-                            pestaniaPrincipal.establecerEstado("Analisis completado");
                         }
                     });
                 }
@@ -368,7 +385,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                     SwingUtilities.invokeLater(() -> {
                         if (pestaniaPrincipal != null) {
                             pestaniaPrincipal.registrar("Error de analisis: " + errorMsg);
-                            pestaniaPrincipal.establecerEstado("Analisis fallido");
                             pestaniaPrincipal.actualizarEstadisticas();
                         }
                     });
@@ -394,8 +410,19 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             }
         );
 
-        executorService.submit(analizador);
-        registrar("Hilo de analisis iniciado para: " + url);
+        try {
+            executorService.submit(analizador);
+            registrar("Hilo de analisis iniciado para: " + url);
+        } catch (RejectedExecutionException ex) {
+            String tareaId = tareaIdRef.get();
+            if (gestorTareas != null && tareaId != null) {
+                gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_ERROR, "Descartada por saturación de cola");
+            }
+            if (estadisticas != null) {
+                estadisticas.incrementarErrores();
+            }
+            registrarError("Cola de análisis saturada, solicitud descartada: " + url);
+        }
     }
 
     /**

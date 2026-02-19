@@ -150,7 +150,7 @@ public class PanelHallazgos extends JPanel {
         sorter = new TableRowSorter<>(modelo);
         tabla.setRowSorter(sorter);
 
-        // Configurar renderizadores con wrapper para hallazgos borrados
+        // Configurar renderizadores con wrapper para hallazgos ignorados
         tabla.getColumnModel().getColumn(0).setCellRenderer(
             new RenderizadorHallazgoBorrado(new RenderizadorCentrado(), tabla, modelo)
         );
@@ -359,6 +359,9 @@ public class PanelHallazgos extends JPanel {
     }
 
     private String escapeJson(String texto) {
+        if (texto == null) {
+            return "";
+        }
         return texto.replace("\\", "\\\\")
                    .replace("\"", "\\\"")
                    .replace("\n", "\\n")
@@ -367,9 +370,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     public void agregarHallazgo(Hallazgo hallazgo) {
-        SwingUtilities.invokeLater(() -> {
-            modelo.agregarHallazgo(hallazgo);
-        });
+        modelo.agregarHallazgo(hallazgo);
     }
 
     public void limpiar() {
@@ -391,7 +392,7 @@ public class PanelHallazgos extends JPanel {
         JMenuItem menuItemIntruder = new JMenuItem("🔍 Enviar a Intruder");
         menuItemIntruder.setFont(EstilosUI.FUENTE_ESTANDAR);
         menuItemIntruder.setToolTipText("Enviar la peticion a Intruder para pruebas de fuzzing");
-        menuItemIntruder.addActionListener(e -> enviarAScanner(tabla.getSelectedRows()));
+        menuItemIntruder.addActionListener(e -> enviarAIntruder(tabla.getSelectedRows()));
         menuContextual.add(menuItemIntruder);
 
         menuContextual.addSeparator();
@@ -441,38 +442,32 @@ public class PanelHallazgos extends JPanel {
         tabla.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    int fila = tabla.rowAtPoint(e.getPoint());
-                    if (fila >= 0) {
-                        if (!tabla.isRowSelected(fila)) {
-                            if (!e.isControlDown()) {
-                                tabla.setRowSelectionInterval(fila, fila);
-                            } else {
-                                tabla.addRowSelectionInterval(fila, fila);
-                            }
-                        }
-                        menuContextual.show(tabla, e.getX(), e.getY());
-                    }
-                }
+                mostrarMenuContextualSiAplica(e, menuContextual);
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    int fila = tabla.rowAtPoint(e.getPoint());
-                    if (fila >= 0) {
-                        if (!tabla.isRowSelected(fila)) {
-                            if (!e.isControlDown()) {
-                                tabla.setRowSelectionInterval(fila, fila);
-                            } else {
-                                tabla.addRowSelectionInterval(fila, fila);
-                            }
-                        }
-                        menuContextual.show(tabla, e.getX(), e.getY());
-                    }
-                }
+                mostrarMenuContextualSiAplica(e, menuContextual);
             }
         });
+    }
+
+    private void mostrarMenuContextualSiAplica(MouseEvent e, JPopupMenu menuContextual) {
+        if (!SwingUtilities.isRightMouseButton(e)) {
+            return;
+        }
+        int fila = tabla.rowAtPoint(e.getPoint());
+        if (fila < 0) {
+            return;
+        }
+        if (!tabla.isRowSelected(fila)) {
+            if (!e.isControlDown()) {
+                tabla.setRowSelectionInterval(fila, fila);
+            } else {
+                tabla.addRowSelectionInterval(fila, fila);
+            }
+        }
+        menuContextual.show(tabla, e.getX(), e.getY());
     }
 
     private void enviarARepeater(int[] filas) {
@@ -522,11 +517,10 @@ public class PanelHallazgos extends JPanel {
         }, "BurpIA-Repeater").start();
     }
 
-    private void enviarAScanner(int[] filas) {
+    private void enviarAIntruder(int[] filas) {
         new Thread(() -> {
             int exitosos = 0;
             int sinRequest = 0;
-            int noDisponible = 0;
             StringBuilder detalle = new StringBuilder();
 
             for (int fila : filas) {
@@ -565,7 +559,7 @@ public class PanelHallazgos extends JPanel {
                     totalExitosos > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
                 );
             });
-        }, "BurpIA-Scanner").start();
+        }, "BurpIA-Intruder").start();
     }
 
     private void ignorarHallazgos(int[] filas) {

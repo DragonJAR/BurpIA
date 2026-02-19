@@ -1,26 +1,18 @@
 package com.burpia.util;
 
 import com.burpia.config.ConfiguracionAPI;
-import com.burpia.config.ProveedorAI;
 
 import javax.swing.*;
 import okhttp3.*;
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Clase para probar la conexión con APIs de IA.
- * OPTIMIZACIÓN v1.0: Usa OkHttp en lugar de HttpURLConnection nativo para consistencia.
- * OPTIMIZACIÓN v1.0: Usa ParserRespuestasAI para parsing robusto de JSON.
- */
 public class ProbadorConexionAI {
     private final ConfiguracionAPI config;
     private final OkHttpClient clienteHttp;
 
     public ProbadorConexionAI(ConfiguracionAPI config) {
         this.config = config;
-        // Usar OkHttp para consistencia con AnalizadorAI
         this.clienteHttp = new OkHttpClient.Builder()
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .readTimeout(config.obtenerTiempoEsperaAI(), TimeUnit.SECONDS)
@@ -39,12 +31,15 @@ public class ProbadorConexionAI {
                 return new ResultadoPrueba(false, sb.toString(), null);
             }
 
-            // Realizar solicitud de prueba
-            String respuesta = realizarSolicitudPrueba();
+            String endpointProbado = ConfiguracionAPI.construirUrlApiProveedor(
+                config.obtenerProveedorAI(),
+                config.obtenerUrlApi(),
+                config.obtenerModelo()
+            );
+            String respuesta = realizarSolicitudPrueba(endpointProbado);
 
             if (respuesta != null && !respuesta.isEmpty()) {
-                // Analizar respuesta segun proveedor
-                String mensaje = analizarRespuesta(respuesta);
+                String mensaje = analizarRespuesta(respuesta, endpointProbado);
                 return new ResultadoPrueba(true, mensaje, respuesta);
             } else {
                 return new ResultadoPrueba(false, "No se recibio respuesta del servidor", null);
@@ -55,25 +50,20 @@ public class ProbadorConexionAI {
         }
     }
 
-    private String realizarSolicitudPrueba() throws IOException {
-        String urlApi = config.obtenerUrlApi();
+    private String realizarSolicitudPrueba(String endpointProbado) throws IOException {
         String proveedor = config.obtenerProveedorAI();
         String claveApi = config.obtenerClaveApi();
-
-        // Construir cuerpo de solicitud simple
         String cuerpo = construirCuerpoPrueba(proveedor);
 
-        // Construir solicitud HTTP con OkHttp
         Request.Builder solicitudBuilder = new Request.Builder()
-                .url(urlApi)
+                .url(endpointProbado)
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Accept", "application/json")
                 .post(RequestBody.create(
-                        MediaType.parse("application/json"),
-                        cuerpo
+                        cuerpo,
+                        MediaType.parse("application/json")
                 ));
 
-        // Agregar headers de autenticación según proveedor
         switch (proveedor) {
             case "OpenAI":
                 solicitudBuilder.addHeader("Authorization", "Bearer " + claveApi);
@@ -96,7 +86,6 @@ public class ProbadorConexionAI {
 
         Request solicitud = solicitudBuilder.build();
 
-        // Ejecutar solicitud
         try (Response respuesta = clienteHttp.newCall(solicitud).execute()) {
             if (!respuesta.isSuccessful()) {
                 String cuerpoError = respuesta.body() != null ? respuesta.body().string() : "sin cuerpo";
@@ -109,7 +98,7 @@ public class ProbadorConexionAI {
 
     private String construirCuerpoPrueba(String proveedor) {
         StringBuilder cuerpo = new StringBuilder();
-        String mensajePrueba = "Hola, escribe OK";
+        String mensajePrueba = "Responde exactamente con OK";
 
         switch (proveedor) {
             case "OpenAI":
@@ -148,30 +137,23 @@ public class ProbadorConexionAI {
         return cuerpo.toString();
     }
 
-    /**
-     * Analiza la respuesta de la API de IA.
-     * OPTIMIZACIÓN v1.0: Usa ParserRespuestasAI para parsing robusto de JSON.
-     *
-     * @param respuesta JSON crudo de la respuesta
-     * @return Mensaje formateado para mostrar al usuario
-     */
-    private String analizarRespuesta(String respuesta) {
+    private String analizarRespuesta(String respuesta, String endpointProbado) {
         String proveedor = config.obtenerProveedorAI();
 
         StringBuilder mensaje = new StringBuilder();
         mensaje.append("✅ Conexión exitosa a ").append(proveedor).append("\n\n");
 
-        // OPTIMIZACIÓN v1.0: Usar ParserRespuestasAI en lugar de parsing manual
         String contenidoRespuesta = ParserRespuestasAI.extraerContenido(respuesta, proveedor);
         boolean respuestaValida = ParserRespuestasAI.validarRespuestaPrueba(contenidoRespuesta);
+        boolean conexionValida = ParserRespuestasAI.validarRespuestaConexion(contenidoRespuesta);
 
         mensaje.append("📋 Configuración:\n");
         mensaje.append("   Modelo: ").append(config.obtenerModelo()).append("\n");
-        mensaje.append("   URL base: ").append(ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi())).append("\n");
-        mensaje.append("   Endpoint probado: ").append(config.obtenerUrlApi()).append("\n\n");
+        mensaje.append("   URL base: ").append(ConfiguracionAPI.extraerUrlBase(endpointProbado)).append("\n");
+        mensaje.append("   Endpoint probado: ").append(endpointProbado).append("\n\n");
 
         if (respuestaValida) {
-            mensaje.append("💬 Mensaje enviado: \"Hola, escribe OK\"\n\n");
+            mensaje.append("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n");
             mensaje.append("✅ Respuesta del modelo:\n");
             if (contenidoRespuesta.length() > 100) {
                 mensaje.append("   ").append(contenidoRespuesta.substring(0, 100)).append("...");
@@ -180,8 +162,18 @@ public class ProbadorConexionAI {
             }
             mensaje.append("\n\n✅ ¡El modelo respondió correctamente!");
             mensaje.append("\n(Respuesta aceptada: contiene \"OK\" o \"Hola\")");
+        } else if (conexionValida) {
+            mensaje.append("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n");
+            mensaje.append("✅ El proveedor respondió y el contenido fue extraído correctamente.\n");
+            mensaje.append("ℹ️ La respuesta no incluyó literalmente \"OK\", pero la conexión es válida.\n\n");
+            mensaje.append("Respuesta del modelo:\n");
+            if (contenidoRespuesta.length() > 150) {
+                mensaje.append("   ").append(contenidoRespuesta.substring(0, 150)).append("...");
+            } else {
+                mensaje.append("   ").append(contenidoRespuesta);
+            }
         } else {
-            mensaje.append("💬 Mensaje enviado: \"Hola, escribe OK\"\n\n");
+            mensaje.append("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n");
             if (!contenidoRespuesta.isEmpty()) {
                 mensaje.append("⚠️ La respuesta NO contiene \"OK\" ni \"Hola\"\n\n");
                 mensaje.append("❌ Respuesta recibida:\n");
@@ -190,8 +182,7 @@ public class ProbadorConexionAI {
                 } else {
                     mensaje.append("   ").append(contenidoRespuesta);
                 }
-                mensaje.append("\n\n⚠️ El modelo respondió pero NO escribió \"OK\" ni \"Hola\" como se esperaba.\n");
-                mensaje.append("   Esto puede indicar un problema con el modelo o la configuración.");
+                mensaje.append("\n\n⚠️ El modelo respondió pero no cumple el formato esperado.");
             } else {
                 mensaje.append("⚠️ No se pudo extraer el contenido de la respuesta\n");
                 mensaje.append("   La conexión fue exitosa pero el formato de respuesta no es el esperado.\n");

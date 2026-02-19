@@ -2,11 +2,7 @@ package com.burpia;
 
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.scanner.audit.issues.AuditIssue;
-import burp.api.montoya.scanner.audit.issues.AuditIssueConfidence;
-import burp.api.montoya.scanner.audit.issues.AuditIssueSeverity;
 import burp.api.montoya.http.handler.HttpResponseReceived;
-import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.model.Estadisticas;
@@ -204,12 +200,12 @@ public class ExtensionBurpIA implements BurpExtension {
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
             hallazgo.obtenerHallazgo(),
             hallazgo.obtenerHallazgo() + "\n\nURL: " + hallazgo.obtenerUrl(),
-            "Revisar la solicitud para confirmar la vulnerabilidad.",
+            "Revisa la solicitud para confirmar la vulnerabilidad. Este hallazgo se guarda automáticamente para que no se pierda al cerrar Burp, pero requiere validación manual. Haz clic derecho en la pestaña de hallazgos para enviar la petición al Repeater o al Intruder. Nunca confíes ciegamente en los resultados de una IA.",
             hallazgo.obtenerUrl(),
             severity,
             confidence,
             null,
-            "Revisar los encabezados y cuerpo de la solicitud HTTP.",
+            "Revisa los encabezados y el cuerpo de la solicitud HTTP para confirmar la vulnerabilidad. Este hallazgo se guarda automáticamente para que no se pierda al cerrar Burp, pero requiere validación manual. Haz clic derecho en la pestaña de hallazgos para enviar la petición al Repeater o al Intruder, y nunca confíes ciegamente en los resultados de una IA.",
             null,
             new burp.api.montoya.http.message.HttpRequestResponse[0]
         );

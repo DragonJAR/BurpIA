@@ -37,6 +37,7 @@ public class AnalizadorAI implements Runnable {
     private final GestorConsolaGUI gestorConsola;
     private final BooleanSupplier tareaCancelada;
     private final BooleanSupplier tareaPausada;
+    private static final int MAX_CHARS_LOG_DETALLADO = 4000;
 
     // Cliente HTTP compartido entre todas las instancias para evitar agotamiento de recursos
     private static final OkHttpClient CLIENTE_COMPARTIDO = new OkHttpClient.Builder()
@@ -186,7 +187,7 @@ public class AnalizadorAI implements Runnable {
 
         String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
         rastrear("Longitud de prompt: " + prompt.length() + " caracteres");
-        rastrear("Prompt completo:\n" + prompt);
+        rastrear("Prompt (preview):\n" + resumirParaLog(prompt));
 
         Request solicitudHttp = construirSolicitudApi(prompt);
         registrar("Llamando a API: " + config.obtenerUrlApi() + " con modelo: " + config.obtenerModelo());
@@ -207,7 +208,7 @@ public class AnalizadorAI implements Runnable {
 
             String cuerpoRespuesta = respuesta.body().string();
             registrar("Longitud de respuesta de API: " + cuerpoRespuesta.length() + " caracteres");
-            rastrear("Respuesta completa de API:\n" + cuerpoRespuesta);
+            rastrear("Respuesta de API (preview):\n" + resumirParaLog(cuerpoRespuesta));
 
             return cuerpoRespuesta;
         } catch (IOException e) {
@@ -289,8 +290,8 @@ public class AnalizadorAI implements Runnable {
         String cadenaCarga = carga.toString();
         rastrear("Carga de API:\n" + cadenaCarga);
         return builder.post(RequestBody.create(
-            MediaType.parse("application/json"),
-            cadenaCarga
+            cadenaCarga,
+            MediaType.parse("application/json")
         )).build();
     }
 
@@ -382,15 +383,14 @@ public class AnalizadorAI implements Runnable {
                 respuestaJson = jsonReparado;
             }
 
-            JsonObject json = gson.fromJson(respuestaJson, JsonObject.class);
             String proveedor = config.obtenerProveedorAI() != null ? config.obtenerProveedorAI() : "";
             String contenido = ParserRespuestasAI.extraerContenido(respuestaJson, proveedor);
             if (contenido == null || contenido.trim().isEmpty()) {
-                contenido = json != null ? json.toString() : "";
+                contenido = respuestaJson != null ? respuestaJson : "";
             }
 
             rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
-            rastrear("Contenido:\n" + contenido);
+            rastrear("Contenido (preview):\n" + resumirParaLog(contenido));
 
             // Intentar parsear como JSON con array de hallazgos
             try {
@@ -410,7 +410,7 @@ public class AnalizadorAI implements Runnable {
                 contenidoLimpio = contenidoLimpio.trim();
 
                 if (contenidoLimpio.length() > 0 && !contenidoLimpio.equals(contenido)) {
-                    rastrear("Contenido limpio para parsing:\n" + contenidoLimpio);
+                    rastrear("Contenido limpio para parsing (preview):\n" + resumirParaLog(contenidoLimpio));
                 }
 
                 JsonObject jsonHallazgos = gson.fromJson(contenidoLimpio, JsonObject.class);
@@ -457,7 +457,7 @@ public class AnalizadorAI implements Runnable {
 
         } catch (Exception e) {
             registrarError("Error al parsear respuesta de API: " + e.getMessage());
-            rastrear("JSON fallido:\n" + respuestaJson);
+            rastrear("JSON fallido (preview):\n" + resumirParaLog(respuestaJson));
 
             String marcaTiempo = LocalDateTime.now().format(
                     DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -467,7 +467,7 @@ public class AnalizadorAI implements Runnable {
                 solicitud.obtenerUrl(),
                 "Error al parsear respuesta: " + e.getMessage(),
                 "Info",
-                "Baja",
+                "Low",
                 solicitud.obtenerSolicitudHttp()
             ));
 
@@ -587,5 +587,16 @@ public class AnalizadorAI implements Runnable {
         // También escribir al stderr original
         stderr.println("[BurpIA] [ERROR] " + mensaje);
         stderr.flush();
+    }
+
+    private String resumirParaLog(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        if (texto.length() <= MAX_CHARS_LOG_DETALLADO) {
+            return texto;
+        }
+        return texto.substring(0, MAX_CHARS_LOG_DETALLADO) +
+            "... [truncado " + (texto.length() - MAX_CHARS_LOG_DETALLADO) + " chars]";
     }
 }

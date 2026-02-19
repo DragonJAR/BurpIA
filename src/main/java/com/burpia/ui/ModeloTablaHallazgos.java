@@ -39,57 +39,68 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public void agregarHallazgo(Hallazgo hallazgo) {
-        lock.lock();
-        try {
-            datos.add(hallazgo);
-        } finally {
-            lock.unlock();
+        SwingUtilities.invokeLater(() -> {
+            lock.lock();
+            try {
+                datos.add(hallazgo);
+                addRow(hallazgo.aFilaTabla());
+                aplicarLimiteFilas();
+            } finally {
+                lock.unlock();
+            }
+        });
+    }
+
+    public void agregarHallazgos(List<Hallazgo> hallazgos) {
+        if (hallazgos == null || hallazgos.isEmpty()) {
+            return;
         }
 
         SwingUtilities.invokeLater(() -> {
-            Object[] fila = hallazgo.aFilaTabla();
-            addRow(fila);
-            fireTableDataChanged();
-            aplicarLimiteFilas();
+            lock.lock();
+            try {
+                for (Hallazgo hallazgo : hallazgos) {
+                    if (hallazgo == null) {
+                        continue;
+                    }
+                    datos.add(hallazgo);
+                    addRow(hallazgo.aFilaTabla());
+                }
+                aplicarLimiteFilas();
+            } finally {
+                lock.unlock();
+            }
         });
     }
 
     private void aplicarLimiteFilas() {
-        lock.lock();
-        try {
-            if (getRowCount() > limiteFilas) {
-                int filasAEliminar = getRowCount() - limiteFilas;
-                for (int i = 0; i < filasAEliminar; i++) {
-                    removeRow(0);
-                    if (!datos.isEmpty()) {
-                        datos.remove(0);
-                    }
-                    Set<Integer> nuevosIgnorados = new HashSet<>();
-                    for (Integer idx : filasIgnoradas) {
-                        if (idx > 0) nuevosIgnorados.add(idx - 1);
-                    }
-                    filasIgnoradas.clear();
-                    filasIgnoradas.addAll(nuevosIgnorados);
+        if (getRowCount() > limiteFilas) {
+            int filasAEliminar = getRowCount() - limiteFilas;
+            for (int i = 0; i < filasAEliminar; i++) {
+                removeRow(0);
+                if (!datos.isEmpty()) {
+                    datos.remove(0);
                 }
-                fireTableDataChanged();
+                Set<Integer> nuevosIgnorados = new HashSet<>();
+                for (Integer idx : filasIgnoradas) {
+                    if (idx > 0) nuevosIgnorados.add(idx - 1);
+                }
+                filasIgnoradas.clear();
+                filasIgnoradas.addAll(nuevosIgnorados);
             }
-        } finally {
-            lock.unlock();
         }
     }
 
     public void limpiar() {
-        lock.lock();
-        try {
-            datos.clear();
-            filasIgnoradas.clear();
-        } finally {
-            lock.unlock();
-        }
-
         SwingUtilities.invokeLater(() -> {
-            setRowCount(0);
-            fireTableDataChanged();
+            lock.lock();
+            try {
+                datos.clear();
+                filasIgnoradas.clear();
+                setRowCount(0);
+            } finally {
+                lock.unlock();
+            }
         });
     }
 
@@ -194,21 +205,6 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         }
     }
 
-    @Deprecated
-    public void marcarComoBorrado(int fila) {
-        marcarComoIgnorado(fila);
-    }
-
-    @Deprecated
-    public boolean estaBorrado(int fila) {
-        return estaIgnorado(fila);
-    }
-
-    @Deprecated
-    public int obtenerNumeroBorrados() {
-        return obtenerNumeroIgnorados();
-    }
-
     public HttpRequest obtenerSolicitudHttp(int indiceFila) {
         lock.lock();
         try {
@@ -246,7 +242,6 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             if (indiceFila < getRowCount()) {
                 removeRow(indiceFila);
             }
-            fireTableDataChanged();
         });
     }
 

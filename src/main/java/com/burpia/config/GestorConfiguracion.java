@@ -9,6 +9,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 public class GestorConfiguracion {
     private static final String NOMBRE_ARCHIVO = ".burpia.json";
@@ -33,7 +35,7 @@ public class GestorConfiguracion {
         }
         this.rutaConfig = Paths.get(userHome, NOMBRE_ARCHIVO);
 
-        out.println("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
+        this.out.println("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
     }
 
     public ConfiguracionAPI cargarConfiguracion() {
@@ -57,22 +59,13 @@ public class GestorConfiguracion {
                 return new ConfiguracionAPI();
             }
 
-            ConfiguracionAPI config = gson.fromJson(json, ConfiguracionAPI.class);
-
-            if (config == null) {
+            ArchivoConfiguracion archivo = gson.fromJson(json, ArchivoConfiguracion.class);
+            if (archivo == null) {
                 out.println("[Configuracion] Error al parsear JSON, usando configuracion por defecto");
                 return new ConfiguracionAPI();
             }
 
-            // Migraciones para compatibilidad con versiones anteriores
-            if (config.obtenerProveedorAI() == null || config.obtenerProveedorAI().isEmpty()) {
-                config.establecerProveedorAI("Z.ai");
-                config.actualizarUrlParaProveedor();
-            }
-
-            if (config.obtenerPromptConfigurable() == null || config.obtenerPromptConfigurable().trim().isEmpty()) {
-                config.establecerPromptConfigurable(ConfiguracionAPI.obtenerPromptPorDefecto());
-            }
+            ConfiguracionAPI config = construirDesdeArchivo(archivo);
 
             out.println("[Configuracion] Configuracion cargada exitosamente");
             return config;
@@ -115,7 +108,8 @@ public class GestorConfiguracion {
                 return false;
             }
 
-            String json = gson.toJson(config);
+            ArchivoConfiguracion archivo = construirArchivo(config);
+            String json = gson.toJson(archivo);
 
             // Usar escritura atomica con archivo temporal
             Path tempPath = Paths.get(path.toString() + ".tmp");
@@ -169,5 +163,105 @@ public class GestorConfiguracion {
             err.println("[Configuracion] Error al eliminar: " + e.getMessage());
             return false;
         }
+    }
+
+    private ConfiguracionAPI construirDesdeArchivo(ArchivoConfiguracion archivo) {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+
+        if (archivo.proveedorAI != null && ProveedorAI.existeProveedor(archivo.proveedorAI)) {
+            config.establecerProveedorAI(archivo.proveedorAI);
+        }
+
+        if (archivo.retrasoSegundos != null) {
+            config.establecerRetrasoSegundos(archivo.retrasoSegundos);
+        }
+        if (archivo.maximoConcurrente != null) {
+            config.establecerMaximoConcurrente(archivo.maximoConcurrente);
+        }
+        if (archivo.tiempoEsperaAI != null) {
+            config.establecerTiempoEsperaAI(archivo.tiempoEsperaAI);
+        }
+        if (archivo.tema != null) {
+            config.establecerTema(archivo.tema);
+        }
+        if (archivo.escaneoPasivoHabilitado != null) {
+            config.establecerEscaneoPasivoHabilitado(archivo.escaneoPasivoHabilitado);
+        }
+        if (archivo.promptConfigurable != null) {
+            config.establecerPromptConfigurable(archivo.promptConfigurable);
+        }
+        if (archivo.promptModificado != null) {
+            config.establecerPromptModificado(archivo.promptModificado);
+        }
+
+        // verbose off por defecto si no existe el campo
+        config.establecerDetallado(Boolean.TRUE.equals(archivo.detallado));
+
+        config.establecerApiKeysPorProveedor(sanitizarMapaString(archivo.apiKeysPorProveedor));
+        config.establecerUrlsBasePorProveedor(sanitizarMapaString(archivo.urlsBasePorProveedor));
+        config.establecerModelosPorProveedor(sanitizarMapaString(archivo.modelosPorProveedor));
+        config.establecerMaxTokensPorProveedor(sanitizarMapaInt(archivo.maxTokensPorProveedor));
+
+        return config;
+    }
+
+    private ArchivoConfiguracion construirArchivo(ConfiguracionAPI config) {
+        ArchivoConfiguracion archivo = new ArchivoConfiguracion();
+        archivo.proveedorAI = config.obtenerProveedorAI();
+        archivo.retrasoSegundos = config.obtenerRetrasoSegundos();
+        archivo.maximoConcurrente = config.obtenerMaximoConcurrente();
+        archivo.detallado = config.esDetallado();
+        archivo.tiempoEsperaAI = config.obtenerTiempoEsperaAI();
+        archivo.tema = config.obtenerTema();
+        archivo.escaneoPasivoHabilitado = config.escaneoPasivoHabilitado();
+        archivo.promptConfigurable = config.obtenerPromptConfigurable();
+        archivo.promptModificado = config.esPromptModificado();
+        archivo.apiKeysPorProveedor = new HashMap<>(config.obtenerApiKeysPorProveedor());
+        archivo.urlsBasePorProveedor = new HashMap<>(config.obtenerUrlsBasePorProveedor());
+        archivo.modelosPorProveedor = new HashMap<>(config.obtenerModelosPorProveedor());
+        archivo.maxTokensPorProveedor = new HashMap<>(config.obtenerMaxTokensPorProveedor());
+        return archivo;
+    }
+
+    private Map<String, String> sanitizarMapaString(Map<String, String> mapa) {
+        Map<String, String> limpio = new HashMap<>();
+        if (mapa == null) {
+            return limpio;
+        }
+        for (Map.Entry<String, String> entry : mapa.entrySet()) {
+            if (entry.getKey() != null && ProveedorAI.existeProveedor(entry.getKey())) {
+                limpio.put(entry.getKey(), entry.getValue() != null ? entry.getValue() : "");
+            }
+        }
+        return limpio;
+    }
+
+    private Map<String, Integer> sanitizarMapaInt(Map<String, Integer> mapa) {
+        Map<String, Integer> limpio = new HashMap<>();
+        if (mapa == null) {
+            return limpio;
+        }
+        for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
+            if (entry.getKey() != null && ProveedorAI.existeProveedor(entry.getKey()) && entry.getValue() != null) {
+                limpio.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return limpio;
+    }
+
+    private static class ArchivoConfiguracion {
+        private String proveedorAI;
+        private Integer retrasoSegundos;
+        private Integer maximoConcurrente;
+        private Boolean detallado;
+        private Integer tiempoEsperaAI;
+        private String tema;
+        private Boolean escaneoPasivoHabilitado;
+        private String promptConfigurable;
+        private Boolean promptModificado;
+        private Map<String, String> apiKeysPorProveedor;
+        private Map<String, String> urlsBasePorProveedor;
+        private Map<String, String> modelosPorProveedor;
+        private Map<String, Integer> maxTokensPorProveedor;
     }
 }

@@ -18,18 +18,8 @@ public class ConstructorPrompts {
         this.config = config;
     }
 
-    /**
-     * Constructor por defecto con prompt legacy.
-     * @deprecated Usar {@link #ConstructorPrompts(ConfiguracionAPI)} en su lugar.
-     * Este constructor será eliminado en v2.0.
-     */
-    @Deprecated
-    public ConstructorPrompts() {
-        this.config = new ConfiguracionAPI(); // Crear config por defecto en lugar de null
-    }
-
     public String construirPromptAnalisis(SolicitudAnalisis solicitud) {
-        String promptTemplate = (config != null) ? config.obtenerPromptConfigurable() : obtenerPromptLegacy();
+        String promptTemplate = config.obtenerPromptConfigurable();
 
         // Construir la parte de la solicitud HTTP
         StringBuilder requestBuilder = new StringBuilder();
@@ -42,19 +32,5 @@ public class ConstructorPrompts {
 
         // Reemplazar {REQUEST} con la solicitud HTTP actual
         return promptTemplate.replace("{REQUEST}", requestBuilder.toString());
-    }
-
-    private String obtenerPromptLegacy() {
-        return "Act as an offensive security expert. Analyze this HTTP request " +
-               "for OWASP Top 10 vulnerabilities. Respond in Spanish.\n\n" +
-               "REQUEST:\n" +
-               "{REQUEST}\n\n" +
-               "IMPORTANT: You must respond ONLY with a valid JSON, no additional text. " +
-               "Use this exact format:\n" +
-               "{\"hallazgos\": [\n" +
-               "  {\"descripcion\": \"Short vulnerability description\", \"severidad\": \"Critical|High|Medium|Low|Info\", \"confianza\": \"High|Medium|Low\"},\n" +
-               "  {\"descripcion\": \"Another vulnerability found\", \"severidad\": \"High\", \"confianza\": \"Medium\"}\n" +
-               "]}\n\n" +
-               "If no vulnerabilities are found, return an empty array: {\"hallazgos\": []}";
     }
 }

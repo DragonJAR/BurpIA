@@ -6,7 +6,9 @@ import java.awt.*;
 import java.io.PrintWriter;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class GestorConsolaGUI {
     public enum TipoLog {
@@ -17,36 +19,36 @@ public class GestorConsolaGUI {
 
     private JTextPane consola;
     private StyledDocument documento;
-    private final ReentrantLock candado;
     private boolean autoScroll;
-    private int contadorInfo;
-    private int contadorVerbose;
-    private int contadorError;
+    private final AtomicInteger contadorInfo;
+    private final AtomicInteger contadorVerbose;
+    private final AtomicInteger contadorError;
     private final DateTimeFormatter formateadorHora;
+    private final ConcurrentLinkedQueue<EntradaLog> colaPendiente;
+    private final AtomicBoolean flushProgramado;
+    private static final int MAXIMO_CARACTERES = 200_000;
 
-    // Estilos para diferentes tipos de log
     private Style estiloInfo;
     private Style estiloVerbose;
     private Style estiloError;
 
-    // Streams originales de Burp
     private PrintWriter stdoutOriginal;
     private PrintWriter stderrOriginal;
 
     public GestorConsolaGUI() {
-        this.candado = new ReentrantLock();
         this.autoScroll = true;
-        this.contadorInfo = 0;
-        this.contadorVerbose = 0;
-        this.contadorError = 0;
+        this.contadorInfo = new AtomicInteger(0);
+        this.contadorVerbose = new AtomicInteger(0);
+        this.contadorError = new AtomicInteger(0);
         this.formateadorHora = DateTimeFormatter.ofPattern("HH:mm:ss");
+        this.colaPendiente = new ConcurrentLinkedQueue<>();
+        this.flushProgramado = new AtomicBoolean(false);
     }
 
     public void establecerConsola(JTextPane consola) {
         this.consola = consola;
         this.documento = consola.getStyledDocument();
 
-        StyleContext contextoEstilos = StyleContext.getDefaultStyleContext();
         estiloInfo = documento.addStyle("Info", null);
         StyleConstants.setForeground(estiloInfo, Color.BLACK);
         StyleConstants.setFontFamily(estiloInfo, Font.MONOSPACED);
@@ -68,46 +70,17 @@ public class GestorConsolaGUI {
     }
 
     public void registrar(String mensaje, TipoLog tipo) {
-        candado.lock();
-        try {
-            switch (tipo) {
-                case INFO:
-                    contadorInfo++;
-                    break;
-                case VERBOSE:
-                    contadorVerbose++;
-                    break;
-                case ERROR:
-                    contadorError++;
-                    break;
-            }
+        incrementarContador(tipo);
 
-            // Formatear mensaje con timestamp
-            String hora = LocalTime.now().format(formateadorHora);
-            String mensajeFormateado = String.format("[%s] %s\n", hora, mensaje);
+        String hora = LocalTime.now().format(formateadorHora);
+        String mensajeFormateado = String.format("[%s] %s%n", hora, mensaje);
 
-            // Escribir a consola GUI
-            if (documento != null) {
-                SwingUtilities.invokeLater(() -> {
-                    try {
-                        Style estilo = obtenerEstilo(tipo);
-                        documento.insertString(documento.getLength(), mensajeFormateado, estilo);
-
-                        // Auto-scroll si está activado
-                        if (autoScroll) {
-                            consola.setCaretPosition(documento.getLength());
-                        }
-                    } catch (BadLocationException e) {
-                        // Ignorar errores de inserción
-                    }
-                });
-            }
-
-            duplicarAStreamOriginal(mensajeFormateado, tipo);
-
-        } finally {
-            candado.unlock();
+        if (documento != null) {
+            colaPendiente.add(new EntradaLog(mensajeFormateado, tipo));
+            programarFlush();
         }
+
+        duplicarAStreamOriginal(mensajeFormateado, tipo);
     }
 
     public void registrarInfo(String mensaje) {
@@ -125,13 +98,15 @@ public class GestorConsolaGUI {
     public void limpiarConsola() {
         SwingUtilities.invokeLater(() -> {
             try {
-                documento.remove(0, documento.getLength());
-                // Reiniciar contadores
-                contadorInfo = 0;
-                contadorVerbose = 0;
-                contadorError = 0;
+                if (documento != null) {
+                    documento.remove(0, documento.getLength());
+                }
+                colaPendiente.clear();
+                contadorInfo.set(0);
+                contadorVerbose.set(0);
+                contadorError.set(0);
             } catch (BadLocationException e) {
-                // Ignorar errores
+                // Ignorar errores de UI
             }
         });
     }
@@ -141,24 +116,24 @@ public class GestorConsolaGUI {
     }
 
     public int obtenerTotalLogs() {
-        return contadorInfo + contadorVerbose + contadorError;
+        return contadorInfo.get() + contadorVerbose.get() + contadorError.get();
     }
 
     public int obtenerContadorInfo() {
-        return contadorInfo;
+        return contadorInfo.get();
     }
 
     public int obtenerContadorVerbose() {
-        return contadorVerbose;
+        return contadorVerbose.get();
     }
 
     public int obtenerContadorError() {
-        return contadorError;
+        return contadorError.get();
     }
 
     public String generarResumen() {
         return String.format("Total: %d | Info: %d | Verbose: %d | Errores: %d",
-            obtenerTotalLogs(), contadorInfo, contadorVerbose, contadorError);
+            obtenerTotalLogs(), contadorInfo.get(), contadorVerbose.get(), contadorError.get());
     }
 
     private Style obtenerEstilo(TipoLog tipo) {
@@ -192,8 +167,73 @@ public class GestorConsolaGUI {
      * Método shutdown para limpieza de recursos (llamado por ExtensionBurpIA.unload())
      */
     public void shutdown() {
-        // Limpiar referencias a streams originales
+        colaPendiente.clear();
         stdoutOriginal = null;
         stderrOriginal = null;
+    }
+
+    private void programarFlush() {
+        if (flushProgramado.compareAndSet(false, true)) {
+            SwingUtilities.invokeLater(this::flushPendientesEnEdt);
+        }
+    }
+
+    private void flushPendientesEnEdt() {
+        try {
+            if (documento == null) {
+                return;
+            }
+
+            EntradaLog entrada;
+            while ((entrada = colaPendiente.poll()) != null) {
+                documento.insertString(documento.getLength(), entrada.mensaje, obtenerEstilo(entrada.tipo));
+            }
+
+            trimDocumentoSiEsNecesario();
+            if (autoScroll && consola != null) {
+                consola.setCaretPosition(documento.getLength());
+            }
+        } catch (BadLocationException ignored) {
+            // Ignorar errores de inserción en UI
+        } finally {
+            flushProgramado.set(false);
+            if (!colaPendiente.isEmpty()) {
+                programarFlush();
+            }
+        }
+    }
+
+    private void trimDocumentoSiEsNecesario() throws BadLocationException {
+        int longitud = documento.getLength();
+        if (longitud <= MAXIMO_CARACTERES) {
+            return;
+        }
+        int exceso = longitud - MAXIMO_CARACTERES;
+        documento.remove(0, exceso);
+    }
+
+    private void incrementarContador(TipoLog tipo) {
+        switch (tipo) {
+            case VERBOSE:
+                contadorVerbose.incrementAndGet();
+                break;
+            case ERROR:
+                contadorError.incrementAndGet();
+                break;
+            case INFO:
+            default:
+                contadorInfo.incrementAndGet();
+                break;
+        }
+    }
+
+    private static final class EntradaLog {
+        private final String mensaje;
+        private final TipoLog tipo;
+
+        private EntradaLog(String mensaje, TipoLog tipo) {
+            this.mensaje = mensaje;
+            this.tipo = tipo;
+        }
     }
 }
