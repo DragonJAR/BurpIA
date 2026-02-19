@@ -99,7 +99,24 @@ public class ParserRespuestasAI {
                 if (firstChoice.has("message")) {
                     JsonObject message = firstChoice.getAsJsonObject("message");
                     if (message.has("content")) {
-                        return message.get("content").getAsString();
+                        String content = message.get("content").getAsString();
+                        if (content != null && !content.trim().isEmpty()) {
+                            return content;
+                        }
+                    }
+                    // Algunos proveedores compatibles OpenAI (ej. Z.ai) pueden responder aquí
+                    if (message.has("reasoning_content")) {
+                        String reasoning = message.get("reasoning_content").getAsString();
+                        if (reasoning != null && !reasoning.trim().isEmpty()) {
+                            return reasoning;
+                        }
+                    }
+                }
+
+                if (firstChoice.has("text")) {
+                    String text = firstChoice.get("text").getAsString();
+                    if (text != null && !text.trim().isEmpty()) {
+                        return text;
                     }
                 }
             }
@@ -165,7 +182,7 @@ public class ParserRespuestasAI {
      */
     private static String extraerContenidoGenerico(JsonObject raiz) {
         // Buscar campos comunes en orden de probabilidad
-        String[] campos = {"content", "text", "message", "response", "output"};
+        String[] campos = {"content", "text", "message", "response", "output", "reasoning_content"};
 
         for (String campo : campos) {
             if (raiz.has(campo)) {
@@ -192,5 +209,13 @@ public class ParserRespuestasAI {
 
         String contenidoUpper = contenido.toUpperCase().trim();
         return contenidoUpper.contains("OK") || contenidoUpper.contains("HOLA");
+    }
+
+    /**
+     * Validación flexible para pruebas de conexión:
+     * si hay contenido no vacío, la conexión y el parseo son considerados correctos.
+     */
+    public static boolean validarRespuestaConexion(String contenido) {
+        return contenido != null && !contenido.trim().isEmpty();
     }
 }

@@ -34,7 +34,7 @@ public class ProveedorAI {
         public int obtenerMaxTokensVentana() { return maxTokensVentana; }
     }
 
-    private static final Map<String, ConfiguracionProveedor> PROVEEDORES = new HashMap<>();
+    private static final Map<String, ConfiguracionProveedor> PROVEEDORES = new LinkedHashMap<>();
 
     static {
         // Ollama - Local (modelos típicamente 4k-32k context)

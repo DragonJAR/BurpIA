@@ -88,4 +88,27 @@ class DeduplicadorSolicitudesTest {
         assertTrue(deduplicador.contieneHash("hash1"));
         assertTrue(deduplicador.esDuplicadoYAgregar("hash1")); // ahora es duplicado
     }
+
+    @Test
+    @DisplayName("Respeta limite maximo de hashes con eviction LRU")
+    void testLimiteMaximo() {
+        DeduplicadorSolicitudes deduplicadorLocal = new DeduplicadorSolicitudes(3, 60000);
+        deduplicadorLocal.esDuplicadoYAgregar("h1");
+        deduplicadorLocal.esDuplicadoYAgregar("h2");
+        deduplicadorLocal.esDuplicadoYAgregar("h3");
+        deduplicadorLocal.esDuplicadoYAgregar("h4");
+
+        assertEquals(3, deduplicadorLocal.obtenerNumeroHashes());
+    }
+
+    @Test
+    @DisplayName("Expira hashes por TTL")
+    void testExpiracionPorTtl() throws Exception {
+        DeduplicadorSolicitudes deduplicadorLocal = new DeduplicadorSolicitudes(100, 50);
+        deduplicadorLocal.esDuplicadoYAgregar("h1");
+        Thread.sleep(80);
+
+        assertFalse(deduplicadorLocal.contieneHash("h1"));
+        assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"));
+    }
 }

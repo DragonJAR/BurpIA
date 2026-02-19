@@ -24,19 +24,21 @@ class ConfiguracionAPITest {
         assertNotNull(config.obtenerUrlApi());
         assertNotNull(config.obtenerModelo());
         assertNotNull(config.obtenerPromptConfigurable());
+        assertFalse(config.esDetallado());
     }
 
     @Test
-    @DisplayName("Establecer y obtener valores basicos")
+    @DisplayName("Establecer y obtener valores por proveedor")
     void testEstablecerYObtenerValores() {
-        config.establecerUrlApi("https://api.test.com/v1");
-        config.establecerClaveApi("test-key-123");
-        config.establecerModelo("gpt-4");
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.test.com/v1");
+        config.establecerApiKeyParaProveedor("OpenAI", "test-key-123");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-4");
         config.establecerRetrasoSegundos(10);
         config.establecerMaximoConcurrente(5);
         config.establecerDetallado(true);
 
-        assertEquals("https://api.test.com/v1", config.obtenerUrlApi());
+        assertEquals("https://api.test.com/v1/chat/completions", config.obtenerUrlApi());
         assertEquals("test-key-123", config.obtenerClaveApi());
         assertEquals("gpt-4", config.obtenerModelo());
         assertEquals(10, config.obtenerRetrasoSegundos());
@@ -48,9 +50,9 @@ class ConfiguracionAPITest {
     @DisplayName("Validacion con errores")
     void testValidacionConErrores() {
         ConfiguracionAPI configInvalida = new ConfiguracionAPI();
-        configInvalida.establecerUrlApi(null);
-        configInvalida.establecerModelo(null);
-        configInvalida.establecerClaveApi("");
+        configInvalida.establecerProveedorAI("OpenAI");
+        configInvalida.establecerModeloParaProveedor("OpenAI", "");
+        configInvalida.establecerApiKeyParaProveedor("OpenAI", "");
 
         Map<String, String> errores = configInvalida.validar();
 
@@ -74,8 +76,7 @@ class ConfiguracionAPITest {
         assertTrue(config.esConfiguracionValida());
 
         ConfiguracionAPI invalida = new ConfiguracionAPI();
-        invalida.establecerUrlApi(null);
-        invalida.establecerModelo(null);
+        invalida.establecerModeloParaProveedor("Z.ai", "");
 
         assertFalse(invalida.esConfiguracionValida());
     }
@@ -125,5 +126,16 @@ class ConfiguracionAPITest {
 
         assertEquals("openai-key", config.obtenerApiKeyParaProveedor("OpenAI"));
         assertEquals("claude-key", config.obtenerApiKeyParaProveedor("Claude"));
+        assertEquals("", config.obtenerApiKeyParaProveedor("Gemini"));
+    }
+
+    @Test
+    @DisplayName("No arrastra API key entre proveedores")
+    void testNoArrastreApiKey() {
+        config.establecerProveedorAI("OpenAI");
+        config.establecerApiKeyParaProveedor("OpenAI", "openai-key");
+
+        config.establecerProveedorAI("Claude");
+        assertEquals("", config.obtenerClaveApi());
     }
 }

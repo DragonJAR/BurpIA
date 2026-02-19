@@ -1,9 +1,11 @@
 package com.burpia.ui;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
+import java.awt.font.TextAttribute;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Renderizador que muestra las celdas de hallazgos ignorados en gris y tachado.
@@ -39,16 +41,23 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
         if (modelo.estaIgnorado(filaModelo)) {
             if (componente instanceof JLabel) {
                 JLabel etiqueta = (JLabel) componente;
+                etiqueta.putClientProperty("html.disable", Boolean.TRUE);
 
                 if (!isSelected) {
                     etiqueta.setBackground(new Color(240, 240, 240));
                     etiqueta.setForeground(Color.GRAY);
                 }
 
-                String textoOriginal = etiqueta.getText();
-                if (!textoOriginal.startsWith("<html>")) {
-                    etiqueta.setText("<html><s>" + textoOriginal + "</s></html>");
-                }
+                Font base = tabla.getFont();
+                Map<TextAttribute, Object> atributos = new HashMap<>(base.getAttributes());
+                atributos.put(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON);
+                etiqueta.setFont(base.deriveFont(atributos));
+            }
+        } else {
+            if (componente instanceof JLabel) {
+                JLabel etiqueta = (JLabel) componente;
+                etiqueta.putClientProperty("html.disable", Boolean.TRUE);
+                etiqueta.setFont(tabla.getFont());
             }
         }
 

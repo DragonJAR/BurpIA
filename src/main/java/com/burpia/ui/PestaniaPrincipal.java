@@ -47,11 +47,6 @@ public class PestaniaPrincipal extends JPanel {
         panelConsola.obtenerGestorConsola().registrarInfo(mensaje);
     }
 
-    @Deprecated
-    public void establecerEstado(String estado) {
-        // El estado se muestra en el panel de estadísticas
-    }
-
     public void limpiarResultados() {
         panelHallazgos.limpiar();
     }
@@ -82,17 +77,6 @@ public class PestaniaPrincipal extends JPanel {
 
     public void establecerManejadorConfiguracion(Runnable manejador) {
         panelEstadisticas.establecerManejadorConfiguracion(manejador);
-    }
-
-    /**
-     * @deprecated Usar {@link #agregarHallazgo(Hallazgo)} en su lugar.
-     * Este método será eliminado en v2.0. La nueva forma acepta objetos Hallazgo completos.
-     */
-    @Deprecated
-    public void agregarResultado(String hora, String url, String hallazgos, String severidad) {
-        // Mantener compatibilidad con código antiguo pero marcar claramente el reemplazo
-        Hallazgo hallazgo = new Hallazgo(url, hallazgos, severidad, "Media");
-        agregarHallazgo(hallazgo);
     }
 
     public void destruir() {

@@ -67,7 +67,7 @@ BurpIA uses state-of-the-art AI models to detect:
 - **🔄 Task Manager** - Monitor and control analysis tasks with pause/resume/cancel capabilities
 - **📝 Console Log** - Detailed logging with color-coded severity levels
 - **⚙️ Configuration Dialog** - Easy-to-use interface for managing AI providers and settings
-- **📤 Burp Suite Integration** - Send findings directly to Repeater for manual validation or Scanner for automated verification
+- **📤 Burp Suite Integration** - Send findings directly to Repeater or Intruder for manual validation and fuzzing
 
 ### 🔧 Advanced Features
 
@@ -184,7 +184,7 @@ Right-click on tasks for dynamic context menus based on task state.
 
 Right-click on findings table:
 - **📤 Send to Repeater** - Send HTTP request to Burp's Repeater for manual testing
-- **🔍 Send to Scanner** - Send HTTP request to Burp's Scanner for automated verification
+- **🔍 Send to Intruder** - Send HTTP request to Burp's Intruder for fuzzing and validation
 - **🚫 Ignore** - Mark as ignored (excluded from exports but visible in table)
 - **🗑️ Delete** - Remove from table completely
 - **Export to CSV** - For spreadsheets (excludes ignored findings)
@@ -210,7 +210,7 @@ Right-click on findings table:
 - **Headers**: `x-api-key`, `anthropic-version: 2023-06-01`
 
 #### Gemini (Google)
-- **API URL**: `https://generativelanguage.googleapis.com/v1`
+- **API URL**: `https://generativelanguage.googleapis.com/v1beta`
 - **Models**: Gemini 3 Pro, Flash, Deep Think
 - **Max Tokens**: 8192 (default)
 - **API Key**: Required
@@ -229,7 +229,7 @@ Right-click on findings table:
 |---------|---------|-------|-------------|
 | **Max Concurrent** | 3 | 1-10 | Maximum simultaneous API requests |
 | **Delay (seconds)** | 5 | 0-60 | Delay between requests per thread |
-| **AI Timeout (seconds)** | 180 | 10-300 | Maximum wait time for AI response |
+| **AI Timeout (seconds)** | 60 | 10-300 | Maximum wait time for AI response |
 | **Verbose Mode** | Off | On/Off | Enable detailed logging |
 
 ### Performance Tuning
@@ -277,7 +277,6 @@ com.burpia/
 ├── analyzer/
 │   ├── AnalizadorAI.java          # AI analysis engine
 │   ├── ConstructorPrompts.java    # Prompt builder
-│   └── ReparadorJson.java         # JSON repair utility
 ├── config/
 │   ├── ConfiguracionAPI.java       # Configuration POJO
 │   ├── GestorConfiguracion.java    # JSON persistence
@@ -300,6 +299,7 @@ com.burpia/
     ├── GestorTareas.java            # Task manager
     ├── LimitadorTasa.java           # Rate limiter
     ├── DeduplicadorSolicitudes.java  # Request deduplication
+    ├── ReparadorJson.java           # JSON repair utility
     ├── ProbadorConexionAI.java      # Connection tester
     └── ParserRespuestasAI.java      # Response parser
 ```
