@@ -242,9 +242,9 @@ public class DialogoConfiguracion extends JDialog {
             "   Ollama:   http://localhost:11434\n" +
             "   OpenAI:   https://api.openai.com/v1\n" +
             "   Claude:   https://api.anthropic.com/v1\n" +
-            "   Gemini:   https://generativelanguage.googleapis.com/v1\n" +
+            "   Gemini:   https://generativelanguage.googleapis.com/v1beta\n" +
             "   Z.ai:     https://api.z.ai/api/paas/v4\n" +
-            "   minimax:  https://api.minimax.ai/v1"
+            "   minimax:  https://api.minimax.io/v1"
         );
         urlsReferencia.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 255), 1));
         panel.add(urlsReferencia, gbc);
@@ -762,7 +762,7 @@ public class DialogoConfiguracion extends JDialog {
         java.util.List<String> modelos = new java.util.ArrayList<>();
 
         try {
-            String urlBase = urlApi.replace("/chat/completions", "").replace("/api/tags", "");
+            String urlBase = ConfiguracionAPI.extraerUrlBase(urlApi);
             if (!urlBase.endsWith("/api/tags")) {
                 urlBase = urlBase + "/api/tags";
             }

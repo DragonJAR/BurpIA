@@ -98,7 +98,7 @@ public class ProveedorAI {
         // Gemini (Google - 1M tokens context)
         PROVEEDORES.put("Gemini", new ConfiguracionProveedor(
             "Gemini",
-            "https://generativelanguage.googleapis.com/v1",
+            "https://generativelanguage.googleapis.com/v1beta",
             "gemini-3-deep-think-preview",
             Arrays.asList(
                 "gemini-3-deep-think-preview",
@@ -134,7 +134,7 @@ public class ProveedorAI {
         // MiniMax (conservador, sin datos específicos)
         PROVEEDORES.put("minimax", new ConfiguracionProveedor(
             "minimax",
-            "https://api.minimax.ai/v1",
+            "https://api.minimax.io/v1",
             "minimax-m2.5",
             Arrays.asList(
                 "minimax-m2.5",
