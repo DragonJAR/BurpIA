@@ -1,0 +1,480 @@
+package com.burpia.analyzer;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.burpia.config.ConfiguracionAPI;
+import com.burpia.model.Hallazgo;
+import com.burpia.model.ResultadoAnalisisMultiple;
+import com.burpia.model.SolicitudAnalisis;
+import com.burpia.util.GestorConsolaGUI;
+import com.burpia.util.LimitadorTasa;
+import com.burpia.util.ReparadorJson;
+
+import okhttp3.*;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+public class AnalizadorAI implements Runnable {
+    private final SolicitudAnalisis solicitud;
+    private final ConfiguracionAPI config;
+    private final PrintWriter stdout;
+    private final PrintWriter stderr;
+    private final LimitadorTasa limitador;
+    private final Callback callback;
+    private final OkHttpClient clienteHttp;
+    private final Gson gson;
+    private final ConstructorPrompts constructorPrompt;
+    private final GestorConsolaGUI gestorConsola;
+
+    // Cliente HTTP compartido entre todas las instancias para evitar agotamiento de recursos
+    private static final OkHttpClient CLIENTE_COMPARTIDO = new OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)  // Aumentado a 3 minutos para APIs de IA (Z.ai a veces tarda más)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .build();
+
+    public interface Callback {
+        void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
+        void alErrorAnalisis(String error);
+    }
+
+    public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
+                     LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola) {
+        this.solicitud = solicitud;
+        this.config = config;
+        this.stdout = stdout;
+        this.stderr = stderr;
+        this.limitador = limitador;
+        this.callback = callback;
+        this.gestorConsola = gestorConsola;
+        this.clienteHttp = CLIENTE_COMPARTIDO; // Usar cliente compartido
+        this.gson = new Gson();
+        this.constructorPrompt = new ConstructorPrompts(config);
+    }
+
+    // Constructor sobrecargado para compatibilidad con código existente
+    public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
+                     LimitadorTasa limitador, Callback callback) {
+        this(solicitud, config, stdout, stderr, limitador, callback, null);
+    }
+
+    @Override
+    public void run() {
+        String nombreHilo = Thread.currentThread().getName();
+        long tiempoInicio = System.currentTimeMillis();
+
+        registrar("[" + nombreHilo + "] AnalizadorAI iniciado para URL: " + solicitud.obtenerUrl());
+        rastrear("[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud());
+
+        try {
+            rastrear("[" + nombreHilo + "] Adquiriendo permiso del limitador (disponibles: " +
+                    limitador.permisosDisponibles() + ")");
+            limitador.adquirir();
+            rastrear("[" + nombreHilo + "] Permiso de limitador adquirido");
+
+            // Retraso de limitacion de tasa
+            int retrasoSegundos = config.obtenerRetrasoSegundos();
+            rastrear("[" + nombreHilo + "] Durmiendo por " + retrasoSegundos + " segundos antes de llamar a la API");
+            Thread.sleep(retrasoSegundos * 1000L);
+
+            registrar("Analizando: " + solicitud.obtenerUrl());
+
+            String respuesta = llamarAPIAIConRetries();
+            ResultadoAnalisisMultiple resultadoMultiple = parsearRespuesta(respuesta);
+
+            long duracion = System.currentTimeMillis() - tiempoInicio;
+            registrar("Analisis completado: " + solicitud.obtenerUrl() + " (tomo " + duracion + "ms)");
+            rastrear("[" + nombreHilo + "] Severidad maxima: " + resultadoMultiple.obtenerSeveridadMaxima());
+
+            callback.alCompletarAnalisis(resultadoMultiple);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            long duracion = System.currentTimeMillis() - tiempoInicio;
+            registrarError("[" + nombreHilo + "] Analisis interrumpido despues de " + duracion + "ms: " + e.getMessage());
+            callback.alErrorAnalisis("Analisis interrumpido: " + e.getMessage());
+        } catch (Exception e) {
+            long duracion = System.currentTimeMillis() - tiempoInicio;
+            registrarError("[" + nombreHilo + "] Analisis fallido despues de " + duracion + "ms: " + e.getMessage());
+            rastrear("[" + nombreHilo + "] Detalles de solicitud: metodo=" + solicitud.obtenerMetodo() +
+                    ", url=" + solicitud.obtenerUrl() + ", longitud_cuerpo=" + solicitud.obtenerCuerpo().length());
+            callback.alErrorAnalisis(e.getMessage());
+        } finally {
+            limitador.liberar();
+            rastrear("[" + nombreHilo + "] Permiso de limitador liberado (disponibles: " +
+                    limitador.permisosDisponibles() + ")");
+        }
+    }
+
+    private String llamarAPIAI() throws IOException {
+        rastrear("Construyendo prompt para URL: " + solicitud.obtenerUrl());
+
+        String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
+        rastrear("Longitud de prompt: " + prompt.length() + " caracteres");
+        rastrear("Prompt completo:\n" + prompt);
+
+        JsonObject carga = new JsonObject();
+        carga.addProperty("model", config.obtenerModelo());
+
+        JsonArray mensajes = new JsonArray();
+        JsonObject mensajeUsuario = new JsonObject();
+        mensajeUsuario.addProperty("role", "user");
+        mensajeUsuario.addProperty("content", prompt);
+        mensajes.add(mensajeUsuario);
+        carga.add("messages", mensajes);
+
+        String cadenaCarga = carga.toString();
+        rastrear("Carga de API:\n" + cadenaCarga);
+        registrar("Llamando a API: " + config.obtenerUrlApi() + " con modelo: " + config.obtenerModelo());
+
+        Request solicitudHttp = new Request.Builder()
+                .url(config.obtenerUrlApi())
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Authorization", "Bearer " + config.obtenerClaveApi())
+                .post(RequestBody.create(
+                        MediaType.parse("application/json"),
+                        cadenaCarga
+                ))
+                .build();
+
+        // SECURITY FIX: NO loggear la API key ni parcialmente
+        // Los logs pueden ser accedidos por usuarios no autorizados
+        rastrear("Encabezados de solicitud: Content-Type=application/json, Authorization=Bearer [OCULTO]");
+
+        try (Response respuesta = clienteHttp.newCall(solicitudHttp).execute()) {
+            registrar("Codigo de respuesta de API: " + respuesta.code());
+            rastrear("Encabezados de respuesta de API: " + respuesta.headers());
+
+            if (!respuesta.isSuccessful()) {
+                String cuerpoError = respuesta.body() != null ? respuesta.body().string() : "null";
+                registrarError("Cuerpo de respuesta de error de API: " + cuerpoError);
+                throw new IOException("Error de API: " + respuesta.code() + " - " + cuerpoError);
+            }
+
+            String cuerpoRespuesta = respuesta.body().string();
+            registrar("Longitud de respuesta de API: " + cuerpoRespuesta.length() + " caracteres");
+            rastrear("Respuesta completa de API:\n" + cuerpoRespuesta);
+
+            return cuerpoRespuesta;
+        } catch (IOException e) {
+            registrarError("Solicitud HTTP fallida: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            rastrear("Stack trace de la excepción:", e);
+            throw e;
+        } catch (Exception e) {
+            registrarError("Error inesperado en llamada API: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            rastrear("Stack trace de la excepción:", e);
+            throw new IOException("Error inesperado: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Sistema de retry con backoff exponencial para llamadas a la API.
+     * Estrategia:
+     * 1. 3 intentos inmediatos (sin espera entre ellos)
+     * 2. Si fallan, esperar 30 segundos y reintentar
+     * 3. Si falla, esperar 60 segundos y reintentar
+     * 4. Si falla, esperar 90 segundos y reintentar
+     * 5. Si falla, preguntar al usuario si desea cambiar de proveedor
+     */
+    private String llamarAPIAIConRetries() throws IOException {
+        IOException ultimaExcepcion = null;
+
+        // FASE 1: 3 intentos inmediatos
+        registrar("Sistema de retry: Iniciando 3 intentos inmediatos...");
+        for (int i = 0; i < 3; i++) {
+            try {
+                registrar("Intento inmediato #" + (i + 1) + " de 3");
+                return llamarAPIAI();
+            } catch (IOException e) {
+                ultimaExcepcion = e;
+                registrar("Intento #" + (i + 1) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                // No esperar entre intentos inmediatos
+            }
+        }
+
+        // FASE 2: Backoff exponencial con espera
+        int[] esperasSegundos = {30, 60, 90}; // Backoff exponencial
+
+        for (int i = 0; i < esperasSegundos.length; i++) {
+            int esperaSegundos = esperasSegundos[i];
+            registrar("Todos los intentos inmediatos fallaron. Esperando " + esperaSegundos +
+                     " segundos antes del próximo reintento (intentos: " + (3 + i + 1) + " de 6)");
+
+            try {
+                Thread.sleep(esperaSegundos * 1000L);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Sistema de retry interrumpido", ie);
+            }
+
+            try {
+                registrar("Reintento #" + (4 + i) + " después de esperar " + esperaSegundos + " segundos");
+                return llamarAPIAI();
+            } catch (IOException e) {
+                ultimaExcepcion = e;
+                registrar("Reintento #" + (4 + i) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            }
+        }
+
+        registrar("Todos los reintentos fallaron despues de 6 intentos");
+        registrarError("SUGERENCIA: Considera cambiar de proveedor de API.");
+        registrarError("Ultimo error: " + ultimaExcepcion.getClass().getSimpleName() + " - " +
+                      ultimaExcepcion.getMessage());
+
+        throw ultimaExcepcion;
+    }
+
+    private void rastrear(String mensaje, Throwable e) {
+        if (config.esDetallado()) {
+            java.io.StringWriter sw = new java.io.StringWriter();
+            java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+            e.printStackTrace(pw);
+            rastrear(mensaje + "\n" + sw.toString());
+        }
+    }
+
+    private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
+        rastrear("Parseando respuesta JSON");
+        List<Hallazgo> hallazgos = new ArrayList<>();
+
+        try {
+            // Intentar reparar JSON si está malformado
+            String jsonReparado = ReparadorJson.repararJson(respuestaJson);
+            if (jsonReparado != null && !jsonReparado.equals(respuestaJson)) {
+                rastrear("JSON reparado exitosamente");
+                respuestaJson = jsonReparado;
+            }
+
+            JsonObject json = gson.fromJson(respuestaJson, JsonObject.class);
+
+            // Manejar diferentes formatos de respuesta para extraer contenido
+            String contenido;
+            if (json.has("choices") && json.getAsJsonArray("choices").size() > 0) {
+                // Formato OpenAI
+                contenido = json.getAsJsonArray("choices")
+                        .get(0).getAsJsonObject()
+                        .getAsJsonObject("message")
+                        .get("content").getAsString();
+            } else if (json.has("data")) {
+                // Formato Zhipu/GLM
+                JsonObject datos = json.getAsJsonObject("data");
+                if (datos.has("choices")) {
+                    contenido = datos.getAsJsonArray("choices")
+                            .get(0).getAsJsonObject()
+                            .getAsJsonObject("message")
+                            .get("content").getAsString();
+                } else {
+                    contenido = datos.get("content").getAsString();
+                }
+            } else {
+                contenido = json.toString();
+            }
+
+            rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
+            rastrear("Contenido:\n" + contenido);
+
+            // Intentar parsear como JSON con array de hallazgos
+            try {
+                // PRIMERO: Limpiar markdown si existe
+                String contenidoLimpio = contenido.trim();
+
+                if (contenidoLimpio.contains("```json")) {
+                    contenidoLimpio = contenidoLimpio.replaceAll("```json\\s*", "");
+                    contenidoLimpio = contenidoLimpio.replaceAll("```\\s*$", "");
+                    rastrear("Eliminados bloques de código markdown JSON");
+                } else if (contenidoLimpio.contains("```")) {
+                    contenidoLimpio = contenidoLimpio.replaceAll("```\\w*\\s*", "");
+                    contenidoLimpio = contenidoLimpio.replaceAll("```\\s*$", "");
+                    rastrear("Eliminados bloques de código markdown genéricos");
+                }
+
+                contenidoLimpio = contenidoLimpio.trim();
+
+                if (contenidoLimpio.length() > 0 && !contenidoLimpio.equals(contenido)) {
+                    rastrear("Contenido limpio para parsing:\n" + contenidoLimpio);
+                }
+
+                JsonObject jsonHallazgos = gson.fromJson(contenidoLimpio, JsonObject.class);
+
+                if (jsonHallazgos != null && jsonHallazgos.has("hallazgos")) {
+                    JsonArray arrayHallazgos = jsonHallazgos.getAsJsonArray("hallazgos");
+
+                    rastrear("Se encontraron " + arrayHallazgos.size() + " hallazgos en JSON");
+
+                    for (JsonElement elemento : arrayHallazgos) {
+                        JsonObject obj = elemento.getAsJsonObject();
+                        String descripcion = obj.has("descripcion") ? obj.get("descripcion").getAsString() : "Sin descripción";
+                        String severidad = obj.has("severidad") ? obj.get("severidad").getAsString() : "Info";
+                        String confianza = obj.has("confianza") ? obj.get("confianza").getAsString() : "Low";
+
+                        // Normalizar severidad
+                        severidad = normalizarSeveridad(severidad);
+                        confianza = normalizarConfianza(confianza);
+
+                        Hallazgo hallazgo = new Hallazgo(solicitud.obtenerUrl(), descripcion, severidad, confianza, solicitud.obtenerSolicitudHttp());
+                        hallazgos.add(hallazgo);
+
+                        rastrear("Hallazgo agregado: " + descripcion + " (" + severidad + ", " + confianza + ")");
+                    }
+                } else {
+                    rastrear("JSON no contiene campo 'hallazgos', intentando parsing de texto plano");
+                    // Fallback: parsing de texto plano
+                    hallazgos.addAll(parsearTextoPlano(contenido));
+                }
+            } catch (Exception e) {
+                rastrear("No se pudo parsear como JSON de hallazgos: " + e.getMessage());
+                rastrear("Intentando parsing de texto plano como fallback");
+                // Fallback: parsing de texto plano
+                hallazgos.addAll(parsearTextoPlano(contenido));
+            }
+
+            String marcaTiempo = LocalDateTime.now().format(
+                    DateTimeFormatter.ofPattern("HH:mm:ss")
+            );
+
+            rastrear("Total de hallazgos parseados: " + hallazgos.size());
+
+            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), marcaTiempo, hallazgos, solicitud.obtenerSolicitudHttp());
+
+        } catch (Exception e) {
+            registrarError("Error al parsear respuesta de API: " + e.getMessage());
+            rastrear("JSON fallido:\n" + respuestaJson);
+
+            String marcaTiempo = LocalDateTime.now().format(
+                    DateTimeFormatter.ofPattern("HH:mm:ss")
+            );
+            List<Hallazgo> hallazgosError = new ArrayList<>();
+            hallazgosError.add(new Hallazgo(
+                solicitud.obtenerUrl(),
+                "Error al parsear respuesta: " + e.getMessage(),
+                "Info",
+                "Baja",
+                solicitud.obtenerSolicitudHttp()
+            ));
+
+            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), marcaTiempo, hallazgosError, solicitud.obtenerSolicitudHttp());
+        }
+    }
+
+    private List<Hallazgo> parsearTextoPlano(String contenido) {
+        List<Hallazgo> hallazgos = new ArrayList<>();
+
+        try {
+            String[] lineas = contenido.split("\n");
+            StringBuilder descripcion = new StringBuilder();
+            String severidad = "Info";
+            String confianza = "Low";
+
+            for (String linea : lineas) {
+                linea = linea.trim();
+
+                if (linea.toLowerCase().contains("severidad:") ||
+                    linea.toLowerCase().contains("severity:")) {
+                    String sev = linea.replaceAll("(?i)(severidad:|severity:)", "").trim();
+                    severidad = normalizarSeveridad(sev);
+                } else if (linea.toLowerCase().contains("vulnerabilidad") ||
+                           linea.toLowerCase().contains("descripcion:") ||
+                           linea.toLowerCase().contains("description:")) {
+                    if (descripcion.length() > 0) {
+                        // Guardar hallazgo anterior
+                        hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), descripcion.toString(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
+                        descripcion = new StringBuilder();
+                    }
+                    descripcion.append(linea.replaceAll("(?i)(vulnerabilidad|descripcion:|description:)", "").trim());
+                } else if (linea.length() > 0 && !linea.startsWith("{") && !linea.startsWith("}")) {
+                    descripcion.append(" ").append(linea);
+                }
+            }
+
+            if (descripcion.length() > 0) {
+                hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), descripcion.toString().trim(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
+            }
+
+            // Si no se encontró nada, crear un hallazgo genérico
+            if (hallazgos.isEmpty() && contenido.length() > 0) {
+                String sev = extraerSeveridad(contenido);
+                hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), contenido.substring(0, Math.min(200, contenido.length())), sev, "Low", solicitud.obtenerSolicitudHttp()));
+            }
+
+        } catch (Exception e) {
+            rastrear("Error al parsear texto plano: " + e.getMessage());
+        }
+
+        return hallazgos;
+    }
+
+    private String normalizarSeveridad(String severidad) {
+        if (severidad == null) return "Info";
+
+        String s = severidad.toLowerCase();
+        if (s.contains("critica") || s.contains("critical")) return "Critical";
+        if (s.contains("alta") || s.contains("high")) return "High";
+        if (s.contains("media") || s.contains("medium") || s.contains("moderada")) return "Medium";
+        if (s.contains("baja") || s.contains("low")) return "Low";
+        return "Info";
+    }
+
+    private String normalizarConfianza(String confianza) {
+        if (confianza == null) return "Medium";
+
+        String c = confianza.toLowerCase();
+        if (c.contains("alta") || c.contains("high")) return "High";
+        if (c.contains("baja") || c.contains("low")) return "Low"; // Correcto: baja → Low
+        return "Medium";
+    }
+
+    private String extraerSeveridad(String contenido) {
+        String minusculas = contenido.toLowerCase();
+        String severidad;
+
+        if (minusculas.contains("alta") || minusculas.contains("high") || minusculas.contains("critica") ||
+                minusculas.contains("critical") || minusculas.contains("severa")) {
+            severidad = "Alta";
+        } else if (minusculas.contains("media") || minusculas.contains("medium") ||
+                minusculas.contains("moderada")) {
+            severidad = "Media";
+        } else {
+            severidad = "Baja";
+        }
+
+        rastrear("Severidad extraida: " + severidad + " del contenido");
+        return severidad;
+    }
+
+    private void registrar(String mensaje) {
+        if (gestorConsola != null) {
+            gestorConsola.registrarInfo(mensaje);
+        }
+        // También escribir al stdout original
+        stdout.println("[BurpIA] " + mensaje);
+        stdout.flush();
+    }
+
+    private void rastrear(String mensaje) {
+        if (config.esDetallado()) {
+            if (gestorConsola != null) {
+                gestorConsola.registrarVerbose(mensaje);
+            }
+            // También escribir al stdout original
+            stdout.println("[BurpIA] [RASTREO] " + mensaje);
+            stdout.flush();
+        }
+    }
+
+    private void registrarError(String mensaje) {
+        if (gestorConsola != null) {
+            gestorConsola.registrarError(mensaje);
+        }
+        // También escribir al stderr original
+        stderr.println("[BurpIA] [ERROR] " + mensaje);
+        stderr.flush();
+    }
+}
