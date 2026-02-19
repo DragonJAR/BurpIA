@@ -33,3 +33,4 @@ build.gradle
 /.gradle
 /build
 /.gradle-local
+build-jar.sh

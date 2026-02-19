@@ -167,7 +167,8 @@ public class ProbadorConexionAI {
 
         mensaje.append("📋 Configuración:\n");
         mensaje.append("   Modelo: ").append(config.obtenerModelo()).append("\n");
-        mensaje.append("   URL: ").append(config.obtenerUrlApiBase()).append("\n\n");
+        mensaje.append("   URL base: ").append(ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi())).append("\n");
+        mensaje.append("   Endpoint probado: ").append(config.obtenerUrlApi()).append("\n\n");
 
         if (respuestaValida) {
             mensaje.append("💬 Mensaje enviado: \"Hola, escribe OK\"\n\n");
