@@ -10,6 +10,7 @@ import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.LimitadorTasa;
+import com.burpia.util.ParserRespuestasAI;
 import com.burpia.util.ReparadorJson;
 
 import okhttp3.*;
@@ -21,6 +22,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 
 public class AnalizadorAI implements Runnable {
     private final SolicitudAnalisis solicitud;
@@ -33,6 +35,8 @@ public class AnalizadorAI implements Runnable {
     private final Gson gson;
     private final ConstructorPrompts constructorPrompt;
     private final GestorConsolaGUI gestorConsola;
+    private final BooleanSupplier tareaCancelada;
+    private final BooleanSupplier tareaPausada;
 
     // Cliente HTTP compartido entre todas las instancias para evitar agotamiento de recursos
     private static final OkHttpClient CLIENTE_COMPARTIDO = new OkHttpClient.Builder()
@@ -44,10 +48,12 @@ public class AnalizadorAI implements Runnable {
     public interface Callback {
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
         void alErrorAnalisis(String error);
+        default void alCanceladoAnalisis() {}
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
-                     LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola) {
+                     LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola,
+                     BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
         this.solicitud = solicitud;
         this.config = config;
         this.stdout = stdout;
@@ -58,32 +64,45 @@ public class AnalizadorAI implements Runnable {
         this.clienteHttp = CLIENTE_COMPARTIDO; // Usar cliente compartido
         this.gson = new Gson();
         this.constructorPrompt = new ConstructorPrompts(config);
+        this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
+        this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
     }
 
     // Constructor sobrecargado para compatibilidad con código existente
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback) {
-        this(solicitud, config, stdout, stderr, limitador, callback, null);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, null, null);
+    }
+
+    // Constructor sobrecargado para código existente con consola
+    public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
+                     LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola) {
+        this(solicitud, config, stdout, stderr, limitador, callback, gestorConsola, null, null);
     }
 
     @Override
     public void run() {
         String nombreHilo = Thread.currentThread().getName();
         long tiempoInicio = System.currentTimeMillis();
+        boolean permisoAdquirido = false;
 
         registrar("[" + nombreHilo + "] AnalizadorAI iniciado para URL: " + solicitud.obtenerUrl());
         rastrear("[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud());
 
         try {
+            verificarCancelacion();
+            esperarSiPausada();
+
             rastrear("[" + nombreHilo + "] Adquiriendo permiso del limitador (disponibles: " +
                     limitador.permisosDisponibles() + ")");
             limitador.adquirir();
+            permisoAdquirido = true;
             rastrear("[" + nombreHilo + "] Permiso de limitador adquirido");
 
             // Retraso de limitacion de tasa
             int retrasoSegundos = config.obtenerRetrasoSegundos();
             rastrear("[" + nombreHilo + "] Durmiendo por " + retrasoSegundos + " segundos antes de llamar a la API");
-            Thread.sleep(retrasoSegundos * 1000L);
+            esperarConControl(retrasoSegundos * 1000L);
 
             registrar("Analizando: " + solicitud.obtenerUrl());
 
@@ -99,8 +118,14 @@ public class AnalizadorAI implements Runnable {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             long duracion = System.currentTimeMillis() - tiempoInicio;
-            registrarError("[" + nombreHilo + "] Analisis interrumpido despues de " + duracion + "ms: " + e.getMessage());
-            callback.alErrorAnalisis("Analisis interrumpido: " + e.getMessage());
+            String causa = e.getMessage() != null ? e.getMessage() : "interrupción";
+            if (esCancelada()) {
+                registrar("[" + nombreHilo + "] Analisis cancelado por usuario (" + duracion + "ms)");
+                callback.alCanceladoAnalisis();
+            } else {
+                registrarError("[" + nombreHilo + "] Analisis interrumpido despues de " + duracion + "ms: " + causa);
+                callback.alErrorAnalisis("Analisis interrumpido: " + causa);
+            }
         } catch (Exception e) {
             long duracion = System.currentTimeMillis() - tiempoInicio;
             registrarError("[" + nombreHilo + "] Analisis fallido despues de " + duracion + "ms: " + e.getMessage());
@@ -108,42 +133,63 @@ public class AnalizadorAI implements Runnable {
                     ", url=" + solicitud.obtenerUrl() + ", longitud_cuerpo=" + solicitud.obtenerCuerpo().length());
             callback.alErrorAnalisis(e.getMessage());
         } finally {
-            limitador.liberar();
-            rastrear("[" + nombreHilo + "] Permiso de limitador liberado (disponibles: " +
-                    limitador.permisosDisponibles() + ")");
+            if (permisoAdquirido) {
+                limitador.liberar();
+                rastrear("[" + nombreHilo + "] Permiso de limitador liberado (disponibles: " +
+                        limitador.permisosDisponibles() + ")");
+            }
+        }
+    }
+
+    private boolean esCancelada() {
+        return tareaCancelada.getAsBoolean();
+    }
+
+    private boolean esPausada() {
+        return tareaPausada.getAsBoolean();
+    }
+
+    private void verificarCancelacion() throws InterruptedException {
+        if (esCancelada()) {
+            throw new InterruptedException("Tarea cancelada por usuario");
+        }
+    }
+
+    private void esperarSiPausada() throws InterruptedException {
+        while (esPausada() && !esCancelada()) {
+            Thread.sleep(250);
+        }
+        verificarCancelacion();
+    }
+
+    private void esperarConControl(long milisegundos) throws InterruptedException {
+        long restante = milisegundos;
+        while (restante > 0) {
+            verificarCancelacion();
+            esperarSiPausada();
+            long espera = Math.min(restante, 250);
+            Thread.sleep(espera);
+            restante -= espera;
         }
     }
 
     private String llamarAPIAI() throws IOException {
+        try {
+            verificarCancelacion();
+            esperarSiPausada();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Analisis cancelado/interrumpido por usuario", e);
+        }
+
         rastrear("Construyendo prompt para URL: " + solicitud.obtenerUrl());
 
         String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
         rastrear("Longitud de prompt: " + prompt.length() + " caracteres");
         rastrear("Prompt completo:\n" + prompt);
 
-        JsonObject carga = new JsonObject();
-        carga.addProperty("model", config.obtenerModelo());
-
-        JsonArray mensajes = new JsonArray();
-        JsonObject mensajeUsuario = new JsonObject();
-        mensajeUsuario.addProperty("role", "user");
-        mensajeUsuario.addProperty("content", prompt);
-        mensajes.add(mensajeUsuario);
-        carga.add("messages", mensajes);
-
-        String cadenaCarga = carga.toString();
-        rastrear("Carga de API:\n" + cadenaCarga);
+        Request solicitudHttp = construirSolicitudApi(prompt);
         registrar("Llamando a API: " + config.obtenerUrlApi() + " con modelo: " + config.obtenerModelo());
-
-        Request solicitudHttp = new Request.Builder()
-                .url(config.obtenerUrlApi())
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer " + config.obtenerClaveApi())
-                .post(RequestBody.create(
-                        MediaType.parse("application/json"),
-                        cadenaCarga
-                ))
-                .build();
 
         // SECURITY FIX: NO loggear la API key ni parcialmente
         // Los logs pueden ser accedidos por usuarios no autorizados
@@ -175,6 +221,79 @@ public class AnalizadorAI implements Runnable {
         }
     }
 
+    private Request construirSolicitudApi(String prompt) {
+        String proveedor = config.obtenerProveedorAI();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            proveedor = "OpenAI";
+        }
+
+        JsonObject carga = new JsonObject();
+        Request.Builder builder = new Request.Builder()
+                .url(config.obtenerUrlApi())
+                .addHeader("Content-Type", "application/json")
+                .addHeader("Accept", "application/json");
+
+        switch (proveedor) {
+            case "Claude":
+                carga.addProperty("model", config.obtenerModelo());
+                carga.addProperty("max_tokens", config.obtenerMaxTokensParaProveedor(proveedor));
+                JsonArray mensajesClaude = new JsonArray();
+                JsonObject mensajeClaude = new JsonObject();
+                mensajeClaude.addProperty("role", "user");
+                mensajeClaude.addProperty("content", prompt);
+                mensajesClaude.add(mensajeClaude);
+                carga.add("messages", mensajesClaude);
+                builder.addHeader("x-api-key", config.obtenerClaveApi());
+                builder.addHeader("anthropic-version", "2023-06-01");
+                break;
+
+            case "Gemini":
+                JsonArray contenidos = new JsonArray();
+                JsonObject contenido = new JsonObject();
+                JsonArray partes = new JsonArray();
+                JsonObject parte = new JsonObject();
+                parte.addProperty("text", prompt);
+                partes.add(parte);
+                contenido.add("parts", partes);
+                contenidos.add(contenido);
+                carga.add("contents", contenidos);
+                builder.addHeader("x-goog-api-key", config.obtenerClaveApi());
+                break;
+
+            case "Ollama":
+                carga.addProperty("model", config.obtenerModelo());
+                carga.addProperty("stream", false);
+                JsonArray mensajesOllama = new JsonArray();
+                JsonObject mensajeOllama = new JsonObject();
+                mensajeOllama.addProperty("role", "user");
+                mensajeOllama.addProperty("content", prompt);
+                mensajesOllama.add(mensajeOllama);
+                carga.add("messages", mensajesOllama);
+                break;
+
+            case "OpenAI":
+            case "Z.ai":
+            case "minimax":
+            default:
+                carga.addProperty("model", config.obtenerModelo());
+                JsonArray mensajes = new JsonArray();
+                JsonObject mensajeUsuario = new JsonObject();
+                mensajeUsuario.addProperty("role", "user");
+                mensajeUsuario.addProperty("content", prompt);
+                mensajes.add(mensajeUsuario);
+                carga.add("messages", mensajes);
+                builder.addHeader("Authorization", "Bearer " + config.obtenerClaveApi());
+                break;
+        }
+
+        String cadenaCarga = carga.toString();
+        rastrear("Carga de API:\n" + cadenaCarga);
+        return builder.post(RequestBody.create(
+            MediaType.parse("application/json"),
+            cadenaCarga
+        )).build();
+    }
+
     /**
      * Sistema de retry con backoff exponencial para llamadas a la API.
      * Estrategia:
@@ -191,12 +310,17 @@ public class AnalizadorAI implements Runnable {
         registrar("Sistema de retry: Iniciando 3 intentos inmediatos...");
         for (int i = 0; i < 3; i++) {
             try {
+                verificarCancelacion();
+                esperarSiPausada();
                 registrar("Intento inmediato #" + (i + 1) + " de 3");
                 return llamarAPIAI();
             } catch (IOException e) {
                 ultimaExcepcion = e;
                 registrar("Intento #" + (i + 1) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
                 // No esperar entre intentos inmediatos
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Sistema de retry cancelado/interrumpido", e);
             }
         }
 
@@ -209,18 +333,23 @@ public class AnalizadorAI implements Runnable {
                      " segundos antes del próximo reintento (intentos: " + (3 + i + 1) + " de 6)");
 
             try {
-                Thread.sleep(esperaSegundos * 1000L);
+                esperarConControl(esperaSegundos * 1000L);
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Sistema de retry interrumpido", ie);
             }
 
             try {
+                verificarCancelacion();
+                esperarSiPausada();
                 registrar("Reintento #" + (4 + i) + " después de esperar " + esperaSegundos + " segundos");
                 return llamarAPIAI();
             } catch (IOException e) {
                 ultimaExcepcion = e;
                 registrar("Reintento #" + (4 + i) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Sistema de retry cancelado/interrumpido", e);
             }
         }
 
@@ -254,28 +383,10 @@ public class AnalizadorAI implements Runnable {
             }
 
             JsonObject json = gson.fromJson(respuestaJson, JsonObject.class);
-
-            // Manejar diferentes formatos de respuesta para extraer contenido
-            String contenido;
-            if (json.has("choices") && json.getAsJsonArray("choices").size() > 0) {
-                // Formato OpenAI
-                contenido = json.getAsJsonArray("choices")
-                        .get(0).getAsJsonObject()
-                        .getAsJsonObject("message")
-                        .get("content").getAsString();
-            } else if (json.has("data")) {
-                // Formato Zhipu/GLM
-                JsonObject datos = json.getAsJsonObject("data");
-                if (datos.has("choices")) {
-                    contenido = datos.getAsJsonArray("choices")
-                            .get(0).getAsJsonObject()
-                            .getAsJsonObject("message")
-                            .get("content").getAsString();
-                } else {
-                    contenido = datos.get("content").getAsString();
-                }
-            } else {
-                contenido = json.toString();
+            String proveedor = config.obtenerProveedorAI() != null ? config.obtenerProveedorAI() : "";
+            String contenido = ParserRespuestasAI.extraerContenido(respuestaJson, proveedor);
+            if (contenido == null || contenido.trim().isEmpty()) {
+                contenido = json != null ? json.toString() : "";
             }
 
             rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
@@ -437,12 +548,12 @@ public class AnalizadorAI implements Runnable {
 
         if (minusculas.contains("alta") || minusculas.contains("high") || minusculas.contains("critica") ||
                 minusculas.contains("critical") || minusculas.contains("severa")) {
-            severidad = "Alta";
+            severidad = "High";
         } else if (minusculas.contains("media") || minusculas.contains("medium") ||
                 minusculas.contains("moderada")) {
-            severidad = "Media";
+            severidad = "Medium";
         } else {
-            severidad = "Baja";
+            severidad = "Low";
         }
 
         rastrear("Severidad extraida: " + severidad + " del contenido");

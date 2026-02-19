@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 
@@ -16,7 +17,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final ConcurrentHashMap<String, Long> ultimoClic;
 
     public interface ConsumerSolicitud {
-        void analizarSolicitud(String solicitud, boolean forzarAnalisis);
+        void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis);
     }
 
     public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis) {
@@ -34,7 +35,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
 
         // Capturar la solicitud ANTES de crear el ActionListener para evitar problemas de scope
-        final String solicitudCapturada = evento.selectedRequestResponses().get(0).request().toString();
+        final HttpRequest solicitudCapturada = evento.selectedRequestResponses().get(0).request();
 
         JMenuItem itemAnalizar = new JMenuItem("Analizar Solicitud con BurpIA");
         itemAnalizar.addActionListener(e -> {
@@ -46,8 +47,9 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         return itemsMenu;
     }
 
-    private void manejarClicConDebounce(String solicitud) {
-        String hash = String.valueOf(solicitud.hashCode());
+    private void manejarClicConDebounce(HttpRequest solicitud) {
+        String contenido = solicitud != null ? solicitud.toString() : "null";
+        String hash = String.valueOf(contenido.hashCode());
         long ahora = System.currentTimeMillis();
 
         Long ultimoClicTime = ultimoClic.get(hash);

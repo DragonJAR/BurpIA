@@ -15,6 +15,7 @@ import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
 import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.ui.DialogoConfiguracion;
+import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
@@ -37,6 +38,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private GestorConsolaGUI gestorConsola;
     private ModeloTablaHallazgos modeloTablaHallazgos;
     private ModeloTablaTareas modeloTablaTareas;
+    private FabricaMenuContextual fabricaMenuContextual;
 
     public ExtensionBurpIA() {
     }
@@ -116,6 +118,14 @@ public class ExtensionBurpIA implements BurpExtension {
         api.http().registerHttpHandler(manejadorHttp);
         registrar("Manejador HTTP registrado exitosamente");
 
+        fabricaMenuContextual = new FabricaMenuContextual(api, (solicitud, forzarAnalisis) -> {
+            if (forzarAnalisis && manejadorHttp != null) {
+                manejadorHttp.analizarSolicitudForzada(solicitud);
+            }
+        });
+        api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
+        registrar("Menu contextual de BurpIA registrado exitosamente");
+
         api.logging().logToOutput("==================================================");
         api.logging().logToOutput(" BurpIA v1.0.0 - Complemento de Seguridad con IA Cargado");
         api.logging().logToOutput(" Modo detallado: " + (config.esDetallado() ? "ACTIVADO" : "desactivado"));
@@ -170,6 +180,11 @@ public class ExtensionBurpIA implements BurpExtension {
         if (pestaniaPrincipal != null) {
             pestaniaPrincipal.destruir();
             pestaniaPrincipal = null;
+        }
+
+        if (gestorTareas != null) {
+            gestorTareas.shutdown();
+            gestorTareas = null;
         }
 
         if (limitador != null) {

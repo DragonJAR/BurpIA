@@ -10,6 +10,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PanelTareas extends JPanel {
     private final ModeloTablaTareas modelo;
@@ -176,11 +178,6 @@ public class PanelTareas extends JPanel {
             );
             if (confirmacion == JOptionPane.YES_OPTION) {
                 gestorTareas.limpiarCompletadas();
-                modelo.eliminarPorEstado(
-                    Tarea.ESTADO_COMPLETADO,
-                    Tarea.ESTADO_ERROR,
-                    Tarea.ESTADO_CANCELADO
-                );
                 actualizarEstadisticas();
             }
         });
@@ -342,7 +339,6 @@ public class PanelTareas extends JPanel {
             menuItemLimpiar.addActionListener(e -> {
                 if (tareaId != null) {
                     gestorTareas.limpiarTarea(tareaId);
-                    modelo.eliminarTarea(filaModelo);
                     actualizarEstadisticas();
                 }
             });
@@ -497,23 +493,29 @@ public class PanelTareas extends JPanel {
     }
 
     private void eliminarTareasSeleccionadas(int[] filas) {
-        Integer[] filasOrdenadas = new Integer[filas.length];
-        for (int i = 0; i < filas.length; i++) {
-            filasOrdenadas[i] = filas[i];
-        }
-        java.util.Arrays.sort(filasOrdenadas, java.util.Collections.reverseOrder());
+        List<String> idsAEliminar = new ArrayList<>();
 
-        int contador = 0;
-        for (int fila : filasOrdenadas) {
+        for (int fila : filas) {
             int filaModelo = tabla.convertRowIndexToModel(fila);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
-            String tareaId = modelo.obtenerIdTarea(filaModelo);
-            if (tareaId != null && (Tarea.ESTADO_COMPLETADO.equals(estado) || Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado))) {
-                gestorTareas.limpiarTarea(tareaId);
-                modelo.eliminarTarea(filaModelo);
-                contador++;
+            if (filaModelo >= 0 && filaModelo < modelo.getRowCount()) {
+                String estado = (String) modelo.getValueAt(filaModelo, 2);
+                if (Tarea.ESTADO_COMPLETADO.equals(estado) ||
+                    Tarea.ESTADO_ERROR.equals(estado) ||
+                    Tarea.ESTADO_CANCELADO.equals(estado)) {
+                    String tareaId = modelo.obtenerIdTarea(filaModelo);
+                    if (tareaId != null) {
+                        idsAEliminar.add(tareaId);
+                    }
+                }
             }
         }
+
+        int contador = 0;
+        for (String tareaId : idsAEliminar) {
+            gestorTareas.limpiarTarea(tareaId);
+            contador++;
+        }
+
         actualizarEstadisticas();
         mostrarMensaje("Tareas eliminadas: " + contador);
     }

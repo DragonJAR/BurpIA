@@ -1,9 +1,9 @@
 package com.burpia.util;
 
 import com.burpia.model.Tarea;
+import com.burpia.ui.ModeloTablaTareas;
 
 import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -13,21 +13,18 @@ public class GestorTareas {
     private final Map<String, Tarea> tareas;
     private final ReentrantLock candado;
     private final javax.swing.Timer temporizadorVerificacion;
-    private final DefaultTableModel modeloTabla;
+    private final ModeloTablaTareas modeloTabla;
     private final Consumer<String> logger;
-    private final Map<String, Integer> indiceFilas; // Mapeo URL -> indice fila para O(1) updates
 
-    private static final long INTERVALO_VERIFICACION_MS = 30000; // 30 segundos
-    private static final long TAREA_ATASCADA_MS = 300000; // 5 minutos
+    private static final long INTERVALO_VERIFICACION_MS = 30000;
+    private static final long TAREA_ATASCADA_MS = 300000;
 
-    public GestorTareas(DefaultTableModel modeloTabla, Consumer<String> logger) {
+    public GestorTareas(ModeloTablaTareas modeloTabla, Consumer<String> logger) {
         this.tareas = new ConcurrentHashMap<>();
         this.candado = new ReentrantLock();
         this.modeloTabla = modeloTabla;
         this.logger = logger;
-        this.indiceFilas = new ConcurrentHashMap<>();
 
-        // Iniciar temporizador de verificacion
         this.temporizadorVerificacion = new javax.swing.Timer(
             (int) INTERVALO_VERIFICACION_MS,
             e -> verificarTareasAtascadas()
@@ -43,11 +40,7 @@ public class GestorTareas {
         candado.lock();
         try {
             tareas.put(id, tarea);
-            SwingUtilities.invokeLater(() -> {
-                int rowIndex = modeloTabla.getRowCount();
-                modeloTabla.addRow(tarea.aFilaTabla());
-                indiceFilas.put(url, rowIndex); // Track row index for O(1) updates
-            });
+            modeloTabla.agregarTarea(tarea);
             logger.accept("Tarea creada: " + tipo + " - " + url);
         } finally {
             candado.unlock();
@@ -125,7 +118,6 @@ public class GestorTareas {
         candado.lock();
         try {
             List<String> idsAEliminar = new ArrayList<>();
-            List<String> urlsAEliminar = new ArrayList<>();
 
             for (Map.Entry<String, Tarea> entry : tareas.entrySet()) {
                 String estado = entry.getValue().obtenerEstado();
@@ -133,28 +125,17 @@ public class GestorTareas {
                     estado.equals(Tarea.ESTADO_ERROR) ||
                     estado.equals(Tarea.ESTADO_CANCELADO)) {
                     idsAEliminar.add(entry.getKey());
-                    urlsAEliminar.add(entry.getValue().obtenerUrl());
                 }
             }
 
             for (String id : idsAEliminar) {
                 tareas.remove(id);
             }
-
-            // Limpiar mapeo de indices
-            for (String url : urlsAEliminar) {
-                indiceFilas.remove(url);
-            }
-
-            // Recrear tabla
-            SwingUtilities.invokeLater(() -> {
-                modeloTabla.setRowCount(0);
-                int newIndex = 0;
-                for (Tarea tarea : tareas.values()) {
-                    modeloTabla.addRow(tarea.aFilaTabla());
-                    indiceFilas.put(tarea.obtenerUrl(), newIndex++);
-                }
-            });
+            modeloTabla.eliminarPorEstado(
+                Tarea.ESTADO_COMPLETADO,
+                Tarea.ESTADO_ERROR,
+                Tarea.ESTADO_CANCELADO
+            );
 
             logger.accept("Tareas limpiadas: " + idsAEliminar.size());
         } finally {
@@ -196,15 +177,7 @@ public class GestorTareas {
     }
 
     private void actualizarFilaTabla(Tarea tarea) {
-        SwingUtilities.invokeLater(() -> {
-            Integer rowIndex = indiceFilas.get(tarea.obtenerUrl());
-            if (rowIndex != null && rowIndex < modeloTabla.getRowCount()) {
-                Object[] fila = tarea.aFilaTabla();
-                for (int j = 0; j < fila.length; j++) {
-                    modeloTabla.setValueAt(fila[j], rowIndex, j);
-                }
-            }
-        });
+        modeloTabla.actualizarTarea(tarea);
     }
 
     public Collection<Tarea> obtenerTareas() {
@@ -300,31 +273,19 @@ public class GestorTareas {
     }
 
     public void limpiarTarea(String id) {
-        final String urlAEliminar;
-
         candado.lock();
         try {
             Tarea tarea = tareas.remove(id);
             if (tarea == null) {
                 return;
             }
-            urlAEliminar = tarea.obtenerUrl();
-            indiceFilas.remove(urlAEliminar);
         } finally {
             candado.unlock();
         }
 
-        SwingUtilities.invokeLater(() -> {
-            for (int i = 0; i < modeloTabla.getRowCount(); i++) {
-                String urlEnTabla = (String) modeloTabla.getValueAt(i, 1);
-                if (urlEnTabla.equals(urlAEliminar)) {
-                    modeloTabla.removeRow(i);
-                    break;
-                }
-            }
-        });
+        modeloTabla.eliminarTareaPorId(id);
 
-        logger.accept("Tarea limpiada: " + urlAEliminar);
+        logger.accept("Tarea limpiada: " + id);
     }
 
     public void detener() {
@@ -335,7 +296,7 @@ public class GestorTareas {
         candado.lock();
         try {
             tareas.clear();
-            indiceFilas.clear();
+            modeloTabla.limpiar();
         } finally {
             candado.unlock();
         }

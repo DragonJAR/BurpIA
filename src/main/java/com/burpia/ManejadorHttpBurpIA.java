@@ -7,7 +7,6 @@ import burp.api.montoya.http.handler.HttpResponseReceived;
 import burp.api.montoya.http.handler.RequestToBeSentAction;
 import burp.api.montoya.http.handler.ResponseReceivedAction;
 import burp.api.montoya.http.message.requests.HttpRequest;
-import burp.api.montoya.http.message.responses.HttpResponse;
 import burp.api.montoya.scanner.audit.issues.AuditIssue;
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
@@ -96,6 +95,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         registrar("ManejadorHttpBurpIA inicializado (maximoConcurrente=" + config.obtenerMaximoConcurrente() +
             ", retraso=" + config.obtenerRetrasoSegundos() + "s, detallado=" + config.esDetallado() + ")");
+        registrar("NOTA: Solo se analizaran solicitudes DENTRO del SCOPE de Burp Suite");
     }
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
@@ -141,7 +141,15 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         rastrear("Respuesta recibida: " + metodo + " " + url + " (estado: " + codigoEstado + ")");
-        registrar("Procesando: " + metodo + " " + url);
+
+        // === VERIFICACION DE SCOPE ===
+        // Solo analizar solicitudes que esten dentro del scope de Burp Suite
+        if (!estaEnScope(respuestaRecibida.initiatingRequest())) {
+            rastrear("FUERA DE SCOPE - Omitiendo: " + url);
+            return ResponseReceivedAction.continueWith(respuestaRecibida);
+        }
+
+        registrar("DENTRO DE SCOPE - Procesando: " + metodo + " " + url);
 
         if (esRecursoEstatico(url)) {
             if (estadisticas != null) {
@@ -194,70 +202,120 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         SolicitudAnalisis solicitudAnalisis = new SolicitudAnalisis(
             url, metodo, encabezados, cuerpo, hashSolicitud, respuestaRecibida.initiatingRequest()
         );
+        programarAnalisis(solicitudAnalisis, respuestaCapturada, "Analisis HTTP");
 
+        return ResponseReceivedAction.continueWith(respuestaRecibida);
+    }
+
+    public void analizarSolicitudForzada(HttpRequest solicitud) {
+        if (solicitud == null) {
+            registrarError("No se pudo analizar solicitud forzada: request null");
+            return;
+        }
+
+        String url = solicitud.url() != null ? solicitud.url() : "[URL NULL]";
+        String metodo = solicitud.method() != null ? solicitud.method() : "[METHOD NULL]";
+        String cadenaSolicitud = solicitud.toString() != null ? solicitud.toString() : metodo + " " + url;
+        String hashSolicitud = generarHash(cadenaSolicitud.getBytes());
+        String encabezados = extraerEncabezados(solicitud);
+        String cuerpo = "";
+        try {
+            byte[] bodyBytes = solicitud.body().getBytes();
+            if (bodyBytes != null && bodyBytes.length > 0) {
+                cuerpo = solicitud.bodyToString();
+                if (cuerpo == null) {
+                    cuerpo = "";
+                }
+            }
+        } catch (Exception ignored) {
+            cuerpo = "";
+        }
+
+        SolicitudAnalisis solicitudAnalisis = new SolicitudAnalisis(
+            url, metodo, encabezados, cuerpo, hashSolicitud, solicitud
+        );
+        registrar("Analisis forzado solicitado desde menu contextual: " + metodo + " " + url);
+        programarAnalisis(solicitudAnalisis, null, "Analisis Manual");
+    }
+
+    private void programarAnalisis(SolicitudAnalisis solicitudAnalisis,
+                                   HttpResponseReceived respuestaCapturada,
+                                   String tipoTarea) {
+        final String url = solicitudAnalisis.obtenerUrl();
         final AtomicReference<String> tareaIdRef = new AtomicReference<>();
+
         if (gestorTareas != null) {
             Tarea tarea = gestorTareas.crearTarea(
-                "Analisis HTTP",
+                tipoTarea,
                 url,
                 Tarea.ESTADO_EN_COLA,
-                "Esperando análisis"
+                "Esperando analisis"
             );
             tareaIdRef.set(tarea.obtenerId());
         }
 
         SwingUtilities.invokeLater(() -> {
-            pestaniaPrincipal.establecerEstado("Analizando: " + url);
-            pestaniaPrincipal.registrar("Iniciando analisis para: " + url);
+            if (pestaniaPrincipal != null) {
+                pestaniaPrincipal.establecerEstado("Analizando: " + url);
+                pestaniaPrincipal.registrar("Iniciando analisis para: " + url);
+            }
         });
 
-        AnalizadorAI analizador = new AnalizadorAI(solicitudAnalisis, config, stdout, stderr, limitador,
-                new AnalizadorAI.Callback() {
-                    @Override
-                    public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
-                        if (estadisticas != null) {
-                            estadisticas.incrementarAnalizados();
-                        }
+        AnalizadorAI analizador = new AnalizadorAI(
+            solicitudAnalisis,
+            config,
+            stdout,
+            stderr,
+            limitador,
+            new AnalizadorAI.Callback() {
+                @Override
+                public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
+                    String tareaId = tareaIdRef.get();
+                    boolean cancelada = gestorTareas != null && tareaId != null && gestorTareas.estaTareaCancelada(tareaId);
+                    if (cancelada) {
+                        registrar("Resultado descartado porque la tarea fue cancelada: " + url);
+                        return;
+                    }
 
-                        String tareaId = tareaIdRef.get();
-                        if (gestorTareas != null && tareaId != null) {
-                            gestorTareas.actualizarTarea(
-                                tareaId,
-                                Tarea.ESTADO_COMPLETADO,
-                                "Completado: " + resultado.obtenerNumeroHallazgos() + " hallazgos"
-                            );
-                        }
+                    if (estadisticas != null) {
+                        estadisticas.incrementarAnalizados();
+                    }
 
-                        if (resultado != null && resultado.obtenerHallazgos() != null) {
-                            for (Hallazgo hallazgo : resultado.obtenerHallazgos()) {
-                                if (hallazgo == null) {
-                                    continue;
+                    if (gestorTareas != null && tareaId != null) {
+                        gestorTareas.actualizarTarea(
+                            tareaId,
+                            Tarea.ESTADO_COMPLETADO,
+                            "Completado: " + (resultado != null ? resultado.obtenerNumeroHallazgos() : 0) + " hallazgos"
+                        );
+                    }
+
+                    if (resultado != null && resultado.obtenerHallazgos() != null) {
+                        for (Hallazgo hallazgo : resultado.obtenerHallazgos()) {
+                            if (hallazgo == null) {
+                                continue;
+                            }
+
+                            if (modeloTablaHallazgos != null) {
+                                SwingUtilities.invokeLater(() -> modeloTablaHallazgos.agregarHallazgo(hallazgo));
+                            }
+
+                            if (estadisticas != null) {
+                                String severidad = hallazgo.obtenerSeveridad();
+                                if (severidad != null) {
+                                    estadisticas.incrementarHallazgoSeveridad(severidad);
                                 }
+                            }
 
-                                if (modeloTablaHallazgos != null) {
-                                    SwingUtilities.invokeLater(() -> {
-                                        modeloTablaHallazgos.agregarHallazgo(hallazgo);
-                                    });
-                                }
-
-                                if (estadisticas != null) {
-                                    String severidad = hallazgo.obtenerSeveridad();
-                                    if (severidad != null) {
-                                        estadisticas.incrementarHallazgoSeveridad(severidad);
-                                    }
-                                }
-
+                            if (respuestaCapturada != null) {
                                 executorService.submit(() -> {
                                     try {
-                                        if (respuestaCapturada != null) {
-                                            AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(
-                                                hallazgo,
-                                                respuestaCapturada
-                                            );
-                                            if (auditIssue != null && api != null && api.siteMap() != null) {
-                                                api.siteMap().add(auditIssue);
-                                                rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
-                                            }
+                                        AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(
+                                            hallazgo,
+                                            respuestaCapturada
+                                        );
+                                        if (auditIssue != null && api != null && api.siteMap() != null) {
+                                            api.siteMap().add(auditIssue);
+                                            rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
                                         }
                                     } catch (Exception e) {
                                         registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
@@ -266,57 +324,123 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                                 });
                             }
                         }
-
-                        String resultadoUrl = resultado != null ? resultado.obtenerUrl() : "[URL NULL]";
-                        String severidadMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
-                        int numHallazgos = resultado != null ? resultado.obtenerNumeroHallazgos() : 0;
-
-                        registrar("Analisis completado: " + resultadoUrl +
-                            " (severidad maxima: " + severidadMax +
-                            ", hallazgos: " + numHallazgos + ")");
-
-                        SwingUtilities.invokeLater(() -> {
-                            if (pestaniaPrincipal != null) {
-                                pestaniaPrincipal.actualizarEstadisticas();
-                                pestaniaPrincipal.establecerEstado("Analisis completado");
-                            }
-                        });
                     }
 
-                    @Override
-                    public void alErrorAnalisis(String error) {
-                        if (estadisticas != null) {
-                            estadisticas.incrementarErrores();
+                    String severidadMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
+                    int numHallazgos = resultado != null ? resultado.obtenerNumeroHallazgos() : 0;
+                    registrar("Analisis completado: " + url +
+                        " (severidad maxima: " + severidadMax +
+                        ", hallazgos: " + numHallazgos + ")");
+
+                    SwingUtilities.invokeLater(() -> {
+                        if (pestaniaPrincipal != null) {
+                            pestaniaPrincipal.actualizarEstadisticas();
+                            pestaniaPrincipal.establecerEstado("Analisis completado");
                         }
+                    });
+                }
 
-                        String tareaId = tareaIdRef.get();
-                        if (gestorTareas != null && tareaId != null) {
-                            gestorTareas.actualizarTarea(
-                                tareaId,
-                                Tarea.ESTADO_ERROR,
-                                "Error: " + (error != null ? error : "Error desconocido")
-                            );
-                        }
+                @Override
+                public void alErrorAnalisis(String error) {
+                    String tareaId = tareaIdRef.get();
+                    boolean cancelada = gestorTareas != null && tareaId != null && gestorTareas.estaTareaCancelada(tareaId);
 
-                        String errorMsg = error != null ? error : "Error desconocido";
-                        registrarError("Analisis fallido para " + url + ": " + errorMsg);
-
-                        SwingUtilities.invokeLater(() -> {
-                            if (pestaniaPrincipal != null) {
-                                pestaniaPrincipal.registrar("Error de analisis: " + errorMsg);
-                                pestaniaPrincipal.establecerEstado("Analisis fallido");
-                                pestaniaPrincipal.actualizarEstadisticas();
-                            }
-                        });
+                    if (cancelada) {
+                        registrar("Analisis detenido por cancelacion de usuario: " + url);
+                        return;
                     }
-                },
-                gestorConsola
+
+                    if (estadisticas != null) {
+                        estadisticas.incrementarErrores();
+                    }
+
+                    if (gestorTareas != null && tareaId != null) {
+                        gestorTareas.actualizarTarea(
+                            tareaId,
+                            Tarea.ESTADO_ERROR,
+                            "Error: " + (error != null ? error : "Error desconocido")
+                        );
+                    }
+
+                    String errorMsg = error != null ? error : "Error desconocido";
+                    registrarError("Analisis fallido para " + url + ": " + errorMsg);
+
+                    SwingUtilities.invokeLater(() -> {
+                        if (pestaniaPrincipal != null) {
+                            pestaniaPrincipal.registrar("Error de analisis: " + errorMsg);
+                            pestaniaPrincipal.establecerEstado("Analisis fallido");
+                            pestaniaPrincipal.actualizarEstadisticas();
+                        }
+                    });
+                }
+
+                @Override
+                public void alCanceladoAnalisis() {
+                    String tareaId = tareaIdRef.get();
+                    if (gestorTareas != null && tareaId != null) {
+                        gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
+                    }
+                    registrar("Analisis cancelado por usuario: " + url);
+                }
+            },
+            gestorConsola,
+            () -> {
+                String tareaId = tareaIdRef.get();
+                return gestorTareas != null && tareaId != null && gestorTareas.estaTareaCancelada(tareaId);
+            },
+            () -> {
+                String tareaId = tareaIdRef.get();
+                return gestorTareas != null && tareaId != null && gestorTareas.estaTareaPausada(tareaId);
+            }
         );
 
         executorService.submit(analizador);
         registrar("Hilo de analisis iniciado para: " + url);
+    }
 
-        return ResponseReceivedAction.continueWith(respuestaRecibida);
+    /**
+     * Verifica si la solicitud esta dentro del scope de Burp Suite.
+     * Esto es CRITICO para asegurar que solo se analicen objetivos autorizados.
+     *
+     * @param solicitud La solicitud HTTP a verificar
+     * @return true si esta en scope, false si esta fuera de scope
+     */
+    private boolean estaEnScope(HttpRequest solicitud) {
+        if (solicitud == null) {
+            rastrear("Solicitud null, no se puede verificar scope");
+            return false;
+        }
+
+        try {
+            String url = solicitud.url();
+            if (url == null || url.isEmpty()) {
+                rastrear("URL null o vacia, no se puede verificar scope");
+                return false;
+            }
+
+            // Verificar scope usando la API de Burp
+            if (api != null && api.scope() != null) {
+                boolean enScope = api.scope().isInScope(url);
+
+                if (!enScope) {
+                    rastrear("URL fuera de scope: " + url);
+                } else {
+                    rastrear("URL dentro de scope: " + url);
+                }
+
+                return enScope;
+            }
+
+            // Si no hay API de scope disponible, registrar advertencia y permitir
+            // (comportamiento defensivo para no bloquear analisis)
+            rastrear("API de scope no disponible, permitiendo solicitud");
+            return true;
+
+        } catch (Exception e) {
+            // En caso de error, permitir la solicitud (comportamiento defensivo)
+            registrarError("Error al verificar scope: " + e.getMessage());
+            return true;
+        }
     }
 
     private boolean esRecursoEstatico(String url) {
@@ -433,11 +557,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             executorService.shutdown();
             try {
                 if (!executorService.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
-                    registrar("ExecutorService no terminó en 5 segundos, forzando shutdown...");
+                    registrar("ExecutorService no termino en 5 segundos, forzando shutdown...");
                     executorService.shutdownNow();
                 }
             } catch (InterruptedException e) {
-                registrarError("Error al esperar terminación de ExecutorService: " + e.getMessage());
+                registrarError("Error al esperar terminacion de ExecutorService: " + e.getMessage());
                 executorService.shutdownNow();
                 Thread.currentThread().interrupt();
             }

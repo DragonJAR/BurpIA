@@ -134,6 +134,28 @@ public class ModeloTablaTareas extends DefaultTableModel {
         });
     }
 
+    public int buscarIndicePorId(String idTarea) {
+        lock.lock();
+        try {
+            for (int i = 0; i < datos.size(); i++) {
+                Tarea tarea = datos.get(i);
+                if (tarea != null && tarea.obtenerId().equals(idTarea)) {
+                    return i;
+                }
+            }
+            return -1;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void eliminarTareaPorId(String idTarea) {
+        int indice = buscarIndicePorId(idTarea);
+        if (indice >= 0) {
+            eliminarTarea(indice);
+        }
+    }
+
     public int obtenerNumeroTareas() {
         lock.lock();
         try {
