@@ -84,8 +84,57 @@ public class ConfiguracionAPI {
     public void actualizarUrlParaProveedor() {
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedorAI);
         if (config != null) {
-            this.urlApi = config.obtenerUrlApi() + "/chat/completions";
+            this.urlApi = construirUrlApiProveedor(proveedorAI, config.obtenerUrlApi(), modelo);
         }
+    }
+
+    public static String construirUrlApiProveedor(String proveedor, String urlBase, String modelo) {
+        String baseNormalizada = normalizarUrlBase(urlBase);
+        String proveedorNormalizado = proveedor != null ? proveedor : "";
+        String modeloNormalizado = (modelo != null && !modelo.trim().isEmpty()) ? modelo.trim() : "gemini-1.5-pro";
+
+        switch (proveedorNormalizado) {
+            case "Claude":
+                return baseNormalizada + "/messages";
+            case "Gemini":
+                return baseNormalizada + "/models/" + modeloNormalizado + ":generateContent";
+            case "Ollama":
+                return baseNormalizada + "/api/chat";
+            case "OpenAI":
+            case "Z.ai":
+            case "minimax":
+            default:
+                return baseNormalizada + "/chat/completions";
+        }
+    }
+
+    public static String extraerUrlBase(String urlConfigurada) {
+        return normalizarUrlBase(urlConfigurada);
+    }
+
+    private static String normalizarUrlBase(String urlBase) {
+        String base = (urlBase == null) ? "" : urlBase.trim();
+        while (base.endsWith("/")) {
+            base = base.substring(0, base.length() - 1);
+        }
+
+        String[] sufijos = {
+            "/chat/completions",
+            "/messages",
+            "/api/chat"
+        };
+        for (String sufijo : sufijos) {
+            if (base.endsWith(sufijo)) {
+                return base.substring(0, base.length() - sufijo.length());
+            }
+        }
+
+        int idxGemini = base.indexOf("/models/");
+        if (idxGemini > 0) {
+            return base.substring(0, idxGemini);
+        }
+
+        return base;
     }
 
     public String obtenerUrlApiBase() {

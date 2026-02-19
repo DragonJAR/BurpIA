@@ -18,7 +18,6 @@ public class DialogoConfiguracion extends JDialog {
 
     private JTextField txtUrl;
     private JPasswordField txtClave;
-    private JTextField txtModelo;
     private JTextField txtRetraso;
     private JTextField txtMaximoConcurrente;
     private JCheckBox chkDetallado;
@@ -202,7 +201,7 @@ public class DialogoConfiguracion extends JDialog {
 
         btnRefrescarModelos = new JButton("🔄 Refresh");
         btnRefrescarModelos.setFont(EstilosUI.FUENTE_ESTANDAR);
-        btnRefrescarModelos.setToolTipText("Obtener lista de modelos desde el API");
+        btnRefrescarModelos.setToolTipText("Actualizar lista de modelos disponibles para el proveedor");
         btnRefrescarModelos.addActionListener(e -> refrescarModelosDesdeAPI());
         panelModelo.add(btnRefrescarModelos, BorderLayout.EAST);
 
@@ -509,7 +508,7 @@ public class DialogoConfiguracion extends JDialog {
 
         String urlApi = config.obtenerUrlApi();
         if (urlApi != null) {
-            String urlBase = urlApi.replace("/chat/completions", "");
+            String urlBase = ConfiguracionAPI.extraerUrlBase(urlApi);
             txtUrl.setText(urlBase);
         }
 
@@ -565,13 +564,6 @@ public class DialogoConfiguracion extends JDialog {
         String proveedorSeleccionado = (String) comboProveedor.getSelectedItem();
         config.establecerProveedorAI(proveedorSeleccionado);
 
-        String urlBase = txtUrl.getText().trim();
-        if (!urlBase.endsWith("/chat/completions")) {
-            urlBase = urlBase + "/chat/completions";
-        }
-        config.establecerUrlApi(urlBase);
-        config.establecerUrlBaseParaProveedor(proveedorSeleccionado, txtUrl.getText().trim());
-
         String claveApi = new String(txtClave.getPassword());
         config.establecerClaveApi(claveApi);
         config.establecerApiKeyParaProveedor(proveedorSeleccionado, claveApi);
@@ -582,6 +574,15 @@ public class DialogoConfiguracion extends JDialog {
         } else {
             config.establecerModelo(comboModelo.getEditor().getItem().toString().trim());
         }
+
+        String urlBase = txtUrl.getText().trim();
+        String urlCompleta = ConfiguracionAPI.construirUrlApiProveedor(
+            proveedorSeleccionado,
+            urlBase,
+            config.obtenerModelo()
+        );
+        config.establecerUrlApi(urlCompleta);
+        config.establecerUrlBaseParaProveedor(proveedorSeleccionado, urlBase);
 
         // Guardar Max Tokens por proveedor
         try {
@@ -614,13 +615,24 @@ public class DialogoConfiguracion extends JDialog {
             config.establecerRetrasoSegundos(Integer.parseInt(txtRetraso.getText()));
             config.establecerMaximoConcurrente(Integer.parseInt(txtMaximoConcurrente.getText()));
 
-            gestorConfig.guardarConfiguracion(config);
+            StringBuilder errorMsg = new StringBuilder();
+            boolean guardado = gestorConfig.guardarConfiguracion(config, errorMsg);
+
+            if (!guardado) {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo guardar la configuracion:\n" + errorMsg.toString() +
+                        "\n\nRuta: " + gestorConfig.obtenerRutaConfiguracion(),
+                        "Error al Guardar",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             alGuardar.run();
             setVisible(false);
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this,
-                    "Formato de número inválido para retraso o solicitudes concurrentes",
-                    "Error de Validación",
+                    "Formato de numero invalido para retraso o solicitudes concurrentes",
+                    "Error de Validacion",
                     JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -727,7 +739,7 @@ public class DialogoConfiguracion extends JDialog {
                         }
 
                         JOptionPane.showMessageDialog(DialogoConfiguracion.this,
-                                "Se obtuvieron " + modelos.size() + " modelos desde " + proveedorSeleccionado,
+                                "Se cargaron " + modelos.size() + " modelos para " + proveedorSeleccionado,
                                 "Modelos Actualizados",
                                 JOptionPane.INFORMATION_MESSAGE);
                     }
@@ -875,7 +887,7 @@ public class DialogoConfiguracion extends JDialog {
         // Determinar qué modelo usar: el seleccionado o el personalizado
         final String modeloAUsar;
         if (modeloActual.equals(MODELO_CUSTOM)) {
-            String modeloPersonalizado = txtModelo.getText().trim();
+            String modeloPersonalizado = comboModelo.getEditor().getItem().toString().trim();
             if (modeloPersonalizado.isEmpty()) {
                 JOptionPane.showMessageDialog(
                     this,
@@ -884,7 +896,7 @@ public class DialogoConfiguracion extends JDialog {
                     "Validación",
                     JOptionPane.WARNING_MESSAGE
                 );
-                txtModelo.requestFocus();
+                comboModelo.requestFocus();
                 return;
             }
             modeloAUsar = modeloPersonalizado;
@@ -901,9 +913,15 @@ public class DialogoConfiguracion extends JDialog {
                 try {
                     ConfiguracionAPI configTemp = new ConfiguracionAPI();
                     configTemp.establecerProveedorAI(proveedorSeleccionado);
-                    configTemp.establecerUrlApi(urlApi);
                     configTemp.establecerClaveApi(claveApi);
                     configTemp.establecerModelo(modeloAUsar);
+                    configTemp.establecerUrlApi(
+                        ConfiguracionAPI.construirUrlApiProveedor(
+                            proveedorSeleccionado,
+                            urlApi,
+                            modeloAUsar
+                        )
+                    );
 
                     ProbadorConexionAI probador = new ProbadorConexionAI(configTemp);
                     return probador.probarConexion();

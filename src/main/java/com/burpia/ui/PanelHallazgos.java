@@ -230,7 +230,7 @@ public class PanelHallazgos extends JPanel {
 
         // Filtro de texto
         if (!textoBusqueda.isEmpty()) {
-            filtros.add(RowFilter.regexFilter("(?i)" + textoBusqueda, 1, 2)); // URL y Hallazgo
+            filtros.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(textoBusqueda), 1, 2)); // URL y Hallazgo
         }
 
         // Filtro de severidad
@@ -388,11 +388,11 @@ public class PanelHallazgos extends JPanel {
         menuItemRepeater.addActionListener(e -> enviarARepeater(tabla.getSelectedRows()));
         menuContextual.add(menuItemRepeater);
 
-        JMenuItem menuItemScanner = new JMenuItem("🔍 Enviar a Intruder");
-        menuItemScanner.setFont(EstilosUI.FUENTE_ESTANDAR);
-        menuItemScanner.setToolTipText("Enviar la peticion a Intruder para pruebas de fuzzing");
-        menuItemScanner.addActionListener(e -> enviarAScanner(tabla.getSelectedRows()));
-        menuContextual.add(menuItemScanner);
+        JMenuItem menuItemIntruder = new JMenuItem("🔍 Enviar a Intruder");
+        menuItemIntruder.setFont(EstilosUI.FUENTE_ESTANDAR);
+        menuItemIntruder.setToolTipText("Enviar la peticion a Intruder para pruebas de fuzzing");
+        menuItemIntruder.addActionListener(e -> enviarAScanner(tabla.getSelectedRows()));
+        menuContextual.add(menuItemIntruder);
 
         menuContextual.addSeparator();
 
@@ -559,10 +559,9 @@ public class PanelHallazgos extends JPanel {
                     PanelHallazgos.this,
                     "Enviados a Intruder: " + totalExitosos + "/" + filas.length +
                     (totalSinRequest > 0 ? "\nSin request original: " + totalSinRequest : "") +
-                    "\n\nNota: Scanner requiere Burp Suite Professional.\n" +
-                    "Los requests fueron enviados a Intruder como alternativa.\n\n" +
+                    "\n\n" +
                     detalleFinal,
-                    "Enviar a Scanner/Intruder",
+                    "Enviar a Intruder",
                     totalExitosos > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
                 );
             });
