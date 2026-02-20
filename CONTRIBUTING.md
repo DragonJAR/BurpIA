@@ -321,9 +321,10 @@ public void shutdown() {
 
 ## 🧪 Escribiendo Tests
 
-Aunque el proyecto aún no tiene suite de tests completa, puedes agregar pruebas:
+El proyecto tiene una suite de tests con JUnit 5 y Mockito. Ubica tus tests en `src/test/java/com/burpia/`:
 
 ```java
+@DisplayName("ProbadorConexionAI debería validar endpoints correctamente")
 @Test
 public void testGestorTareas_crearTarea() {
     GestorTareas gestor = new GestorTareas(modelo, logger);
@@ -334,6 +335,16 @@ public void testGestorTareas_crearTarea() {
     assertEquals("Test", tarea.obtenerTipo());
     assertEquals("http://example.com", tarea.obtenerUrl());
 }
+```
+
+### Ejecutar Tests
+
+```bash
+# Todos los tests
+./gradlew test
+
+# Test específico
+./gradlew test --tests "com.burpia.util.ProbadorConexionAITest"
 ```
 
 ## 📚 Recursos Útiles

@@ -38,7 +38,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final MontoyaApi api;
     private final ConfiguracionAPI config;
     private final PestaniaPrincipal pestaniaPrincipal;
-    private final LimitadorTasa limitador;
+    private volatile LimitadorTasa limitador;
     private final DeduplicadorSolicitudes deduplicador;
     private final PrintWriter stdout;
     private final PrintWriter stderr;
@@ -117,7 +117,32 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void actualizarConfiguracion(ConfiguracionAPI nuevaConfig) {
-        registrar("Configuracion actualizada: nuevo maximoConcurrente=" + nuevaConfig.obtenerMaximoConcurrente());
+        int nuevoMaximoConcurrente = nuevaConfig.obtenerMaximoConcurrente() > 0
+            ? nuevaConfig.obtenerMaximoConcurrente()
+            : 10;
+
+        this.limitador = new LimitadorTasa(nuevoMaximoConcurrente);
+        actualizarPoolEjecucion(nuevoMaximoConcurrente);
+
+        registrar("Configuracion actualizada: nuevo maximoConcurrente=" + nuevoMaximoConcurrente +
+            ", nuevo retraso=" + nuevaConfig.obtenerRetrasoSegundos() + "s");
+    }
+
+    private void actualizarPoolEjecucion(int nuevoMaximoConcurrente) {
+        synchronized (executorService) {
+            int maxActual = executorService.getMaximumPoolSize();
+            if (nuevoMaximoConcurrente == maxActual) {
+                return;
+            }
+
+            if (nuevoMaximoConcurrente > maxActual) {
+                executorService.setMaximumPoolSize(nuevoMaximoConcurrente);
+                executorService.setCorePoolSize(nuevoMaximoConcurrente);
+            } else {
+                executorService.setCorePoolSize(nuevoMaximoConcurrente);
+                executorService.setMaximumPoolSize(nuevoMaximoConcurrente);
+            }
+        }
     }
 
     @Override

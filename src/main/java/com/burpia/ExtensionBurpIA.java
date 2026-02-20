@@ -19,6 +19,7 @@ import com.burpia.util.LimitadorTasa;
 import javax.swing.*;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 
 public class ExtensionBurpIA implements BurpExtension {
     private MontoyaApi api;
@@ -111,12 +112,7 @@ public class ExtensionBurpIA implements BurpExtension {
         gestorConsola = new GestorConsolaGUI();
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
 
-        SwingUtilities.invokeLater(() -> {
-            pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas, modeloTablaHallazgos);
-            pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
-            api.userInterface().registerSuiteTab("BurpIA", pestaniaPrincipal.obtenerPanel());
-            registrar("Pestania de UI registrada exitosamente");
-        });
+        crearYRegistrarPestaniaPrincipal();
 
         manejadorHttp = new ManejadorHttpBurpIA(
             api, config, pestaniaPrincipal, stdout, stderr, limitador,
@@ -151,7 +147,6 @@ public class ExtensionBurpIA implements BurpExtension {
                     config,
                     gestorConfig,
                     () -> {
-                        limitador = new LimitadorTasa(config.obtenerMaximoConcurrente());
                         modeloTablaHallazgos.establecerLimiteFilas(config.obtenerMaximoHallazgosTabla());
                         manejadorHttp.actualizarConfiguracion(config);
                         gestorConsola.registrarInfo("Configuracion guardada exitosamente");
@@ -165,6 +160,29 @@ public class ExtensionBurpIA implements BurpExtension {
             );
             dialogo.setVisible(true);
         });
+    }
+
+    private void crearYRegistrarPestaniaPrincipal() {
+        Runnable crearUi = () -> {
+            pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas, modeloTablaHallazgos);
+            pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
+            api.userInterface().registerSuiteTab("BurpIA", pestaniaPrincipal.obtenerPanel());
+            registrar("Pestania de UI registrada exitosamente");
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            crearUi.run();
+            return;
+        }
+
+        try {
+            SwingUtilities.invokeAndWait(crearUi);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Inicializacion UI interrumpida", e);
+        } catch (InvocationTargetException e) {
+            throw new RuntimeException("No se pudo inicializar la UI de BurpIA", e);
+        }
     }
 
     private void registrar(String mensaje) {
