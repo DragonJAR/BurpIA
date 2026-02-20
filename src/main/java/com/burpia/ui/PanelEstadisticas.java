@@ -5,6 +5,7 @@ import com.burpia.model.Estadisticas;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.function.IntSupplier;
@@ -19,18 +20,21 @@ public class PanelEstadisticas extends JPanel {
     private Timer timerActualizacion;
     private final JButton botonConfiguracion;
     private final JButton botonLimpiar;
-    private Runnable manejadorConfiguracion;
 
     private JPanel panelContenidoCentral;
     private JPanel panelHallazgos;
     private JPanel panelOperativo;
     private JPanel panelBotones;
     private JPanel panelLateral;
+    private JPanel contenedorBotonesLateral;
+    private GridBagConstraints restriccionesBotonesLateral;
     private JPanel panelLineaHallazgos;
     private JPanel panelLineaOperativo;
 
     private static final int UMBRAL_RESPONSIVE = 900;
-    private static final int TAMANIO_FIJO_BOTON = 40;
+    private static final int TAMANIO_FIJO_BOTON = 30;
+    private static final int AJUSTE_Y_BOTONES = -10;
+    private static final int ESPACIADO_BOTONES = 4;
 
     public PanelEstadisticas(Estadisticas estadisticas, IntSupplier proveedorLimiteHallazgos) {
         this.estadisticas = estadisticas;
@@ -45,8 +49,12 @@ public class PanelEstadisticas extends JPanel {
     }
 
     public void establecerManejadorConfiguracion(Runnable manejador) {
-        this.manejadorConfiguracion = manejador;
-        botonConfiguracion.addActionListener(e -> manejador.run());
+        for (ActionListener listener : botonConfiguracion.getActionListeners()) {
+            botonConfiguracion.removeActionListener(listener);
+        }
+        if (manejador != null) {
+            botonConfiguracion.addActionListener(e -> manejador.run());
+        }
     }
 
     private void initComponents() {
@@ -85,14 +93,39 @@ public class PanelEstadisticas extends JPanel {
             public void componentResized(ComponentEvent e) {
                 panelContenidoCentral.revalidate();
                 panelContenidoCentral.repaint();
+                actualizarLayoutBotonesResponsive(getWidth());
                 ajustarDimensionBotones();
             }
         });
 
         panelBotones = crearPanelBotones();
-        panelLateral = new JPanel(new BorderLayout());
+        panelLateral = new JPanel(new GridBagLayout()) {
+            @Override
+            public Dimension getPreferredSize() {
+                Dimension preferido = super.getPreferredSize();
+                return new Dimension(preferido.width, 0);
+            }
+
+            @Override
+            public Dimension getMinimumSize() {
+                Dimension minimo = super.getMinimumSize();
+                return new Dimension(minimo.width, 0);
+            }
+        };
         panelLateral.setOpaque(false);
-        panelLateral.add(panelBotones, BorderLayout.NORTH);
+        contenedorBotonesLateral = new JPanel(new BorderLayout());
+        contenedorBotonesLateral.setOpaque(false);
+        contenedorBotonesLateral.add(panelBotones, BorderLayout.NORTH);
+
+        restriccionesBotonesLateral = new GridBagConstraints();
+        restriccionesBotonesLateral.gridx = 0;
+        restriccionesBotonesLateral.gridy = 0;
+        restriccionesBotonesLateral.weightx = 0;
+        restriccionesBotonesLateral.weighty = 1;
+        restriccionesBotonesLateral.anchor = GridBagConstraints.FIRST_LINE_START;
+        restriccionesBotonesLateral.fill = GridBagConstraints.NONE;
+        restriccionesBotonesLateral.insets = new Insets(0, 0, 0, 0);
+        panelLateral.add(contenedorBotonesLateral, restriccionesBotonesLateral);
 
         add(panelContenidoCentral, BorderLayout.CENTER);
         add(panelLateral, BorderLayout.EAST);
@@ -100,7 +133,10 @@ public class PanelEstadisticas extends JPanel {
         timerActualizacion = new Timer(1000, e -> actualizar());
         timerActualizacion.start();
         actualizar();
-        SwingUtilities.invokeLater(this::ajustarDimensionBotones);
+        SwingUtilities.invokeLater(() -> {
+            actualizarLayoutBotonesResponsive(getWidth());
+            ajustarDimensionBotones();
+        });
     }
 
     private JPanel crearPanelHallazgos() {
@@ -132,10 +168,7 @@ public class PanelEstadisticas extends JPanel {
         etiquetaLimiteHallazgos.setForeground(new Color(80, 80, 80));
         panelLineaHallazgos.add(etiquetaLimiteHallazgos);
 
-        JPanel centro = new JPanel(new GridBagLayout());
-        centro.setOpaque(false);
-        centro.add(panelLineaHallazgos);
-        panel.add(centro, BorderLayout.CENTER);
+        panel.add(panelLineaHallazgos, BorderLayout.NORTH);
 
         return panel;
     }
@@ -151,10 +184,7 @@ public class PanelEstadisticas extends JPanel {
         panelLineaOperativo.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
         panelLineaOperativo.add(etiquetaResumenOperativo);
 
-        JPanel centro = new JPanel(new GridBagLayout());
-        centro.setOpaque(false);
-        centro.add(panelLineaOperativo);
-        panel.add(centro, BorderLayout.CENTER);
+        panel.add(panelLineaOperativo, BorderLayout.NORTH);
 
         return panel;
     }
@@ -173,7 +203,8 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private JPanel crearPanelBotones() {
-        JPanel panelBotones = new JPanel(new GridLayout(1, 2, 4, 0));
+        JPanel panelBotones = new JPanel();
+        panelBotones.setLayout(new GridLayout(1, 2, ESPACIADO_BOTONES, 0));
         panelBotones.setOpaque(false);
         panelBotones.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
@@ -206,12 +237,72 @@ public class PanelEstadisticas extends JPanel {
         return panelBotones;
     }
 
+    private void actualizarLayoutBotonesResponsive(int anchoContenedor) {
+        if (panelBotones == null) {
+            return;
+        }
+
+        boolean layoutVertical = anchoContenedor < UMBRAL_RESPONSIVE;
+        if (layoutVertical) {
+            aplicarLayoutBotonesVerticalAlineado();
+        } else {
+            aplicarLayoutBotonesHorizontal();
+        }
+    }
+
+    private void aplicarLayoutBotonesHorizontal() {
+        if (panelBotones.getLayout() instanceof GridLayout) {
+            GridLayout grid = (GridLayout) panelBotones.getLayout();
+            if (grid.getRows() == 1 && grid.getColumns() == 2) {
+                return;
+            }
+        }
+
+        panelBotones.removeAll();
+        panelBotones.setLayout(new GridLayout(1, 2, ESPACIADO_BOTONES, 0));
+        panelBotones.add(botonLimpiar);
+        panelBotones.add(botonConfiguracion);
+        panelBotones.revalidate();
+        panelBotones.repaint();
+    }
+
+    private void aplicarLayoutBotonesVerticalAlineado() {
+        if (panelBotones.getLayout() instanceof GridBagLayout) {
+            return;
+        }
+
+        panelBotones.removeAll();
+        panelBotones.setLayout(new GridBagLayout());
+
+        GridBagConstraints filaSuperior = new GridBagConstraints();
+        filaSuperior.gridx = 0;
+        filaSuperior.gridy = 0;
+        filaSuperior.anchor = GridBagConstraints.FIRST_LINE_START;
+        filaSuperior.fill = GridBagConstraints.NONE;
+        filaSuperior.weightx = 0;
+        filaSuperior.weighty = 0;
+        filaSuperior.insets = new Insets(0, 0, ESPACIADO_BOTONES, 0);
+        panelBotones.add(botonLimpiar, filaSuperior);
+
+        GridBagConstraints filaInferior = new GridBagConstraints();
+        filaInferior.gridx = 0;
+        filaInferior.gridy = 1;
+        filaInferior.anchor = GridBagConstraints.FIRST_LINE_START;
+        filaInferior.fill = GridBagConstraints.NONE;
+        filaInferior.weightx = 0;
+        filaInferior.weighty = 0;
+        filaInferior.insets = new Insets(0, 0, 0, 0);
+        panelBotones.add(botonConfiguracion, filaInferior);
+
+        panelBotones.revalidate();
+        panelBotones.repaint();
+    }
+
     private void ajustarDimensionBotones() {
         if (botonLimpiar == null || botonConfiguracion == null) {
             return;
         }
 
-        Rectangle franjaBotones = obtenerFranjaObjetivoBotones();
         int ladoBoton = TAMANIO_FIJO_BOTON;
 
         Dimension tamano = new Dimension(ladoBoton, ladoBoton);
@@ -219,9 +310,24 @@ public class PanelEstadisticas extends JPanel {
         aplicarDimensionBotonCuadrado(botonConfiguracion, tamano);
         actualizarTamanoIcono(ladoBoton);
 
-        if (panelLateral != null) {
-            int offsetSuperior = Math.max(0, franjaBotones.y);
-            panelLateral.setBorder(BorderFactory.createEmptyBorder(offsetSuperior, 0, 0, 0));
+        if (panelLateral != null && contenedorBotonesLateral != null && restriccionesBotonesLateral != null) {
+            int anchoContenedor = getWidth();
+            boolean layoutVertical = anchoContenedor < UMBRAL_RESPONSIVE;
+            int offsetSuperior = calcularOffsetSuperiorBotones(obtenerFranjaObjetivoBotones(), ladoBoton);
+
+            if (layoutVertical) {
+                int offsetInferior = calcularOffsetSuperiorBotones(
+                    obtenerFranjaObjetivoBotonesDesde(panelLineaOperativo),
+                    ladoBoton
+                );
+                restriccionesBotonesLateral.insets = new Insets(offsetSuperior, 0, 0, 0);
+                ajustarSeparacionVerticalBotones(offsetInferior - offsetSuperior, ladoBoton);
+            } else {
+                restriccionesBotonesLateral.insets = new Insets(offsetSuperior, 0, 0, 0);
+            }
+
+            GridBagLayout layoutLateral = (GridBagLayout) panelLateral.getLayout();
+            layoutLateral.setConstraints(contenedorBotonesLateral, restriccionesBotonesLateral);
         }
 
         if (panelBotones != null) {
@@ -241,30 +347,36 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private Rectangle obtenerFranjaObjetivoBotones() {
-        JPanel seccionReferencia = obtenerSeccionReferencia();
-        if (seccionReferencia == null) {
-            return new Rectangle(0, 0, 0, 0);
-        }
-
-        int alturaTotal = seccionReferencia.getHeight() > 0
-            ? seccionReferencia.getHeight()
-            : seccionReferencia.getPreferredSize().height;
-        Insets insets = seccionReferencia.getInsets();
-        int yLocalContenido = insets.top;
-        int alturaContenido = Math.max(0, alturaTotal - insets.top - insets.bottom);
-
-        Point origenEnPanel = SwingUtilities.convertPoint(seccionReferencia, 0, yLocalContenido, this);
-        return new Rectangle(origenEnPanel.x, origenEnPanel.y, 0, alturaContenido);
+        return obtenerFranjaObjetivoBotonesDesde(panelLineaHallazgos != null ? panelLineaHallazgos : panelLineaOperativo);
     }
 
-    private JPanel obtenerSeccionReferencia() {
-        if (panelHallazgos != null && panelHallazgos.getParent() != null) {
-            return panelHallazgos;
+    private Rectangle obtenerFranjaObjetivoBotonesDesde(JPanel lineaReferencia) {
+        if (lineaReferencia == null || lineaReferencia.getParent() == null || panelLateral == null) {
+            return new Rectangle(0, 0, 0, 0);
         }
-        if (panelOperativo != null && panelOperativo.getParent() != null) {
-            return panelOperativo;
+        Point origenEnPanel = SwingUtilities.convertPoint(
+            lineaReferencia.getParent(),
+            lineaReferencia.getLocation(),
+            panelLateral
+        );
+        return new Rectangle(origenEnPanel.x, origenEnPanel.y, lineaReferencia.getWidth(), lineaReferencia.getHeight());
+    }
+
+    private int calcularOffsetSuperiorBotones(Rectangle franjaBotones, int ladoBoton) {
+        int offsetSuperior = franjaBotones.y + AJUSTE_Y_BOTONES;
+        return Math.max(0, offsetSuperior);
+    }
+
+    private void ajustarSeparacionVerticalBotones(int diferenciaY, int ladoBoton) {
+        if (!(panelBotones.getLayout() instanceof GridBagLayout) || panelBotones.getComponentCount() < 2) {
+            return;
         }
-        return null;
+
+        int separacion = Math.max(ESPACIADO_BOTONES, diferenciaY - ladoBoton);
+        GridBagLayout layoutBotones = (GridBagLayout) panelBotones.getLayout();
+        GridBagConstraints superior = layoutBotones.getConstraints(botonLimpiar);
+        superior.insets = new Insets(0, 0, separacion, 0);
+        layoutBotones.setConstraints(botonLimpiar, superior);
     }
 
     private void actualizarTamanoIcono(int ladoBoton) {
@@ -276,6 +388,8 @@ public class PanelEstadisticas extends JPanel {
 
     public void actualizar() {
         SwingUtilities.invokeLater(() -> {
+            actualizarLayoutBotonesResponsive(getWidth());
+
             etiquetaResumenPrincipal.setText(String.format("🔎 Total: %d", estadisticas.obtenerHallazgosCreados()));
 
             etiquetaResumenSeveridad.setText(
