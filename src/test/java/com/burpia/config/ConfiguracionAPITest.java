@@ -25,6 +25,7 @@ class ConfiguracionAPITest {
         assertNotNull(config.obtenerModelo());
         assertNotNull(config.obtenerPromptConfigurable());
         assertFalse(config.esDetallado());
+        assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla());
     }
 
     @Test
@@ -137,5 +138,15 @@ class ConfiguracionAPITest {
 
         config.establecerProveedorAI("Claude");
         assertEquals("", config.obtenerClaveApi());
+    }
+
+    @Test
+    @DisplayName("Maximo hallazgos tabla se normaliza en rango permitido")
+    void testMaximoHallazgosNormalizaRango() {
+        config.establecerMaximoHallazgosTabla(1);
+        assertEquals(ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA, config.obtenerMaximoHallazgosTabla());
+
+        config.establecerMaximoHallazgosTabla(999999);
+        assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA, config.obtenerMaximoHallazgosTabla());
     }
 }

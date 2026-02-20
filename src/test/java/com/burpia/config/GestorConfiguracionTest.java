@@ -10,6 +10,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DisplayName("GestorConfiguracion Tests")
 class GestorConfiguracionTest {
@@ -37,6 +38,7 @@ class GestorConfiguracionTest {
         config.establecerModeloParaProveedor("OpenAI", "gpt-4o");
         config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
         config.establecerDetallado(false);
+        config.establecerMaximoHallazgosTabla(2500);
 
         assertTrue(gestor.guardarConfiguracion(config));
 
@@ -48,6 +50,7 @@ class GestorConfiguracionTest {
         assertFalse(json.contains("\"modelo\""));
         assertTrue(json.contains("\"apiKeysPorProveedor\""));
         assertTrue(json.contains("\"modelosPorProveedor\""));
+        assertTrue(json.contains("\"maximoHallazgosTabla\": 2500"));
     }
 
     @Test
@@ -72,5 +75,6 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = gestor.cargarConfiguracion();
         assertFalse(config.esDetallado());
+        assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla());
     }
 }

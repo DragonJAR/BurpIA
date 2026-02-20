@@ -24,7 +24,7 @@ public class PestaniaPrincipal extends JPanel {
                             ModeloTablaHallazgos modeloHallazgos) {
         setLayout(new BorderLayout(10, 10));
 
-        panelEstadisticas = new PanelEstadisticas(estadisticas);
+        panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas);
 
         panelTareas = new PanelTareas(gestorTareas, modeloTareas);
         panelHallazgos = new PanelHallazgos(api, modeloHallazgos);

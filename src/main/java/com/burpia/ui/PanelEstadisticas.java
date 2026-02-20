@@ -7,29 +7,36 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.util.function.IntSupplier;
 
 public class PanelEstadisticas extends JPanel {
     private final JLabel etiquetaResumenPrincipal;
     private final JLabel etiquetaResumenSeveridad;
+    private final JLabel etiquetaLimiteHallazgos;
     private final JLabel etiquetaResumenOperativo;
     private final Estadisticas estadisticas;
+    private final IntSupplier proveedorLimiteHallazgos;
     private Timer timerActualizacion;
     private final JButton botonConfiguracion;
+    private final JButton botonLimpiar;
     private Runnable manejadorConfiguracion;
 
-    private JPanel panelSuperior;
-    private JPanel panelInferior;
     private JPanel panelContenidoCentral;
+    private JPanel panelHallazgos;
+    private JPanel panelOperativo;
+    private JPanel panelBotones;
 
-    // Umbral de ancho para cambiar de layout (en pixeles)
     private static final int UMBRAL_RESPONSIVE = 900;
 
-    public PanelEstadisticas(Estadisticas estadisticas) {
+    public PanelEstadisticas(Estadisticas estadisticas, IntSupplier proveedorLimiteHallazgos) {
         this.estadisticas = estadisticas;
+        this.proveedorLimiteHallazgos = proveedorLimiteHallazgos != null ? proveedorLimiteHallazgos : () -> 1000;
         this.etiquetaResumenPrincipal = new JLabel();
         this.etiquetaResumenSeveridad = new JLabel();
+        this.etiquetaLimiteHallazgos = new JLabel();
         this.etiquetaResumenOperativo = new JLabel();
-        this.botonConfiguracion = new JButton("🧠 Ajustes");
+        this.botonConfiguracion = new JButton();
+        this.botonLimpiar = new JButton();
         initComponents();
     }
 
@@ -39,28 +46,25 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private void initComponents() {
-        setLayout(new BorderLayout(10, 10));
-        setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        setLayout(new BorderLayout(8, 4));
+        setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
 
-        panelSuperior = crearPanelHallazgos();
+        panelHallazgos = crearPanelHallazgos();
+        panelOperativo = crearPanelOperativo();
 
-        panelInferior = crearPanelOperativo();
-
-        panelContenidoCentral = new JPanel(new GridLayout(1, 2, 10, 0)) {
+        panelContenidoCentral = new JPanel(new GridLayout(1, 2, 8, 0)) {
             private boolean ultimoLayoutHorizontal = true;
 
             @Override
             public void doLayout() {
-                // Detectar ancho disponible
-                int ancho = getWidth() - 140; // Restar márgenes y panel de botones
+                int ancho = getWidth() - 132;
                 boolean esLayoutHorizontal = ancho >= UMBRAL_RESPONSIVE;
 
-                // Cambiar layout solo si es necesario
                 if (esLayoutHorizontal != ultimoLayoutHorizontal) {
                     if (esLayoutHorizontal) {
-                        setLayout(new GridLayout(1, 2, 10, 0)); // Horizontal: 1 fila, 2 columnas
+                        setLayout(new GridLayout(1, 2, 8, 0));
                     } else {
-                        setLayout(new GridLayout(2, 1, 0, 10)); // Vertical: 2 filas, 1 columna
+                        setLayout(new GridLayout(2, 1, 0, 6));
                     }
                     ultimoLayoutHorizontal = esLayoutHorizontal;
                 }
@@ -69,100 +73,82 @@ public class PanelEstadisticas extends JPanel {
             }
         };
 
-        panelContenidoCentral.add(panelSuperior);
-        panelContenidoCentral.add(panelInferior);
+        panelContenidoCentral.add(panelHallazgos);
+        panelContenidoCentral.add(panelOperativo);
 
-        // Listener para detectar cambios de tamaño y ajustar layout
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
                 panelContenidoCentral.revalidate();
                 panelContenidoCentral.repaint();
+                ajustarDimensionBotones();
             }
         });
 
-        JPanel panelBotones = crearPanelBotones();
+        panelBotones = crearPanelBotones();
+        JPanel panelLateral = new JPanel(new GridBagLayout());
+        panelLateral.setOpaque(false);
+        panelLateral.add(panelBotones);
 
         add(panelContenidoCentral, BorderLayout.CENTER);
-        add(panelBotones, BorderLayout.EAST);
+        add(panelLateral, BorderLayout.EAST);
 
-        // Timer para actualizar cada segundo
         timerActualizacion = new Timer(1000, e -> actualizar());
         timerActualizacion.start();
-
-        // Actualización inicial
         actualizar();
+        SwingUtilities.invokeLater(this::ajustarDimensionBotones);
     }
 
     private JPanel crearPanelHallazgos() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "🎯 HALLAZGOS Y CRITICIDAD",
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
-        ));
+        JPanel panel = crearPanelSeccion("🎯 POSIBLES HALLAZGOS Y CRITICIDADES");
 
-<<<<<<< ours
-        JPanel panelHallazgosCompleto = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
-        panelHallazgosCompleto.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JPanel linea = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        linea.setOpaque(false);
 
-        // Total de hallazgos (izquierda)
-        etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO);
-        etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204)); // Azul destacado
-        panelHallazgosCompleto.add(etiquetaResumenPrincipal);
+        etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
+        etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204));
+        linea.add(etiquetaResumenPrincipal);
 
-        // Separador visual
         JLabel separador = new JLabel(" | ");
         separador.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
-        separador.setForeground(new Color(150, 150, 150));
-        panelHallazgosCompleto.add(separador);
+        separador.setForeground(new Color(140, 140, 140));
+        linea.add(separador);
 
-        // Niveles de severidad (misma línea)
-        etiquetaResumenSeveridad.setFont(EstilosUI.FUENTE_MONO);
-        panelHallazgosCompleto.add(etiquetaResumenSeveridad);
-=======
-        JPanel panelHallazgosCompleto = new JPanel();
-        panelHallazgosCompleto.setOpaque(false);
-        panelHallazgosCompleto.setLayout(new BoxLayout(panelHallazgosCompleto, BoxLayout.Y_AXIS));
-        panelHallazgosCompleto.setBorder(BorderFactory.createEmptyBorder(2, 8, 6, 8));
-
-        JPanel filaPrincipal = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        filaPrincipal.setOpaque(false);
-        etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
-        etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204)); // Azul destacado
-        filaPrincipal.add(etiquetaResumenPrincipal);
-
-        JPanel filaSeveridades = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 2));
-        filaSeveridades.setOpaque(false);
         etiquetaResumenSeveridad.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumenSeveridad.setForeground(new Color(70, 70, 70));
-        filaSeveridades.add(etiquetaResumenSeveridad);
->>>>>>> theirs
+        linea.add(etiquetaResumenSeveridad);
 
-        panelHallazgosCompleto.add(filaPrincipal);
-        panelHallazgosCompleto.add(Box.createVerticalStrut(4));
-        panelHallazgosCompleto.add(filaSeveridades);
-        panel.add(panelHallazgosCompleto);
+        JLabel separador2 = new JLabel(" | ");
+        separador2.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
+        separador2.setForeground(new Color(140, 140, 140));
+        linea.add(separador2);
+
+        etiquetaLimiteHallazgos.setFont(EstilosUI.FUENTE_MONO);
+        etiquetaLimiteHallazgos.setForeground(new Color(80, 80, 80));
+        linea.add(etiquetaLimiteHallazgos);
+
+        JPanel centro = new JPanel(new GridBagLayout());
+        centro.setOpaque(false);
+        centro.add(linea);
+        panel.add(centro, BorderLayout.CENTER);
+
         return panel;
     }
 
     private JPanel crearPanelOperativo() {
-<<<<<<< ours
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-=======
         JPanel panel = crearPanelSeccion("📊 DETALLES OPERATIVOS");
-        JPanel panelOperativo = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
-        panelOperativo.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
-        panelOperativo.setOpaque(false);
 
-        etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
-        etiquetaResumenOperativo.setForeground(new Color(100, 100, 100)); // Gris suave
-        panelOperativo.add(etiquetaResumenOperativo);
-        panel.add(panelOperativo);
+        etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO);
+        etiquetaResumenOperativo.setForeground(new Color(90, 90, 90));
+
+        JPanel linea = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        linea.setOpaque(false);
+        linea.add(etiquetaResumenOperativo);
+
+        JPanel centro = new JPanel(new GridBagLayout());
+        centro.setOpaque(false);
+        centro.add(linea);
+        panel.add(centro, BorderLayout.CENTER);
 
         return panel;
     }
@@ -170,46 +156,26 @@ public class PanelEstadisticas extends JPanel {
     private JPanel crearPanelSeccion(String titulo) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
->>>>>>> theirs
         panel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "📊 DETALLES OPERATIVOS",
+            titulo,
             TitledBorder.LEFT,
             TitledBorder.TOP,
             EstilosUI.FUENTE_NEGRITA
         ));
-
-        JPanel panelOperativo = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
-        etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO);
-        etiquetaResumenOperativo.setForeground(new Color(100, 100, 100)); // Gris suave
-        panelOperativo.add(etiquetaResumenOperativo);
-        panel.add(panelOperativo);
-
         return panel;
     }
 
     private JPanel crearPanelBotones() {
-        JPanel panelBotones = new JPanel();
-        panelBotones.setLayout(new BoxLayout(panelBotones, BoxLayout.Y_AXIS));
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
+        panelBotones.setOpaque(false);
+        panelBotones.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
-        // Dimensiones iguales para ambos botones
-        Dimension tamanoBoton = new Dimension(120, 28);
-
-        botonConfiguracion.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonConfiguracion.setToolTipText("Abrir ajustes de API");
-        botonConfiguracion.setPreferredSize(tamanoBoton);
-        botonConfiguracion.setMinimumSize(tamanoBoton);
-        botonConfiguracion.setMaximumSize(tamanoBoton);
-        panelBotones.add(botonConfiguracion);
-        panelBotones.add(Box.createVerticalStrut(5));
-
-        JButton botonReiniciar = new JButton("🧹 Limpiar");
-        botonReiniciar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonReiniciar.setToolTipText("Limpiar todos los contadores");
-        botonReiniciar.setPreferredSize(tamanoBoton);
-        botonReiniciar.setMinimumSize(tamanoBoton);
-        botonReiniciar.setMaximumSize(tamanoBoton);
-        botonReiniciar.addActionListener(e -> {
+        botonLimpiar.setText("🧹");
+        botonLimpiar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        botonLimpiar.setToolTipText("Limpiar estadísticas");
+        botonLimpiar.setFocusable(false);
+        botonLimpiar.addActionListener(e -> {
             int confirmacion = JOptionPane.showConfirmDialog(
                 this,
                 "¿Estás seguro de que deseas limpiar todas las estadísticas?",
@@ -223,29 +189,57 @@ public class PanelEstadisticas extends JPanel {
             }
         });
 
-        panelBotones.add(botonReiniciar);
+        botonConfiguracion.setText("⚙️");
+        botonConfiguracion.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        botonConfiguracion.setToolTipText("Abrir ajustes");
+        botonConfiguracion.setFocusable(false);
+
+        // Orden requerido: primero Limpiar, luego Ajustes
+        panelBotones.add(botonLimpiar);
+        panelBotones.add(botonConfiguracion);
         return panelBotones;
+    }
+
+    private void ajustarDimensionBotones() {
+        if (botonLimpiar == null || botonConfiguracion == null) {
+            return;
+        }
+
+        int alturaReferencia = 0;
+        if (panelHallazgos != null && panelHallazgos.getHeight() > 0) {
+            alturaReferencia = panelHallazgos.getHeight();
+        } else if (panelOperativo != null && panelOperativo.getHeight() > 0) {
+            alturaReferencia = panelOperativo.getHeight();
+        } else if (panelHallazgos != null) {
+            alturaReferencia = panelHallazgos.getPreferredSize().height;
+        }
+
+        if (alturaReferencia <= 0) {
+            return;
+        }
+
+        Dimension tamano = new Dimension(alturaReferencia, alturaReferencia);
+        aplicarDimensionBotonCuadrado(botonLimpiar, tamano);
+        aplicarDimensionBotonCuadrado(botonConfiguracion, tamano);
+
+        if (panelBotones != null) {
+            panelBotones.revalidate();
+            panelBotones.repaint();
+        }
+    }
+
+    private void aplicarDimensionBotonCuadrado(JButton boton, Dimension tamano) {
+        boton.setPreferredSize(tamano);
+        boton.setMinimumSize(tamano);
+        boton.setMaximumSize(tamano);
     }
 
     public void actualizar() {
         SwingUtilities.invokeLater(() -> {
-            // Total de hallazgos (compacto, misma línea que severidades)
-            etiquetaResumenPrincipal.setText(
-<<<<<<< ours
-                String.format("🔍 Total: %d",
-=======
-                String.format("🔎 Total hallazgos: %d",
->>>>>>> theirs
-                    estadisticas.obtenerHallazgosCreados())
-            );
+            etiquetaResumenPrincipal.setText(String.format("🔎 Total: %d", estadisticas.obtenerHallazgosCreados()));
 
-            // Niveles de severidad (misma línea que total de hallazgos)
             etiquetaResumenSeveridad.setText(
-<<<<<<< ours
-                String.format("🟣 %d | 🔴 %d | 🟠 %d | 🟢 %d | 🔵 %d",
-=======
-                String.format("🟣 Critical: %d   |   🔴 High: %d   |   🟠 Medium: %d   |   🟢 Low: %d   |   🔵 Info: %d",
->>>>>>> theirs
+                String.format("🟣 %d   🔴 %d   🟠 %d   🟢 %d   🔵 %d",
                     estadisticas.obtenerHallazgosCritical(),
                     estadisticas.obtenerHallazgosHigh(),
                     estadisticas.obtenerHallazgosMedium(),
@@ -253,10 +247,12 @@ public class PanelEstadisticas extends JPanel {
                     estadisticas.obtenerHallazgosInfo())
             );
 
-            // LÍNEA OPERATIVA (abajo, más pequeña y gris)
-            // Detalles de procesamiento
+            etiquetaLimiteHallazgos.setText(
+                String.format("🧮 Límite Hallazgos: %d", proveedorLimiteHallazgos.getAsInt())
+            );
+
             etiquetaResumenOperativo.setText(
-                String.format("📥 Solicitudes: %d | ✅ Analizados: %d | ⏭️ Omitidos: %d | ❌ Errores: %d",
+                String.format("📥 Solicitudes: %d   |   ✅ Analizados: %d   |   ⏭ Omitidos: %d   |   ❌ Errores: %d",
                     estadisticas.obtenerTotalSolicitudes(),
                     estadisticas.obtenerAnalizados(),
                     estadisticas.obtenerTotalOmitidos(),

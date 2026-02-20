@@ -4,8 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ConfiguracionAPI {
+    public static final int MAXIMO_HALLAZGOS_TABLA_DEFECTO = 1000;
+    public static final int MINIMO_HALLAZGOS_TABLA = 100;
+    public static final int MAXIMO_HALLAZGOS_TABLA = 50000;
+
     private int retrasoSegundos;
     private int maximoConcurrente;
+    private int maximoHallazgosTabla;
     private boolean detallado;
     private String proveedorAI;
     private int tiempoEsperaAI;
@@ -23,6 +28,7 @@ public class ConfiguracionAPI {
         this.proveedorAI = "Z.ai";
         this.retrasoSegundos = 5;
         this.maximoConcurrente = 3;
+        this.maximoHallazgosTabla = MAXIMO_HALLAZGOS_TABLA_DEFECTO;
         this.tiempoEsperaAI = 60;
         this.detallado = false;
         this.tema = "Light";
@@ -71,6 +77,11 @@ public class ConfiguracionAPI {
 
     public int obtenerMaximoConcurrente() { return maximoConcurrente; }
     public void establecerMaximoConcurrente(int maximoConcurrente) { this.maximoConcurrente = maximoConcurrente; }
+
+    public int obtenerMaximoHallazgosTabla() { return maximoHallazgosTabla; }
+    public void establecerMaximoHallazgosTabla(int maximoHallazgosTabla) {
+        this.maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
+    }
 
     public boolean esDetallado() { return detallado; }
     public void establecerDetallado(boolean detallado) { this.detallado = detallado; }
@@ -259,6 +270,11 @@ public class ConfiguracionAPI {
             errores.put("maximoConcurrente", "Maximo concurrente debe estar entre 1 y 10");
         }
 
+        if (maximoHallazgosTabla < MINIMO_HALLAZGOS_TABLA || maximoHallazgosTabla > MAXIMO_HALLAZGOS_TABLA) {
+            errores.put("maximoHallazgosTabla",
+                "Maximo de hallazgos en tabla debe estar entre " + MINIMO_HALLAZGOS_TABLA + " y " + MAXIMO_HALLAZGOS_TABLA);
+        }
+
         if (tiempoEsperaAI < 10 || tiempoEsperaAI > 300) {
             errores.put("tiempoEsperaAI", "Tiempo de espera debe estar entre 10 y 300 segundos");
         }
@@ -393,5 +409,16 @@ public class ConfiguracionAPI {
         if (proveedorAI == null || proveedorAI.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedorAI)) {
             proveedorAI = "Z.ai";
         }
+        maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
+    }
+
+    private static int normalizarMaximoHallazgos(int valor) {
+        if (valor < MINIMO_HALLAZGOS_TABLA) {
+            return MINIMO_HALLAZGOS_TABLA;
+        }
+        if (valor > MAXIMO_HALLAZGOS_TABLA) {
+            return MAXIMO_HALLAZGOS_TABLA;
+        }
+        return valor;
     }
 }

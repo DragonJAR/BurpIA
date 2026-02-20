@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class ModeloTablaHallazgos extends DefaultTableModel {
     private static final String[] COLUMNAS = {"Hora", "URL", "Hallazgo", "Severidad", "Confianza"};
     private final List<Hallazgo> datos;
-    private final int limiteFilas;
+    private int limiteFilas;
     private final Set<Integer> filasIgnoradas;
     private final ReentrantLock lock;
 
@@ -28,7 +28,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     public ModeloTablaHallazgos(int limiteFilas) {
         super(COLUMNAS, 0);
         this.datos = new ArrayList<>();
-        this.limiteFilas = limiteFilas;
+        this.limiteFilas = Math.max(1, limiteFilas);
         this.filasIgnoradas = new HashSet<>();
         this.lock = new ReentrantLock();
     }
@@ -252,5 +252,27 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
+    }
+
+    public int obtenerLimiteFilas() {
+        lock.lock();
+        try {
+            return limiteFilas;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void establecerLimiteFilas(int nuevoLimite) {
+        int limiteNormalizado = Math.max(1, nuevoLimite);
+        SwingUtilities.invokeLater(() -> {
+            lock.lock();
+            try {
+                limiteFilas = limiteNormalizado;
+                aplicarLimiteFilas();
+            } finally {
+                lock.unlock();
+            }
+        });
     }
 }
