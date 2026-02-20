@@ -22,7 +22,7 @@ public class PestaniaPrincipal extends JPanel {
                             GestorConsolaGUI gestorConsola,
                             ModeloTablaTareas modeloTareas,
                             ModeloTablaHallazgos modeloHallazgos) {
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(10, 2));
 
         panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas);
 
@@ -31,9 +31,11 @@ public class PestaniaPrincipal extends JPanel {
         panelConsola = new PanelConsola(gestorConsola);
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
-        tabbedPane.addTab("📋 Tareas", panelTareas);
-        tabbedPane.addTab("🔍 Hallazgos", panelHallazgos);
-        tabbedPane.addTab("📝 Consola", panelConsola);
+        tabbedPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        tabbedPane.setFont(EstilosUI.FUENTE_NEGRITA);
+        tabbedPane.addTab("📋 TAREAS", panelTareas);
+        tabbedPane.addTab("🔍 HALLAZGOS", panelHallazgos);
+        tabbedPane.addTab("📝 CONSOLA", panelConsola);
 
         add(panelEstadisticas, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);

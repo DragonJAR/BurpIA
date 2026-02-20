@@ -25,8 +25,12 @@ public class PanelEstadisticas extends JPanel {
     private JPanel panelHallazgos;
     private JPanel panelOperativo;
     private JPanel panelBotones;
+    private JPanel panelLateral;
+    private JPanel panelLineaHallazgos;
+    private JPanel panelLineaOperativo;
 
     private static final int UMBRAL_RESPONSIVE = 900;
+    private static final int TAMANIO_FIJO_BOTON = 40;
 
     public PanelEstadisticas(Estadisticas estadisticas, IntSupplier proveedorLimiteHallazgos) {
         this.estadisticas = estadisticas;
@@ -46,8 +50,8 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private void initComponents() {
-        setLayout(new BorderLayout(8, 4));
-        setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        setLayout(new BorderLayout(8, 2));
+        setBorder(BorderFactory.createEmptyBorder(4, 8, 2, 8));
 
         panelHallazgos = crearPanelHallazgos();
         panelOperativo = crearPanelOperativo();
@@ -86,9 +90,9 @@ public class PanelEstadisticas extends JPanel {
         });
 
         panelBotones = crearPanelBotones();
-        JPanel panelLateral = new JPanel(new GridBagLayout());
+        panelLateral = new JPanel(new BorderLayout());
         panelLateral.setOpaque(false);
-        panelLateral.add(panelBotones);
+        panelLateral.add(panelBotones, BorderLayout.NORTH);
 
         add(panelContenidoCentral, BorderLayout.CENTER);
         add(panelLateral, BorderLayout.EAST);
@@ -102,34 +106,35 @@ public class PanelEstadisticas extends JPanel {
     private JPanel crearPanelHallazgos() {
         JPanel panel = crearPanelSeccion("🎯 POSIBLES HALLAZGOS Y CRITICIDADES");
 
-        JPanel linea = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        linea.setOpaque(false);
+        panelLineaHallazgos = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        panelLineaHallazgos.setOpaque(false);
+        panelLineaHallazgos.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
 
         etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
         etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204));
-        linea.add(etiquetaResumenPrincipal);
+        panelLineaHallazgos.add(etiquetaResumenPrincipal);
 
         JLabel separador = new JLabel(" | ");
         separador.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
         separador.setForeground(new Color(140, 140, 140));
-        linea.add(separador);
+        panelLineaHallazgos.add(separador);
 
         etiquetaResumenSeveridad.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumenSeveridad.setForeground(new Color(70, 70, 70));
-        linea.add(etiquetaResumenSeveridad);
+        panelLineaHallazgos.add(etiquetaResumenSeveridad);
 
         JLabel separador2 = new JLabel(" | ");
         separador2.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
         separador2.setForeground(new Color(140, 140, 140));
-        linea.add(separador2);
+        panelLineaHallazgos.add(separador2);
 
         etiquetaLimiteHallazgos.setFont(EstilosUI.FUENTE_MONO);
         etiquetaLimiteHallazgos.setForeground(new Color(80, 80, 80));
-        linea.add(etiquetaLimiteHallazgos);
+        panelLineaHallazgos.add(etiquetaLimiteHallazgos);
 
         JPanel centro = new JPanel(new GridBagLayout());
         centro.setOpaque(false);
-        centro.add(linea);
+        centro.add(panelLineaHallazgos);
         panel.add(centro, BorderLayout.CENTER);
 
         return panel;
@@ -141,13 +146,14 @@ public class PanelEstadisticas extends JPanel {
         etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumenOperativo.setForeground(new Color(90, 90, 90));
 
-        JPanel linea = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        linea.setOpaque(false);
-        linea.add(etiquetaResumenOperativo);
+        panelLineaOperativo = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        panelLineaOperativo.setOpaque(false);
+        panelLineaOperativo.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
+        panelLineaOperativo.add(etiquetaResumenOperativo);
 
         JPanel centro = new JPanel(new GridBagLayout());
         centro.setOpaque(false);
-        centro.add(linea);
+        centro.add(panelLineaOperativo);
         panel.add(centro, BorderLayout.CENTER);
 
         return panel;
@@ -167,12 +173,12 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private JPanel crearPanelBotones() {
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
+        JPanel panelBotones = new JPanel(new GridLayout(1, 2, 4, 0));
         panelBotones.setOpaque(false);
         panelBotones.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
 
         botonLimpiar.setText("🧹");
-        botonLimpiar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        botonLimpiar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
         botonLimpiar.setToolTipText("Limpiar estadísticas");
         botonLimpiar.setFocusable(false);
         botonLimpiar.addActionListener(e -> {
@@ -190,7 +196,7 @@ public class PanelEstadisticas extends JPanel {
         });
 
         botonConfiguracion.setText("⚙️");
-        botonConfiguracion.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 20));
+        botonConfiguracion.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
         botonConfiguracion.setToolTipText("Abrir ajustes");
         botonConfiguracion.setFocusable(false);
 
@@ -205,26 +211,26 @@ public class PanelEstadisticas extends JPanel {
             return;
         }
 
-        int alturaReferencia = 0;
-        if (panelHallazgos != null && panelHallazgos.getHeight() > 0) {
-            alturaReferencia = panelHallazgos.getHeight();
-        } else if (panelOperativo != null && panelOperativo.getHeight() > 0) {
-            alturaReferencia = panelOperativo.getHeight();
-        } else if (panelHallazgos != null) {
-            alturaReferencia = panelHallazgos.getPreferredSize().height;
-        }
+        Rectangle franjaBotones = obtenerFranjaObjetivoBotones();
+        int ladoBoton = TAMANIO_FIJO_BOTON;
 
-        if (alturaReferencia <= 0) {
-            return;
-        }
-
-        Dimension tamano = new Dimension(alturaReferencia, alturaReferencia);
+        Dimension tamano = new Dimension(ladoBoton, ladoBoton);
         aplicarDimensionBotonCuadrado(botonLimpiar, tamano);
         aplicarDimensionBotonCuadrado(botonConfiguracion, tamano);
+        actualizarTamanoIcono(ladoBoton);
+
+        if (panelLateral != null) {
+            int offsetSuperior = Math.max(0, franjaBotones.y);
+            panelLateral.setBorder(BorderFactory.createEmptyBorder(offsetSuperior, 0, 0, 0));
+        }
 
         if (panelBotones != null) {
             panelBotones.revalidate();
             panelBotones.repaint();
+        }
+        if (panelLateral != null) {
+            panelLateral.revalidate();
+            panelLateral.repaint();
         }
     }
 
@@ -232,6 +238,40 @@ public class PanelEstadisticas extends JPanel {
         boton.setPreferredSize(tamano);
         boton.setMinimumSize(tamano);
         boton.setMaximumSize(tamano);
+    }
+
+    private Rectangle obtenerFranjaObjetivoBotones() {
+        JPanel seccionReferencia = obtenerSeccionReferencia();
+        if (seccionReferencia == null) {
+            return new Rectangle(0, 0, 0, 0);
+        }
+
+        int alturaTotal = seccionReferencia.getHeight() > 0
+            ? seccionReferencia.getHeight()
+            : seccionReferencia.getPreferredSize().height;
+        Insets insets = seccionReferencia.getInsets();
+        int yLocalContenido = insets.top;
+        int alturaContenido = Math.max(0, alturaTotal - insets.top - insets.bottom);
+
+        Point origenEnPanel = SwingUtilities.convertPoint(seccionReferencia, 0, yLocalContenido, this);
+        return new Rectangle(origenEnPanel.x, origenEnPanel.y, 0, alturaContenido);
+    }
+
+    private JPanel obtenerSeccionReferencia() {
+        if (panelHallazgos != null && panelHallazgos.getParent() != null) {
+            return panelHallazgos;
+        }
+        if (panelOperativo != null && panelOperativo.getParent() != null) {
+            return panelOperativo;
+        }
+        return null;
+    }
+
+    private void actualizarTamanoIcono(int ladoBoton) {
+        int tamanioFuente = Math.max(18, (int) Math.round(ladoBoton * 0.45));
+        Font fuenteIcono = new Font(Font.SANS_SERIF, Font.PLAIN, tamanioFuente);
+        botonLimpiar.setFont(fuenteIcono);
+        botonConfiguracion.setFont(fuenteIcono);
     }
 
     public void actualizar() {
@@ -258,6 +298,7 @@ public class PanelEstadisticas extends JPanel {
                     estadisticas.obtenerTotalOmitidos(),
                     estadisticas.obtenerErrores())
             );
+            ajustarDimensionBotones();
         });
     }
 
