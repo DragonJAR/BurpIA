@@ -20,6 +20,7 @@ public class DialogoConfiguracion extends JDialog {
     private JPasswordField txtClave;
     private JTextField txtRetraso;
     private JTextField txtMaximoConcurrente;
+    private JTextField txtMaximoHallazgosTabla;
     private JCheckBox chkDetallado;
     private JTextArea txtPrompt;
     private JButton btnRestaurarPrompt;
@@ -103,7 +104,7 @@ public class DialogoConfiguracion extends JDialog {
             javax.swing.border.TitledBorder.TOP,
             EstilosUI.FUENTE_NEGRITA
         ));
-        panelEjecucion.setMaximumSize(new Dimension(Integer.MAX_VALUE, 180));
+        panelEjecucion.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6, 8, 6, 8);
@@ -114,6 +115,13 @@ public class DialogoConfiguracion extends JDialog {
         txtRetraso.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         txtMaximoConcurrente = new JTextField(10);
         txtMaximoConcurrente.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtMaximoHallazgosTabla = new JTextField(10);
+        txtMaximoHallazgosTabla.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtMaximoHallazgosTabla.setToolTipText(
+            "Límite de hallazgos retenidos en tabla/memoria (" +
+                ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA + "-" +
+                ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA + ")"
+        );
         chkDetallado = new JCheckBox("Activar registro detallado (recomendado para depuración)");
         chkDetallado.setToolTipText("Cuando está activo, todas las operaciones del complemento se registran con información detallada");
 
@@ -128,6 +136,11 @@ public class DialogoConfiguracion extends JDialog {
         panelEjecucion.add(txtMaximoConcurrente, gbc);
 
         gbc.gridx = 0; gbc.gridy = 2; gbc.weightx = 0;
+        panelEjecucion.add(new JLabel("Máx Hallazgos Tabla:"), gbc);
+        gbc.gridx = 1; gbc.weightx = 1;
+        panelEjecucion.add(txtMaximoHallazgosTabla, gbc);
+
+        gbc.gridx = 0; gbc.gridy = 3; gbc.weightx = 0;
         panelEjecucion.add(new JLabel("Modo Detallado:"), gbc);
         gbc.gridx = 1; gbc.weightx = 1;
         panelEjecucion.add(chkDetallado, gbc);
@@ -135,7 +148,7 @@ public class DialogoConfiguracion extends JDialog {
         JLabel etiquetaDescripcion = new JLabel("El modo detallado registra solicitudes HTTP, llamadas API y operaciones internas.");
         etiquetaDescripcion.setFont(EstilosUI.FUENTE_ESTANDAR);
         etiquetaDescripcion.setForeground(new Color(120, 120, 120));
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2;
+        gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
         panelEjecucion.add(etiquetaDescripcion, gbc);
 
         contenido.add(panelEjecucion);
@@ -237,18 +250,6 @@ public class DialogoConfiguracion extends JDialog {
         panelMaxTokens.add(lblInfoTokens, BorderLayout.EAST);
 
         panel.add(panelMaxTokens, gbc);
-
-        fila++;
-
-        // URLs de referencia
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.HORIZONTAL;
-        JTextArea urlsReferencia = new JTextArea();
-        urlsReferencia.setEditable(false);
-        urlsReferencia.setBackground(new Color(240, 248, 255));
-        urlsReferencia.setFont(EstilosUI.FUENTE_TABLA);
-        urlsReferencia.setText(construirUrlsReferencia());
-        urlsReferencia.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 255), 1));
-        panel.add(urlsReferencia, gbc);
 
         return panel;
     }
@@ -541,6 +542,7 @@ public class DialogoConfiguracion extends JDialog {
 
         txtRetraso.setText(String.valueOf(config.obtenerRetrasoSegundos()));
         txtMaximoConcurrente.setText(String.valueOf(config.obtenerMaximoConcurrente()));
+        txtMaximoHallazgosTabla.setText(String.valueOf(config.obtenerMaximoHallazgosTabla()));
         chkDetallado.setSelected(config.esDetallado());
 
         if (config.esPromptModificado()) {
@@ -603,6 +605,7 @@ public class DialogoConfiguracion extends JDialog {
         try {
             config.establecerRetrasoSegundos(Integer.parseInt(txtRetraso.getText()));
             config.establecerMaximoConcurrente(Integer.parseInt(txtMaximoConcurrente.getText()));
+            config.establecerMaximoHallazgosTabla(Integer.parseInt(txtMaximoHallazgosTabla.getText()));
 
             StringBuilder errorMsg = new StringBuilder();
             boolean guardado = gestorConfig.guardarConfiguracion(config, errorMsg);
@@ -620,7 +623,7 @@ public class DialogoConfiguracion extends JDialog {
             setVisible(false);
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this,
-                    "Formato de numero invalido para retraso o solicitudes concurrentes",
+                    "Formato de número inválido en ajustes de ejecución",
                     "Error de Validacion",
                     JOptionPane.ERROR_MESSAGE);
         }
@@ -809,21 +812,6 @@ public class DialogoConfiguracion extends JDialog {
 
     private java.util.List<String> obtenerModelosDesdeAPI(String proveedor) {
         return ProveedorAI.obtenerModelosDisponibles(proveedor);
-    }
-
-    private String construirUrlsReferencia() {
-        StringBuilder sb = new StringBuilder("📌 URLs de referencia por proveedor:\n");
-        for (String nombreProveedor : ProveedorAI.obtenerNombresProveedores()) {
-            ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(nombreProveedor);
-            if (configProveedor != null) {
-                sb.append("   ")
-                  .append(String.format("%-8s", nombreProveedor + ":"))
-                  .append(" ")
-                  .append(configProveedor.obtenerUrlApi())
-                  .append("\n");
-            }
-        }
-        return sb.toString().trim();
     }
 
     private void probarConexion() {

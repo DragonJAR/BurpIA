@@ -229,6 +229,7 @@ Right-click on findings table:
 |---------|---------|-------|-------------|
 | **Max Concurrent** | 3 | 1-10 | Maximum simultaneous API requests |
 | **Delay (seconds)** | 5 | 0-60 | Delay between requests per thread |
+| **Max Findings in Table** | 1000 | 100-50000 | Maximum findings retained in memory/UI table |
 | **AI Timeout (seconds)** | 60 | 10-300 | Maximum wait time for AI response |
 | **Verbose Mode** | Off | On/Off | Enable detailed logging |
 

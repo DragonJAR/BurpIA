@@ -178,6 +178,9 @@ public class GestorConfiguracion {
         if (archivo.maximoConcurrente != null) {
             config.establecerMaximoConcurrente(archivo.maximoConcurrente);
         }
+        if (archivo.maximoHallazgosTabla != null) {
+            config.establecerMaximoHallazgosTabla(archivo.maximoHallazgosTabla);
+        }
         if (archivo.tiempoEsperaAI != null) {
             config.establecerTiempoEsperaAI(archivo.tiempoEsperaAI);
         }
@@ -210,6 +213,7 @@ public class GestorConfiguracion {
         archivo.proveedorAI = config.obtenerProveedorAI();
         archivo.retrasoSegundos = config.obtenerRetrasoSegundos();
         archivo.maximoConcurrente = config.obtenerMaximoConcurrente();
+        archivo.maximoHallazgosTabla = config.obtenerMaximoHallazgosTabla();
         archivo.detallado = config.esDetallado();
         archivo.tiempoEsperaAI = config.obtenerTiempoEsperaAI();
         archivo.tema = config.obtenerTema();
@@ -253,6 +257,7 @@ public class GestorConfiguracion {
         private String proveedorAI;
         private Integer retrasoSegundos;
         private Integer maximoConcurrente;
+        private Integer maximoHallazgosTabla;
         private Boolean detallado;
         private Integer tiempoEsperaAI;
         private String tema;

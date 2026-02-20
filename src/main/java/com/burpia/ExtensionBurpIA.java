@@ -35,6 +35,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private ModeloTablaHallazgos modeloTablaHallazgos;
     private ModeloTablaTareas modeloTablaTareas;
     private FabricaMenuContextual fabricaMenuContextual;
+    private boolean esProfessional = false;
 
     public ExtensionBurpIA() {
     }
@@ -42,6 +43,7 @@ public class ExtensionBurpIA implements BurpExtension {
     @Override
     public void initialize(MontoyaApi api) {
         this.api = api;
+        this.esProfessional = detectarBurpProfessional(api);
 
         api.extension().setName("BurpIA");
         api.extension().registerUnloadingHandler(() -> {
@@ -74,7 +76,15 @@ public class ExtensionBurpIA implements BurpExtension {
         }, true);
 
         registrar("==================================================");
-        registrar(" BurpIA v1.0.0 - Complemento de Seguridad con IA Cargando...");
+        registrar(" BurpIA v1.0.0 - Complemento de Seguridad con IA");
+        registrar("==================================================");
+        registrar("Burp Suite: " + (esProfessional ? "Professional" : "Community Edition"));
+        
+        // Mostrar versión de Burp Suite si está disponible
+        String versionBurp = obtenerVersionBurp(api);
+        if (versionBurp != null) {
+            registrar("Version Burp Suite: " + versionBurp);
+        }
         registrar("==================================================");
 
         gestorConfig = new GestorConfiguracion(stdout, stderr);
@@ -85,6 +95,7 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar("  - Modelo: " + config.obtenerModelo());
         registrar("  - Retraso: " + config.obtenerRetrasoSegundos() + " segundos");
         registrar("  - Maximo Concurrente: " + config.obtenerMaximoConcurrente());
+        registrar("  - Maximo Hallazgos en Tabla: " + config.obtenerMaximoHallazgosTabla());
         registrar("  - Modo Detallado: " + (config.esDetallado() ? "ACTIVADO" : "desactivado"));
         registrar("==================================================");
 
@@ -92,7 +103,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
         estadisticas = new Estadisticas();
         modeloTablaTareas = new ModeloTablaTareas();
-        modeloTablaHallazgos = new ModeloTablaHallazgos();
+        modeloTablaHallazgos = new ModeloTablaHallazgos(config.obtenerMaximoHallazgosTabla());
 
         gestorTareas = new GestorTareas(modeloTablaTareas,
             mensaje -> stdout.println("[GestorTareas] " + mensaje));
@@ -141,13 +152,15 @@ public class ExtensionBurpIA implements BurpExtension {
                     gestorConfig,
                     () -> {
                         limitador = new LimitadorTasa(config.obtenerMaximoConcurrente());
+                        modeloTablaHallazgos.establecerLimiteFilas(config.obtenerMaximoHallazgosTabla());
                         manejadorHttp.actualizarConfiguracion(config);
                         gestorConsola.registrarInfo("Configuracion guardada exitosamente");
                         api.logging().logToOutput("Configuracion guardada");
 
                         registrar("Configuracion actualizada: detallado=" + config.esDetallado() +
                                 ", maximoConcurrente=" + config.obtenerMaximoConcurrente() +
-                                ", retraso=" + config.obtenerRetrasoSegundos() + "s");
+                                ", retraso=" + config.obtenerRetrasoSegundos() + "s" +
+                                ", maximoHallazgos=" + config.obtenerMaximoHallazgosTabla());
                     }
             );
             dialogo.setVisible(true);
@@ -237,5 +250,72 @@ public class ExtensionBurpIA implements BurpExtension {
             default:
                 return burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.TENTATIVE;
         }
+    }
+
+    /**
+     * Detecta si Burp Suite está ejecutándose en versión Professional.
+     * Professional tiene acceso a Scanner, AI, Collaborator y otras features exclusivas.
+     * 
+     * @param api Instancia de MontoyaApi
+     * @return true si es Professional, false si es Community Edition
+     */
+    private boolean detectarBurpProfessional(MontoyaApi api) {
+        try {
+            // Método 1: Verificar si Scanner está disponible (solo Pro)
+            if (api.scanner() != null) {
+                return true;
+            }
+        } catch (Exception e) {
+            // Scanner no disponible
+        }
+        
+        try {
+            // Método 2: Verificar si AI está disponible (solo Pro)
+            if (api.ai() != null && api.ai().isEnabled()) {
+                return true;
+            }
+        } catch (Exception e) {
+            // AI no disponible
+        }
+        
+        try {
+            // Método 3: Verificar si Collaborator está disponible (solo Pro)
+            if (api.collaborator() != null) {
+                return true;
+            }
+        } catch (Exception e) {
+            // Collaborator no disponible
+        }
+        
+        return false;
+    }
+
+    /**
+     * Obtiene la versión de Burp Suite si está disponible.
+     * 
+     * @param api Instancia de MontoyaApi
+     * @return String con la versión o null si no está disponible
+     */
+    private String obtenerVersionBurp(MontoyaApi api) {
+        try {
+            // Intentar obtener versión a través de burpSuite()
+            if (api.burpSuite() != null) {
+                // ProductVersion puede estar disponible en algunas versiones
+                // Esta es una verificación best-effort
+                return "Detectado";
+            }
+        } catch (Exception e) {
+            // Versión no disponible a través de esta API
+        }
+        return null;
+    }
+
+    /**
+     * Retorna si la extensión está corriendo en Burp Suite Professional.
+     * 
+     * @return true si es Professional, false si es Community
+     */
+    public boolean esBurpProfessional() {
+        return esProfessional;
     }
 }
