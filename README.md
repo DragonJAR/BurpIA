@@ -53,12 +53,12 @@ BurpIA uses state-of-the-art AI models to detect:
 
 | Provider | Models | Context Window |
 |----------|--------|----------------|
-| **OpenAI** | GPT-5.x, GPT-4o, o1 | 128k tokens |
-| **Claude** | Claude Sonnet 4-6, Opus, Haiku | 200k tokens |
-| **Gemini** | Gemini 3 Pro, Flash, Deep Think | 1M tokens |
-| **Z.ai** | GLM-5, GLM-4.x | 128k tokens |
-| **Minimax** | MiniMax M2.5 | 32k tokens |
-| **Ollama** | Local models (Llama, Mistral, etc.) | Variable |
+| **OpenAI** | GPT-5.3-codex, GPT-5.2-pro/thinking, GPT-5-mini, GPT-4o, o1 | 128k tokens |
+| **Claude** | Claude Sonnet 4-6, Claude 3 Opus/Haiku | 200k tokens |
+| **Gemini** | Gemini 3 Deep Think/Pro/Flash, Gemini 2.0 Flash | 1M tokens |
+| **Z.ai** | GLM-5, GLM-4.7-thinking, GLM-4.5v | 128k tokens |
+| **Minimax** | MiniMax M2.5, M2.5-lightning, M2.1-codex | 32k tokens |
+| **Ollama** | Gemma3, DeepSeek-v3.2, Phi4, Llama3.3, Qwen2.5 | Variable |
 
 ### 🎨 Professional Interface
 
@@ -309,6 +309,24 @@ com.burpia/
 
 ## 🧪 Testing
 
+### Running Tests
+
+```bash
+# Run all tests
+./gradlew test
+
+# Run specific test class
+./gradlew test --tests "com.burpia.config.ConfiguracionAPITest"
+```
+
+### Test Coverage
+
+The project includes unit tests for:
+- **Config**: API configuration, endpoint builders, persistence
+- **Util**: Connection tester, response parser, task manager, deduplicator
+- **UI**: Table models, context menus, renderers
+- **Model**: Task and finding model validation
+
 ### Manual Testing Checklist
 
 - [ ] Connection test works for each provider
@@ -344,7 +362,7 @@ cd BurpIA
 # Build
 ./gradlew clean build
 
-# Run tests (when implemented)
+# Run tests
 ./gradlew test
 
 # Generate fat JAR
