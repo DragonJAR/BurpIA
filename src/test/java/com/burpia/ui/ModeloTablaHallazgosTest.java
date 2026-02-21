@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.SwingUtilities;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @DisplayName("ModeloTablaHallazgos Tests")
@@ -31,5 +32,21 @@ class ModeloTablaHallazgosTest {
         SwingUtilities.invokeAndWait(() -> {});
         assertEquals(3, modelo.getRowCount());
         assertEquals(3, modelo.obtenerLimiteFilas());
+    }
+
+    @Test
+    @DisplayName("Ignorar y eliminar con indice invalido no rompe la tabla")
+    void testOperacionesIndiceInvalido() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
+        modelo.agregarHallazgo(new Hallazgo("https://example.com/x", "Hallazgo X", "Low", "Low"));
+        SwingUtilities.invokeAndWait(() -> {});
+        assertEquals(1, modelo.getRowCount());
+
+        assertDoesNotThrow(() -> modelo.marcarComoIgnorado(-1));
+        assertDoesNotThrow(() -> modelo.eliminarHallazgo(-1));
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(1, modelo.getRowCount());
+        assertEquals(0, modelo.obtenerNumeroIgnorados());
     }
 }

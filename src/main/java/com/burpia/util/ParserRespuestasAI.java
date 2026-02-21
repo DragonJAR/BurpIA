@@ -3,6 +3,7 @@ package com.burpia.util;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonArray;
 
 /**
  * Utilidad para parsear respuestas de APIs de IA de forma robusta.
@@ -35,7 +36,9 @@ public class ParserRespuestasAI {
             JsonObject raiz = elemento.getAsJsonObject();
             String contenido = "";
 
-            switch (proveedor) {
+            String proveedorNormalizado = proveedor != null ? proveedor : "";
+
+            switch (proveedorNormalizado) {
                 case "Ollama":
                     contenido = extraerContenidoOllama(raiz);
                     break;
@@ -55,12 +58,10 @@ public class ParserRespuestasAI {
                     break;
 
                 default:
-                    // Intentar genérico
                     contenido = extraerContenidoGenerico(raiz);
                     break;
             }
 
-            // Limpiar caracteres de escape
             if (contenido != null && !contenido.isEmpty()) {
                 contenido = contenido
                     .replace("\\n", " ")
@@ -72,7 +73,6 @@ public class ParserRespuestasAI {
             return limpiarBloquesPensamiento(contenido != null ? contenido : "");
 
         } catch (Exception e) {
-            // Si falla el parsing JSON, retornar cadena vacía
             return "";
         }
     }
@@ -81,11 +81,10 @@ public class ParserRespuestasAI {
      * Formato Ollama: {"message": {"content": "..."}}
      */
     private static String extraerContenidoOllama(JsonObject raiz) {
-        if (raiz.has("message")) {
-            JsonObject message = raiz.getAsJsonObject("message");
-            if (message.has("content")) {
-                return message.get("content").getAsString();
-            }
+        JsonObject message = obtenerObjeto(raiz, "message");
+        String contenido = obtenerTexto(message, "content");
+        if (!contenido.isEmpty()) {
+            return contenido;
         }
         return "";
     }
@@ -94,61 +93,55 @@ public class ParserRespuestasAI {
      * Formato OpenAI/Z.ai/minimax: {"choices": [{"message": {"content": "..."}}]}
      */
     private static String extraerContenidoOpenAI(JsonObject raiz) {
-        // OpenAI Responses API: {"output_text":"..."} o {"output":[{"content":[{"type":"output_text","text":"..."}]}]}
-        if (raiz.has("output_text")) {
-            String outputText = raiz.get("output_text").getAsString();
-            if (outputText != null && !outputText.trim().isEmpty()) {
-                return outputText;
-            }
+        String outputText = obtenerTexto(raiz, "output_text");
+        if (!outputText.isEmpty()) {
+            return outputText;
         }
-        if (raiz.has("output")) {
-            JsonElement outputElement = raiz.get("output");
-            if (outputElement.isJsonArray()) {
-                var output = outputElement.getAsJsonArray();
-                if (output.size() > 0 && output.get(0).isJsonObject()) {
-                    JsonObject first = output.get(0).getAsJsonObject();
-                    if (first.has("content") && first.get("content").isJsonArray()) {
-                        var content = first.getAsJsonArray("content");
-                        if (content.size() > 0 && content.get(0).isJsonObject()) {
-                            JsonObject firstContent = content.get(0).getAsJsonObject();
-                            if (firstContent.has("text")) {
-                                String text = firstContent.get("text").getAsString();
-                                if (text != null && !text.trim().isEmpty()) {
-                                    return text;
-                                }
-                            }
-                        }
+
+        JsonArray output = obtenerArreglo(raiz, "output");
+        if (output != null) {
+            for (JsonElement outputItem : output) {
+                JsonObject outputObject = obtenerObjeto(outputItem);
+                JsonArray contenidos = obtenerArreglo(outputObject, "content");
+                if (contenidos == null) {
+                    continue;
+                }
+                for (JsonElement contenidoItem : contenidos) {
+                    JsonObject contenidoObjeto = obtenerObjeto(contenidoItem);
+                    String texto = obtenerTexto(contenidoObjeto, "text");
+                    if (!texto.isEmpty()) {
+                        return texto;
                     }
                 }
             }
         }
 
-        if (raiz.has("choices")) {
-            var choices = raiz.getAsJsonArray("choices");
-            if (choices != null && choices.size() > 0) {
-                JsonObject firstChoice = choices.get(0).getAsJsonObject();
-                if (firstChoice.has("message")) {
-                    JsonObject message = firstChoice.getAsJsonObject("message");
-                    if (message.has("content")) {
-                        String content = message.get("content").getAsString();
-                        if (content != null && !content.trim().isEmpty()) {
-                            return content;
-                        }
-                    }
-                    // Algunos proveedores compatibles OpenAI (ej. Z.ai) pueden responder aquí
-                    if (message.has("reasoning_content")) {
-                        String reasoning = message.get("reasoning_content").getAsString();
-                        if (reasoning != null && !reasoning.trim().isEmpty()) {
-                            return reasoning;
-                        }
-                    }
+        JsonArray choices = obtenerArreglo(raiz, "choices");
+        if (choices != null) {
+            for (JsonElement choiceItem : choices) {
+                JsonObject choice = obtenerObjeto(choiceItem);
+                if (choice == null) {
+                    continue;
                 }
 
-                if (firstChoice.has("text")) {
-                    String text = firstChoice.get("text").getAsString();
-                    if (text != null && !text.trim().isEmpty()) {
-                        return text;
-                    }
+                JsonObject message = obtenerObjeto(choice, "message");
+                String content = obtenerTexto(message, "content");
+                if (!content.isEmpty()) {
+                    return content;
+                }
+                String contentPartes = extraerTextoDesdeArreglo(obtenerArreglo(message, "content"));
+                if (!contentPartes.isEmpty()) {
+                    return contentPartes;
+                }
+
+                String reasoning = obtenerTexto(message, "reasoning_content");
+                if (!reasoning.isEmpty()) {
+                    return reasoning;
+                }
+
+                String text = obtenerTexto(choice, "text");
+                if (!text.isEmpty()) {
+                    return text;
                 }
             }
         }
@@ -163,19 +156,20 @@ public class ParserRespuestasAI {
         if (raiz.has("content")) {
             JsonElement content = raiz.get("content");
 
-            // Si es un array, buscar el primer bloque de texto
             if (content.isJsonArray()) {
                 var contentArray = content.getAsJsonArray();
                 for (JsonElement item : contentArray) {
-                    if (item.isJsonObject()) {
-                        JsonObject obj = item.getAsJsonObject();
-                        if ("text".equals(obj.get("type").getAsString()) && obj.has("text")) {
-                            return obj.get("text").getAsString();
-                        }
+                    JsonObject obj = obtenerObjeto(item);
+                    if (obj == null) {
+                        continue;
+                    }
+                    String tipo = obtenerTexto(obj, "type");
+                    String texto = obtenerTexto(obj, "text");
+                    if (!texto.isEmpty() && ("text".equals(tipo) || tipo.isEmpty())) {
+                        return texto;
                     }
                 }
             }
-            // Si es un string directo
             else if (content.isJsonPrimitive()) {
                 return content.getAsString();
             }
@@ -187,21 +181,22 @@ public class ParserRespuestasAI {
      * Formato Gemini: {"candidates": [{"content": {"parts": [{"text": "..."}]}}]}
      */
     private static String extraerContenidoGemini(JsonObject raiz) {
-        if (raiz.has("candidates")) {
-            var candidates = raiz.getAsJsonArray("candidates");
-            if (candidates != null && candidates.size() > 0) {
-                JsonObject firstCandidate = candidates.get(0).getAsJsonObject();
-                if (firstCandidate.has("content")) {
-                    JsonObject content = firstCandidate.getAsJsonObject("content");
-                    if (content.has("parts")) {
-                        var parts = content.getAsJsonArray("parts");
-                        if (parts != null && parts.size() > 0) {
-                            JsonObject firstPart = parts.get(0).getAsJsonObject();
-                            if (firstPart.has("text")) {
-                                return firstPart.get("text").getAsString();
-                            }
-                        }
-                    }
+        JsonArray candidates = obtenerArreglo(raiz, "candidates");
+        if (candidates == null) {
+            return "";
+        }
+        for (JsonElement candidateItem : candidates) {
+            JsonObject candidate = obtenerObjeto(candidateItem);
+            JsonObject content = obtenerObjeto(candidate, "content");
+            JsonArray parts = obtenerArreglo(content, "parts");
+            if (parts == null) {
+                continue;
+            }
+            for (JsonElement partItem : parts) {
+                JsonObject part = obtenerObjeto(partItem);
+                String text = obtenerTexto(part, "text");
+                if (!text.isEmpty()) {
+                    return text;
                 }
             }
         }
@@ -212,14 +207,28 @@ public class ParserRespuestasAI {
      * Intento genérico de extraer contenido buscando campos comunes.
      */
     private static String extraerContenidoGenerico(JsonObject raiz) {
-        // Buscar campos comunes en orden de probabilidad
         String[] campos = {"content", "text", "message", "response", "output", "reasoning_content"};
 
         for (String campo : campos) {
-            if (raiz.has(campo)) {
-                JsonElement elemento = raiz.get(campo);
-                if (elemento.isJsonPrimitive()) {
-                    return elemento.getAsString();
+            JsonElement elemento = obtenerElemento(raiz, campo);
+            if (elemento == null) {
+                continue;
+            }
+
+            if (elemento.isJsonPrimitive()) {
+                String valor = obtenerTexto(elemento);
+                if (!valor.isEmpty()) {
+                    return valor;
+                }
+            } else if (elemento.isJsonObject()) {
+                JsonObject objeto = elemento.getAsJsonObject();
+                String content = obtenerTexto(objeto, "content");
+                if (!content.isEmpty()) {
+                    return content;
+                }
+                String text = obtenerTexto(objeto, "text");
+                if (!text.isEmpty()) {
+                    return text;
                 }
             }
         }
@@ -256,5 +265,79 @@ public class ParserRespuestasAI {
         }
         String limpio = PATRON_BLOQUES_PENSAMIENTO.matcher(texto).replaceAll(" ");
         return limpio.replaceAll("\\s+", " ").trim();
+    }
+
+    private static JsonElement obtenerElemento(JsonObject objeto, String campo) {
+        if (objeto == null || campo == null || !objeto.has(campo)) {
+            return null;
+        }
+        JsonElement elemento = objeto.get(campo);
+        if (elemento == null || elemento.isJsonNull()) {
+            return null;
+        }
+        return elemento;
+    }
+
+    private static JsonObject obtenerObjeto(JsonObject objeto, String campo) {
+        return obtenerObjeto(obtenerElemento(objeto, campo));
+    }
+
+    private static JsonObject obtenerObjeto(JsonElement elemento) {
+        if (elemento == null || !elemento.isJsonObject()) {
+            return null;
+        }
+        return elemento.getAsJsonObject();
+    }
+
+    private static JsonArray obtenerArreglo(JsonObject objeto, String campo) {
+        return obtenerArreglo(obtenerElemento(objeto, campo));
+    }
+
+    private static JsonArray obtenerArreglo(JsonElement elemento) {
+        if (elemento == null || !elemento.isJsonArray()) {
+            return null;
+        }
+        return elemento.getAsJsonArray();
+    }
+
+    private static String obtenerTexto(JsonObject objeto, String campo) {
+        return obtenerTexto(obtenerElemento(objeto, campo));
+    }
+
+    private static String obtenerTexto(JsonElement elemento) {
+        if (elemento == null || !elemento.isJsonPrimitive()) {
+            return "";
+        }
+        try {
+            String valor = elemento.getAsString();
+            return valor != null ? valor : "";
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private static String extraerTextoDesdeArreglo(JsonArray arreglo) {
+        if (arreglo == null) {
+            return "";
+        }
+        for (JsonElement item : arreglo) {
+            String directo = obtenerTexto(item);
+            if (!directo.isEmpty()) {
+                return directo;
+            }
+            JsonObject objeto = obtenerObjeto(item);
+            if (objeto == null) {
+                continue;
+            }
+            String text = obtenerTexto(objeto, "text");
+            if (!text.isEmpty()) {
+                return text;
+            }
+            String content = obtenerTexto(objeto, "content");
+            if (!content.isEmpty()) {
+                return content;
+            }
+        }
+        return "";
     }
 }

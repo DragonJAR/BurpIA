@@ -1,5 +1,7 @@
 package com.burpia.util;
 
+import com.burpia.i18n.I18nLogs;
+
 import javax.swing.*;
 import javax.swing.text.*;
 import java.awt.*;
@@ -70,10 +72,11 @@ public class GestorConsolaGUI {
     }
 
     public void registrar(String mensaje, TipoLog tipo) {
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
         incrementarContador(tipo);
 
         String hora = LocalTime.now().format(formateadorHora);
-        String mensajeFormateado = String.format("[%s] %s%n", hora, mensaje);
+        String mensajeFormateado = String.format("[%s] %s%n", hora, mensajeLocalizado);
 
         if (documento != null) {
             colaPendiente.add(new EntradaLog(mensajeFormateado, tipo));

@@ -1,13 +1,14 @@
 package com.burpia.ui;
 
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
 import com.burpia.util.GestorTareas;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -22,9 +23,10 @@ public class PanelTareas extends JPanel {
     private JLabel etiquetaEstadisticas;
     private final GestorTareas gestorTareas;
     private Timer timerActualizacion;
+    private JPanel panelControles;
+    private JPanel panelTablaWrapper;
 
-    // Umbral de ancho para cambiar de layout (en pixeles)
-    private static final int UMBRAL_RESPONSIVE = 800;  // Ajustado para mejor distribución
+    private static final int UMBRAL_RESPONSIVE = 800;
 
     public PanelTareas(GestorTareas gestorTareas, ModeloTablaTareas modelo) {
         this.modelo = modelo;
@@ -37,12 +39,12 @@ public class PanelTareas extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JPanel panelControles = new JPanel();
+        panelControles = new JPanel();
         panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
         panelControles.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                "🎮 CONTROLES DE TAREAS",
+                I18nUI.Tareas.TITULO_CONTROLES(),
                 TitledBorder.LEFT,
                 TitledBorder.TOP,
                 EstilosUI.FUENTE_NEGRITA
@@ -55,17 +57,13 @@ public class PanelTareas extends JPanel {
 
             @Override
             public void doLayout() {
-                // Detectar ancho disponible
                 int ancho = getWidth() - 40;
                 boolean esLayoutHorizontal = ancho >= UMBRAL_RESPONSIVE;
 
-                // Cambiar layout solo si es necesario
                 if (esLayoutHorizontal != ultimoLayoutHorizontal) {
                     if (esLayoutHorizontal) {
-                        // Espacio suficiente: una fila con botones + estadísticas
                         setLayout(new FlowLayout(FlowLayout.LEFT, 12, 4));
                     } else {
-                        // Espacio limitado: botones en vertical, estadísticas abajo
                         setLayout(new GridLayout(2, 1, 0, 10));
                     }
                     ultimoLayoutHorizontal = esLayoutHorizontal;
@@ -75,33 +73,33 @@ public class PanelTareas extends JPanel {
             }
         };
 
-        botonPausarReanudar = new JButton("⏸️ Pausar Todo");
+        botonPausarReanudar = new JButton(I18nUI.Tareas.BOTON_PAUSAR_TODO());
         botonPausarReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonPausarReanudar.setToolTipText("Pausar o reanudar todas las tareas en análisis");
+        botonPausarReanudar.setToolTipText(TooltipsUI.Tareas.PAUSAR_REANUDAR());
         panelTodosControles.add(botonPausarReanudar);
 
-        botonCancelar = new JButton("🛑 Cancelar Todo");
+        botonCancelar = new JButton(I18nUI.Tareas.BOTON_CANCELAR_TODO());
         botonCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonCancelar.setToolTipText("Cancelar todas las tareas activas");
+        botonCancelar.setToolTipText(TooltipsUI.Tareas.CANCELAR());
         panelTodosControles.add(botonCancelar);
 
-        botonLimpiarCompletadas = new JButton("🧹 Limpiar");
+        botonLimpiarCompletadas = new JButton(I18nUI.Tareas.BOTON_LIMPIAR());
         botonLimpiarCompletadas.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonLimpiarCompletadas.setToolTipText("Eliminar tareas completadas, con error o canceladas");
+        botonLimpiarCompletadas.setToolTipText(TooltipsUI.Tareas.LIMPIAR());
         panelTodosControles.add(botonLimpiarCompletadas);
 
-        // Estadísticas de tareas (en el mismo panel cuando hay espacio)
-        etiquetaEstadisticas = new JLabel("📊 Tareas Activas: 0 | ✅ Completadas: 0 | ❌ Con Errores: 0");
+        etiquetaEstadisticas = new JLabel(I18nUI.Tareas.ESTADISTICAS(0, 0, 0));
         etiquetaEstadisticas.setFont(EstilosUI.FUENTE_MONO);
+        etiquetaEstadisticas.setToolTipText(TooltipsUI.Tareas.ESTADISTICAS());
         panelTodosControles.add(etiquetaEstadisticas);
 
         panelControles.add(panelTodosControles);
 
-        JPanel panelTablaWrapper = new JPanel(new BorderLayout());
+        panelTablaWrapper = new JPanel(new BorderLayout());
         panelTablaWrapper.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                "📋 LISTA DE TAREAS",
+                I18nUI.Tareas.TITULO_LISTA(),
                 TitledBorder.LEFT,
                 TitledBorder.TOP,
                 EstilosUI.FUENTE_NEGRITA
@@ -113,15 +111,8 @@ public class PanelTareas extends JPanel {
         tabla.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         tabla.setRowHeight(EstilosUI.ALTURA_FILA_TABLA);
         tabla.setFont(EstilosUI.FUENTE_TABLA);
-
-        tabla.getColumnModel().getColumn(2).setCellRenderer(new RenderizadorEstado()); // Estado
-        tabla.getColumnModel().getColumn(3).setCellRenderer(new RenderizadorCentrado()); // Duración centrada
-
-        // Ajustar anchos de columna
-        tabla.getColumnModel().getColumn(0).setPreferredWidth(120); // Tipo
-        tabla.getColumnModel().getColumn(1).setPreferredWidth(400); // URL
-        tabla.getColumnModel().getColumn(2).setPreferredWidth(130); // Estado
-        tabla.getColumnModel().getColumn(3).setPreferredWidth(100); // Duración
+        tabla.setToolTipText(TooltipsUI.Tareas.TABLA());
+        configurarColumnasTabla();
 
         JScrollPane panelDesplazable = new JScrollPane(tabla);
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -136,8 +127,8 @@ public class PanelTareas extends JPanel {
             } else {
                 JOptionPane.showMessageDialog(
                     this,
-                    "No hay tareas activas o pausadas para gestionar.",
-                    "Información",
+                    I18nUI.Tareas.INFO_SIN_TAREAS_GESTIONAR(),
+                    I18nUI.Tareas.TITULO_INFORMACION(),
                     JOptionPane.INFORMATION_MESSAGE
                 );
             }
@@ -151,8 +142,8 @@ public class PanelTareas extends JPanel {
             if (activas == 0) {
                 JOptionPane.showMessageDialog(
                     this,
-                    "No hay tareas activas para cancelar.",
-                    "Información",
+                    I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR(),
+                    I18nUI.Tareas.TITULO_INFORMACION(),
                     JOptionPane.INFORMATION_MESSAGE
                 );
                 return;
@@ -160,8 +151,8 @@ public class PanelTareas extends JPanel {
 
             int confirmacion = JOptionPane.showConfirmDialog(
                 this,
-                "¿Cancelar " + activas + " tarea(s) activa(s)?",
-                "Confirmar cancelación",
+                I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(activas),
+                I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE
             );
@@ -178,8 +169,8 @@ public class PanelTareas extends JPanel {
             if (completadas == 0) {
                 JOptionPane.showMessageDialog(
                     this,
-                    "No hay tareas completadas para limpiar.",
-                    "Información",
+                    I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR(),
+                    I18nUI.Tareas.TITULO_INFORMACION(),
                     JOptionPane.INFORMATION_MESSAGE
                 );
                 return;
@@ -187,8 +178,8 @@ public class PanelTareas extends JPanel {
 
             int confirmacion = JOptionPane.showConfirmDialog(
                 this,
-                "¿Eliminar " + completadas + " tarea(s) completada(s)?",
-                "Confirmar limpieza",
+                I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(completadas),
+                I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
             );
@@ -198,11 +189,10 @@ public class PanelTareas extends JPanel {
             }
         });
 
-        // Timer para actualizar estadísticas cada segundo
         timerActualizacion = new Timer(1000, e -> actualizarEstadisticas());
         timerActualizacion.start();
+        aplicarIdioma();
 
-        // Crear menú contextual para tareas individuales
         crearMenuContextual();
 
         add(panelControles, BorderLayout.NORTH);
@@ -210,42 +200,36 @@ public class PanelTareas extends JPanel {
     }
 
     private void crearMenuContextual() {
-        // Agregar MouseListener a la tabla para mostrar menú contextual dinámico
         tabla.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    int fila = tabla.rowAtPoint(e.getPoint());
-                    if (fila >= 0) {
-                        if (!tabla.isRowSelected(fila)) {
-                            if (!e.isControlDown()) {
-                                tabla.setRowSelectionInterval(fila, fila);
-                            } else {
-                                tabla.addRowSelectionInterval(fila, fila);
-                            }
-                        }
-                        mostrarMenuContextualDinamico(e.getX(), e.getY());
-                    }
-                }
+                mostrarMenuContextualSiAplica(e);
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (SwingUtilities.isRightMouseButton(e)) {
-                    int fila = tabla.rowAtPoint(e.getPoint());
-                    if (fila >= 0) {
-                        if (!tabla.isRowSelected(fila)) {
-                            if (!e.isControlDown()) {
-                                tabla.setRowSelectionInterval(fila, fila);
-                            } else {
-                                tabla.addRowSelectionInterval(fila, fila);
-                            }
-                        }
-                        mostrarMenuContextualDinamico(e.getX(), e.getY());
-                    }
-                }
+                mostrarMenuContextualSiAplica(e);
             }
         });
+    }
+
+    private void mostrarMenuContextualSiAplica(MouseEvent e) {
+        if (!e.isPopupTrigger()) {
+            return;
+        }
+
+        int fila = tabla.rowAtPoint(e.getPoint());
+        if (fila < 0) {
+            return;
+        }
+        if (!tabla.isRowSelected(fila)) {
+            if (!e.isControlDown()) {
+                tabla.setRowSelectionInterval(fila, fila);
+            } else {
+                tabla.addRowSelectionInterval(fila, fila);
+            }
+        }
+        mostrarMenuContextualDinamico(e.getX(), e.getY());
     }
 
     private void mostrarMenuContextualDinamico(int x, int y) {
@@ -255,14 +239,12 @@ public class PanelTareas extends JPanel {
         JPopupMenu menuContextual = new JPopupMenu();
 
         if (filas.length == 1) {
-            // Menú dinámico para una sola tarea
             int filaModelo = tabla.convertRowIndexToModel(filas[0]);
-            String estado = (String) modelo.getValueAt(filaModelo, 2); // Índice 2 = Estado
+            String estado = (String) modelo.getValueAt(filaModelo, 2);
             String tareaId = modelo.obtenerIdTarea(filaModelo);
 
             crearMenuUnaTarea(menuContextual, tareaId, estado, filaModelo);
         } else {
-            // Menú para múltiples tareas
             crearMenuMultipleTareas(menuContextual, filas);
         }
 
@@ -270,25 +252,28 @@ public class PanelTareas extends JPanel {
     }
 
     private void crearMenuUnaTarea(JPopupMenu menu, String tareaId, String estado, int filaModelo) {
-        // Ver detalles - solo para tareas con ERROR
         if (Tarea.ESTADO_ERROR.equals(estado)) {
-            JMenuItem menuItemVerDetalles = new JMenuItem("📋 Ver Detalles del Error");
+            JMenuItem menuItemVerDetalles = new JMenuItem(I18nUI.Tareas.MENU_VER_DETALLES_ERROR());
             menuItemVerDetalles.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemVerDetalles.setToolTipText(TooltipsUI.Tareas.MENU_VER_DETALLES_ERROR());
             menuItemVerDetalles.addActionListener(e -> {
                 String url = (String) modelo.getValueAt(filaModelo, 1);
                 String duracion = (String) modelo.getValueAt(filaModelo, 3);
-                String mensaje = "URL: " + url + "\n" +
-                               "Duracion: " + duracion + "\n" +
-                               "Estado: " + estado;
-                JOptionPane.showMessageDialog(PanelTareas.this, mensaje, "Detalles del Error", JOptionPane.ERROR_MESSAGE);
+                String mensaje = I18nUI.Tareas.MSG_DETALLES_ERROR(url, duracion, estado);
+                JOptionPane.showMessageDialog(
+                    PanelTareas.this,
+                    mensaje,
+                    I18nUI.Tareas.TITULO_DETALLES_ERROR(),
+                    JOptionPane.ERROR_MESSAGE
+                );
             });
             menu.add(menuItemVerDetalles);
         }
 
-        // Reintentar - solo para ERROR o CANCELADO
         if (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado)) {
-            JMenuItem menuItemReintentar = new JMenuItem("🔄 Reintentar");
+            JMenuItem menuItemReintentar = new JMenuItem(I18nUI.Tareas.MENU_REINTENTAR());
             menuItemReintentar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemReintentar.setToolTipText(TooltipsUI.Tareas.MENU_REINTENTAR_UNA());
             menuItemReintentar.addActionListener(e -> {
                 if (tareaId != null) {
                     gestorTareas.reanudarTarea(tareaId);
@@ -298,10 +283,10 @@ public class PanelTareas extends JPanel {
             menu.add(menuItemReintentar);
         }
 
-        // Pausar - solo para EN_COLA o ANALIZANDO
         if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado)) {
-            JMenuItem menuItemPausar = new JMenuItem("⏸️ Pausar");
+            JMenuItem menuItemPausar = new JMenuItem(I18nUI.Tareas.MENU_PAUSAR());
             menuItemPausar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemPausar.setToolTipText(TooltipsUI.Tareas.MENU_PAUSAR_UNA());
             menuItemPausar.addActionListener(e -> {
                 if (tareaId != null) {
                     gestorTareas.pausarTarea(tareaId);
@@ -311,10 +296,10 @@ public class PanelTareas extends JPanel {
             menu.add(menuItemPausar);
         }
 
-        // Reanudar - solo para PAUSADO
         if (Tarea.ESTADO_PAUSADO.equals(estado)) {
-            JMenuItem menuItemReanudar = new JMenuItem("▶️ Reanudar");
+            JMenuItem menuItemReanudar = new JMenuItem(I18nUI.Tareas.MENU_REANUDAR());
             menuItemReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemReanudar.setToolTipText(TooltipsUI.Tareas.MENU_REANUDAR_UNA());
             menuItemReanudar.addActionListener(e -> {
                 if (tareaId != null) {
                     gestorTareas.reanudarTarea(tareaId);
@@ -324,17 +309,17 @@ public class PanelTareas extends JPanel {
             menu.add(menuItemReanudar);
         }
 
-        // Cancelar - para tareas activas (EN_COLA, ANALIZANDO, PAUSADO)
         if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado) || Tarea.ESTADO_PAUSADO.equals(estado)) {
             if (menu.getComponentCount() > 0) menu.addSeparator();
 
-            JMenuItem menuItemCancelar = new JMenuItem("🛑 Cancelar");
+            JMenuItem menuItemCancelar = new JMenuItem(I18nUI.Tareas.MENU_CANCELAR());
             menuItemCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemCancelar.setToolTipText(TooltipsUI.Tareas.MENU_CANCELAR_UNA());
             menuItemCancelar.addActionListener(e -> {
                 int confirmacion = JOptionPane.showConfirmDialog(
                     PanelTareas.this,
-                    "¿Cancelar esta tarea?",
-                    "Confirmar cancelacion",
+                    I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_UNA_TAREA(),
+                    I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE
                 );
@@ -346,12 +331,12 @@ public class PanelTareas extends JPanel {
             menu.add(menuItemCancelar);
         }
 
-        // Eliminar de la lista - para COMPLETADO, ERROR, CANCELADO
         if (Tarea.ESTADO_COMPLETADO.equals(estado) || Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado)) {
             if (menu.getComponentCount() > 0) menu.addSeparator();
 
-            JMenuItem menuItemLimpiar = new JMenuItem("🧹 Eliminar de la Lista");
+            JMenuItem menuItemLimpiar = new JMenuItem(I18nUI.Tareas.MENU_ELIMINAR_LISTA());
             menuItemLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemLimpiar.setToolTipText(TooltipsUI.Tareas.MENU_ELIMINAR_UNA());
             menuItemLimpiar.addActionListener(e -> {
                 if (tareaId != null) {
                     gestorTareas.limpiarTarea(tareaId);
@@ -363,7 +348,6 @@ public class PanelTareas extends JPanel {
     }
 
     private void crearMenuMultipleTareas(JPopupMenu menu, int[] filas) {
-        // Contar tareas por estado
         int erroresCanceladas = 0;
         int activas = 0;
         int pausadas = 0;
@@ -371,7 +355,7 @@ public class PanelTareas extends JPanel {
 
         for (int fila : filas) {
             int filaModelo = tabla.convertRowIndexToModel(fila);
-            String estado = (String) modelo.getValueAt(filaModelo, 2); // Índice 2 = Estado
+            String estado = (String) modelo.getValueAt(filaModelo, 2);
 
             if (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado)) {
                 erroresCanceladas++;
@@ -384,47 +368,47 @@ public class PanelTareas extends JPanel {
             }
         }
 
-        // Reintentar - si hay errores o canceladas
         if (erroresCanceladas > 0) {
-            JMenuItem menuItemReintentar = new JMenuItem("🔄 Reintentar " + erroresCanceladas + " tarea(s) con error/cancelada(s)");
+            JMenuItem menuItemReintentar = new JMenuItem(I18nUI.Tareas.MENU_REINTENTAR_MULTIPLES(erroresCanceladas));
             menuItemReintentar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemReintentar.setToolTipText(TooltipsUI.Tareas.MENU_REINTENTAR_MULTIPLES());
             menuItemReintentar.addActionListener(e -> reintentarTareas(filas));
             menu.add(menuItemReintentar);
         }
 
-        // Pausar - si hay activas
         if (activas > 0) {
-            JMenuItem menuItemPausar = new JMenuItem("⏸️ Pausar " + activas + " tarea(s) activa(s)");
+            JMenuItem menuItemPausar = new JMenuItem(I18nUI.Tareas.MENU_PAUSAR_MULTIPLES(activas));
             menuItemPausar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemPausar.setToolTipText(TooltipsUI.Tareas.MENU_PAUSAR_MULTIPLES());
             menuItemPausar.addActionListener(e -> pausarTareas(filas));
             menu.add(menuItemPausar);
         }
 
-        // Reanudar - si hay pausadas
         if (pausadas > 0) {
-            JMenuItem menuItemReanudar = new JMenuItem("▶️ Reanudar " + pausadas + " tarea(s) pausada(s)");
+            JMenuItem menuItemReanudar = new JMenuItem(I18nUI.Tareas.MENU_REANUDAR_MULTIPLES(pausadas));
             menuItemReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemReanudar.setToolTipText(TooltipsUI.Tareas.MENU_REANUDAR_MULTIPLES());
             menuItemReanudar.addActionListener(e -> reanudarTareas(filas));
             menu.add(menuItemReanudar);
         }
 
-        // Cancelar - si hay activas o pausadas
         if (activas > 0 || pausadas > 0) {
             if (menu.getComponentCount() > 0) menu.addSeparator();
 
-            JMenuItem menuItemCancelar = new JMenuItem("🛑 Cancelar " + (activas + pausadas) + " tarea(s) activa(s)");
+            JMenuItem menuItemCancelar = new JMenuItem(I18nUI.Tareas.MENU_CANCELAR_MULTIPLES(activas + pausadas));
             menuItemCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemCancelar.setToolTipText(TooltipsUI.Tareas.MENU_CANCELAR_MULTIPLES());
             menuItemCancelar.addActionListener(e -> cancelarTareas(filas));
             menu.add(menuItemCancelar);
         }
 
-        // Eliminar finalizadas
         int totalFinalizadas = erroresCanceladas + finalizadas;
         if (totalFinalizadas > 0) {
             if (menu.getComponentCount() > 0) menu.addSeparator();
 
-            JMenuItem menuItemLimpiar = new JMenuItem("🧹 Eliminar " + totalFinalizadas + " tarea(s) finalizada(s)");
+            JMenuItem menuItemLimpiar = new JMenuItem(I18nUI.Tareas.MENU_ELIMINAR_MULTIPLES(totalFinalizadas));
             menuItemLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemLimpiar.setToolTipText(TooltipsUI.Tareas.MENU_ELIMINAR_MULTIPLES());
             menuItemLimpiar.addActionListener(e -> eliminarTareasSeleccionadas(filas));
             menu.add(menuItemLimpiar);
         }
@@ -442,7 +426,7 @@ public class PanelTareas extends JPanel {
             }
         }
         actualizarEstadisticas();
-        mostrarMensaje("Tareas puestas en cola para reintentar: " + contador);
+        mostrarMensaje(I18nUI.Tareas.MSG_REINTENTOS(contador));
     }
 
     private void pausarTareas(int[] filas) {
@@ -457,7 +441,7 @@ public class PanelTareas extends JPanel {
             }
         }
         actualizarEstadisticas();
-        mostrarMensaje("Tareas pausadas: " + contador);
+        mostrarMensaje(I18nUI.Tareas.MSG_PAUSADAS(contador));
     }
 
     private void reanudarTareas(int[] filas) {
@@ -472,7 +456,7 @@ public class PanelTareas extends JPanel {
             }
         }
         actualizarEstadisticas();
-        mostrarMensaje("Tareas reanudadas: " + contador);
+        mostrarMensaje(I18nUI.Tareas.MSG_REANUDADAS(contador));
     }
 
     private void cancelarTareas(int[] filas) {
@@ -487,8 +471,8 @@ public class PanelTareas extends JPanel {
 
         int confirmacion = JOptionPane.showConfirmDialog(
             this,
-            "¿Cancelar " + total + " tarea(s) activa(s)?",
-            "Confirmar cancelacion",
+            I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(total),
+            I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
             JOptionPane.YES_NO_OPTION,
             JOptionPane.WARNING_MESSAGE
         );
@@ -505,7 +489,7 @@ public class PanelTareas extends JPanel {
             }
         }
         actualizarEstadisticas();
-        mostrarMensaje("Tareas canceladas: " + contador);
+        mostrarMensaje(I18nUI.Tareas.MSG_CANCELADAS(contador));
     }
 
     private void eliminarTareasSeleccionadas(int[] filas) {
@@ -533,12 +517,17 @@ public class PanelTareas extends JPanel {
         }
 
         actualizarEstadisticas();
-        mostrarMensaje("Tareas eliminadas: " + contador);
+        mostrarMensaje(I18nUI.Tareas.MSG_ELIMINADAS(contador));
     }
 
     private void mostrarMensaje(String mensaje) {
         SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(PanelTareas.this, mensaje, "Informacion", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(
+                PanelTareas.this,
+                mensaje,
+                I18nUI.Tareas.TITULO_INFORMACION(),
+                JOptionPane.INFORMATION_MESSAGE
+            );
         });
     }
 
@@ -546,19 +535,64 @@ public class PanelTareas extends JPanel {
         SwingUtilities.invokeLater(() -> {
             EstadisticasTareas estadisticas = calcularEstadisticasTareas();
 
-            etiquetaEstadisticas.setText(
-                String.format("📊 Tareas Activas: %d | ✅ Completadas: %d | ❌ Con Errores: %d",
-                    estadisticas.activas, estadisticas.completadas, estadisticas.errores)
-            );
+            etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
+                estadisticas.activas,
+                estadisticas.completadas,
+                estadisticas.errores
+            ));
 
             if (estadisticas.pausadas > 0) {
-                botonPausarReanudar.setText("▶️ Reanudar Todo");
-                botonPausarReanudar.setToolTipText("Reanudar todas las tareas pausadas");
+                botonPausarReanudar.setText(I18nUI.Tareas.BOTON_REANUDAR_TODO());
+                botonPausarReanudar.setToolTipText(TooltipsUI.Tareas.REANUDAR_TODO());
             } else {
-                botonPausarReanudar.setText("⏸️ Pausar Todo");
-                botonPausarReanudar.setToolTipText("Pausar todas las tareas en análisis");
+                botonPausarReanudar.setText(I18nUI.Tareas.BOTON_PAUSAR_TODO());
+                botonPausarReanudar.setToolTipText(TooltipsUI.Tareas.PAUSAR_TODO());
             }
         });
+    }
+
+    public void aplicarIdioma() {
+        botonCancelar.setText(I18nUI.Tareas.BOTON_CANCELAR_TODO());
+        botonLimpiarCompletadas.setText(I18nUI.Tareas.BOTON_LIMPIAR());
+        botonPausarReanudar.setToolTipText(TooltipsUI.Tareas.PAUSAR_REANUDAR());
+        botonCancelar.setToolTipText(TooltipsUI.Tareas.CANCELAR());
+        botonLimpiarCompletadas.setToolTipText(TooltipsUI.Tareas.LIMPIAR());
+        etiquetaEstadisticas.setToolTipText(TooltipsUI.Tareas.ESTADISTICAS());
+        tabla.setToolTipText(TooltipsUI.Tareas.TABLA());
+        actualizarTituloPanel(panelControles, I18nUI.Tareas.TITULO_CONTROLES());
+        actualizarTituloPanel(panelTablaWrapper, I18nUI.Tareas.TITULO_LISTA());
+        modelo.refrescarColumnasIdioma();
+        SwingUtilities.invokeLater(this::configurarColumnasTabla);
+        actualizarEstadisticas();
+        revalidate();
+        repaint();
+    }
+
+    private void configurarColumnasTabla() {
+        if (tabla.getColumnModel().getColumnCount() < 4) {
+            return;
+        }
+        tabla.getColumnModel().getColumn(2).setCellRenderer(new RenderizadorEstado());
+        tabla.getColumnModel().getColumn(3).setCellRenderer(new RenderizadorCentrado());
+
+        tabla.getColumnModel().getColumn(0).setPreferredWidth(120);
+        tabla.getColumnModel().getColumn(1).setPreferredWidth(400);
+        tabla.getColumnModel().getColumn(2).setPreferredWidth(130);
+        tabla.getColumnModel().getColumn(3).setPreferredWidth(100);
+    }
+
+    private void actualizarTituloPanel(JPanel panel, String titulo) {
+        if (panel == null) {
+            return;
+        }
+        Border borde = panel.getBorder();
+        if (!(borde instanceof CompoundBorder)) {
+            return;
+        }
+        Border externo = ((CompoundBorder) borde).getOutsideBorder();
+        if (externo instanceof TitledBorder) {
+            ((TitledBorder) externo).setTitle(titulo);
+        }
     }
 
     public void agregarTarea(Tarea tarea) {

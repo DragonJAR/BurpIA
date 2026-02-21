@@ -1,5 +1,6 @@
 package com.burpia.ui;
 
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
 
 import javax.swing.*;
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ModeloTablaTareas extends DefaultTableModel {
-    private static final String[] COLUMNAS = {"Tipo", "URL", "Estado", "Duracion"};
+    private static final int TOTAL_COLUMNAS = 4;
     private final List<Tarea> datos;
     private final int limiteFilas;
     private final ReentrantLock lock;
@@ -19,9 +20,9 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public ModeloTablaTareas(int limiteFilas) {
-        super(COLUMNAS, 0);
+        super(I18nUI.Tablas.COLUMNAS_TAREAS(), 0);
         this.datos = new ArrayList<>();
-        this.limiteFilas = limiteFilas;
+        this.limiteFilas = Math.max(1, limiteFilas);
         this.lock = new ReentrantLock();
     }
 
@@ -31,6 +32,9 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public void agregarTarea(Tarea tarea) {
+        if (tarea == null) {
+            return;
+        }
         lock.lock();
         try {
             datos.add(tarea);
@@ -40,12 +44,14 @@ public class ModeloTablaTareas extends DefaultTableModel {
 
         SwingUtilities.invokeLater(() -> {
             addRow(tarea.aFilaTabla());
-            fireTableDataChanged();
             aplicarLimiteFilas();
         });
     }
 
     public void actualizarTarea(Tarea tarea) {
+        if (tarea == null) {
+            return;
+        }
         lock.lock();
         try {
             for (int i = 0; i < datos.size(); i++) {
@@ -78,7 +84,6 @@ public class ModeloTablaTareas extends DefaultTableModel {
                         datos.remove(0);
                     }
                 }
-                fireTableDataChanged();
             }
         } finally {
             lock.unlock();
@@ -95,7 +100,6 @@ public class ModeloTablaTareas extends DefaultTableModel {
 
         SwingUtilities.invokeLater(() -> {
             setRowCount(0);
-            fireTableDataChanged();
         });
     }
 
@@ -117,20 +121,24 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public void eliminarTarea(int indiceFila) {
+        boolean eliminado = false;
         lock.lock();
         try {
             if (indiceFila >= 0 && indiceFila < datos.size()) {
                 datos.remove(indiceFila);
+                eliminado = true;
             }
         } finally {
             lock.unlock();
         }
 
+        if (!eliminado) {
+            return;
+        }
         SwingUtilities.invokeLater(() -> {
-            if (indiceFila < getRowCount()) {
+            if (indiceFila >= 0 && indiceFila < getRowCount()) {
                 removeRow(indiceFila);
             }
-            fireTableDataChanged();
         });
     }
 
@@ -210,7 +218,6 @@ public class ModeloTablaTareas extends DefaultTableModel {
                     removeRow(indice);
                 }
             }
-            fireTableDataChanged();
         });
     }
 
@@ -221,5 +228,14 @@ public class ModeloTablaTareas extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
+    }
+
+    public void refrescarColumnasIdioma() {
+        SwingUtilities.invokeLater(() -> setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_TAREAS()));
+    }
+
+    @Override
+    public int getColumnCount() {
+        return TOTAL_COLUMNAS;
     }
 }

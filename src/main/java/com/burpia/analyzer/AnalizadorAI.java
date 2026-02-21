@@ -5,6 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
@@ -40,10 +41,9 @@ public class AnalizadorAI implements Runnable {
     private final BooleanSupplier tareaPausada;
     private static final int MAX_CHARS_LOG_DETALLADO = 4000;
 
-    // Cliente HTTP compartido entre todas las instancias para evitar agotamiento de recursos
     private static final OkHttpClient CLIENTE_COMPARTIDO = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(180, TimeUnit.SECONDS)  // Aumentado a 3 minutos para APIs de IA (Z.ai a veces tarda más)
+            .readTimeout(180, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
             .build();
 
@@ -63,20 +63,18 @@ public class AnalizadorAI implements Runnable {
         this.limitador = limitador;
         this.callback = callback;
         this.gestorConsola = gestorConsola;
-        this.clienteHttp = CLIENTE_COMPARTIDO; // Usar cliente compartido
+        this.clienteHttp = CLIENTE_COMPARTIDO;
         this.gson = new Gson();
         this.constructorPrompt = new ConstructorPrompts(config);
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
     }
 
-    // Constructor sobrecargado para compatibilidad con código existente
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback) {
         this(solicitud, config, stdout, stderr, limitador, callback, null, null, null);
     }
 
-    // Constructor sobrecargado para código existente con consola
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola) {
         this(solicitud, config, stdout, stderr, limitador, callback, gestorConsola, null, null);
@@ -101,7 +99,6 @@ public class AnalizadorAI implements Runnable {
             permisoAdquirido = true;
             rastrear("[" + nombreHilo + "] Permiso de limitador adquirido");
 
-            // Retraso de limitacion de tasa
             int retrasoSegundos = config.obtenerRetrasoSegundos();
             rastrear("[" + nombreHilo + "] Durmiendo por " + retrasoSegundos + " segundos antes de llamar a la API");
             esperarConControl(retrasoSegundos * 1000L);
@@ -198,8 +195,6 @@ public class AnalizadorAI implements Runnable {
             registrar(preparada.advertencia);
         }
 
-        // SECURITY FIX: NO loggear la API key ni parcialmente
-        // Los logs pueden ser accedidos por usuarios no autorizados
         rastrear("Encabezados de solicitud: Content-Type=application/json, Authorization=Bearer [OCULTO]");
 
         try (Response respuesta = clienteHttp.newCall(solicitudHttp).execute()) {
@@ -216,7 +211,8 @@ public class AnalizadorAI implements Runnable {
                 throw new IOException(mensajeError);
             }
 
-            String cuerpoRespuesta = respuesta.body().string();
+            ResponseBody cuerpo = respuesta.body();
+            String cuerpoRespuesta = cuerpo != null ? cuerpo.string() : "";
             registrar("Longitud de respuesta de API: " + cuerpoRespuesta.length() + " caracteres");
             rastrear("Respuesta de API (preview):\n" + resumirParaLog(cuerpoRespuesta));
 
@@ -244,7 +240,6 @@ public class AnalizadorAI implements Runnable {
     private String llamarAPIAIConRetries() throws IOException {
         IOException ultimaExcepcion = null;
 
-        // FASE 1: 3 intentos inmediatos
         registrar("Sistema de retry: Iniciando 3 intentos inmediatos...");
         for (int i = 0; i < 3; i++) {
             try {
@@ -257,15 +252,13 @@ public class AnalizadorAI implements Runnable {
             } catch (IOException e) {
                 ultimaExcepcion = e;
                 registrar("Intento #" + (i + 1) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-                // No esperar entre intentos inmediatos
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Sistema de retry cancelado/interrumpido", e);
             }
         }
 
-        // FASE 2: Backoff exponencial con espera
-        int[] esperasSegundos = {30, 60, 90}; // Backoff exponencial
+        int[] esperasSegundos = {30, 60, 90};
 
         for (int i = 0; i < esperasSegundos.length; i++) {
             int esperaSegundos = esperasSegundos[i];
@@ -297,8 +290,11 @@ public class AnalizadorAI implements Runnable {
 
         registrar("Todos los reintentos fallaron despues de 6 intentos");
         registrarError("SUGERENCIA: Considera cambiar de proveedor de API.");
+        if (ultimaExcepcion == null) {
+            ultimaExcepcion = new IOException("Fallo de retry sin detalle de excepción");
+        }
         registrarError("Ultimo error: " + ultimaExcepcion.getClass().getSimpleName() + " - " +
-                      ultimaExcepcion.getMessage());
+            ultimaExcepcion.getMessage());
 
         throw ultimaExcepcion;
     }
@@ -334,7 +330,6 @@ public class AnalizadorAI implements Runnable {
         List<Hallazgo> hallazgos = new ArrayList<>();
 
         try {
-            // Intentar reparar JSON si está malformado
             String jsonReparado = ReparadorJson.repararJson(respuestaJson);
             if (jsonReparado != null && !jsonReparado.equals(respuestaJson)) {
                 rastrear("JSON reparado exitosamente");
@@ -350,9 +345,7 @@ public class AnalizadorAI implements Runnable {
             rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
             rastrear("Contenido (preview):\n" + resumirParaLog(contenido));
 
-            // Intentar parsear como JSON con array de hallazgos
             try {
-                // PRIMERO: Limpiar markdown si existe
                 String contenidoLimpio = contenido.trim();
 
                 if (contenidoLimpio.contains("```json")) {
@@ -384,7 +377,6 @@ public class AnalizadorAI implements Runnable {
                         String severidad = obj.has("severidad") ? obj.get("severidad").getAsString() : "Info";
                         String confianza = obj.has("confianza") ? obj.get("confianza").getAsString() : "Low";
 
-                        // Normalizar severidad
                         severidad = normalizarSeveridad(severidad);
                         confianza = normalizarConfianza(confianza);
 
@@ -395,13 +387,11 @@ public class AnalizadorAI implements Runnable {
                     }
                 } else {
                     rastrear("JSON no contiene campo 'hallazgos', intentando parsing de texto plano");
-                    // Fallback: parsing de texto plano
                     hallazgos.addAll(parsearTextoPlano(contenido));
                 }
             } catch (Exception e) {
                 rastrear("No se pudo parsear como JSON de hallazgos: " + e.getMessage());
                 rastrear("Intentando parsing de texto plano como fallback");
-                // Fallback: parsing de texto plano
                 hallazgos.addAll(parsearTextoPlano(contenido));
             }
 
@@ -453,7 +443,6 @@ public class AnalizadorAI implements Runnable {
                            linea.toLowerCase().contains("descripcion:") ||
                            linea.toLowerCase().contains("description:")) {
                     if (descripcion.length() > 0) {
-                        // Guardar hallazgo anterior
                         hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), descripcion.toString(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
                         descripcion = new StringBuilder();
                     }
@@ -467,7 +456,6 @@ public class AnalizadorAI implements Runnable {
                 hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), descripcion.toString().trim(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
             }
 
-            // Si no se encontró nada, crear un hallazgo genérico
             if (hallazgos.isEmpty() && contenido.length() > 0) {
                 String sev = extraerSeveridad(contenido);
                 hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), contenido.substring(0, Math.min(200, contenido.length())), sev, "Low", solicitud.obtenerSolicitudHttp()));
@@ -519,31 +507,31 @@ public class AnalizadorAI implements Runnable {
     }
 
     private void registrar(String mensaje) {
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
         if (gestorConsola != null) {
-            gestorConsola.registrarInfo(mensaje);
+            gestorConsola.registrarInfo(mensajeLocalizado);
         }
-        // También escribir al stdout original
-        stdout.println("[BurpIA] " + mensaje);
+        stdout.println("[BurpIA] " + mensajeLocalizado);
         stdout.flush();
     }
 
     private void rastrear(String mensaje) {
         if (config.esDetallado()) {
+            String mensajeLocalizado = I18nLogs.tr(mensaje);
             if (gestorConsola != null) {
-                gestorConsola.registrarVerbose(mensaje);
+                gestorConsola.registrarVerbose(mensajeLocalizado);
             }
-            // También escribir al stdout original
-            stdout.println("[BurpIA] [RASTREO] " + mensaje);
+            stdout.println("[BurpIA] [RASTREO] " + mensajeLocalizado);
             stdout.flush();
         }
     }
 
     private void registrarError(String mensaje) {
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
         if (gestorConsola != null) {
-            gestorConsola.registrarError(mensaje);
+            gestorConsola.registrarError(mensajeLocalizado);
         }
-        // También escribir al stderr original
-        stderr.println("[BurpIA] [ERROR] " + mensaje);
+        stderr.println("[BurpIA] [ERROR] " + mensajeLocalizado);
         stderr.flush();
     }
 

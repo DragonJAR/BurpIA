@@ -6,10 +6,12 @@ import burp.api.montoya.http.handler.HttpRequestToBeSent;
 import burp.api.montoya.http.handler.HttpResponseReceived;
 import burp.api.montoya.http.handler.RequestToBeSentAction;
 import burp.api.montoya.http.handler.ResponseReceivedAction;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.scanner.audit.issues.AuditIssue;
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
@@ -24,10 +26,12 @@ import com.burpia.util.DeduplicadorSolicitudes;
 
 import javax.swing.*;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
@@ -220,18 +224,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         registrar("Nueva solicitud registrada: " + url + " (hash: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...)");
 
         String encabezados = extraerEncabezados(respuestaRecibida.initiatingRequest());
-        String cuerpo = "";
-        try {
-            byte[] bodyBytes = respuestaRecibida.initiatingRequest().body().getBytes();
-            if (bodyBytes != null && bodyBytes.length > 0) {
-                cuerpo = respuestaRecibida.initiatingRequest().bodyToString();
-                if (cuerpo == null) {
-                    cuerpo = "";
-                }
-            }
-        } catch (Exception e) {
-            cuerpo = "";
-        }
+        String cuerpo = extraerCuerpoSolicitud(respuestaRecibida.initiatingRequest());
+        String encabezadosRespuesta = extraerEncabezadosRespuesta(respuestaRecibida);
+        String cuerpoRespuesta = extraerCuerpoRespuesta(respuestaRecibida);
 
         int numEncabezados = 0;
         if (respuestaRecibida.initiatingRequest().headers() != null) {
@@ -239,17 +234,34 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         rastrear("Detalles de solicitud: Metodo=" + metodo + ", URL=" + url +
-                ", Encabezados=" + numEncabezados + ", Longitud cuerpo=" + cuerpo.length());
+                ", Encabezados=" + numEncabezados + ", Longitud cuerpo=" + cuerpo.length() +
+                ", Codigo respuesta=" + codigoEstado + ", Longitud cuerpo respuesta=" + cuerpoRespuesta.length());
 
         SolicitudAnalisis solicitudAnalisis = new SolicitudAnalisis(
-            url, metodo, encabezados, cuerpo, hashSolicitud, respuestaRecibida.initiatingRequest()
+            url,
+            metodo,
+            encabezados,
+            cuerpo,
+            hashSolicitud,
+            respuestaRecibida.initiatingRequest(),
+            codigoEstado,
+            encabezadosRespuesta,
+            cuerpoRespuesta
         );
-        programarAnalisis(solicitudAnalisis, respuestaCapturada, "Analisis HTTP");
+        programarAnalisis(
+            solicitudAnalisis,
+            construirEvidenciaHttp(respuestaCapturada.initiatingRequest(), respuestaCapturada),
+            "Analisis HTTP"
+        );
 
         return ResponseReceivedAction.continueWith(respuestaRecibida);
     }
 
     public void analizarSolicitudForzada(HttpRequest solicitud) {
+        analizarSolicitudForzada(solicitud, null);
+    }
+
+    public void analizarSolicitudForzada(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
         if (solicitud == null) {
             registrarError("No se pudo analizar solicitud forzada: request null");
             return;
@@ -260,28 +272,43 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         String cadenaSolicitud = solicitud.toString() != null ? solicitud.toString() : metodo + " " + url;
         String hashSolicitud = generarHash(cadenaSolicitud.getBytes());
         String encabezados = extraerEncabezados(solicitud);
-        String cuerpo = "";
-        try {
-            byte[] bodyBytes = solicitud.body().getBytes();
-            if (bodyBytes != null && bodyBytes.length > 0) {
-                cuerpo = solicitud.bodyToString();
-                if (cuerpo == null) {
-                    cuerpo = "";
+        String cuerpo = extraerCuerpoSolicitud(solicitud);
+        int codigoEstadoRespuesta = -1;
+        String encabezadosRespuesta = "";
+        String cuerpoRespuesta = "";
+        if (solicitudRespuestaOriginal != null) {
+            try {
+                if (solicitudRespuestaOriginal.hasResponse() && solicitudRespuestaOriginal.response() != null) {
+                    codigoEstadoRespuesta = solicitudRespuestaOriginal.response().statusCode();
+                    encabezadosRespuesta = extraerEncabezadosRespuesta(solicitudRespuestaOriginal.response());
+                    cuerpoRespuesta = extraerCuerpoRespuesta(solicitudRespuestaOriginal.response());
                 }
+            } catch (Exception e) {
+                rastrear("No se pudo capturar la respuesta para analisis manual", e);
             }
-        } catch (Exception ignored) {
-            cuerpo = "";
         }
 
         SolicitudAnalisis solicitudAnalisis = new SolicitudAnalisis(
-            url, metodo, encabezados, cuerpo, hashSolicitud, solicitud
+            url,
+            metodo,
+            encabezados,
+            cuerpo,
+            hashSolicitud,
+            solicitud,
+            codigoEstadoRespuesta,
+            encabezadosRespuesta,
+            cuerpoRespuesta
         );
         registrar("Analisis forzado solicitado desde menu contextual: " + metodo + " " + url);
-        programarAnalisis(solicitudAnalisis, null, "Analisis Manual");
+        programarAnalisis(
+            solicitudAnalisis,
+            normalizarEvidenciaManual(solicitud, solicitudRespuestaOriginal),
+            "Analisis Manual"
+        );
     }
 
     private void programarAnalisis(SolicitudAnalisis solicitudAnalisis,
-                                   HttpResponseReceived respuestaCapturada,
+                                   HttpRequestResponse evidenciaHttp,
                                    String tipoTarea) {
         final String url = solicitudAnalisis.obtenerUrl();
         final AtomicReference<String> tareaIdRef = new AtomicReference<>();
@@ -346,35 +373,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                                 }
                             }
 
-                            if (respuestaCapturada != null) {
-                                try {
-                                    executorService.submit(() -> {
-                                        try {
-                                            boolean enviarIssues = pestaniaPrincipal != null && 
-                                                pestaniaPrincipal.obtenerPanelHallazgos() != null && 
-                                                pestaniaPrincipal.obtenerPanelHallazgos().isGuardadoAutomaticoIssuesActivo();
-                                            
-                                            if (enviarIssues) {
-                                                AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(
-                                                    hallazgo,
-                                                    respuestaCapturada
-                                                );
-                                                if (auditIssue != null && api != null && api.siteMap() != null) {
-                                                    api.siteMap().add(auditIssue);
-                                                    rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
-                                                }
-                                            } else {
-                                                rastrear("Hallazgo omitido en Issues (Autoguardado deshabilitado): " + hallazgo.obtenerHallazgo());
-                                            }
-                                        } catch (Exception e) {
-                                            registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
-                                            rastrear("Stack trace:", e);
-                                        }
-                                    });
-                                } catch (RejectedExecutionException ex) {
-                                    registrarError("No se pudo encolar AuditIssue por saturación de cola: " + hallazgo.obtenerHallazgo());
-                                }
-                            }
+                            guardarHallazgoEnIssuesSiAplica(hallazgo, evidenciaHttp);
                         }
 
                         if (modeloTablaHallazgos != null && !hallazgosValidos.isEmpty()) {
@@ -463,6 +462,79 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
     }
 
+    private HttpRequestResponse construirEvidenciaHttp(HttpRequest solicitud, burp.api.montoya.http.message.responses.HttpResponse respuesta) {
+        if (solicitud == null || respuesta == null) {
+            return null;
+        }
+        try {
+            return HttpRequestResponse.httpRequestResponse(solicitud, respuesta);
+        } catch (Exception e) {
+            rastrear("No se pudo construir HttpRequestResponse para evidencia de Issue", e);
+            return null;
+        }
+    }
+
+    private HttpRequestResponse normalizarEvidenciaManual(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
+        if (solicitudRespuestaOriginal == null) {
+            rastrear("Analisis manual sin request/response original: se registraran hallazgos, pero no Issue.");
+            return null;
+        }
+
+        try {
+            if (!solicitudRespuestaOriginal.hasResponse()) {
+                rastrear("Analisis manual sin response asociada: se registraran hallazgos, pero no Issue.");
+                return null;
+            }
+            if (solicitudRespuestaOriginal.request() != null && solicitudRespuestaOriginal.response() != null) {
+                return solicitudRespuestaOriginal;
+            }
+        } catch (Exception e) {
+            rastrear("No se pudo reutilizar la evidencia original del analisis manual", e);
+        }
+
+        try {
+            return construirEvidenciaHttp(solicitud, solicitudRespuestaOriginal.response());
+        } catch (Exception e) {
+            rastrear("No se pudo construir evidencia desde analisis manual", e);
+            return null;
+        }
+    }
+
+    private void guardarHallazgoEnIssuesSiAplica(Hallazgo hallazgo, HttpRequestResponse evidenciaHttp) {
+        if (hallazgo == null) {
+            return;
+        }
+        if (evidenciaHttp == null) {
+            rastrear("Hallazgo sin evidencia HTTP: no se puede crear AuditIssue");
+            return;
+        }
+
+        boolean enviarIssues = pestaniaPrincipal != null
+            && pestaniaPrincipal.obtenerPanelHallazgos() != null
+            && pestaniaPrincipal.obtenerPanelHallazgos().isGuardadoAutomaticoIssuesActivo();
+        if (!enviarIssues) {
+            rastrear("Hallazgo omitido en Issues (Autoguardado deshabilitado): " + hallazgo.obtenerHallazgo());
+            return;
+        }
+
+        try {
+            AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, evidenciaHttp);
+            if (auditIssue == null) {
+                rastrear("AuditIssue no creado: hallazgo sin datos suficientes");
+                return;
+            }
+            if (api == null || api.siteMap() == null) {
+                registrarError("No se pudo guardar AuditIssue: SiteMap API no disponible");
+                return;
+            }
+            api.siteMap().add(auditIssue);
+            rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
+        } catch (Exception e) {
+            registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
+            rastrear("Stack trace:", e);
+        }
+    }
+
     /**
      * Verifica si la solicitud esta dentro del scope de Burp Suite.
      * Esto es CRITICO para asegurar que solo se analicen objetivos autorizados.
@@ -496,15 +568,12 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 return enScope;
             }
 
-            // Si no hay API de scope disponible, registrar advertencia y permitir
-            // (comportamiento defensivo para no bloquear analisis)
-            rastrear("API de scope no disponible, permitiendo solicitud");
-            return true;
+            rastrear("API de scope no disponible, omitiendo solicitud por seguridad");
+            return false;
 
         } catch (Exception e) {
-            // En caso de error, permitir la solicitud (comportamiento defensivo)
             registrarError("Error al verificar scope: " + e.getMessage());
-            return true;
+            return false;
         }
     }
 
@@ -513,12 +582,22 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return false;
         }
 
-        int ultimoPunto = url.lastIndexOf('.');
+        String ruta = url;
+        try {
+            URI uri = URI.create(url);
+            if (uri.getPath() != null && !uri.getPath().isEmpty()) {
+                ruta = uri.getPath();
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Mantener la URL original para evaluación best-effort
+        }
+
+        int ultimoPunto = ruta.lastIndexOf('.');
         if (ultimoPunto == -1) {
             return false;
         }
 
-        String extension = url.substring(ultimoPunto);
+        String extension = ruta.substring(ultimoPunto).toLowerCase(Locale.ROOT);
         boolean esEstatico = EXTENSIONES_ESTATICAS.contains(extension);
 
         if (esEstatico && config.esDetallado()) {
@@ -575,34 +654,107 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         return encabezados.toString();
     }
 
+    private String extraerCuerpoSolicitud(HttpRequest solicitud) {
+        if (solicitud == null) {
+            return "";
+        }
+        try {
+            byte[] bodyBytes = solicitud.body() != null ? solicitud.body().getBytes() : null;
+            if (bodyBytes == null || bodyBytes.length == 0) {
+                return "";
+            }
+            String cuerpo = solicitud.bodyToString();
+            return cuerpo != null ? cuerpo : "";
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private String extraerEncabezadosRespuesta(burp.api.montoya.http.message.responses.HttpResponse respuesta) {
+        if (respuesta == null) {
+            return "[RESPUESTA NULL]";
+        }
+
+        StringBuilder encabezados = new StringBuilder();
+        try {
+            String version = respuesta.httpVersion() != null ? respuesta.httpVersion() : "HTTP/1.1";
+            encabezados.append(version)
+                .append(" ")
+                .append(respuesta.statusCode());
+
+            String reason = respuesta.reasonPhrase();
+            if (reason != null && !reason.trim().isEmpty()) {
+                encabezados.append(" ").append(reason.trim());
+            }
+            encabezados.append("\n");
+
+            if (respuesta.headers() != null) {
+                respuesta.headers().forEach(encabezado -> {
+                    if (encabezado != null) {
+                        encabezados.append(encabezado.name() != null ? encabezado.name() : "[NAME NULL]")
+                            .append(": ")
+                            .append(encabezado.value() != null ? encabezado.value() : "[VALUE NULL]")
+                            .append("\n");
+                    }
+                });
+            } else {
+                encabezados.append("[HEADERS NULL]\n");
+            }
+        } catch (Exception e) {
+            registrarError("Error al extraer encabezados de respuesta: " + e.getMessage());
+            return "[ERROR AL EXTRAER ENCABEZADOS DE RESPUESTA]";
+        }
+
+        return encabezados.toString();
+    }
+
+    private String extraerCuerpoRespuesta(burp.api.montoya.http.message.responses.HttpResponse respuesta) {
+        if (respuesta == null) {
+            return "";
+        }
+        try {
+            byte[] bodyBytes = respuesta.body() != null ? respuesta.body().getBytes() : null;
+            if (bodyBytes == null || bodyBytes.length == 0) {
+                return "";
+            }
+            String cuerpo = respuesta.bodyToString();
+            return cuerpo != null ? cuerpo : "";
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
     private void registrar(String mensaje) {
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
         synchronized (logLock) {
             if (gestorConsola != null) {
-                gestorConsola.registrarInfo(mensaje);
+                gestorConsola.registrarInfo(mensajeLocalizado);
             }
-            stdout.println("[ManejadorBurpIA] " + mensaje);
+            stdout.println("[ManejadorBurpIA] " + mensajeLocalizado);
             stdout.flush();
         }
     }
 
     private void rastrear(String mensaje) {
         if (config.esDetallado()) {
+            String mensajeLocalizado = I18nLogs.tr(mensaje);
             synchronized (logLock) {
                 if (gestorConsola != null) {
-                    gestorConsola.registrarVerbose(mensaje);
+                    gestorConsola.registrarVerbose(mensajeLocalizado);
                 }
-                stdout.println("[ManejadorBurpIA] [RASTREO] " + mensaje);
+                stdout.println("[ManejadorBurpIA] [RASTREO] " + mensajeLocalizado);
                 stdout.flush();
             }
         }
     }
 
     private void registrarError(String mensaje) {
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
         synchronized (logLock) {
             if (gestorConsola != null) {
-                gestorConsola.registrarError(mensaje);
+                gestorConsola.registrarError(mensajeLocalizado);
             }
-            stderr.println("[ManejadorBurpIA] [ERROR] " + mensaje);
+            stderr.println("[ManejadorBurpIA] [ERROR] " + mensajeLocalizado);
             stderr.flush();
         }
     }

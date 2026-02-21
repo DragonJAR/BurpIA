@@ -5,9 +5,12 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.scanner.AuditConfiguration;
 import burp.api.montoya.scanner.BuiltInAuditConfiguration;
 import burp.api.montoya.scanner.audit.Audit;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -20,7 +23,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -37,12 +41,14 @@ public class PanelHallazgos extends JPanel {
     private JButton botonLimpiarTodo;
     private final MontoyaApi api;
     private final boolean esBurpProfessional;
+    private JPanel panelFiltros;
+    private JPanel panelGuardarProyecto;
+    private JPanel panelTablaWrapper;
+    private JLabel etiquetaBusqueda;
 
     private TableRowSorter<ModeloTablaHallazgos> sorter;
     private JCheckBox chkGuardarEnIssues;
-
-    // Umbral de ancho para cambiar de layout (en pixeles)
-    private static final int UMBRAL_RESPONSIVE = 900;  // Aumentado para mejor uso del espacio
+    private volatile boolean guardadoAutomaticoIssuesActivo = true;
 
     public PanelHallazgos(MontoyaApi api) {
         this.api = api;
@@ -68,12 +74,12 @@ public class PanelHallazgos extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JPanel panelFiltros = new JPanel();
+        panelFiltros = new JPanel();
         panelFiltros.setLayout(new BoxLayout(panelFiltros, BoxLayout.Y_AXIS));
         panelFiltros.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                "🔭 FILTROS Y BÚSQUEDA",
+                I18nUI.Hallazgos.TITULO_FILTROS(),
                 TitledBorder.LEFT,
                 TitledBorder.TOP,
                 EstilosUI.FUENTE_NEGRITA
@@ -81,63 +87,42 @@ public class PanelHallazgos extends JPanel {
             BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
-        JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5)) {
-            private boolean ultimoLayoutHorizontal = true;
+        JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
 
-            @Override
-            public void doLayout() {
-                int ancho = getWidth() - 40;
-                boolean esLayoutHorizontal = ancho >= UMBRAL_RESPONSIVE;
-
-                if (esLayoutHorizontal != ultimoLayoutHorizontal) {
-                    if (esLayoutHorizontal) {
-                        // Espacio suficiente: una sola fila con todos los elementos
-                        setLayout(new FlowLayout(FlowLayout.LEFT, 12, 4));
-                    } else {
-                        // Espacio limitado: 2 filas con 3 elementos cada una
-                        setLayout(new GridLayout(2, 3, 5, 10));
-                    }
-                    ultimoLayoutHorizontal = esLayoutHorizontal;
-                }
-
-                super.doLayout();
-            }
-        };
-
-        // Primera fila: búsqueda, severidad, limpiar filtros
-        JLabel etiquetaBusqueda = new JLabel("🔎 Buscar:");
+        etiquetaBusqueda = new JLabel(I18nUI.Hallazgos.ETIQUETA_BUSCAR());
         etiquetaBusqueda.setFont(EstilosUI.FUENTE_ESTANDAR);
+        etiquetaBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
         panelTodosControles.add(etiquetaBusqueda);
-        campoBusqueda = new JTextField(30);
+        campoBusqueda = new JTextField(15);
         campoBusqueda.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
-        campoBusqueda.setToolTipText("Buscar por texto en URL o hallazgo");
+        campoBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
         panelTodosControles.add(campoBusqueda);
 
         comboSeveridad = new JComboBox<>(new String[]{
-            "Todas las Criticidades", "Critical", "High", "Medium", "Low", "Info"
+            I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES(), "Critical", "High", "Medium", "Low", "Info"
         });
         comboSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
+        comboSeveridad.setToolTipText(TooltipsUI.Hallazgos.FILTRO_SEVERIDAD());
         panelTodosControles.add(comboSeveridad);
 
-        botonLimpiarFiltro = new JButton("❌ Limpiar");
+        botonLimpiarFiltro = new JButton(I18nUI.Hallazgos.BOTON_LIMPIAR());
         botonLimpiarFiltro.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonLimpiarFiltro.setToolTipText("Quitar todos los filtros activos");
+        botonLimpiarFiltro.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_FILTROS());
         panelTodosControles.add(botonLimpiarFiltro);
 
-        // Segunda fila: exportar CSV, exportar JSON, limpiar todo
-        botonExportarCSV = new JButton("📄 Exportar CSV");
+        botonExportarCSV = new JButton(I18nUI.Hallazgos.BOTON_EXPORTAR_CSV());
         botonExportarCSV.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonExportarCSV.setToolTipText("Exportar hallazgos a archivo CSV");
+        botonExportarCSV.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_CSV());
         panelTodosControles.add(botonExportarCSV);
 
-        botonExportarJSON = new JButton("📋 Exportar JSON");
+        botonExportarJSON = new JButton(I18nUI.Hallazgos.BOTON_EXPORTAR_JSON());
         botonExportarJSON.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonExportarJSON.setToolTipText("Exportar hallazgos a archivo JSON");
+        botonExportarJSON.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_JSON());
         panelTodosControles.add(botonExportarJSON);
 
-        botonLimpiarTodo = new JButton("🗑️ Limpiar");
+        botonLimpiarTodo = new JButton(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
         botonLimpiarTodo.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonLimpiarTodo.setToolTipText("Eliminar todos los hallazgos");
+        botonLimpiarTodo.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_TODO());
         panelTodosControles.add(botonLimpiarTodo);
 
         panelFiltros.add(panelTodosControles);
@@ -145,33 +130,32 @@ public class PanelHallazgos extends JPanel {
         JPanel panelSuperior = new JPanel(new BorderLayout(10, 0));
         panelSuperior.add(panelFiltros, BorderLayout.CENTER);
 
-        JPanel panelGuardarProyecto = new JPanel(new GridBagLayout());
+        panelGuardarProyecto = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
         panelGuardarProyecto.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                "💾 GUARDAR EN PROYECTO",
+                I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO(),
                 TitledBorder.LEFT,
                 TitledBorder.TOP,
                 EstilosUI.FUENTE_NEGRITA
             ),
             BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
-        chkGuardarEnIssues = new JCheckBox("Guardar automáticamente en Issues");
+        chkGuardarEnIssues = new JCheckBox(I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES());
         chkGuardarEnIssues.setSelected(true);
         chkGuardarEnIssues.setFont(EstilosUI.FUENTE_ESTANDAR);
-        chkGuardarEnIssues.setToolTipText("Enviar los hallazgos directamente al panel Issues de Burp Suite.");
+        chkGuardarEnIssues.setToolTipText(TooltipsUI.Hallazgos.GUARDAR_ISSUES());
+        chkGuardarEnIssues.addActionListener(e -> guardadoAutomaticoIssuesActivo = chkGuardarEnIssues.isSelected());
 
-        GridBagConstraints gbcGuardar = new GridBagConstraints();
-        gbcGuardar.insets = new Insets(10, 15, 10, 15);
-        panelGuardarProyecto.add(chkGuardarEnIssues, gbcGuardar);
+        panelGuardarProyecto.add(chkGuardarEnIssues);
 
         panelSuperior.add(panelGuardarProyecto, BorderLayout.EAST);
 
-        JPanel panelTablaWrapper = new JPanel(new BorderLayout());
+        panelTablaWrapper = new JPanel(new BorderLayout());
         panelTablaWrapper.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                "💎 HALLAZGOS DE SEGURIDAD",
+                I18nUI.Hallazgos.TITULO_TABLA(),
                 TitledBorder.LEFT,
                 TitledBorder.TOP,
                 EstilosUI.FUENTE_NEGRITA
@@ -183,38 +167,16 @@ public class PanelHallazgos extends JPanel {
         tabla.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         tabla.setRowHeight(EstilosUI.ALTURA_FILA_TABLA);
         tabla.setFont(EstilosUI.FUENTE_TABLA);
+        tabla.setToolTipText(TooltipsUI.Hallazgos.TABLA());
         sorter = new TableRowSorter<>(modelo);
         tabla.setRowSorter(sorter);
 
-        // Configurar renderizadores con wrapper para hallazgos ignorados
-        tabla.getColumnModel().getColumn(0).setCellRenderer(
-            new RenderizadorHallazgoBorrado(new RenderizadorCentrado(), tabla, modelo)
-        );
-        tabla.getColumnModel().getColumn(1).setCellRenderer(
-            new RenderizadorHallazgoBorrado(new DefaultTableCellRenderer(), tabla, modelo)
-        );
-        tabla.getColumnModel().getColumn(2).setCellRenderer(
-            new RenderizadorHallazgoBorrado(new DefaultTableCellRenderer(), tabla, modelo)
-        );
-        tabla.getColumnModel().getColumn(3).setCellRenderer(
-            new RenderizadorHallazgoBorrado(new RenderizadorSeveridad(), tabla, modelo)
-        );
-        tabla.getColumnModel().getColumn(4).setCellRenderer(
-            new RenderizadorHallazgoBorrado(new RenderizadorConfianza(), tabla, modelo)
-        );
-
-        // Ajustar anchos de columna
-        tabla.getColumnModel().getColumn(0).setPreferredWidth(80);  // Hora
-        tabla.getColumnModel().getColumn(1).setPreferredWidth(300); // URL
-        tabla.getColumnModel().getColumn(2).setPreferredWidth(400); // Hallazgo
-        tabla.getColumnModel().getColumn(3).setPreferredWidth(100); // Severidad
-        tabla.getColumnModel().getColumn(4).setPreferredWidth(100); // Confianza
+        configurarColumnasTabla();
 
         JScrollPane panelDesplazable = new JScrollPane(tabla);
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         panelTablaWrapper.add(panelDesplazable, BorderLayout.CENTER);
 
-        // Manejadores de eventos
         campoBusqueda.getDocument().addDocumentListener(new DocumentListener() {
             public void changedUpdate(DocumentEvent e) { aplicarFiltros(); }
             public void insertUpdate(DocumentEvent e) { aplicarFiltros(); }
@@ -233,16 +195,16 @@ public class PanelHallazgos extends JPanel {
             int total = modelo.getRowCount();
             if (total == 0) {
                 JOptionPane.showMessageDialog(this,
-                    "No hay hallazgos para limpiar.",
-                    "Información",
+                    I18nUI.Hallazgos.MSG_SIN_HALLAZGOS_LIMPIAR(),
+                    I18nUI.Hallazgos.TITULO_INFORMACION(),
                     JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
             int confirmacion = JOptionPane.showConfirmDialog(
                 this,
-                "¿Estás seguro de que deseas limpiar todos los hallazgos (" + total + ")?",
-                "Confirmar limpieza",
+                I18nUI.Hallazgos.MSG_CONFIRMAR_LIMPIEZA(total),
+                I18nUI.Hallazgos.TITULO_CONFIRMAR_LIMPIEZA(),
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.WARNING_MESSAGE
             );
@@ -251,8 +213,8 @@ public class PanelHallazgos extends JPanel {
             }
         });
 
-        // Crear menú contextual para hallazgos individuales
         crearMenuContextual();
+        aplicarIdioma();
 
         add(panelSuperior, BorderLayout.NORTH);
         add(panelTablaWrapper, BorderLayout.CENTER);
@@ -264,13 +226,11 @@ public class PanelHallazgos extends JPanel {
 
         List<RowFilter<Object, Object>> filtros = new ArrayList<>();
 
-        // Filtro de texto
         if (!textoBusqueda.isEmpty()) {
-            filtros.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(textoBusqueda), 1, 2)); // URL y Hallazgo
+            filtros.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(textoBusqueda), 1, 2));
         }
 
-        // Filtro de severidad
-        if (severidadSeleccionada != null && !severidadSeleccionada.equals("Todas")) {
+        if (severidadSeleccionada != null && comboSeveridad.getSelectedIndex() > 0) {
             filtros.add(RowFilter.regexFilter("^" + severidadSeleccionada + "$", 3));
         }
 
@@ -283,13 +243,13 @@ public class PanelHallazgos extends JPanel {
 
     private void limpiarFiltros() {
         campoBusqueda.setText("");
-        comboSeveridad.setSelectedItem("Todas");
+        comboSeveridad.setSelectedIndex(0);
         sorter.setRowFilter(null);
     }
 
     private void exportarCSV() {
         JFileChooser selectorArchivos = new JFileChooser();
-        selectorArchivos.setDialogTitle("Exportar hallazgos a CSV");
+        selectorArchivos.setDialogTitle(I18nUI.Hallazgos.DIALOGO_EXPORTAR_CSV());
         String nombreArchivo = "burpia_hallazgos_" +
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) +
             ".csv";
@@ -298,10 +258,9 @@ public class PanelHallazgos extends JPanel {
         int resultado = selectorArchivos.showSaveDialog(this);
         if (resultado == JFileChooser.APPROVE_OPTION) {
             File archivo = selectorArchivos.getSelectedFile();
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(archivo))) {
-                writer.write("Hora,URL,Hallazgo,Severidad,Confianza\n");
+            try (BufferedWriter writer = Files.newBufferedWriter(archivo.toPath(), StandardCharsets.UTF_8)) {
+                writer.write(I18nUI.Hallazgos.CSV_HEADER() + "\n");
 
-                // Exportar solo hallazgos NO ignorados
                 List<Hallazgo> hallazgosExportar = modelo.obtenerHallazgosNoIgnorados();
                 int totalEnTabla = modelo.getRowCount();
                 int ignorados = totalEnTabla - hallazgosExportar.size();
@@ -328,16 +287,22 @@ public class PanelHallazgos extends JPanel {
                     writer.write("\n");
                 }
 
-                String mensaje = "Se exportaron " + hallazgosExportar.size() + " hallazgos a " + archivo.getName();
-                if (ignorados > 0) {
-                    mensaje += "\n(Ignorados y no exportados: " + ignorados + ")";
-                }
-                JOptionPane.showMessageDialog(this, mensaje, "Exportacion exitosa", JOptionPane.INFORMATION_MESSAGE);
+                String mensaje = I18nUI.Hallazgos.MSG_EXPORTACION_EXITOSA(
+                    hallazgosExportar.size(),
+                    archivo.getName(),
+                    ignorados
+                );
+                JOptionPane.showMessageDialog(
+                    this,
+                    mensaje,
+                    I18nUI.Hallazgos.TITULO_EXPORTACION_EXITOSA(),
+                    JOptionPane.INFORMATION_MESSAGE
+                );
 
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this,
-                    "Error al exportar: " + e.getMessage(),
-                    "Error de exportacion",
+                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(e.getMessage()),
+                    I18nUI.Hallazgos.TITULO_ERROR_EXPORTACION(),
                     JOptionPane.ERROR_MESSAGE);
             }
         }
@@ -345,7 +310,7 @@ public class PanelHallazgos extends JPanel {
 
     private void exportarJSON() {
         JFileChooser selectorArchivos = new JFileChooser();
-        selectorArchivos.setDialogTitle("Exportar hallazgos a JSON");
+        selectorArchivos.setDialogTitle(I18nUI.Hallazgos.DIALOGO_EXPORTAR_JSON());
         String nombreArchivo = "burpia_hallazgos_" +
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) +
             ".json";
@@ -354,10 +319,9 @@ public class PanelHallazgos extends JPanel {
         int resultado = selectorArchivos.showSaveDialog(this);
         if (resultado == JFileChooser.APPROVE_OPTION) {
             File archivo = selectorArchivos.getSelectedFile();
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(archivo))) {
+            try (BufferedWriter writer = Files.newBufferedWriter(archivo.toPath(), StandardCharsets.UTF_8)) {
                 writer.write("{\n  \"hallazgos\": [\n");
 
-                // Exportar solo hallazgos NO ignorados
                 List<Hallazgo> hallazgosExportar = modelo.obtenerHallazgosNoIgnorados();
                 int totalEnTabla = modelo.getRowCount();
                 int ignorados = totalEnTabla - hallazgosExportar.size();
@@ -379,16 +343,22 @@ public class PanelHallazgos extends JPanel {
 
                 writer.write("  ]\n}\n");
 
-                String mensaje = "Se exportaron " + hallazgosExportar.size() + " hallazgos a " + archivo.getName();
-                if (ignorados > 0) {
-                    mensaje += "\n(Ignorados y no exportados: " + ignorados + ")";
-                }
-                JOptionPane.showMessageDialog(this, mensaje, "Exportacion exitosa", JOptionPane.INFORMATION_MESSAGE);
+                String mensaje = I18nUI.Hallazgos.MSG_EXPORTACION_EXITOSA(
+                    hallazgosExportar.size(),
+                    archivo.getName(),
+                    ignorados
+                );
+                JOptionPane.showMessageDialog(
+                    this,
+                    mensaje,
+                    I18nUI.Hallazgos.TITULO_EXPORTACION_EXITOSA(),
+                    JOptionPane.INFORMATION_MESSAGE
+                );
 
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this,
-                    "Error al exportar: " + e.getMessage(),
-                    "Error de exportacion",
+                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(e.getMessage()),
+                    I18nUI.Hallazgos.TITULO_ERROR_EXPORTACION(),
                     JOptionPane.ERROR_MESSAGE);
             }
         }
@@ -418,40 +388,38 @@ public class PanelHallazgos extends JPanel {
     private void crearMenuContextual() {
         JPopupMenu menuContextual = new JPopupMenu();
 
-        // === ACCIONES DE BURP SUITE ===
-        JMenuItem menuItemRepeater = new JMenuItem("📤 Enviar al Repeater");
+        JMenuItem menuItemRepeater = new JMenuItem(I18nUI.Hallazgos.MENU_ENVIAR_REPEATER());
         menuItemRepeater.setFont(EstilosUI.FUENTE_ESTANDAR);
-        menuItemRepeater.setToolTipText("Enviar la peticion al Repeater de Burp Suite para validacion manual");
+        menuItemRepeater.setToolTipText(TooltipsUI.Hallazgos.MENU_REPEATER());
         menuItemRepeater.addActionListener(e -> enviarARepeater(tabla.getSelectedRows()));
         menuContextual.add(menuItemRepeater);
 
-        JMenuItem menuItemIntruder = new JMenuItem("🔍 Enviar a Intruder");
+        JMenuItem menuItemIntruder = new JMenuItem(I18nUI.Hallazgos.MENU_ENVIAR_INTRUDER());
         menuItemIntruder.setFont(EstilosUI.FUENTE_ESTANDAR);
-        menuItemIntruder.setToolTipText("Enviar la peticion a Intruder para pruebas de fuzzing");
+        menuItemIntruder.setToolTipText(TooltipsUI.Hallazgos.MENU_INTRUDER());
         menuItemIntruder.addActionListener(e -> enviarAIntruder(tabla.getSelectedRows()));
         menuContextual.add(menuItemIntruder);
 
         if (esBurpProfessional) {
-            JMenuItem menuItemScanner = new JMenuItem("🛰️ Enviar a Scanner Pro");
+            JMenuItem menuItemScanner = new JMenuItem(I18nUI.Hallazgos.MENU_ENVIAR_SCANNER());
             menuItemScanner.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemScanner.setToolTipText("Enviar la peticion al Scanner de Burp Professional");
+            menuItemScanner.setToolTipText(TooltipsUI.Hallazgos.MENU_SCANNER());
             menuItemScanner.addActionListener(e -> enviarAScanner(tabla.getSelectedRows()));
             menuContextual.add(menuItemScanner);
         }
 
         menuContextual.addSeparator();
 
-        // === GESTION DE HALLAZGOS ===
-        JMenuItem menuItemIgnorar = new JMenuItem("🚫 Ignorar");
+        JMenuItem menuItemIgnorar = new JMenuItem(I18nUI.Hallazgos.MENU_IGNORAR());
         menuItemIgnorar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        menuItemIgnorar.setToolTipText("Marcar como ignorado (no se incluye en exportaciones)");
+        menuItemIgnorar.setToolTipText(TooltipsUI.Hallazgos.MENU_IGNORAR());
         menuItemIgnorar.addActionListener(e -> {
             int[] filas = tabla.getSelectedRows();
             if (filas.length > 0) {
                 int confirmacion = JOptionPane.showConfirmDialog(
                     PanelHallazgos.this,
-                    filas.length == 1 ? "¿Ignorar este hallazgo?" : "¿Ignorar " + filas.length + " hallazgos?",
-                    "Confirmar ignorar",
+                    I18nUI.Hallazgos.MSG_CONFIRMAR_IGNORAR(filas.length),
+                    I18nUI.Hallazgos.TITULO_CONFIRMAR_IGNORAR(),
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE
                 );
@@ -462,16 +430,16 @@ public class PanelHallazgos extends JPanel {
         });
         menuContextual.add(menuItemIgnorar);
 
-        JMenuItem menuItemBorrar = new JMenuItem("🗑️ Borrar");
+        JMenuItem menuItemBorrar = new JMenuItem(I18nUI.Hallazgos.MENU_BORRAR());
         menuItemBorrar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        menuItemBorrar.setToolTipText("Eliminar hallazgos de la tabla");
+        menuItemBorrar.setToolTipText(TooltipsUI.Hallazgos.MENU_BORRAR());
         menuItemBorrar.addActionListener(e -> {
             int[] filas = tabla.getSelectedRows();
             if (filas.length > 0) {
                 int confirmacion = JOptionPane.showConfirmDialog(
                     PanelHallazgos.this,
-                    filas.length == 1 ? "¿Borrar este hallazgo de la tabla?" : "¿Borrar " + filas.length + " hallazgos de la tabla?",
-                    "Confirmar borrado",
+                    I18nUI.Hallazgos.MSG_CONFIRMAR_BORRAR(filas.length),
+                    I18nUI.Hallazgos.TITULO_CONFIRMAR_BORRAR(),
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE
                 );
@@ -482,7 +450,6 @@ public class PanelHallazgos extends JPanel {
         });
         menuContextual.add(menuItemBorrar);
 
-        // === MOUSE LISTENER ===
         tabla.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -537,8 +504,8 @@ public class PanelHallazgos extends JPanel {
         ejecutarAccionBurp(
             filas,
             "BurpIA-Repeater",
-            "Enviar al Repeater",
-            "Enviados al Repeater",
+            I18nUI.Hallazgos.TITULO_ACCION_REPEATER(),
+            I18nUI.Hallazgos.RESUMEN_ACCION_REPEATER(),
             (solicitud, hallazgo) -> {
                 String nombreTab = "BurpIA-" + (hallazgo != null ? hallazgo.obtenerSeveridad() : "Hallazgo");
                 api.repeater().sendToRepeater(solicitud, nombreTab);
@@ -551,11 +518,11 @@ public class PanelHallazgos extends JPanel {
         ejecutarAccionBurp(
             filas,
             "BurpIA-Intruder",
-            "Enviar a Intruder",
-            "Enviados a Intruder",
+            I18nUI.Hallazgos.TITULO_ACCION_INTRUDER(),
+            I18nUI.Hallazgos.RESUMEN_ACCION_INTRUDER(),
             (solicitud, hallazgo) -> {
                 api.intruder().sendToIntruder(solicitud);
-                return "✅ " + solicitud.url() + " (enviado a Intruder)";
+                return "✅ " + solicitud.url() + " " + I18nUI.tr("(enviado a Intruder)", "(sent to Intruder)");
             }
         );
     }
@@ -564,8 +531,8 @@ public class PanelHallazgos extends JPanel {
         ejecutarAccionBurp(
             filas,
             "BurpIA-Scanner",
-            "Enviar a Scanner Pro",
-            "Enviados a Scanner Pro",
+            I18nUI.Hallazgos.TITULO_ACCION_SCANNER(),
+            I18nUI.Hallazgos.RESUMEN_ACCION_SCANNER(),
             new AccionSobreSolicitud() {
                 private Audit auditoriaActiva;
 
@@ -581,8 +548,11 @@ public class PanelHallazgos extends JPanel {
                         auditoriaActiva = api.scanner().startAudit(configScanner);
                     }
                     auditoriaActiva.addRequest(solicitud);
-                    api.logging().logToOutput("[BurpIA] Peticion enviada a Scanner Pro: " + solicitud.url());
-                    return "✅ " + solicitud.url() + " (enviado a Scanner Pro)";
+                    api.logging().logToOutput(I18nUI.tr(
+                        "[BurpIA] Peticion enviada a Scanner Pro: ",
+                        "[BurpIA] Request sent to Scanner Pro: "
+                    ) + solicitud.url());
+                    return "✅ " + solicitud.url() + " " + I18nUI.tr("(enviado a Scanner Pro)", "(sent to Scanner Pro)");
                 }
             }
         );
@@ -605,8 +575,8 @@ public class PanelHallazgos extends JPanel {
 
                 if (solicitud == null) {
                     sinRequest++;
-                    detalle.append("⚠️ ").append(hallazgo != null ? hallazgo.obtenerUrl() : "URL desconocida")
-                        .append(" (sin request)\n");
+                    detalle.append("⚠️ ").append(hallazgo != null ? hallazgo.obtenerUrl() : I18nUI.tr("URL desconocida", "Unknown URL"))
+                        .append(" ").append(I18nUI.Hallazgos.MSG_SIN_REQUEST()).append("\n");
                     continue;
                 }
 
@@ -618,7 +588,10 @@ public class PanelHallazgos extends JPanel {
                     String mensaje = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
                     detalle.append("❌ ").append(solicitud.url()).append(" (error: ").append(mensaje).append(")\n");
                     if (titulo.contains("Scanner")) {
-                        api.logging().logToError("[BurpIA] Error al enviar a Scanner Pro: " + mensaje);
+                        api.logging().logToError(I18nUI.tr(
+                            "[BurpIA] Error al enviar a Scanner Pro: ",
+                            "[BurpIA] Error sending to Scanner Pro: "
+                        ) + mensaje);
                     }
                 }
             }
@@ -630,9 +603,13 @@ public class PanelHallazgos extends JPanel {
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(
                     PanelHallazgos.this,
-                    resumen + ": " + totalExitosos + "/" + filas.length +
-                        (totalSinRequest > 0 ? "\nSin request original: " + totalSinRequest : "") +
-                        "\n\n" + detalleFinal,
+                    I18nUI.Hallazgos.MSG_RESULTADO_ACCION(
+                        resumen,
+                        totalExitosos,
+                        filas.length,
+                        totalSinRequest,
+                        detalleFinal
+                    ),
                     titulo,
                     totalExitosos > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
                 );
@@ -655,15 +632,14 @@ public class PanelHallazgos extends JPanel {
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(
                 PanelHallazgos.this,
-                "Hallazgos ignorados: " + ignorados + "\n\nNo se incluiran en exportaciones CSV/JSON.",
-                "Hallazgos ignorados",
+                I18nUI.Hallazgos.MSG_HALLAZGOS_IGNORADOS(ignorados),
+                I18nUI.Hallazgos.TITULO_HALLAZGOS_IGNORADOS(),
                 JOptionPane.INFORMATION_MESSAGE
             );
         });
     }
 
     private void borrarHallazgosDeTabla(int[] filas) {
-        // Ordenar de mayor a menor para no afectar índices
         Integer[] filasOrdenadas = new Integer[filas.length];
         for (int i = 0; i < filas.length; i++) {
             filasOrdenadas[i] = filas[i];
@@ -682,11 +658,91 @@ public class PanelHallazgos extends JPanel {
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(
                 PanelHallazgos.this,
-                "Hallazgos eliminados: " + borrados[0],
-                "Hallazgos borrados",
+                I18nUI.Hallazgos.MSG_HALLAZGOS_BORRADOS(borrados[0]),
+                I18nUI.Hallazgos.TITULO_HALLAZGOS_BORRADOS(),
                 JOptionPane.INFORMATION_MESSAGE
             );
         });
+    }
+
+    public void aplicarIdioma() {
+        etiquetaBusqueda.setText(I18nUI.Hallazgos.ETIQUETA_BUSCAR());
+        botonLimpiarFiltro.setText(I18nUI.Hallazgos.BOTON_LIMPIAR());
+        botonExportarCSV.setText(I18nUI.Hallazgos.BOTON_EXPORTAR_CSV());
+        botonExportarJSON.setText(I18nUI.Hallazgos.BOTON_EXPORTAR_JSON());
+        botonLimpiarTodo.setText(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
+        chkGuardarEnIssues.setText(I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES());
+        actualizarPrimeraOpcionSeveridad();
+
+        etiquetaBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
+        campoBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
+        comboSeveridad.setToolTipText(TooltipsUI.Hallazgos.FILTRO_SEVERIDAD());
+        botonLimpiarFiltro.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_FILTROS());
+        botonExportarCSV.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_CSV());
+        botonExportarJSON.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_JSON());
+        botonLimpiarTodo.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_TODO());
+        chkGuardarEnIssues.setToolTipText(TooltipsUI.Hallazgos.GUARDAR_ISSUES());
+        tabla.setToolTipText(TooltipsUI.Hallazgos.TABLA());
+
+        actualizarTituloPanel(panelFiltros, I18nUI.Hallazgos.TITULO_FILTROS());
+        actualizarTituloPanel(panelGuardarProyecto, I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO());
+        actualizarTituloPanel(panelTablaWrapper, I18nUI.Hallazgos.TITULO_TABLA());
+
+        modelo.refrescarColumnasIdioma();
+        SwingUtilities.invokeLater(() -> {
+            sorter = new TableRowSorter<>(modelo);
+            tabla.setRowSorter(sorter);
+            configurarColumnasTabla();
+            aplicarFiltros();
+        });
+        revalidate();
+        repaint();
+    }
+
+    private void actualizarPrimeraOpcionSeveridad() {
+        boolean estabaSeleccionadoPrimero = comboSeveridad.getSelectedIndex() == 0;
+        comboSeveridad.removeItemAt(0);
+        comboSeveridad.insertItemAt(I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES(), 0);
+        if (estabaSeleccionadoPrimero || comboSeveridad.getSelectedIndex() < 0) {
+            comboSeveridad.setSelectedIndex(0);
+        }
+    }
+
+    private void configurarColumnasTabla() {
+        if (tabla.getColumnModel().getColumnCount() < 5) {
+            return;
+        }
+        tabla.getColumnModel().getColumn(0).setCellRenderer(
+            new RenderizadorHallazgoBorrado(new RenderizadorCentrado(), tabla, modelo)
+        );
+        tabla.getColumnModel().getColumn(1).setCellRenderer(
+            new RenderizadorHallazgoBorrado(new DefaultTableCellRenderer(), tabla, modelo)
+        );
+        tabla.getColumnModel().getColumn(2).setCellRenderer(
+            new RenderizadorHallazgoBorrado(new DefaultTableCellRenderer(), tabla, modelo)
+        );
+        tabla.getColumnModel().getColumn(3).setCellRenderer(
+            new RenderizadorHallazgoBorrado(new RenderizadorSeveridad(), tabla, modelo)
+        );
+        tabla.getColumnModel().getColumn(4).setCellRenderer(
+            new RenderizadorHallazgoBorrado(new RenderizadorConfianza(), tabla, modelo)
+        );
+
+        tabla.getColumnModel().getColumn(0).setPreferredWidth(80);
+        tabla.getColumnModel().getColumn(1).setPreferredWidth(300);
+        tabla.getColumnModel().getColumn(2).setPreferredWidth(400);
+        tabla.getColumnModel().getColumn(3).setPreferredWidth(100);
+        tabla.getColumnModel().getColumn(4).setPreferredWidth(100);
+    }
+
+    private void actualizarTituloPanel(JPanel panel, String titulo) {
+        Border borde = panel.getBorder();
+        if (borde instanceof CompoundBorder) {
+            Border bordeExterno = ((CompoundBorder) borde).getOutsideBorder();
+            if (bordeExterno instanceof TitledBorder) {
+                ((TitledBorder) bordeExterno).setTitle(titulo);
+            }
+        }
     }
 
     public ModeloTablaHallazgos obtenerModelo() {
@@ -694,6 +750,6 @@ public class PanelHallazgos extends JPanel {
     }
 
     public boolean isGuardadoAutomaticoIssuesActivo() {
-        return chkGuardarEnIssues != null && chkGuardarEnIssues.isSelected();
+        return guardadoAutomaticoIssuesActivo;
     }
 }

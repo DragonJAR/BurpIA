@@ -1,45 +1,50 @@
 package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
+import com.burpia.i18n.I18nUI;
 
 import javax.swing.*;
 import java.awt.Component;
+import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final MontoyaApi api;
     private final ConsumerSolicitud manejadorAnalisis;
-    private final ConcurrentHashMap<String, Long> ultimoClic;
+    private final AtomicReference<RegistroClic> ultimoClic;
+    private static final long VENTANA_DEBOUNCE_MS = 500L;
 
     public interface ConsumerSolicitud {
-        void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis);
+        void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal);
     }
 
     public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis) {
         this.api = api;
         this.manejadorAnalisis = manejadorAnalisis;
-        this.ultimoClic = new ConcurrentHashMap<>();
+        this.ultimoClic = new AtomicReference<>();
     }
 
     @Override
     public List<Component> provideMenuItems(ContextMenuEvent evento) {
         List<Component> itemsMenu = new ArrayList<>();
 
-        if (evento.selectedRequestResponses().isEmpty()) {
+        if (evento == null || evento.selectedRequestResponses() == null || evento.selectedRequestResponses().isEmpty()) {
             return itemsMenu;
         }
 
-        // Capturar la solicitud ANTES de crear el ActionListener para evitar problemas de scope
-        final HttpRequest solicitudCapturada = evento.selectedRequestResponses().get(0).request();
+        final HttpRequestResponse solicitudRespuestaSeleccionada = evento.selectedRequestResponses().get(0);
+        final HttpRequest solicitudCapturada = solicitudRespuestaSeleccionada.request();
 
-        JMenuItem itemAnalizar = new JMenuItem("Analizar Solicitud con BurpIA");
+        JMenuItem itemAnalizar = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD());
+        itemAnalizar.setToolTipText(TooltipsUI.Contexto.ANALIZAR_SOLICITUD());
         itemAnalizar.addActionListener(e -> {
-            manejarClicConDebounce(solicitudCapturada);
+            manejarClicConDebounce(solicitudCapturada, solicitudRespuestaSeleccionada);
         });
 
         itemsMenu.add(itemAnalizar);
@@ -47,41 +52,50 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         return itemsMenu;
     }
 
-    private void manejarClicConDebounce(HttpRequest solicitud) {
+    private void manejarClicConDebounce(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
         String contenido = solicitud != null ? solicitud.toString() : "null";
         String hash = String.valueOf(contenido.hashCode());
         long ahora = System.currentTimeMillis();
 
-        Long ultimoClicTime = ultimoClic.get(hash);
-        if (ultimoClicTime != null && (ahora - ultimoClicTime) < 500) {
-            api.logging().logToOutput("[BurpIA] Debounce: ignorando clic duplicado");
+        RegistroClic previo = ultimoClic.get();
+        if (previo != null && hash.equals(previo.hashSolicitud) && (ahora - previo.timestampMs) < VENTANA_DEBOUNCE_MS) {
+            api.logging().logToOutput(I18nUI.tr(
+                "[BurpIA] Debounce: ignorando clic duplicado",
+                "[BurpIA] Debounce: duplicate click ignored"
+            ));
             return;
         }
 
-        ultimoClic.put(hash, ahora);
+        ultimoClic.set(new RegistroClic(hash, ahora));
 
-        // Llamar al manejador con forzarAnalisis=true
-        manejadorAnalisis.analizarSolicitud(solicitud, true);
+        manejadorAnalisis.analizarSolicitud(solicitud, true, solicitudRespuestaOriginal);
 
-        api.logging().logToOutput("[BurpIA] Analizando solicitud desde menu contextual (forzado)");
+        api.logging().logToOutput(I18nUI.tr(
+            "[BurpIA] Analizando solicitud desde menu contextual (forzado)",
+            "[BurpIA] Analyzing request from context menu (forced)"
+        ));
 
-        // Mostrar dialogo opcional
         SwingUtilities.invokeLater(() -> {
+            if (GraphicsEnvironment.isHeadless()) {
+                return;
+            }
             JOptionPane.showMessageDialog(
                 null,
-                "Solicitud enviada para analisis forzado.\n" +
-                "Esto puede tomar unos segundos dependiendo de la respuesta de la AI.",
-                "BurpIA - Análisis Iniciado",
+                I18nUI.Contexto.MSG_ANALISIS_INICIADO(),
+                I18nUI.Contexto.TITULO_ANALISIS_INICIADO(),
                 JOptionPane.INFORMATION_MESSAGE
             );
         });
     }
 
-    public void limpiarDebounceAntiguo() {
-        long ahora = System.currentTimeMillis();
-        ultimoClic.entrySet().removeIf(entry -> {
-            Long tiempo = entry.getValue();
-            return tiempo == null || (ahora - tiempo) > 60000; // 1 minuto
-        });
+    private static final class RegistroClic {
+        private final String hashSolicitud;
+        private final long timestampMs;
+
+        private RegistroClic(String hashSolicitud, long timestampMs) {
+            this.hashSolicitud = hashSolicitud;
+            this.timestampMs = timestampMs;
+        }
     }
+
 }

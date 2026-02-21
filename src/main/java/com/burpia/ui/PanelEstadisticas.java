@@ -1,8 +1,11 @@
 package com.burpia.ui;
 
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 
 import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
@@ -118,18 +121,20 @@ public class PanelEstadisticas extends JPanel {
 
         timerActualizacion = new Timer(1000, e -> actualizar());
         timerActualizacion.start();
+        aplicarIdioma();
         actualizar();
         SwingUtilities.invokeLater(this::ajustarDimensionBotones);
     }
 
     private JPanel crearPanelHallazgos() {
-        JPanel panel = crearPanelSeccion("🎯 POSIBLES HALLAZGOS Y CRITICIDADES");
+        JPanel panel = crearPanelSeccion(I18nUI.Estadisticas.TITULO_HALLAZGOS());
 
         panelLineaHallazgos = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
         panelLineaHallazgos.setOpaque(false);
 
         etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
         etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204));
+        etiquetaResumenPrincipal.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_TOTAL());
         panelLineaHallazgos.add(etiquetaResumenPrincipal);
 
         JLabel separador = new JLabel(" | ");
@@ -139,6 +144,7 @@ public class PanelEstadisticas extends JPanel {
 
         etiquetaResumenSeveridad.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumenSeveridad.setForeground(new Color(70, 70, 70));
+        etiquetaResumenSeveridad.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_SEVERIDAD());
         panelLineaHallazgos.add(etiquetaResumenSeveridad);
 
         JLabel separador2 = new JLabel(" | ");
@@ -148,6 +154,7 @@ public class PanelEstadisticas extends JPanel {
 
         etiquetaLimiteHallazgos.setFont(EstilosUI.FUENTE_MONO);
         etiquetaLimiteHallazgos.setForeground(new Color(80, 80, 80));
+        etiquetaLimiteHallazgos.setToolTipText(TooltipsUI.Estadisticas.LIMITE_HALLAZGOS());
         panelLineaHallazgos.add(etiquetaLimiteHallazgos);
 
         panel.add(panelLineaHallazgos, BorderLayout.CENTER);
@@ -155,10 +162,11 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private JPanel crearPanelOperativo() {
-        JPanel panel = crearPanelSeccion("📊 DETALLES OPERATIVOS");
+        JPanel panel = crearPanelSeccion(I18nUI.Estadisticas.TITULO_OPERATIVO());
 
         etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumenOperativo.setForeground(new Color(90, 90, 90));
+        etiquetaResumenOperativo.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_OPERATIVO());
 
         panelLineaOperativo = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
         panelLineaOperativo.setOpaque(false);
@@ -198,7 +206,7 @@ public class PanelEstadisticas extends JPanel {
 
         botonConfiguracion.setText("⚙️");
         botonConfiguracion.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
-        botonConfiguracion.setToolTipText("Abrir ajustes");
+        botonConfiguracion.setToolTipText(TooltipsUI.Estadisticas.CONFIGURACION());
         botonConfiguracion.setFocusable(false);
         botonConfiguracion.setMargin(new Insets(0, 0, 0, 0));
         botonConfiguracion.putClientProperty("JButton.buttonType", "square");
@@ -273,28 +281,24 @@ public class PanelEstadisticas extends JPanel {
 
     public void actualizar() {
         SwingUtilities.invokeLater(() -> {
-            etiquetaResumenPrincipal.setText(String.format("🔎 Total: %d", estadisticas.obtenerHallazgosCreados()));
+            etiquetaResumenPrincipal.setText(I18nUI.Estadisticas.RESUMEN_TOTAL(estadisticas.obtenerHallazgosCreados()));
 
-            etiquetaResumenSeveridad.setText(
-                String.format("🟣 %d   🔴 %d   🟠 %d   🟢 %d   🔵 %d",
+            etiquetaResumenSeveridad.setText(I18nUI.Estadisticas.RESUMEN_SEVERIDAD(
                     estadisticas.obtenerHallazgosCritical(),
                     estadisticas.obtenerHallazgosHigh(),
                     estadisticas.obtenerHallazgosMedium(),
                     estadisticas.obtenerHallazgosLow(),
-                    estadisticas.obtenerHallazgosInfo())
-            );
+                    estadisticas.obtenerHallazgosInfo()
+            ));
 
-            etiquetaLimiteHallazgos.setText(
-                String.format("🧮 Límite Hallazgos: %d", proveedorLimiteHallazgos.getAsInt())
-            );
+            etiquetaLimiteHallazgos.setText(I18nUI.Estadisticas.LIMITE_HALLAZGOS(proveedorLimiteHallazgos.getAsInt()));
 
-            etiquetaResumenOperativo.setText(
-                String.format("📥 Solicitudes: %d   |   ✅ Analizados: %d   |   ⏭ Omitidos: %d   |   ❌ Errores: %d",
+            etiquetaResumenOperativo.setText(I18nUI.Estadisticas.RESUMEN_OPERATIVO(
                     estadisticas.obtenerTotalSolicitudes(),
                     estadisticas.obtenerAnalizados(),
                     estadisticas.obtenerTotalOmitidos(),
-                    estadisticas.obtenerErrores())
-            );
+                    estadisticas.obtenerErrores()
+            ));
 
             ajustarDimensionBotones();
         });
@@ -315,10 +319,37 @@ public class PanelEstadisticas extends JPanel {
     private void actualizarEstadoCapturaUI() {
         if (capturaActiva) {
             botonCaptura.setText("⏸️");
-            botonCaptura.setToolTipText("Pausar captura de peticiones");
+            botonCaptura.setToolTipText(TooltipsUI.Estadisticas.CAPTURA_PAUSAR());
         } else {
             botonCaptura.setText("▶️");
-            botonCaptura.setToolTipText("Reanudar captura de peticiones");
+            botonCaptura.setToolTipText(TooltipsUI.Estadisticas.CAPTURA_REANUDAR());
+        }
+    }
+
+    public void aplicarIdioma() {
+        actualizarTituloSeccion(panelHallazgos, I18nUI.Estadisticas.TITULO_HALLAZGOS());
+        actualizarTituloSeccion(panelOperativo, I18nUI.Estadisticas.TITULO_OPERATIVO());
+        etiquetaResumenPrincipal.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_TOTAL());
+        etiquetaResumenSeveridad.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_SEVERIDAD());
+        etiquetaLimiteHallazgos.setToolTipText(TooltipsUI.Estadisticas.LIMITE_HALLAZGOS());
+        etiquetaResumenOperativo.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_OPERATIVO());
+        botonConfiguracion.setToolTipText(TooltipsUI.Estadisticas.CONFIGURACION());
+        actualizarEstadoCapturaUI();
+        revalidate();
+        repaint();
+    }
+
+    private void actualizarTituloSeccion(JPanel panel, String titulo) {
+        if (panel == null) {
+            return;
+        }
+        Border borde = panel.getBorder();
+        if (!(borde instanceof CompoundBorder)) {
+            return;
+        }
+        Border bordeExterno = ((CompoundBorder) borde).getOutsideBorder();
+        if (bordeExterno instanceof TitledBorder) {
+            ((TitledBorder) bordeExterno).setTitle(titulo);
         }
     }
 

@@ -161,6 +161,48 @@ class ProbadorConexionAITest {
         assertTrue(resultado.mensaje.contains("Analisis OK"));
     }
 
+    @Test
+    @DisplayName("Gemini falla con URL base invalida sin lanzar excepcion")
+    void testGeminiUrlInvalida() {
+        ConfiguracionAPI config = baseConfig("Gemini", "gemini-1.5-pro-002");
+        config.establecerUrlApi("ht!tp://url-invalida");
+
+        ProbadorConexionAI.ResultadoPrueba resultado = new ProbadorConexionAI(config).probarConexion();
+
+        assertFalse(resultado.exito);
+        assertTrue(resultado.mensaje.contains("URL base de Gemini"));
+    }
+
+    @Test
+    @DisplayName("Gemini falla de forma controlada cuando /models responde JSON invalido")
+    void testGeminiModelosJsonInvalido() {
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("{json invalido"));
+
+        ConfiguracionAPI config = baseConfig("Gemini", "gemini-1.5-pro-002");
+        config.establecerUrlApi(server.url("/v1beta").toString());
+
+        ProbadorConexionAI.ResultadoPrueba resultado = new ProbadorConexionAI(config).probarConexion();
+
+        assertFalse(resultado.exito);
+        assertTrue(resultado.mensaje.contains("Gemini no reportó modelos compatibles"));
+    }
+
+    @Test
+    @DisplayName("Gemini ignora modelos con supportedGenerationMethods en tipo inválido")
+    void testGeminiModelosConMetodosInvalidos() {
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(
+            "{\"models\":[{\"name\":\"models/gemini-1.5-pro-002\",\"supportedGenerationMethods\":{\"name\":\"generateContent\"}}]}"
+        ));
+
+        ConfiguracionAPI config = baseConfig("Gemini", "gemini-1.5-pro-002");
+        config.establecerUrlApi(server.url("/v1beta").toString());
+
+        ProbadorConexionAI.ResultadoPrueba resultado = new ProbadorConexionAI(config).probarConexion();
+
+        assertFalse(resultado.exito);
+        assertTrue(resultado.mensaje.contains("Gemini no reportó modelos compatibles"));
+    }
+
     private ConfiguracionAPI baseConfig(String proveedor, String modelo) {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI(proveedor);

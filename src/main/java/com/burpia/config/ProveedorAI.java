@@ -37,7 +37,6 @@ public class ProveedorAI {
     private static final Map<String, ConfiguracionProveedor> PROVEEDORES = new LinkedHashMap<>();
 
     static {
-        // Ollama - Local (modelos típicamente 4k-32k context)
         PROVEEDORES.put("Ollama", new ConfiguracionProveedor(
             "Ollama",
             "http://localhost:11434",
@@ -53,11 +52,10 @@ public class ProveedorAI {
                 "codellama"
             ),
             false,
-            4096,    // max_tokens por defecto
-            32768    // ventana de contexto típica
+            4096,
+            32768
         ));
 
-        // OpenAI (GPT-4: 128k context, GPT-3.5: 16k context)
         PROVEEDORES.put("OpenAI", new ConfiguracionProveedor(
             "OpenAI",
             "https://api.openai.com/v1",
@@ -72,11 +70,10 @@ public class ProveedorAI {
                 "gpt-4-turbo", "gpt-3.5-turbo"
             ),
             true,
-            4096,    // max_tokens por defecto
-            128000   // ventana de contexto GPT-4
+            4096,
+            128000
         ));
 
-        // Claude (Anthropic - 200k context)
         PROVEEDORES.put("Claude", new ConfiguracionProveedor(
             "Claude",
             "https://api.anthropic.com/v1",
@@ -91,11 +88,10 @@ public class ProveedorAI {
                 "claude-3-opus-20240229"
             ),
             true,
-            8192,    // max_tokens por defecto (Claude permite outputs más largos)
-            200000   // ventana de contexto Claude 3
+            8192,
+            200000
         ));
 
-        // Gemini (Google - 1M tokens context)
         PROVEEDORES.put("Gemini", new ConfiguracionProveedor(
             "Gemini",
             "https://generativelanguage.googleapis.com/v1beta",
@@ -105,11 +101,10 @@ public class ProveedorAI {
                 "gemini-1.5-flash-002"
             ),
             true,
-            8192,    // max_tokens por defecto
-            1000000  // ventana de contexto Gemini 1.5
+            8192,
+            1000000
         ));
 
-        // Z.ai (Zhipu GLM - 128k context)
         PROVEEDORES.put("Z.ai", new ConfiguracionProveedor(
             "Z.ai",
             "https://api.z.ai/api/paas/v4",
@@ -122,11 +117,10 @@ public class ProveedorAI {
                 "glm-4-long"
             ),
             true,
-            4096,    // max_tokens por defecto
-            128000   // ventana de contexto GLM-4
+            4096,
+            128000
         ));
 
-        // MiniMax (conservador, sin datos específicos)
         PROVEEDORES.put("minimax", new ConfiguracionProveedor(
             "minimax",
             "https://api.minimax.io/v1",
@@ -139,8 +133,8 @@ public class ProveedorAI {
                 "abab6-chat"
             ),
             true,
-            4096,    // max_tokens por defecto (conservador)
-            32000    // ventana de contexto estimada
+            4096,
+            32000
         ));
     }
 

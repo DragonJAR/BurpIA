@@ -6,7 +6,8 @@ public class LimitadorTasa {
     private final Semaphore semaforo;
 
     public LimitadorTasa(int maximoConcurrente) {
-        this.semaforo = new Semaphore(maximoConcurrente);
+        int maximoNormalizado = Math.max(1, maximoConcurrente);
+        this.semaforo = new Semaphore(maximoNormalizado);
     }
 
     public void adquirir() throws InterruptedException {

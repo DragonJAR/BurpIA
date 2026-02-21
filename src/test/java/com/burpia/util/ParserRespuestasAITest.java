@@ -40,10 +40,38 @@ class ParserRespuestasAITest {
     }
 
     @Test
+    @DisplayName("Claude extrae texto aunque falte campo type")
+    void testExtraerClaudeSinType() {
+        String json = "{\"content\":[{\"text\":\"Hola Claude sin type\"}]}";
+        assertEquals("Hola Claude sin type", ParserRespuestasAI.extraerContenido(json, "Claude"));
+    }
+
+    @Test
     @DisplayName("Extrae contenido formato Gemini")
     void testExtraerGemini() {
         String json = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"OK Gemini\"}]}}]}";
         assertEquals("OK Gemini", ParserRespuestasAI.extraerContenido(json, "Gemini"));
+    }
+
+    @Test
+    @DisplayName("OpenAI ignora estructuras inválidas y usa fallback válido")
+    void testOpenAiEstructuraMixta() {
+        String json = "{\"choices\":[{\"message\":{\"content\":{}}},{\"text\":\"fallback texto\"}]}";
+        assertEquals("fallback texto", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+    }
+
+    @Test
+    @DisplayName("OpenAI extrae texto cuando message.content llega como array estructurado")
+    void testOpenAiContentArray() {
+        String json = "{\"choices\":[{\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"OK desde array\"}]}}]}";
+        assertEquals("OK desde array", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+    }
+
+    @Test
+    @DisplayName("Gemini ignora candidatos inválidos y toma primer texto util")
+    void testGeminiCandidatosInvalidos() {
+        String json = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":{}}]}},{\"content\":{\"parts\":[{\"text\":\"OK Gemini 2\"}]}}]}";
+        assertEquals("OK Gemini 2", ParserRespuestasAI.extraerContenido(json, "Gemini"));
     }
 
     @Test
