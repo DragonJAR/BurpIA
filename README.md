@@ -118,3 +118,12 @@ El prompt debe incluir obligatoriamente el token `{REQUEST}` y se recomienda inc
     }
   ]
 }
+
+<div align="center">
+
+**Made with ❤️ by DragonJAR.org**
+
+[![GitHub stars](https://img.shields.io/github/stars/jaimearestrepo/BurpIA?style=social)](https://github.com/jaimearestrepo/BurpIA/stargazers)
+[![GitHub forks](https://img.shields.io/github/stars/jaimearestrepo/BurpIA?style=social)](https://github.com/jaimearestrepo/BurpIA/network/members)
+
+</div>
