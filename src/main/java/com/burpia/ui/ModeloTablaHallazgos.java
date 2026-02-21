@@ -275,4 +275,27 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             }
         });
     }
+
+    public void actualizarHallazgo(int indiceFila, Hallazgo nuevoHallazgo) {
+        lock.lock();
+        try {
+            if (indiceFila >= 0 && indiceFila < datos.size()) {
+                datos.set(indiceFila, nuevoHallazgo);
+            } else {
+                return;
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            if (indiceFila < getRowCount()) {
+                Object[] filaValores = nuevoHallazgo.aFilaTabla();
+                for (int i = 0; i < COLUMNAS.length; i++) {
+                    setValueAt(filaValores[i], indiceFila, i);
+                }
+                fireTableRowsUpdated(indiceFila, indiceFila);
+            }
+        });
+    }
 }
