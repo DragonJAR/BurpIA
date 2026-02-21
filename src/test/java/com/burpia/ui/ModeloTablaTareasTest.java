@@ -35,4 +35,27 @@ class ModeloTablaTareasTest {
         SwingUtilities.invokeAndWait(() -> {});
         assertEquals(1, modelo.getRowCount());
     }
+
+    @Test
+    @DisplayName("Buscar y eliminar por id null es seguro")
+    void testOperacionesIdNull() {
+        ModeloTablaTareas modelo = new ModeloTablaTareas(10);
+        assertEquals(-1, modelo.buscarIndicePorId(null));
+        assertDoesNotThrow(() -> modelo.eliminarTareaPorId(null));
+    }
+
+    @Test
+    @DisplayName("Contadores y limpieza por estado toleran parametros null")
+    void testOperacionesEstadoNull() throws Exception {
+        ModeloTablaTareas modelo = new ModeloTablaTareas(10);
+        modelo.agregarTarea(new Tarea("1", "A", "https://example.com/1", Tarea.ESTADO_EN_COLA));
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(0, modelo.contarPorEstado(null));
+        assertDoesNotThrow(() -> modelo.eliminarPorEstado((String[]) null));
+        assertDoesNotThrow(() -> modelo.eliminarPorEstado());
+        assertDoesNotThrow(() -> modelo.eliminarPorEstado((String) null));
+        SwingUtilities.invokeAndWait(() -> {});
+        assertEquals(1, modelo.getRowCount());
+    }
 }

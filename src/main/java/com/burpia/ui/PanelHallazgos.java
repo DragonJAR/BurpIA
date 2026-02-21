@@ -28,7 +28,9 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class PanelHallazgos extends JPanel {
     private final ModeloTablaHallazgos modelo;
@@ -65,7 +67,7 @@ public class PanelHallazgos extends JPanel {
     public PanelHallazgos(MontoyaApi api, ModeloTablaHallazgos modeloCompartido, boolean esBurpProfessional) {
         this.api = api;
         this.esBurpProfessional = esBurpProfessional;
-        this.modelo = modeloCompartido;
+        this.modelo = modeloCompartido != null ? modeloCompartido : new ModeloTablaHallazgos(1000);
         this.tabla = new JTable(modelo);
         initComponents();
     }
@@ -453,14 +455,13 @@ public class PanelHallazgos extends JPanel {
         tabla.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e) && !e.isPopupTrigger()) {
                     int filaVista = tabla.rowAtPoint(e.getPoint());
                     if (filaVista >= 0) {
                         abrirDialogoEdicion(filaVista);
                     }
-                } else {
-                    mostrarMenuContextualSiAplica(e, menuContextual);
                 }
+                mostrarMenuContextualSiAplica(e, menuContextual);
             }
 
             @Override
@@ -483,7 +484,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void mostrarMenuContextualSiAplica(MouseEvent e, JPopupMenu menuContextual) {
-        if (!SwingUtilities.isRightMouseButton(e)) {
+        if (!e.isPopupTrigger()) {
             return;
         }
         int fila = tabla.rowAtPoint(e.getPoint());
@@ -563,19 +564,22 @@ public class PanelHallazgos extends JPanel {
                                     String titulo,
                                     String resumen,
                                     AccionSobreSolicitud accion) {
+        List<EntradaAccion> entradas = capturarEntradasAccion(filas);
+        if (entradas.isEmpty()) {
+            return;
+        }
         new Thread(() -> {
             int exitosos = 0;
             int sinRequest = 0;
             StringBuilder detalle = new StringBuilder();
 
-            for (int fila : filas) {
-                int filaModelo = tabla.convertRowIndexToModel(fila);
-                HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
-                Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
+            for (EntradaAccion entrada : entradas) {
+                HttpRequest solicitud = entrada.solicitud;
+                Hallazgo hallazgo = entrada.hallazgo;
 
                 if (solicitud == null) {
                     sinRequest++;
-                    detalle.append("⚠️ ").append(hallazgo != null ? hallazgo.obtenerUrl() : I18nUI.tr("URL desconocida", "Unknown URL"))
+                    detalle.append("⚠️ ").append(entrada.urlReferencia)
                         .append(" ").append(I18nUI.Hallazgos.MSG_SIN_REQUEST()).append("\n");
                     continue;
                 }
@@ -606,7 +610,7 @@ public class PanelHallazgos extends JPanel {
                     I18nUI.Hallazgos.MSG_RESULTADO_ACCION(
                         resumen,
                         totalExitosos,
-                        filas.length,
+                        entradas.size(),
                         totalSinRequest,
                         detalleFinal
                     ),
@@ -623,12 +627,12 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void ignorarHallazgos(int[] filas) {
-        for (int fila : filas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
+        int[] filasModelo = convertirFilasVistaAModelo(filas);
+        for (int filaModelo : filasModelo) {
             modelo.marcarComoIgnorado(filaModelo);
         }
 
-        final int ignorados = filas.length;
+        final int ignorados = filasModelo.length;
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(
                 PanelHallazgos.this,
@@ -640,15 +644,9 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void borrarHallazgosDeTabla(int[] filas) {
-        Integer[] filasOrdenadas = new Integer[filas.length];
-        for (int i = 0; i < filas.length; i++) {
-            filasOrdenadas[i] = filas[i];
-        }
-        java.util.Arrays.sort(filasOrdenadas, java.util.Collections.reverseOrder());
-
+        int[] filasModeloOrdenadasDesc = convertirFilasVistaAModeloOrdenDesc(filas);
         final int[] borrados = {0};
-        for (int fila : filasOrdenadas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
+        for (int filaModelo : filasModeloOrdenadasDesc) {
             if (filaModelo >= 0) {
                 modelo.eliminarHallazgo(filaModelo);
                 borrados[0]++;
@@ -663,6 +661,65 @@ public class PanelHallazgos extends JPanel {
                 JOptionPane.INFORMATION_MESSAGE
             );
         });
+    }
+
+    private int[] convertirFilasVistaAModelo(int[] filasVista) {
+        if (filasVista == null || filasVista.length == 0) {
+            return new int[0];
+        }
+        List<Integer> filasModelo = new ArrayList<>();
+        Set<Integer> vistos = new HashSet<>();
+        for (int filaVista : filasVista) {
+            if (filaVista < 0 || filaVista >= tabla.getRowCount()) {
+                continue;
+            }
+            int filaModelo = tabla.convertRowIndexToModel(filaVista);
+            if (filaModelo >= 0 && vistos.add(filaModelo)) {
+                filasModelo.add(filaModelo);
+            }
+        }
+        int[] resultado = new int[filasModelo.size()];
+        for (int i = 0; i < filasModelo.size(); i++) {
+            resultado[i] = filasModelo.get(i);
+        }
+        return resultado;
+    }
+
+    private int[] convertirFilasVistaAModeloOrdenDesc(int[] filasVista) {
+        int[] filasModelo = convertirFilasVistaAModelo(filasVista);
+        java.util.Arrays.sort(filasModelo);
+        for (int i = 0, j = filasModelo.length - 1; i < j; i++, j--) {
+            int tmp = filasModelo[i];
+            filasModelo[i] = filasModelo[j];
+            filasModelo[j] = tmp;
+        }
+        return filasModelo;
+    }
+
+    private List<EntradaAccion> capturarEntradasAccion(int[] filasVista) {
+        int[] filasModelo = convertirFilasVistaAModelo(filasVista);
+        List<EntradaAccion> entradas = new ArrayList<>(filasModelo.length);
+        for (int filaModelo : filasModelo) {
+            Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
+            HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
+            String urlReferencia = hallazgo != null
+                ? hallazgo.obtenerUrl()
+                : I18nUI.tr("URL desconocida", "Unknown URL");
+            entradas.add(new EntradaAccion(solicitud, hallazgo, urlReferencia));
+        }
+        return entradas;
+    }
+
+    private static final class EntradaAccion {
+        private final HttpRequest solicitud;
+        private final Hallazgo hallazgo;
+        private final String urlReferencia;
+
+        private EntradaAccion(HttpRequest solicitud, Hallazgo hallazgo, String urlReferencia) {
+            this.solicitud = solicitud;
+            this.hallazgo = hallazgo;
+            this.urlReferencia = urlReferencia;
+        }
     }
 
     public void aplicarIdioma() {

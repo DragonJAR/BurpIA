@@ -247,6 +247,9 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public void actualizarHallazgo(int indiceFila, Hallazgo nuevoHallazgo) {
+        if (nuevoHallazgo == null) {
+            return;
+        }
         lock.lock();
         try {
             if (indiceFila >= 0 && indiceFila < datos.size()) {
