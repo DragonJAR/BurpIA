@@ -92,10 +92,10 @@ public class DialogoConfiguracion extends JDialog {
 
     private JPanel crearPanelGeneral() {
         JPanel root = new JPanel(new BorderLayout());
-        root.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         JPanel contenido = new JPanel();
         contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
+        contenido.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
         contenido.setOpaque(false);
 
         JPanel panelProveedor = crearPanelProveedor();
@@ -175,9 +175,14 @@ public class DialogoConfiguracion extends JDialog {
         panelEjecucion.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelEjecucion.getPreferredSize().height));
 
         contenido.add(panelEjecucion);
-        contenido.add(Box.createVerticalGlue());
+        JScrollPane scrollGeneral = new JScrollPane(contenido);
+        scrollGeneral.setBorder(BorderFactory.createEmptyBorder());
+        scrollGeneral.setViewportBorder(null);
+        scrollGeneral.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollGeneral.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollGeneral.getVerticalScrollBar().setUnitIncrement(16);
 
-        root.add(contenido, BorderLayout.CENTER);
+        root.add(scrollGeneral, BorderLayout.CENTER);
         return root;
     }
 
