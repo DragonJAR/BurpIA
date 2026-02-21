@@ -9,6 +9,8 @@ import com.google.gson.JsonParser;
  * Usa Gson para parsing en lugar de manipulación de strings manual.
  */
 public class ParserRespuestasAI {
+    private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
+        java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
 
     /**
      * Extrae el contenido de texto de una respuesta de API de IA.
@@ -67,7 +69,7 @@ public class ParserRespuestasAI {
                     .trim();
             }
 
-            return contenido != null ? contenido : "";
+            return limpiarBloquesPensamiento(contenido != null ? contenido : "");
 
         } catch (Exception e) {
             // Si falla el parsing JSON, retornar cadena vacía
@@ -92,6 +94,35 @@ public class ParserRespuestasAI {
      * Formato OpenAI/Z.ai/minimax: {"choices": [{"message": {"content": "..."}}]}
      */
     private static String extraerContenidoOpenAI(JsonObject raiz) {
+        // OpenAI Responses API: {"output_text":"..."} o {"output":[{"content":[{"type":"output_text","text":"..."}]}]}
+        if (raiz.has("output_text")) {
+            String outputText = raiz.get("output_text").getAsString();
+            if (outputText != null && !outputText.trim().isEmpty()) {
+                return outputText;
+            }
+        }
+        if (raiz.has("output")) {
+            JsonElement outputElement = raiz.get("output");
+            if (outputElement.isJsonArray()) {
+                var output = outputElement.getAsJsonArray();
+                if (output.size() > 0 && output.get(0).isJsonObject()) {
+                    JsonObject first = output.get(0).getAsJsonObject();
+                    if (first.has("content") && first.get("content").isJsonArray()) {
+                        var content = first.getAsJsonArray("content");
+                        if (content.size() > 0 && content.get(0).isJsonObject()) {
+                            JsonObject firstContent = content.get(0).getAsJsonObject();
+                            if (firstContent.has("text")) {
+                                String text = firstContent.get("text").getAsString();
+                                if (text != null && !text.trim().isEmpty()) {
+                                    return text;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if (raiz.has("choices")) {
             var choices = raiz.getAsJsonArray("choices");
             if (choices != null && choices.size() > 0) {
@@ -217,5 +248,13 @@ public class ParserRespuestasAI {
      */
     public static boolean validarRespuestaConexion(String contenido) {
         return contenido != null && !contenido.trim().isEmpty();
+    }
+
+    private static String limpiarBloquesPensamiento(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return "";
+        }
+        String limpio = PATRON_BLOQUES_PENSAMIENTO.matcher(texto).replaceAll(" ");
+        return limpio.replaceAll("\\s+", " ").trim();
     }
 }

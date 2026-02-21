@@ -127,6 +127,7 @@ public class ConfiguracionAPI {
             case "Ollama":
                 return baseNormalizada + "/api/chat";
             case "OpenAI":
+                return baseNormalizada + "/responses";
             case "Z.ai":
             case "minimax":
             default:
@@ -145,7 +146,9 @@ public class ConfiguracionAPI {
         }
 
         String[] sufijos = {
+            "/responses",
             "/chat/completions",
+            "/completions",
             "/messages",
             "/api/chat"
         };
@@ -421,4 +424,26 @@ public class ConfiguracionAPI {
         }
         return valor;
     }
+
+    public ConfiguracionAPI crearSnapshot() {
+        asegurarMapas();
+        ConfiguracionAPI snapshot = new ConfiguracionAPI();
+        snapshot.retrasoSegundos = this.retrasoSegundos;
+        snapshot.maximoConcurrente = this.maximoConcurrente;
+        snapshot.maximoHallazgosTabla = this.maximoHallazgosTabla;
+        snapshot.detallado = this.detallado;
+        snapshot.proveedorAI = this.proveedorAI;
+        snapshot.tiempoEsperaAI = this.tiempoEsperaAI;
+        snapshot.tema = this.tema;
+        snapshot.escaneoPasivoHabilitado = this.escaneoPasivoHabilitado;
+        snapshot.promptConfigurable = this.promptConfigurable;
+        snapshot.promptModificado = this.promptModificado;
+
+        snapshot.apiKeysPorProveedor = new HashMap<>(this.apiKeysPorProveedor);
+        snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
+        snapshot.modelosPorProveedor = new HashMap<>(this.modelosPorProveedor);
+        snapshot.maxTokensPorProveedor = new HashMap<>(this.maxTokensPorProveedor);
+        return snapshot;
+    }
+
 }

@@ -22,15 +22,18 @@ public class PanelConsola extends JPanel {
 
         JPanel panelControles = new JPanel();
         panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
-        panelControles.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "⚙️ CONTROLES DE CONSOLA",
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelControles.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "⚙️ CONTROLES DE CONSOLA",
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5));
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
 
         checkboxAutoScroll = new JCheckBox("📜 Auto-scroll", true);
         checkboxAutoScroll.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -49,12 +52,15 @@ public class PanelConsola extends JPanel {
         panelControles.add(panelBotones);
 
         JPanel panelConsolaWrapper = new JPanel(new BorderLayout());
-        panelConsolaWrapper.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "📝 LOGS DEL SISTEMA",
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelConsolaWrapper.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "📝 LOGS DEL SISTEMA",
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         // Consola con colores

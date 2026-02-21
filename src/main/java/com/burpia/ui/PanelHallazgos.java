@@ -2,6 +2,9 @@ package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.scanner.AuditConfiguration;
+import burp.api.montoya.scanner.BuiltInAuditConfiguration;
+import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.model.Hallazgo;
 
 import javax.swing.*;
@@ -33,21 +36,29 @@ public class PanelHallazgos extends JPanel {
     private JButton botonExportarJSON;
     private JButton botonLimpiarTodo;
     private final MontoyaApi api;
+    private final boolean esBurpProfessional;
 
     private TableRowSorter<ModeloTablaHallazgos> sorter;
+    private JCheckBox chkGuardarEnIssues;
 
     // Umbral de ancho para cambiar de layout (en pixeles)
     private static final int UMBRAL_RESPONSIVE = 900;  // Aumentado para mejor uso del espacio
 
     public PanelHallazgos(MontoyaApi api) {
         this.api = api;
+        this.esBurpProfessional = false;
         this.modelo = new ModeloTablaHallazgos(1000);
         this.tabla = new JTable(modelo);
         initComponents();
     }
 
     public PanelHallazgos(MontoyaApi api, ModeloTablaHallazgos modeloCompartido) {
+        this(api, modeloCompartido, false);
+    }
+
+    public PanelHallazgos(MontoyaApi api, ModeloTablaHallazgos modeloCompartido, boolean esBurpProfessional) {
         this.api = api;
+        this.esBurpProfessional = esBurpProfessional;
         this.modelo = modeloCompartido;
         this.tabla = new JTable(modelo);
         initComponents();
@@ -59,12 +70,15 @@ public class PanelHallazgos extends JPanel {
 
         JPanel panelFiltros = new JPanel();
         panelFiltros.setLayout(new BoxLayout(panelFiltros, BoxLayout.Y_AXIS));
-        panelFiltros.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "🔭 FILTROS Y BÚSQUEDA",
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelFiltros.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "🔭 FILTROS Y BÚSQUEDA",
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5)) {
@@ -78,10 +92,10 @@ public class PanelHallazgos extends JPanel {
                 if (esLayoutHorizontal != ultimoLayoutHorizontal) {
                     if (esLayoutHorizontal) {
                         // Espacio suficiente: una sola fila con todos los elementos
-                        setLayout(new FlowLayout(FlowLayout.LEFT, 10, 5));
+                        setLayout(new FlowLayout(FlowLayout.LEFT, 12, 4));
                     } else {
                         // Espacio limitado: 2 filas con 3 elementos cada una
-                        setLayout(new GridLayout(2, 3, 5, 5));
+                        setLayout(new GridLayout(2, 3, 5, 10));
                     }
                     ultimoLayoutHorizontal = esLayoutHorizontal;
                 }
@@ -99,16 +113,13 @@ public class PanelHallazgos extends JPanel {
         campoBusqueda.setToolTipText("Buscar por texto en URL o hallazgo");
         panelTodosControles.add(campoBusqueda);
 
-        JLabel etiquetaSeveridad = new JLabel("⚡ Severidad:");
-        etiquetaSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
-        panelTodosControles.add(etiquetaSeveridad);
         comboSeveridad = new JComboBox<>(new String[]{
-            "Todas", "Critical", "High", "Medium", "Low", "Info"
+            "Todas las Criticidades", "Critical", "High", "Medium", "Low", "Info"
         });
         comboSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
         panelTodosControles.add(comboSeveridad);
 
-        botonLimpiarFiltro = new JButton("❌ Limpiar Filtros");
+        botonLimpiarFiltro = new JButton("❌ Limpiar");
         botonLimpiarFiltro.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiarFiltro.setToolTipText("Quitar todos los filtros activos");
         panelTodosControles.add(botonLimpiarFiltro);
@@ -124,23 +135,48 @@ public class PanelHallazgos extends JPanel {
         botonExportarJSON.setToolTipText("Exportar hallazgos a archivo JSON");
         panelTodosControles.add(botonExportarJSON);
 
-        botonLimpiarTodo = new JButton("🗑️ Limpiar Todo");
+        botonLimpiarTodo = new JButton("🗑️ Limpiar");
         botonLimpiarTodo.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiarTodo.setToolTipText("Eliminar todos los hallazgos");
         panelTodosControles.add(botonLimpiarTodo);
 
         panelFiltros.add(panelTodosControles);
 
-        JPanel panelSuperior = new JPanel(new BorderLayout());
-        panelSuperior.add(panelFiltros, BorderLayout.NORTH);
+        JPanel panelSuperior = new JPanel(new BorderLayout(10, 0));
+        panelSuperior.add(panelFiltros, BorderLayout.CENTER);
+
+        JPanel panelGuardarProyecto = new JPanel(new GridBagLayout());
+        panelGuardarProyecto.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "💾 GUARDAR EN PROYECTO",
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
+        ));
+        chkGuardarEnIssues = new JCheckBox("Guardar automáticamente en Issues");
+        chkGuardarEnIssues.setSelected(true);
+        chkGuardarEnIssues.setFont(EstilosUI.FUENTE_ESTANDAR);
+        chkGuardarEnIssues.setToolTipText("Enviar los hallazgos directamente al panel Issues de Burp Suite.");
+
+        GridBagConstraints gbcGuardar = new GridBagConstraints();
+        gbcGuardar.insets = new Insets(10, 15, 10, 15);
+        panelGuardarProyecto.add(chkGuardarEnIssues, gbcGuardar);
+
+        panelSuperior.add(panelGuardarProyecto, BorderLayout.EAST);
 
         JPanel panelTablaWrapper = new JPanel(new BorderLayout());
-        panelTablaWrapper.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "💎 HALLAZGOS DE SEGURIDAD",
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelTablaWrapper.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "💎 HALLAZGOS DE SEGURIDAD",
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         tabla.setAutoCreateRowSorter(true);
@@ -395,6 +431,14 @@ public class PanelHallazgos extends JPanel {
         menuItemIntruder.addActionListener(e -> enviarAIntruder(tabla.getSelectedRows()));
         menuContextual.add(menuItemIntruder);
 
+        if (esBurpProfessional) {
+            JMenuItem menuItemScanner = new JMenuItem("🛰️ Enviar a Scanner Pro");
+            menuItemScanner.setFont(EstilosUI.FUENTE_ESTANDAR);
+            menuItemScanner.setToolTipText("Enviar la peticion al Scanner de Burp Professional");
+            menuItemScanner.addActionListener(e -> enviarAScanner(tabla.getSelectedRows()));
+            menuContextual.add(menuItemScanner);
+        }
+
         menuContextual.addSeparator();
 
         // === GESTION DE HALLAZGOS ===
@@ -471,53 +515,65 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void enviarARepeater(int[] filas) {
-        // CRÍTICO: NO llamar api.repeater() desde EDT (Montoya API rule)
-        // Ejecutar en thread separado para evitar deadlock de UI
-        new Thread(() -> {
-            int exitosos = 0;
-            int sinRequest = 0;
-            StringBuilder detalle = new StringBuilder();
-
-            for (int fila : filas) {
-                int filaModelo = tabla.convertRowIndexToModel(fila);
-                HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
-                Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
-
-                if (solicitud == null) {
-                    sinRequest++;
-                    detalle.append("⚠️ ").append(hallazgo != null ? hallazgo.obtenerUrl() : "URL desconocida")
-                        .append(" (sin request)\n");
-                    continue;
-                }
-
-                try {
-                    String nombreTab = "BurpIA-" + (hallazgo != null ? hallazgo.obtenerSeveridad() : "Hallazgo");
-                    api.repeater().sendToRepeater(solicitud, nombreTab);
-                    exitosos++;
-                    detalle.append("✅ ").append(solicitud.url()).append("\n");
-                } catch (Exception ex) {
-                    detalle.append("❌ ").append(solicitud.url()).append(" (error: ").append(ex.getMessage()).append(")\n");
-                }
+        ejecutarAccionBurp(
+            filas,
+            "BurpIA-Repeater",
+            "Enviar al Repeater",
+            "Enviados al Repeater",
+            (solicitud, hallazgo) -> {
+                String nombreTab = "BurpIA-" + (hallazgo != null ? hallazgo.obtenerSeveridad() : "Hallazgo");
+                api.repeater().sendToRepeater(solicitud, nombreTab);
+                return "✅ " + solicitud.url();
             }
-
-            final int totalExitosos = exitosos;
-            final int totalSinRequest = sinRequest;
-            final String detalleFinal = detalle.toString();
-
-            SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(
-                    PanelHallazgos.this,
-                    "Enviados al Repeater: " + totalExitosos + "/" + filas.length +
-                    (totalSinRequest > 0 ? "\nSin request original: " + totalSinRequest : "") +
-                    "\n\n" + detalleFinal,
-                    "Enviar al Repeater",
-                    totalExitosos > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
-                );
-            });
-        }, "BurpIA-Repeater").start();
+        );
     }
 
     private void enviarAIntruder(int[] filas) {
+        ejecutarAccionBurp(
+            filas,
+            "BurpIA-Intruder",
+            "Enviar a Intruder",
+            "Enviados a Intruder",
+            (solicitud, hallazgo) -> {
+                api.intruder().sendToIntruder(solicitud);
+                return "✅ " + solicitud.url() + " (enviado a Intruder)";
+            }
+        );
+    }
+
+    private void enviarAScanner(int[] filas) {
+        ejecutarAccionBurp(
+            filas,
+            "BurpIA-Scanner",
+            "Enviar a Scanner Pro",
+            "Enviados a Scanner Pro",
+            new AccionSobreSolicitud() {
+                private Audit auditoriaActiva;
+
+                @Override
+                public String ejecutar(HttpRequest solicitud, Hallazgo hallazgo) {
+                    if (!esBurpProfessional) {
+                        throw new IllegalStateException("Scanner solo disponible en Burp Professional");
+                    }
+                    if (auditoriaActiva == null) {
+                        AuditConfiguration configScanner = AuditConfiguration.auditConfiguration(
+                            BuiltInAuditConfiguration.LEGACY_ACTIVE_AUDIT_CHECKS
+                        );
+                        auditoriaActiva = api.scanner().startAudit(configScanner);
+                    }
+                    auditoriaActiva.addRequest(solicitud);
+                    api.logging().logToOutput("[BurpIA] Peticion enviada a Scanner Pro: " + solicitud.url());
+                    return "✅ " + solicitud.url() + " (enviado a Scanner Pro)";
+                }
+            }
+        );
+    }
+
+    private void ejecutarAccionBurp(int[] filas,
+                                    String nombreHilo,
+                                    String titulo,
+                                    String resumen,
+                                    AccionSobreSolicitud accion) {
         new Thread(() -> {
             int exitosos = 0;
             int sinRequest = 0;
@@ -536,11 +592,15 @@ public class PanelHallazgos extends JPanel {
                 }
 
                 try {
-                    api.intruder().sendToIntruder(solicitud);
+                    String resultado = accion.ejecutar(solicitud, hallazgo);
                     exitosos++;
-                    detalle.append("✅ ").append(solicitud.url()).append(" (enviado a Intruder)\n");
+                    detalle.append(resultado).append("\n");
                 } catch (Exception ex) {
-                    detalle.append("❌ ").append(solicitud.url()).append(" (error: ").append(ex.getMessage()).append(")\n");
+                    String mensaje = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
+                    detalle.append("❌ ").append(solicitud.url()).append(" (error: ").append(mensaje).append(")\n");
+                    if (titulo.contains("Scanner")) {
+                        api.logging().logToError("[BurpIA] Error al enviar a Scanner Pro: " + mensaje);
+                    }
                 }
             }
 
@@ -551,15 +611,19 @@ public class PanelHallazgos extends JPanel {
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(
                     PanelHallazgos.this,
-                    "Enviados a Intruder: " + totalExitosos + "/" + filas.length +
-                    (totalSinRequest > 0 ? "\nSin request original: " + totalSinRequest : "") +
-                    "\n\n" +
-                    detalleFinal,
-                    "Enviar a Intruder",
+                    resumen + ": " + totalExitosos + "/" + filas.length +
+                        (totalSinRequest > 0 ? "\nSin request original: " + totalSinRequest : "") +
+                        "\n\n" + detalleFinal,
+                    titulo,
                     totalExitosos > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
                 );
             });
-        }, "BurpIA-Intruder").start();
+        }, nombreHilo).start();
+    }
+
+    @FunctionalInterface
+    private interface AccionSobreSolicitud {
+        String ejecutar(HttpRequest solicitud, Hallazgo hallazgo) throws Exception;
     }
 
     private void ignorarHallazgos(int[] filas) {
@@ -608,5 +672,9 @@ public class PanelHallazgos extends JPanel {
 
     public ModeloTablaHallazgos obtenerModelo() {
         return modelo;
+    }
+
+    public boolean isGuardadoAutomaticoIssuesActivo() {
+        return chkGuardarEnIssues != null && chkGuardarEnIssues.isSelected();
     }
 }

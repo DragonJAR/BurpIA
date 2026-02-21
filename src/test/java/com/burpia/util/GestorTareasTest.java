@@ -84,6 +84,54 @@ class GestorTareasTest {
         assertEquals(t2.obtenerId(), modelo.obtenerIdTarea(0));
     }
 
+    @Test
+    @DisplayName("PausarReanudarTodas en estado mixto solo reanuda pausadas")
+    void testPausarReanudarTodasEstadoMixto() throws Exception {
+        Tarea pausada = gestor.crearTarea("A", "https://example.com/pausa", Tarea.ESTADO_PAUSADO, "");
+        Tarea analizando = gestor.crearTarea("B", "https://example.com/run", Tarea.ESTADO_ANALIZANDO, "");
+        flushEdt();
+
+        gestor.pausarReanudarTodas();
+        flushEdt();
+
+        Tarea pausadaActualizada = gestor.obtenerTarea(pausada.obtenerId());
+        Tarea analizandoActualizada = gestor.obtenerTarea(analizando.obtenerId());
+        assertEquals(Tarea.ESTADO_EN_COLA, pausadaActualizada.obtenerEstado());
+        assertEquals(Tarea.ESTADO_ANALIZANDO, analizandoActualizada.obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Pausar todas activas no afecta tareas ya pausadas")
+    void testPausarTodasActivas() throws Exception {
+        Tarea enCola = gestor.crearTarea("A", "https://example.com/cola", Tarea.ESTADO_EN_COLA, "");
+        Tarea analizando = gestor.crearTarea("B", "https://example.com/run", Tarea.ESTADO_ANALIZANDO, "");
+        Tarea pausada = gestor.crearTarea("C", "https://example.com/pause", Tarea.ESTADO_PAUSADO, "");
+        flushEdt();
+
+        gestor.pausarTodasActivas();
+        flushEdt();
+
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(enCola.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(analizando.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(pausada.obtenerId()).obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Reanudar todas pausadas mueve a cola")
+    void testReanudarTodasPausadas() throws Exception {
+        Tarea pausada1 = gestor.crearTarea("A", "https://example.com/p1", Tarea.ESTADO_PAUSADO, "");
+        Tarea pausada2 = gestor.crearTarea("B", "https://example.com/p2", Tarea.ESTADO_PAUSADO, "");
+        Tarea error = gestor.crearTarea("C", "https://example.com/e", Tarea.ESTADO_ERROR, "");
+        flushEdt();
+
+        gestor.reanudarTodasPausadas();
+        flushEdt();
+
+        assertEquals(Tarea.ESTADO_EN_COLA, gestor.obtenerTarea(pausada1.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_EN_COLA, gestor.obtenerTarea(pausada2.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado());
+    }
+
     private void flushEdt() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             // sin-op, solo esperar cola EDT

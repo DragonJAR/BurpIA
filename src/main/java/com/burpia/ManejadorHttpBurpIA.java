@@ -44,6 +44,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final PrintWriter stderr;
     private final ThreadPoolExecutor executorService;
     private final Object logLock;
+    private volatile boolean capturaActiva = true;
 
     private static final Set<String> EXTENSIONES_ESTATICAS;
 
@@ -153,6 +154,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     @Override
     public ResponseReceivedAction handleHttpResponseReceived(HttpResponseReceived respuestaRecibida) {
+        if (!capturaActiva) {
+            return ResponseReceivedAction.continueWith(respuestaRecibida);
+        }
+
         if (respuestaRecibida == null) {
             registrarError("Respuesta recibida es null");
             return ResponseReceivedAction.continueWith(respuestaRecibida);
@@ -299,7 +304,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         AnalizadorAI analizador = new AnalizadorAI(
             solicitudAnalisis,
-            config,
+            config.crearSnapshot(),
             stdout,
             stderr,
             limitador,
@@ -345,13 +350,21 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                                 try {
                                     executorService.submit(() -> {
                                         try {
-                                            AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(
-                                                hallazgo,
-                                                respuestaCapturada
-                                            );
-                                            if (auditIssue != null && api != null && api.siteMap() != null) {
-                                                api.siteMap().add(auditIssue);
-                                                rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
+                                            boolean enviarIssues = pestaniaPrincipal != null && 
+                                                pestaniaPrincipal.obtenerPanelHallazgos() != null && 
+                                                pestaniaPrincipal.obtenerPanelHallazgos().isGuardadoAutomaticoIssuesActivo();
+                                            
+                                            if (enviarIssues) {
+                                                AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(
+                                                    hallazgo,
+                                                    respuestaCapturada
+                                                );
+                                                if (auditIssue != null && api != null && api.siteMap() != null) {
+                                                    api.siteMap().add(auditIssue);
+                                                    rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
+                                                }
+                                            } else {
+                                                rastrear("Hallazgo omitido en Issues (Autoguardado deshabilitado): " + hallazgo.obtenerHallazgo());
                                             }
                                         } catch (Exception e) {
                                             registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
@@ -618,5 +631,19 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    public void pausarCaptura() {
+        capturaActiva = false;
+        registrar("Captura pausada por usuario");
+    }
+
+    public void reanudarCaptura() {
+        capturaActiva = true;
+        registrar("Captura reanudada por usuario");
+    }
+
+    public boolean estaCapturaActiva() {
+        return capturaActiva;
     }
 }

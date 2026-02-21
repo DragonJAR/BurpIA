@@ -50,10 +50,10 @@ class ProbadorConexionAITest {
     }
 
     @Test
-    @DisplayName("OpenAI prueba /chat/completions")
+    @DisplayName("OpenAI prueba /responses")
     void testEndpointOpenAi() throws Exception {
         server.enqueue(new MockResponse().setResponseCode(200).setBody(
-            "{\"choices\":[{\"message\":{\"content\":\"OK\"}}]}"
+            "{\"output_text\":\"OK\"}"
         ));
 
         ConfiguracionAPI config = baseConfig("OpenAI", "gpt-4o");
@@ -63,7 +63,7 @@ class ProbadorConexionAITest {
         RecordedRequest request = server.takeRequest();
 
         assertTrue(resultado.exito);
-        assertEquals("/v1/chat/completions", request.getPath());
+        assertEquals("/v1/responses", request.getPath());
         assertEquals("Bearer test-key", request.getHeader("Authorization"));
     }
 
@@ -108,6 +108,9 @@ class ProbadorConexionAITest {
     @DisplayName("Gemini prueba /models/{model}:generateContent")
     void testEndpointGemini() throws Exception {
         server.enqueue(new MockResponse().setResponseCode(200).setBody(
+            "{\"models\":[{\"name\":\"models/gemini-1.5-pro-002\",\"supportedGenerationMethods\":[\"generateContent\"]}]}"
+        ));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(
             "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"OK\"}]}}]}"
         ));
 
@@ -115,9 +118,11 @@ class ProbadorConexionAITest {
         config.establecerUrlApi(server.url("/v1beta").toString());
 
         ProbadorConexionAI.ResultadoPrueba resultado = new ProbadorConexionAI(config).probarConexion();
+        RecordedRequest requestList = server.takeRequest();
         RecordedRequest request = server.takeRequest();
 
         assertTrue(resultado.exito);
+        assertEquals("/v1beta/models?key=test-key", requestList.getPath());
         assertEquals("/v1beta/models/gemini-1.5-pro-002:generateContent", request.getPath());
         assertEquals("test-key", request.getHeader("x-goog-api-key"));
     }
