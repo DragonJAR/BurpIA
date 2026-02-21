@@ -486,7 +486,14 @@ public class PanelHallazgos extends JPanel {
         tabla.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                mostrarMenuContextualSiAplica(e, menuContextual);
+                if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
+                    int filaVista = tabla.rowAtPoint(e.getPoint());
+                    if (filaVista >= 0) {
+                        abrirDialogoEdicion(filaVista);
+                    }
+                } else {
+                    mostrarMenuContextualSiAplica(e, menuContextual);
+                }
             }
 
             @Override
@@ -494,6 +501,18 @@ public class PanelHallazgos extends JPanel {
                 mostrarMenuContextualSiAplica(e, menuContextual);
             }
         });
+    }
+
+    private void abrirDialogoEdicion(int filaVista) {
+        int filaModelo = tabla.convertRowIndexToModel(filaVista);
+        Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
+        if (hallazgo != null) {
+            Window windowAncestral = SwingUtilities.getWindowAncestor(this);
+            DialogoDetalleHallazgo dialogo = new DialogoDetalleHallazgo(windowAncestral, hallazgo, hallazgoEditado -> {
+                modelo.actualizarHallazgo(filaModelo, hallazgoEditado);
+            });
+            dialogo.setVisible(true);
+        }
     }
 
     private void mostrarMenuContextualSiAplica(MouseEvent e, JPopupMenu menuContextual) {

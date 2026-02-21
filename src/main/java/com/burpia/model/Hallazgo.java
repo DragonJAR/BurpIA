@@ -29,9 +29,11 @@ public class Hallazgo {
     }
 
     public Hallazgo(String url, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
-        this.horaDescubrimiento = LocalDateTime.now().format(
-            DateTimeFormatter.ofPattern("HH:mm:ss")
-        );
+        this(LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")), url, hallazgo, severidad, confianza, solicitudHttp);
+    }
+
+    public Hallazgo(String horaDescubrimiento, String url, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
+        this.horaDescubrimiento = horaDescubrimiento;
         this.url = url;
         this.hallazgo = hallazgo;
         this.severidad = severidad;

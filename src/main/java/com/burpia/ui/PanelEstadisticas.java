@@ -31,7 +31,7 @@ public class PanelEstadisticas extends JPanel {
     private JPanel panelLineaOperativo;
 
     private static final int UMBRAL_RESPONSIVE = 900;
-    private static final int TAMANIO_FIJO_BOTON = 51;
+    private static final int TAMANIO_FIJO_BOTON = 60;
     private static final int ESPACIADO_BOTONES = 8;
     private static final int AJUSTE_Y_BOTONES = -3;
 
