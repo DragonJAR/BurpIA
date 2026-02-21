@@ -26,3 +26,7 @@ replay_pid*
 # Local runtime config (contains API keys)
 .burpia.json
 BurpIA.zip
+build-jar.sh
+build.gradle
+gradlew
+/gradle

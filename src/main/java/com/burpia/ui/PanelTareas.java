@@ -238,34 +238,31 @@ public class PanelTareas extends JPanel {
         int[] filas = tabla.getSelectedRows();
         if (filas.length == 0) return;
 
+        List<TareaSeleccionada> seleccion = capturarSeleccion(filas);
+        if (seleccion.isEmpty()) {
+            return;
+        }
+
         JPopupMenu menuContextual = new JPopupMenu();
 
-        if (filas.length == 1) {
-            int filaModelo = tabla.convertRowIndexToModel(filas[0]);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
-            String tareaId = modelo.obtenerIdTarea(filaModelo);
-
-            crearMenuUnaTarea(menuContextual, tareaId, estado, filaModelo);
+        if (seleccion.size() == 1) {
+            crearMenuUnaTarea(menuContextual, seleccion.get(0));
         } else {
-            List<TareaSeleccionada> seleccion = capturarSeleccion(filas);
-            if (seleccion.isEmpty()) {
-                return;
-            }
             crearMenuMultipleTareas(menuContextual, seleccion);
         }
 
         menuContextual.show(tabla, x, y);
     }
 
-    private void crearMenuUnaTarea(JPopupMenu menu, String tareaId, String estado, int filaModelo) {
+    private void crearMenuUnaTarea(JPopupMenu menu, TareaSeleccionada seleccion) {
+        String tareaId = seleccion.tareaId;
+        String estado = seleccion.estado;
         if (Tarea.ESTADO_ERROR.equals(estado)) {
             JMenuItem menuItemVerDetalles = new JMenuItem(I18nUI.Tareas.MENU_VER_DETALLES_ERROR());
             menuItemVerDetalles.setFont(EstilosUI.FUENTE_ESTANDAR);
             menuItemVerDetalles.setToolTipText(TooltipsUI.Tareas.MENU_VER_DETALLES_ERROR());
             menuItemVerDetalles.addActionListener(e -> {
-                String url = (String) modelo.getValueAt(filaModelo, 1);
-                String duracion = (String) modelo.getValueAt(filaModelo, 3);
-                String mensaje = I18nUI.Tareas.MSG_DETALLES_ERROR(url, duracion, estado);
+                String mensaje = I18nUI.Tareas.MSG_DETALLES_ERROR(seleccion.url, seleccion.duracion, estado);
                 JOptionPane.showMessageDialog(
                     PanelTareas.this,
                     mensaje,
@@ -533,11 +530,18 @@ public class PanelTareas extends JPanel {
                 continue;
             }
             String tareaId = modelo.obtenerIdTarea(filaModelo);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
-            seleccion.add(new TareaSeleccionada(tareaId, estado));
+            String estado = valorCeldaTexto(filaModelo, 2);
+            String url = valorCeldaTexto(filaModelo, 1);
+            String duracion = valorCeldaTexto(filaModelo, 3);
+            seleccion.add(new TareaSeleccionada(tareaId, estado, url, duracion));
         }
 
         return seleccion;
+    }
+
+    private String valorCeldaTexto(int filaModelo, int columna) {
+        Object valor = modelo.getValueAt(filaModelo, columna);
+        return valor != null ? valor.toString() : "";
     }
 
     private void mostrarMensaje(String mensaje) {
@@ -683,10 +687,14 @@ public class PanelTareas extends JPanel {
     private static final class TareaSeleccionada {
         private final String tareaId;
         private final String estado;
+        private final String url;
+        private final String duracion;
 
-        private TareaSeleccionada(String tareaId, String estado) {
+        private TareaSeleccionada(String tareaId, String estado, String url, String duracion) {
             this.tareaId = tareaId;
             this.estado = estado;
+            this.url = url != null ? url : "";
+            this.duracion = duracion != null ? duracion : "";
         }
     }
 }
