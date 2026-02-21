@@ -38,6 +38,7 @@ class GestorConfiguracionTest {
         config.establecerModeloParaProveedor("OpenAI", "gpt-4o");
         config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
         config.establecerDetallado(false);
+        config.establecerIdiomaUi("en");
         config.establecerMaximoHallazgosTabla(2500);
 
         assertTrue(gestor.guardarConfiguracion(config));
@@ -50,6 +51,7 @@ class GestorConfiguracionTest {
         assertFalse(json.contains("\"modelo\""));
         assertTrue(json.contains("\"apiKeysPorProveedor\""));
         assertTrue(json.contains("\"modelosPorProveedor\""));
+        assertTrue(json.contains("\"idiomaUi\": \"en\""));
         assertTrue(json.contains("\"maximoHallazgosTabla\": 2500"));
     }
 
@@ -65,6 +67,7 @@ class GestorConfiguracionTest {
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"retrasoSegundos\": 5,\n" +
             "  \"maximoConcurrente\": 3,\n" +
+            "  \"idiomaUi\": \"en\",\n" +
             "  \"apiKeysPorProveedor\": {\"OpenAI\": \"\"},\n" +
             "  \"urlsBasePorProveedor\": {\"OpenAI\": \"https://api.openai.com/v1\"},\n" +
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
@@ -75,6 +78,7 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = gestor.cargarConfiguracion();
         assertFalse(config.esDetallado());
+        assertEquals("en", config.obtenerIdiomaUi());
         assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla());
     }
 }

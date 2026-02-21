@@ -28,7 +28,6 @@ public class GestorConfiguracion {
         this.out = out != null ? out : new PrintWriter(System.out, true);
         this.err = err != null ? err : new PrintWriter(System.err, true);
 
-        // Usar Path para manejo multiplataforma correcto
         String userHome = System.getProperty("user.home");
         if (userHome == null || userHome.isEmpty()) {
             userHome = System.getProperty("user.dir", ".");
@@ -90,7 +89,6 @@ public class GestorConfiguracion {
         try {
             Path path = rutaConfig.toAbsolutePath();
 
-            // Verificar que el directorio padre existe y es escribible
             Path directorioPadre = path.getParent();
             if (directorioPadre != null && !Files.exists(directorioPadre)) {
                 err.println("[Configuracion] Directorio padre no existe: " + directorioPadre);
@@ -111,17 +109,13 @@ public class GestorConfiguracion {
             ArchivoConfiguracion archivo = construirArchivo(config);
             String json = gson.toJson(archivo);
 
-            // Usar escritura atomica con archivo temporal
             Path tempPath = Paths.get(path.toString() + ".tmp");
 
-            // Escribir a archivo temporal primero
             Files.write(tempPath, json.getBytes(StandardCharsets.UTF_8));
 
-            // Mover atomicamente (rename)
             try {
                 Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
             } catch (java.nio.file.AtomicMoveNotSupportedException ex) {
-                // Si atomic move no es soportado, hacer move normal
                 Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
 
@@ -187,6 +181,9 @@ public class GestorConfiguracion {
         if (archivo.tema != null) {
             config.establecerTema(archivo.tema);
         }
+        if (archivo.idiomaUi != null) {
+            config.establecerIdiomaUi(archivo.idiomaUi);
+        }
         if (archivo.escaneoPasivoHabilitado != null) {
             config.establecerEscaneoPasivoHabilitado(archivo.escaneoPasivoHabilitado);
         }
@@ -197,7 +194,6 @@ public class GestorConfiguracion {
             config.establecerPromptModificado(archivo.promptModificado);
         }
 
-        // verbose off por defecto si no existe el campo
         config.establecerDetallado(Boolean.TRUE.equals(archivo.detallado));
 
         config.establecerApiKeysPorProveedor(sanitizarMapaString(archivo.apiKeysPorProveedor));
@@ -217,6 +213,7 @@ public class GestorConfiguracion {
         archivo.detallado = config.esDetallado();
         archivo.tiempoEsperaAI = config.obtenerTiempoEsperaAI();
         archivo.tema = config.obtenerTema();
+        archivo.idiomaUi = config.obtenerIdiomaUi();
         archivo.escaneoPasivoHabilitado = config.escaneoPasivoHabilitado();
         archivo.promptConfigurable = config.obtenerPromptConfigurable();
         archivo.promptModificado = config.esPromptModificado();
@@ -261,6 +258,7 @@ public class GestorConfiguracion {
         private Boolean detallado;
         private Integer tiempoEsperaAI;
         private String tema;
+        private String idiomaUi;
         private Boolean escaneoPasivoHabilitado;
         private String promptConfigurable;
         private Boolean promptModificado;

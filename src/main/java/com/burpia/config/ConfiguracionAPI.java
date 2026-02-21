@@ -1,5 +1,7 @@
 package com.burpia.config;
 
+import com.burpia.i18n.IdiomaUI;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,6 +17,7 @@ public class ConfiguracionAPI {
     private String proveedorAI;
     private int tiempoEsperaAI;
     private String tema;
+    private String idiomaUi;
     private boolean escaneoPasivoHabilitado;
     private String promptConfigurable;
 
@@ -32,6 +35,7 @@ public class ConfiguracionAPI {
         this.tiempoEsperaAI = 60;
         this.detallado = false;
         this.tema = "Light";
+        this.idiomaUi = IdiomaUI.porDefecto().codigo();
         this.escaneoPasivoHabilitado = true;
         this.promptModificado = false;
 
@@ -105,6 +109,9 @@ public class ConfiguracionAPI {
 
     public String obtenerTema() { return tema; }
     public void establecerTema(String tema) { this.tema = tema; }
+
+    public String obtenerIdiomaUi() { return idiomaUi; }
+    public void establecerIdiomaUi(String idiomaUi) { this.idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo(); }
 
     public boolean escaneoPasivoHabilitado() { return escaneoPasivoHabilitado; }
     public void establecerEscaneoPasivoHabilitado(boolean escaneoPasivoHabilitado) {
@@ -296,7 +303,7 @@ public class ConfiguracionAPI {
     public static String obtenerPromptPorDefecto() {
         return "You are an elite offensive security researcher performing HTTP traffic analysis for a professional pentest engagement. Your goal is to identify ALL security weaknesses, not limited to OWASP Top 10.\n" +
                "\n" +
-               "Analyze the following HTTP request and identify vulnerabilities including but not limited to:\n" +
+               "Analyze the following HTTP request/response pair and identify vulnerabilities including but not limited to:\n" +
                "- Injection flaws (SQLi, XSS, XXE, SSTI, Command Injection, LDAP, XPath)\n" +
                "- Authentication and session issues\n" +
                "- Access control weaknesses\n" +
@@ -314,6 +321,9 @@ public class ConfiguracionAPI {
                "REQUEST:\n" +
                "{REQUEST}\n" +
                "\n" +
+               "RESPONSE:\n" +
+               "{RESPONSE}\n" +
+               "\n" +
                "SEVERITY CRITERIA:\n" +
                "- Critical: Direct code execution, authentication bypass, full data exposure\n" +
                "- High: SQL injection, stored XSS, SSRF, significant data leakage\n" +
@@ -322,8 +332,8 @@ public class ConfiguracionAPI {
                "- Info: Observations worth noting but no direct exploitability\n" +
                "\n" +
                "CONFIDENCE CRITERIA:\n" +
-               "- High: Vulnerability is directly observable in the request (e.g., no HTTPS is a fact)\n" +
-               "- Medium: Strong indicators present but requires server-side confirmation\n" +
+               "- High: Vulnerability is directly observable in request/response evidence\n" +
+               "- Medium: Strong indicators present but still requires server-side confirmation\n" +
                "- Low: Possible attack surface based on structure, needs active testing to confirm\n" +
                "\n" +
                "STRICT OUTPUT RULES:\n" +
@@ -412,6 +422,7 @@ public class ConfiguracionAPI {
         if (proveedorAI == null || proveedorAI.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedorAI)) {
             proveedorAI = "Z.ai";
         }
+        idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo();
         maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
     }
 
@@ -435,6 +446,7 @@ public class ConfiguracionAPI {
         snapshot.proveedorAI = this.proveedorAI;
         snapshot.tiempoEsperaAI = this.tiempoEsperaAI;
         snapshot.tema = this.tema;
+        snapshot.idiomaUi = this.idiomaUi;
         snapshot.escaneoPasivoHabilitado = this.escaneoPasivoHabilitado;
         snapshot.promptConfigurable = this.promptConfigurable;
         snapshot.promptModificado = this.promptModificado;
@@ -444,6 +456,31 @@ public class ConfiguracionAPI {
         snapshot.modelosPorProveedor = new HashMap<>(this.modelosPorProveedor);
         snapshot.maxTokensPorProveedor = new HashMap<>(this.maxTokensPorProveedor);
         return snapshot;
+    }
+
+    public void aplicarDesde(ConfiguracionAPI origen) {
+        if (origen == null) {
+            return;
+        }
+        origen.asegurarMapas();
+
+        this.retrasoSegundos = origen.retrasoSegundos;
+        this.maximoConcurrente = origen.maximoConcurrente;
+        this.maximoHallazgosTabla = origen.maximoHallazgosTabla;
+        this.detallado = origen.detallado;
+        this.proveedorAI = origen.proveedorAI;
+        this.tiempoEsperaAI = origen.tiempoEsperaAI;
+        this.tema = origen.tema;
+        this.idiomaUi = origen.idiomaUi;
+        this.escaneoPasivoHabilitado = origen.escaneoPasivoHabilitado;
+        this.promptConfigurable = origen.promptConfigurable;
+        this.promptModificado = origen.promptModificado;
+
+        this.apiKeysPorProveedor = new HashMap<>(origen.apiKeysPorProveedor);
+        this.urlsBasePorProveedor = new HashMap<>(origen.urlsBasePorProveedor);
+        this.modelosPorProveedor = new HashMap<>(origen.modelosPorProveedor);
+        this.maxTokensPorProveedor = new HashMap<>(origen.maxTokensPorProveedor);
+        asegurarMapas();
     }
 
 }

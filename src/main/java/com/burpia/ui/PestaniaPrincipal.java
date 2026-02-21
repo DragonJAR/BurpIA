@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.util.GestorConsolaGUI;
@@ -34,9 +35,10 @@ public class PestaniaPrincipal extends JPanel {
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         tabbedPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         tabbedPane.setFont(EstilosUI.FUENTE_NEGRITA);
-        tabbedPane.addTab("📋 TAREAS", panelTareas);
-        tabbedPane.addTab("🔍 HALLAZGOS", panelHallazgos);
-        tabbedPane.addTab("📝 CONSOLA", panelConsola);
+        tabbedPane.addTab("", panelTareas);
+        tabbedPane.addTab("", panelHallazgos);
+        tabbedPane.addTab("", panelConsola);
+        aplicarIdioma();
 
         add(panelEstadisticas, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
@@ -88,6 +90,19 @@ public class PestaniaPrincipal extends JPanel {
 
     public void establecerEstadoCaptura(boolean activa) {
         panelEstadisticas.establecerEstadoCaptura(activa);
+    }
+
+    public void aplicarIdioma() {
+        tabbedPane.setTitleAt(0, I18nUI.Pestanias.TAREAS());
+        tabbedPane.setTitleAt(1, I18nUI.Pestanias.HALLAZGOS());
+        tabbedPane.setTitleAt(2, I18nUI.Pestanias.CONSOLA());
+        tabbedPane.setToolTipTextAt(0, TooltipsUI.Pestanias.TAREAS());
+        tabbedPane.setToolTipTextAt(1, TooltipsUI.Pestanias.HALLAZGOS());
+        tabbedPane.setToolTipTextAt(2, TooltipsUI.Pestanias.CONSOLA());
+        panelEstadisticas.aplicarIdioma();
+        panelTareas.aplicarIdioma();
+        panelHallazgos.aplicarIdioma();
+        panelConsola.aplicarIdioma();
     }
 
     public void destruir() {

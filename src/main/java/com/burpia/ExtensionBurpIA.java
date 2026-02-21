@@ -3,9 +3,11 @@ package com.burpia;
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
-import burp.api.montoya.http.handler.HttpResponseReceived;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.ui.ModeloTablaHallazgos;
@@ -77,20 +79,20 @@ public class ExtensionBurpIA implements BurpExtension {
             public void flush() {}
         }, true);
 
+        gestorConfig = new GestorConfiguracion(stdout, stderr);
+        config = gestorConfig.cargarConfiguracion();
+        I18nUI.establecerIdioma(config.obtenerIdiomaUi());
+
         registrar("==================================================");
         registrar(" BurpIA v1.0.0 - Complemento de Seguridad con IA");
         registrar("==================================================");
         registrar("Burp Suite: " + (esProfessional ? "Professional" : "Community Edition"));
-        
-        // Mostrar versión de Burp Suite si está disponible
+
         String versionBurp = obtenerVersionBurp(api);
         if (versionBurp != null) {
             registrar("Version Burp Suite: " + versionBurp);
         }
         registrar("==================================================");
-
-        gestorConfig = new GestorConfiguracion(stdout, stderr);
-        config = gestorConfig.cargarConfiguracion();
 
         registrar("Configuracion cargada:");
         registrar("  - URL de API: " + config.obtenerUrlApi());
@@ -108,7 +110,7 @@ public class ExtensionBurpIA implements BurpExtension {
         modeloTablaHallazgos = new ModeloTablaHallazgos(config.obtenerMaximoHallazgosTabla());
 
         gestorTareas = new GestorTareas(modeloTablaTareas,
-            mensaje -> stdout.println("[GestorTareas] " + mensaje));
+            mensaje -> stdout.println("[GestorTareas] " + I18nLogs.tr(mensaje)));
 
         gestorConsola = new GestorConsolaGUI();
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
@@ -124,18 +126,27 @@ public class ExtensionBurpIA implements BurpExtension {
         api.http().registerHttpHandler(manejadorHttp);
         registrar("Manejador HTTP registrado exitosamente");
 
-        fabricaMenuContextual = new FabricaMenuContextual(api, (solicitud, forzarAnalisis) -> {
+        fabricaMenuContextual = new FabricaMenuContextual(api, (solicitud, forzarAnalisis, solicitudRespuestaOriginal) -> {
             if (forzarAnalisis && manejadorHttp != null) {
-                manejadorHttp.analizarSolicitudForzada(solicitud);
+                manejadorHttp.analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal);
             }
         });
         api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
         registrar("Menu contextual de BurpIA registrado exitosamente");
 
         api.logging().logToOutput("==================================================");
-        api.logging().logToOutput(" BurpIA v1.0.0 - Complemento de Seguridad con IA Cargado");
-        api.logging().logToOutput(" Modo detallado: " + (config.esDetallado() ? "ACTIVADO" : "desactivado"));
-        api.logging().logToOutput(" Ve a la pestania 'BurpIA' y configura tu clave de API");
+        api.logging().logToOutput(I18nUI.tr(
+            " BurpIA v1.0.0 - Complemento de Seguridad con IA Cargado",
+            " BurpIA v1.0.0 - AI Security Plugin Loaded"
+        ));
+        api.logging().logToOutput(I18nUI.tr(
+            " Modo detallado: ",
+            " Verbose mode: "
+        ) + (config.esDetallado() ? I18nUI.tr("ACTIVADO", "ENABLED") : I18nUI.tr("desactivado", "disabled")));
+        api.logging().logToOutput(I18nUI.tr(
+            " Ve a la pestania 'BurpIA' y configura tu clave de API",
+            " Go to the 'BurpIA' tab and configure your API key"
+        ));
         api.logging().logToOutput("==================================================");
 
         registrar("Inicialización de BurpIA completada exitosamente");
@@ -152,8 +163,10 @@ public class ExtensionBurpIA implements BurpExtension {
                     () -> {
                         modeloTablaHallazgos.establecerLimiteFilas(config.obtenerMaximoHallazgosTabla());
                         manejadorHttp.actualizarConfiguracion(config);
+                        I18nUI.establecerIdioma(config.obtenerIdiomaUi());
+                        pestaniaPrincipal.aplicarIdioma();
                         gestorConsola.registrarInfo("Configuracion guardada exitosamente");
-                        api.logging().logToOutput("Configuracion guardada");
+                        api.logging().logToOutput(I18nUI.tr("Configuracion guardada", "Configuration saved"));
 
                         registrar("Configuracion actualizada: detallado=" + config.esDetallado() +
                                 ", maximoConcurrente=" + config.obtenerMaximoConcurrente() +
@@ -197,12 +210,14 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void registrar(String mensaje) {
-        stdout.println("[BurpIA] " + mensaje);
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
+        stdout.println("[BurpIA] " + mensajeLocalizado);
         stdout.flush();
     }
 
     private void registrarError(String mensaje) {
-        stderr.println("[BurpIA] [ERROR] " + mensaje);
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
+        stderr.println("[BurpIA] [ERROR] " + mensajeLocalizado);
         stderr.flush();
     }
 
@@ -247,10 +262,18 @@ public class ExtensionBurpIA implements BurpExtension {
 
     public static burp.api.montoya.scanner.audit.issues.AuditIssue crearAuditIssueDesdeHallazgo(
             Hallazgo hallazgo,
-            HttpResponseReceived respuestaRecibida) {
+            HttpRequestResponse solicitudRespuestaEvidencia) {
+
+        if (hallazgo == null) {
+            return null;
+        }
 
         burp.api.montoya.scanner.audit.issues.AuditIssueSeverity severity = convertirSeveridad(hallazgo.obtenerSeveridad());
         burp.api.montoya.scanner.audit.issues.AuditIssueConfidence confidence = convertirConfianza(hallazgo.obtenerConfianza());
+
+        HttpRequestResponse[] evidencias = solicitudRespuestaEvidencia != null
+            ? new HttpRequestResponse[] { solicitudRespuestaEvidencia }
+            : new HttpRequestResponse[0];
 
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
             hallazgo.obtenerHallazgo(),
@@ -262,7 +285,7 @@ public class ExtensionBurpIA implements BurpExtension {
             null,
             "Revisa los encabezados y el cuerpo de la solicitud HTTP para confirmar la vulnerabilidad. Este hallazgo se guarda automáticamente para que no se pierda al cerrar Burp, pero requiere validación manual. Haz clic derecho en la pestaña de hallazgos para enviar la petición al Repeater o al Intruder, y nunca confíes ciegamente en los resultados de una IA.",
             null,
-            new burp.api.montoya.http.message.HttpRequestResponse[0]
+            evidencias
         );
     }
 

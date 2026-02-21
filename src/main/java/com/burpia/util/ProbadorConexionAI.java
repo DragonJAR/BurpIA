@@ -1,6 +1,7 @@
 package com.burpia.util;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 
 import javax.swing.*;
 import okhttp3.*;
@@ -24,19 +25,14 @@ public class ProbadorConexionAI {
         try {
             java.util.Map<String, String> errores = config.validar();
             if (!errores.isEmpty()) {
-                StringBuilder sb = new StringBuilder("Errores de configuracion:\n");
+                StringBuilder sb = new StringBuilder(I18nUI.tr("Errores de configuracion:\n", "Configuration errors:\n"));
                 for (java.util.Map.Entry<String, String> entry : errores.entrySet()) {
                     sb.append("  - ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
                 }
                 return new ResultadoPrueba(false, sb.toString(), null);
             }
 
-            String endpointProbado = ConfiguracionAPI.construirUrlApiProveedor(
-                config.obtenerProveedorAI(),
-                config.obtenerUrlApi(),
-                config.obtenerModelo()
-            );
-            ResultadoHttpPrueba resultadoHttp = realizarSolicitudPrueba(endpointProbado);
+            ResultadoHttpPrueba resultadoHttp = realizarSolicitudPrueba();
             String respuesta = resultadoHttp.respuesta;
             String endpointFinal = resultadoHttp.endpoint;
 
@@ -44,15 +40,15 @@ public class ProbadorConexionAI {
                 String mensaje = analizarRespuesta(respuesta, endpointFinal, resultadoHttp.modeloUsado, resultadoHttp.advertencia);
                 return new ResultadoPrueba(true, mensaje, respuesta);
             } else {
-                return new ResultadoPrueba(false, "No se recibio respuesta del servidor", null);
+                return new ResultadoPrueba(false, I18nUI.tr("No se recibio respuesta del servidor", "No response was received from server"), null);
             }
 
         } catch (Exception e) {
-            return new ResultadoPrueba(false, "Error de conexion: " + e.getMessage(), null);
+            return new ResultadoPrueba(false, I18nUI.tr("Error de conexion: ", "Connection error: ") + e.getMessage(), null);
         }
     }
 
-    private ResultadoHttpPrueba realizarSolicitudPrueba(String endpointProbado) throws IOException {
+    private ResultadoHttpPrueba realizarSolicitudPrueba() throws IOException {
         ConstructorSolicitudesProveedor.SolicitudPreparada preparada =
             ConstructorSolicitudesProveedor.construirSolicitud(config, "Responde exactamente con OK", clienteHttp);
 
@@ -72,55 +68,67 @@ public class ProbadorConexionAI {
         String proveedor = config.obtenerProveedorAI();
 
         StringBuilder mensaje = new StringBuilder();
-        mensaje.append("✅ Conexión exitosa a ").append(proveedor).append("\n\n");
+        mensaje.append(I18nUI.tr("✅ Conexion exitosa a ", "✅ Successful connection to ")).append(proveedor).append("\n\n");
 
         String contenidoRespuesta = ParserRespuestasAI.extraerContenido(respuesta, proveedor);
         boolean respuestaValida = ParserRespuestasAI.validarRespuestaPrueba(contenidoRespuesta);
         boolean conexionValida = ParserRespuestasAI.validarRespuestaConexion(contenidoRespuesta);
 
-        mensaje.append("📋 Configuración:\n");
-        mensaje.append("   Modelo: ").append(modeloUsado).append("\n");
-        mensaje.append("   URL base: ").append(ConfiguracionAPI.extraerUrlBase(endpointProbado)).append("\n");
-        mensaje.append("   Endpoint probado: ").append(endpointProbado).append("\n\n");
+        mensaje.append(I18nUI.tr("📋 Configuracion:\n", "📋 Configuration:\n"));
+        mensaje.append(I18nUI.tr("   Modelo: ", "   Model: ")).append(modeloUsado).append("\n");
+        mensaje.append(I18nUI.tr("   URL base: ", "   Base URL: ")).append(ConfiguracionAPI.extraerUrlBase(endpointProbado)).append("\n");
+        mensaje.append(I18nUI.tr("   Endpoint probado: ", "   Tested endpoint: ")).append(endpointProbado).append("\n\n");
         if (advertenciaModelo != null && !advertenciaModelo.isEmpty()) {
             mensaje.append("ℹ️ ").append(advertenciaModelo).append("\n\n");
         }
 
         if (respuestaValida) {
-            mensaje.append("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n");
-            mensaje.append("✅ Respuesta del modelo:\n");
+            mensaje.append(I18nUI.tr("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n",
+                "💬 Sent message: \"Reply exactly with OK\"\n\n"));
+            mensaje.append(I18nUI.tr("✅ Respuesta del modelo:\n", "✅ Model response:\n"));
             if (contenidoRespuesta.length() > 100) {
                 mensaje.append("   ").append(contenidoRespuesta.substring(0, 100)).append("...");
             } else {
                 mensaje.append("   ").append(contenidoRespuesta);
             }
-            mensaje.append("\n\n✅ ¡El modelo respondió correctamente!");
-            mensaje.append("\n(Respuesta aceptada: contiene \"OK\" o \"Hola\")");
+            mensaje.append(I18nUI.tr("\n\n✅ ¡El modelo respondio correctamente!",
+                "\n\n✅ Model responded correctly!"));
+            mensaje.append(I18nUI.tr("\n(Respuesta aceptada: contiene \"OK\" o \"Hola\")",
+                "\n(Accepted response: contains \"OK\" or \"Hello\")"));
         } else if (conexionValida) {
-            mensaje.append("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n");
-            mensaje.append("✅ El proveedor respondió y el contenido fue extraído correctamente.\n");
-            mensaje.append("ℹ️ La respuesta no incluyó literalmente \"OK\", pero la conexión es válida.\n\n");
-            mensaje.append("Respuesta del modelo:\n");
+            mensaje.append(I18nUI.tr("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n",
+                "💬 Sent message: \"Reply exactly with OK\"\n\n"));
+            mensaje.append(I18nUI.tr("✅ El proveedor respondio y el contenido fue extraido correctamente.\n",
+                "✅ Provider responded and content was extracted successfully.\n"));
+            mensaje.append(I18nUI.tr("ℹ️ La respuesta no incluyo literalmente \"OK\", pero la conexion es valida.\n\n",
+                "ℹ️ Response did not include literal \"OK\", but connection is valid.\n\n"));
+            mensaje.append(I18nUI.tr("Respuesta del modelo:\n", "Model response:\n"));
             if (contenidoRespuesta.length() > 150) {
                 mensaje.append("   ").append(contenidoRespuesta.substring(0, 150)).append("...");
             } else {
                 mensaje.append("   ").append(contenidoRespuesta);
             }
         } else {
-            mensaje.append("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n");
+            mensaje.append(I18nUI.tr("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n",
+                "💬 Sent message: \"Reply exactly with OK\"\n\n"));
             if (!contenidoRespuesta.isEmpty()) {
-                mensaje.append("⚠️ La respuesta NO contiene \"OK\" ni \"Hola\"\n\n");
-                mensaje.append("❌ Respuesta recibida:\n");
+                mensaje.append(I18nUI.tr("⚠️ La respuesta NO contiene \"OK\" ni \"Hola\"\n\n",
+                    "⚠️ Response does NOT contain \"OK\" or \"Hello\"\n\n"));
+                mensaje.append(I18nUI.tr("❌ Respuesta recibida:\n", "❌ Received response:\n"));
                 if (contenidoRespuesta.length() > 100) {
                     mensaje.append("   ").append(contenidoRespuesta.substring(0, 100)).append("...");
                 } else {
                     mensaje.append("   ").append(contenidoRespuesta);
                 }
-                mensaje.append("\n\n⚠️ El modelo respondió pero no cumple el formato esperado.");
+                mensaje.append(I18nUI.tr("\n\n⚠️ El modelo respondio pero no cumple el formato esperado.",
+                    "\n\n⚠️ Model responded but did not match the expected format."));
             } else {
-                mensaje.append("⚠️ No se pudo extraer el contenido de la respuesta\n");
-                mensaje.append("   La conexión fue exitosa pero el formato de respuesta no es el esperado.\n");
-                mensaje.append("   Respuesta cruda (primeros 200 caracteres):\n");
+                mensaje.append(I18nUI.tr("⚠️ No se pudo extraer el contenido de la respuesta\n",
+                    "⚠️ Could not extract response content\n"));
+                mensaje.append(I18nUI.tr("   La conexion fue exitosa pero el formato de respuesta no es el esperado.\n",
+                    "   Connection succeeded but response format is not expected.\n"));
+                mensaje.append(I18nUI.tr("   Respuesta cruda (primeros 200 caracteres):\n",
+                    "   Raw response (first 200 characters):\n"));
                 respuesta = respuesta.replaceAll("\\s+", " ");
                 if (respuesta.length() > 200) {
                     mensaje.append("   ").append(respuesta.substring(0, 200)).append("...");
@@ -135,8 +143,8 @@ public class ProbadorConexionAI {
 
     public void mostrarDialogoPrueba(JFrame padre) {
         // Mostrar dialogo de carga
-        JDialog dialogoCarga = new JDialog(padre, "Probando Conexion", true);
-        JLabel etiqueta = new JLabel("Conectando a " + config.obtenerProveedorAI() + "...", SwingConstants.CENTER);
+        JDialog dialogoCarga = new JDialog(padre, I18nUI.tr("Probando Conexion", "Testing Connection"), true);
+        JLabel etiqueta = new JLabel(I18nUI.tr("Conectando a ", "Connecting to ") + config.obtenerProveedorAI() + "...", SwingConstants.CENTER);
         dialogoCarga.add(etiqueta);
         dialogoCarga.setSize(300, 100);
         dialogoCarga.setLocationRelativeTo(padre);
@@ -157,14 +165,15 @@ public class ProbadorConexionAI {
                     JOptionPane.showMessageDialog(
                         padre,
                         resultado.mensaje,
-                        resultado.exito ? "Conexion Exitosa" : "Error de Conexion",
+                        resultado.exito ? I18nUI.tr("Conexion Exitosa", "Connection Successful")
+                            : I18nUI.tr("Error de Conexion", "Connection Error"),
                         tipoMensaje
                     );
                 } catch (Exception e) {
                     JOptionPane.showMessageDialog(
                         padre,
-                        "Error durante la prueba: " + e.getMessage(),
-                        "Error",
+                        I18nUI.tr("Error durante la prueba: ", "Error during test: ") + e.getMessage(),
+                        I18nUI.tr("Error", "Error"),
                         JOptionPane.ERROR_MESSAGE
                     );
                 }

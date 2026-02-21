@@ -24,6 +24,7 @@ class ConfiguracionAPITest {
         assertNotNull(config.obtenerUrlApi());
         assertNotNull(config.obtenerModelo());
         assertNotNull(config.obtenerPromptConfigurable());
+        assertEquals("es", config.obtenerIdiomaUi());
         assertFalse(config.esDetallado());
         assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla());
     }
@@ -103,6 +104,7 @@ class ConfiguracionAPITest {
         assertNotNull(prompt);
         assertFalse(prompt.isEmpty());
         assertTrue(prompt.contains("{REQUEST}"));
+        assertTrue(prompt.contains("{RESPONSE}"));
     }
 
     @Test
@@ -154,6 +156,7 @@ class ConfiguracionAPITest {
     @DisplayName("Snapshot de configuracion no se contamina por cambios posteriores")
     void testSnapshotInmutablePorCopia() {
         config.establecerProveedorAI("Ollama");
+        config.establecerIdiomaUi("en");
         config.establecerModeloParaProveedor("Ollama", "llama3.2:latest");
         config.establecerUrlBaseParaProveedor("Ollama", "http://localhost:11434");
         config.establecerApiKeyParaProveedor("Ollama", "");
@@ -166,8 +169,44 @@ class ConfiguracionAPITest {
         config.establecerApiKeyParaProveedor("OpenAI", "new-key");
 
         assertEquals("Ollama", snapshot.obtenerProveedorAI());
+        assertEquals("en", snapshot.obtenerIdiomaUi());
         assertEquals("llama3.2:latest", snapshot.obtenerModeloParaProveedor("Ollama"));
         assertEquals("http://localhost:11434", snapshot.obtenerUrlBaseParaProveedor("Ollama"));
         assertEquals("", snapshot.obtenerApiKeyParaProveedor("Ollama"));
+    }
+
+    @Test
+    @DisplayName("Idioma UI invalido vuelve a espanol")
+    void testIdiomaInvalidoVuelveAEspanol() {
+        config.establecerIdiomaUi("fr");
+        assertEquals("es", config.obtenerIdiomaUi());
+
+        config.establecerIdiomaUi("en");
+        assertEquals("en", config.obtenerIdiomaUi());
+    }
+
+    @Test
+    @DisplayName("AplicarDesde actualiza configuracion con copia profunda")
+    void testAplicarDesdeCopiaProfunda() {
+        ConfiguracionAPI origen = new ConfiguracionAPI();
+        origen.establecerProveedorAI("OpenAI");
+        origen.establecerIdiomaUi("en");
+        origen.establecerApiKeyParaProveedor("OpenAI", "key-openai");
+        origen.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        origen.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        origen.establecerRetrasoSegundos(7);
+        origen.establecerMaximoConcurrente(4);
+
+        config.aplicarDesde(origen);
+
+        assertEquals("OpenAI", config.obtenerProveedorAI());
+        assertEquals("en", config.obtenerIdiomaUi());
+        assertEquals("key-openai", config.obtenerApiKeyParaProveedor("OpenAI"));
+        assertEquals("gpt-5-mini", config.obtenerModeloParaProveedor("OpenAI"));
+        assertEquals(7, config.obtenerRetrasoSegundos());
+        assertEquals(4, config.obtenerMaximoConcurrente());
+
+        origen.establecerApiKeyParaProveedor("OpenAI", "otro-valor");
+        assertEquals("key-openai", config.obtenerApiKeyParaProveedor("OpenAI"));
     }
 }

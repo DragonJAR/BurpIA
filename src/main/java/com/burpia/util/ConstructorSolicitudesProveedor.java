@@ -137,6 +137,9 @@ public final class ConstructorSolicitudesProveedor {
                                                    String apiKey,
                                                    OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
+        if (base == null || base.trim().isEmpty()) {
+            throw new IOException("URL base de Gemini vacia o invalida");
+        }
         String cacheKey = base + "|" + (apiKey != null ? apiKey.hashCode() : 0);
         CacheModelosGemini cache = CACHE_GEMINI.get(cacheKey);
         long ahora = System.currentTimeMillis();
@@ -144,7 +147,11 @@ public final class ConstructorSolicitudesProveedor {
             return cache.modelos;
         }
 
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(base + "/models").newBuilder();
+        HttpUrl urlModelos = HttpUrl.parse(base + "/models");
+        if (urlModelos == null) {
+            throw new IOException("URL base de Gemini invalida: " + base);
+        }
+        HttpUrl.Builder urlBuilder = urlModelos.newBuilder();
         if (apiKey != null && !apiKey.trim().isEmpty()) {
             urlBuilder.addQueryParameter("key", apiKey);
         }
@@ -170,15 +177,21 @@ public final class ConstructorSolicitudesProveedor {
     }
 
     private static List<String> parsearModelosGemini(String body) {
-        JsonElement element = JsonParser.parseString(body);
+        JsonElement element;
+        try {
+            element = JsonParser.parseString(body);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
         if (!element.isJsonObject()) {
             return Collections.emptyList();
         }
 
-        JsonArray models = element.getAsJsonObject().getAsJsonArray("models");
-        if (models == null) {
+        JsonElement modelsElement = element.getAsJsonObject().get("models");
+        if (modelsElement == null || !modelsElement.isJsonArray()) {
             return Collections.emptyList();
         }
+        JsonArray models = modelsElement.getAsJsonArray();
 
         List<String> result = new ArrayList<>();
         for (JsonElement modelElem : models) {
@@ -186,7 +199,10 @@ public final class ConstructorSolicitudesProveedor {
                 continue;
             }
             JsonObject modelObj = modelElem.getAsJsonObject();
-            JsonArray methods = modelObj.getAsJsonArray("supportedGenerationMethods");
+            JsonElement methodsElement = modelObj.get("supportedGenerationMethods");
+            JsonArray methods = (methodsElement != null && methodsElement.isJsonArray())
+                ? methodsElement.getAsJsonArray()
+                : null;
             if (!soportaGenerateContent(methods)) {
                 continue;
             }
@@ -204,7 +220,8 @@ public final class ConstructorSolicitudesProveedor {
             return false;
         }
         for (JsonElement method : methods) {
-            if (method.isJsonPrimitive() && "generateContent".equals(method.getAsString())) {
+            if (method != null && method.isJsonPrimitive()
+                && "generateContent".equalsIgnoreCase(method.getAsString())) {
                 return true;
             }
         }
@@ -212,11 +229,18 @@ public final class ConstructorSolicitudesProveedor {
     }
 
     private static String obtenerTexto(JsonObject obj, String field) {
-        JsonElement value = obj.get(field);
-        if (value == null || value.isJsonNull()) {
+        if (obj == null || field == null) {
             return "";
         }
-        return value.getAsString().trim();
+        JsonElement value = obj.get(field);
+        if (value == null || value.isJsonNull() || !value.isJsonPrimitive()) {
+            return "";
+        }
+        try {
+            return value.getAsString().trim();
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private static String normalizarNombreModeloGemini(String nombre) {

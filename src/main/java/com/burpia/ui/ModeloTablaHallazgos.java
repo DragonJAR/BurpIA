@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import burp.api.montoya.http.message.requests.HttpRequest;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 
 import javax.swing.*;
@@ -15,7 +16,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * Modelo de tabla para hallazgos con thread-safety.
  */
 public class ModeloTablaHallazgos extends DefaultTableModel {
-    private static final String[] COLUMNAS = {"Hora", "URL", "Hallazgo", "Severidad", "Confianza"};
+    private static final int TOTAL_COLUMNAS = 5;
     private final List<Hallazgo> datos;
     private int limiteFilas;
     private final Set<Integer> filasIgnoradas;
@@ -26,7 +27,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public ModeloTablaHallazgos(int limiteFilas) {
-        super(COLUMNAS, 0);
+        super(I18nUI.Tablas.COLUMNAS_HALLAZGOS(), 0);
         this.datos = new ArrayList<>();
         this.limiteFilas = Math.max(1, limiteFilas);
         this.filasIgnoradas = new HashSet<>();
@@ -39,6 +40,9 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public void agregarHallazgo(Hallazgo hallazgo) {
+        if (hallazgo == null) {
+            return;
+        }
         SwingUtilities.invokeLater(() -> {
             lock.lock();
             try {
@@ -125,49 +129,19 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         }
     }
 
-    public List<Integer> filtrarPorSeveridad(String severidad) {
-        lock.lock();
-        try {
-            List<Integer> indices = new ArrayList<>();
-            for (int i = 0; i < datos.size(); i++) {
-                Hallazgo h = datos.get(i);
-                if (h.obtenerSeveridad().equals(severidad)) {
-                    indices.add(i);
-                }
-            }
-            return indices;
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public List<Integer> buscarPorTexto(String textoBusqueda) {
-        lock.lock();
-        try {
-            List<Integer> indices = new ArrayList<>();
-            String textoLower = textoBusqueda.toLowerCase();
-
-            for (int i = 0; i < datos.size(); i++) {
-                Hallazgo h = datos.get(i);
-                if (h.obtenerHallazgo().toLowerCase().contains(textoLower) ||
-                    h.obtenerUrl().toLowerCase().contains(textoLower)) {
-                    indices.add(i);
-                }
-            }
-            return indices;
-        } finally {
-            lock.unlock();
-        }
-    }
-
     public void marcarComoIgnorado(int fila) {
+        boolean filaValida;
         lock.lock();
         try {
-            if (fila >= 0 && fila < datos.size()) {
+            filaValida = fila >= 0 && fila < datos.size();
+            if (filaValida) {
                 filasIgnoradas.add(fila);
             }
         } finally {
             lock.unlock();
+        }
+        if (!filaValida) {
+            return;
         }
         SwingUtilities.invokeLater(() -> fireTableRowsUpdated(fila, fila));
     }
@@ -219,10 +193,12 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public void eliminarHallazgo(int indiceFila) {
+        boolean eliminado = false;
         lock.lock();
         try {
             if (indiceFila >= 0 && indiceFila < datos.size()) {
                 datos.remove(indiceFila);
+                eliminado = true;
                 Set<Integer> nuevosIgnorados = new HashSet<>();
                 for (Integer idx : filasIgnoradas) {
                     if (idx < indiceFila) {
@@ -238,20 +214,14 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             lock.unlock();
         }
 
+        if (!eliminado) {
+            return;
+        }
         SwingUtilities.invokeLater(() -> {
-            if (indiceFila < getRowCount()) {
+            if (indiceFila >= 0 && indiceFila < getRowCount()) {
                 removeRow(indiceFila);
             }
         });
-    }
-
-    public List<Hallazgo> obtenerTodosLosHallazgos() {
-        lock.lock();
-        try {
-            return new ArrayList<>(datos);
-        } finally {
-            lock.unlock();
-        }
     }
 
     public int obtenerLimiteFilas() {
@@ -291,11 +261,20 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         SwingUtilities.invokeLater(() -> {
             if (indiceFila < getRowCount()) {
                 Object[] filaValores = nuevoHallazgo.aFilaTabla();
-                for (int i = 0; i < COLUMNAS.length; i++) {
+                for (int i = 0; i < TOTAL_COLUMNAS; i++) {
                     setValueAt(filaValores[i], indiceFila, i);
                 }
                 fireTableRowsUpdated(indiceFila, indiceFila);
             }
         });
+    }
+
+    public void refrescarColumnasIdioma() {
+        SwingUtilities.invokeLater(() -> setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_HALLAZGOS()));
+    }
+
+    @Override
+    public int getColumnCount() {
+        return TOTAL_COLUMNAS;
     }
 }
