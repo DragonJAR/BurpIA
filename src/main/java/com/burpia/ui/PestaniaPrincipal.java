@@ -21,13 +21,14 @@ public class PestaniaPrincipal extends JPanel {
                             GestorTareas gestorTareas,
                             GestorConsolaGUI gestorConsola,
                             ModeloTablaTareas modeloTareas,
-                            ModeloTablaHallazgos modeloHallazgos) {
+                            ModeloTablaHallazgos modeloHallazgos,
+                            boolean esBurpProfessional) {
         setLayout(new BorderLayout(10, 2));
 
         panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas);
 
         panelTareas = new PanelTareas(gestorTareas, modeloTareas);
-        panelHallazgos = new PanelHallazgos(api, modeloHallazgos);
+        panelHallazgos = new PanelHallazgos(api, modeloHallazgos, esBurpProfessional);
         panelConsola = new PanelConsola(gestorConsola);
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
@@ -79,6 +80,14 @@ public class PestaniaPrincipal extends JPanel {
 
     public void establecerManejadorConfiguracion(Runnable manejador) {
         panelEstadisticas.establecerManejadorConfiguracion(manejador);
+    }
+
+    public void establecerManejadorToggleCaptura(Runnable manejador) {
+        panelEstadisticas.establecerManejadorToggleCaptura(manejador);
+    }
+
+    public void establecerEstadoCaptura(boolean activa) {
+        panelEstadisticas.establecerEstadoCaptura(activa);
     }
 
     public void destruir() {

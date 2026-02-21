@@ -39,12 +39,15 @@ public class PanelTareas extends JPanel {
 
         JPanel panelControles = new JPanel();
         panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
-        panelControles.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "🎮 CONTROLES DE TAREAS",
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelControles.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "🎮 CONTROLES DE TAREAS",
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5)) {
@@ -60,10 +63,10 @@ public class PanelTareas extends JPanel {
                 if (esLayoutHorizontal != ultimoLayoutHorizontal) {
                     if (esLayoutHorizontal) {
                         // Espacio suficiente: una fila con botones + estadísticas
-                        setLayout(new FlowLayout(FlowLayout.LEFT, 10, 5));
+                        setLayout(new FlowLayout(FlowLayout.LEFT, 12, 4));
                     } else {
                         // Espacio limitado: botones en vertical, estadísticas abajo
-                        setLayout(new GridLayout(2, 1, 0, 5));
+                        setLayout(new GridLayout(2, 1, 0, 10));
                     }
                     ultimoLayoutHorizontal = esLayoutHorizontal;
                 }
@@ -82,7 +85,7 @@ public class PanelTareas extends JPanel {
         botonCancelar.setToolTipText("Cancelar todas las tareas activas");
         panelTodosControles.add(botonCancelar);
 
-        botonLimpiarCompletadas = new JButton("🧹 Limpiar Completadas");
+        botonLimpiarCompletadas = new JButton("🧹 Limpiar");
         botonLimpiarCompletadas.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiarCompletadas.setToolTipText("Eliminar tareas completadas, con error o canceladas");
         panelTodosControles.add(botonLimpiarCompletadas);
@@ -95,12 +98,15 @@ public class PanelTareas extends JPanel {
         panelControles.add(panelTodosControles);
 
         JPanel panelTablaWrapper = new JPanel(new BorderLayout());
-        panelTablaWrapper.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "📋 LISTA DE TAREAS",
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelTablaWrapper.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "📋 LISTA DE TAREAS",
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         tabla.setAutoCreateRowSorter(true);
@@ -122,14 +128,25 @@ public class PanelTareas extends JPanel {
         panelTablaWrapper.add(panelDesplazable, BorderLayout.CENTER);
 
         botonPausarReanudar.addActionListener(e -> {
-            gestorTareas.pausarReanudarTodas();
+            EstadisticasTareas estadisticas = calcularEstadisticasTareas();
+            if (estadisticas.pausadas > 0) {
+                gestorTareas.reanudarTodasPausadas();
+            } else if (estadisticas.activasSinPausadas > 0) {
+                gestorTareas.pausarTodasActivas();
+            } else {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "No hay tareas activas o pausadas para gestionar.",
+                    "Información",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+            }
             actualizarEstadisticas();
         });
 
         botonCancelar.addActionListener(e -> {
-            int activas = modelo.contarPorEstado(Tarea.ESTADO_EN_COLA) +
-                         modelo.contarPorEstado(Tarea.ESTADO_ANALIZANDO) +
-                         modelo.contarPorEstado(Tarea.ESTADO_PAUSADO);
+            EstadisticasTareas estadisticas = calcularEstadisticasTareas();
+            int activas = estadisticas.activas;
 
             if (activas == 0) {
                 JOptionPane.showMessageDialog(
@@ -155,9 +172,8 @@ public class PanelTareas extends JPanel {
         });
 
         botonLimpiarCompletadas.addActionListener(e -> {
-            int completadas = modelo.contarPorEstado(Tarea.ESTADO_COMPLETADO) +
-                             modelo.contarPorEstado(Tarea.ESTADO_ERROR) +
-                             modelo.contarPorEstado(Tarea.ESTADO_CANCELADO);
+            EstadisticasTareas estadisticas = calcularEstadisticasTareas();
+            int completadas = estadisticas.finalizadas;
 
             if (completadas == 0) {
                 JOptionPane.showMessageDialog(
@@ -528,20 +544,14 @@ public class PanelTareas extends JPanel {
 
     private void actualizarEstadisticas() {
         SwingUtilities.invokeLater(() -> {
-            int activas = modelo.contarPorEstado(Tarea.ESTADO_EN_COLA) +
-                         modelo.contarPorEstado(Tarea.ESTADO_ANALIZANDO) +
-                         modelo.contarPorEstado(Tarea.ESTADO_PAUSADO);
-            int pausadas = modelo.contarPorEstado(Tarea.ESTADO_PAUSADO);
-            int completadas = modelo.contarPorEstado(Tarea.ESTADO_COMPLETADO);
-            int errores = modelo.contarPorEstado(Tarea.ESTADO_ERROR);
+            EstadisticasTareas estadisticas = calcularEstadisticasTareas();
 
             etiquetaEstadisticas.setText(
                 String.format("📊 Tareas Activas: %d | ✅ Completadas: %d | ❌ Con Errores: %d",
-                    activas, completadas, errores)
+                    estadisticas.activas, estadisticas.completadas, estadisticas.errores)
             );
 
-            // Actualizar botón Pausar/Reanudar según estado
-            if (pausadas > 0) {
+            if (estadisticas.pausadas > 0) {
                 botonPausarReanudar.setText("▶️ Reanudar Todo");
                 botonPausarReanudar.setToolTipText("Reanudar todas las tareas pausadas");
             } else {
@@ -571,5 +581,48 @@ public class PanelTareas extends JPanel {
 
     public void destruir() {
         timerActualizacion.stop();
+    }
+
+    private EstadisticasTareas calcularEstadisticasTareas() {
+        int enCola = modelo.contarPorEstado(Tarea.ESTADO_EN_COLA);
+        int analizando = modelo.contarPorEstado(Tarea.ESTADO_ANALIZANDO);
+        int pausadas = modelo.contarPorEstado(Tarea.ESTADO_PAUSADO);
+        int completadas = modelo.contarPorEstado(Tarea.ESTADO_COMPLETADO);
+        int errores = modelo.contarPorEstado(Tarea.ESTADO_ERROR);
+        int canceladas = modelo.contarPorEstado(Tarea.ESTADO_CANCELADO);
+        int activasSinPausadas = enCola + analizando;
+        int activas = activasSinPausadas + pausadas;
+        int finalizadas = completadas + errores + canceladas;
+        return new EstadisticasTareas(
+            activas,
+            activasSinPausadas,
+            pausadas,
+            completadas,
+            errores,
+            finalizadas
+        );
+    }
+
+    private static final class EstadisticasTareas {
+        private final int activas;
+        private final int activasSinPausadas;
+        private final int pausadas;
+        private final int completadas;
+        private final int errores;
+        private final int finalizadas;
+
+        private EstadisticasTareas(int activas,
+                                   int activasSinPausadas,
+                                   int pausadas,
+                                   int completadas,
+                                   int errores,
+                                   int finalizadas) {
+            this.activas = activas;
+            this.activasSinPausadas = activasSinPausadas;
+            this.pausadas = pausadas;
+            this.completadas = completadas;
+            this.errores = errores;
+            this.finalizadas = finalizadas;
+        }
     }
 }

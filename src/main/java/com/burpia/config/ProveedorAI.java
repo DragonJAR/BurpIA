@@ -99,13 +99,8 @@ public class ProveedorAI {
         PROVEEDORES.put("Gemini", new ConfiguracionProveedor(
             "Gemini",
             "https://generativelanguage.googleapis.com/v1beta",
-            "gemini-3-deep-think-preview",
+            "gemini-1.5-pro-002",
             Arrays.asList(
-                "gemini-3-deep-think-preview",
-                "gemini-3-pro-preview",
-                "gemini-3-flash-preview",
-                "gemini-2.0-flash-exp",
-                "gemini-2.0-flash-thinking-exp",
                 "gemini-1.5-pro-002",
                 "gemini-1.5-flash-002"
             ),

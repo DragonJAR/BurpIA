@@ -3,13 +3,18 @@ package com.burpia.ui;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.config.ProveedorAI;
+import com.burpia.util.ConstructorSolicitudesProveedor;
+import com.burpia.util.ParserModelosOllama;
 import com.burpia.util.ProbadorConexionAI;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class DialogoConfiguracion extends JDialog {
     private final ConfiguracionAPI config;
@@ -46,7 +51,7 @@ public class DialogoConfiguracion extends JDialog {
 
     private void inicializarComponentes() {
         setLayout(new BorderLayout(10, 10));
-        setSize(800, 600);
+        setSize(800, 650);
         setLocationRelativeTo(getParent());
 
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -83,7 +88,7 @@ public class DialogoConfiguracion extends JDialog {
 
     private JPanel crearPanelGeneral() {
         JPanel root = new JPanel(new BorderLayout());
-        root.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        root.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         JPanel contenido = new JPanel();
         contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
@@ -97,17 +102,19 @@ public class DialogoConfiguracion extends JDialog {
 
         JPanel panelEjecucion = new JPanel(new GridBagLayout());
         panelEjecucion.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelEjecucion.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "⚙️ AJUSTES DE EJECUCIÓN",
-            javax.swing.border.TitledBorder.LEFT,
-            javax.swing.border.TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelEjecucion.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "⚙️ AJUSTES DE EJECUCIÓN",
+                javax.swing.border.TitledBorder.LEFT,
+                javax.swing.border.TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
-        panelEjecucion.setMaximumSize(new Dimension(Integer.MAX_VALUE, 220));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 8, 6, 8);
+        gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
@@ -151,28 +158,30 @@ public class DialogoConfiguracion extends JDialog {
         gbc.gridx = 0; gbc.gridy = 4; gbc.gridwidth = 2;
         panelEjecucion.add(etiquetaDescripcion, gbc);
 
+        panelEjecucion.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelEjecucion.getPreferredSize().height));
+
         contenido.add(panelEjecucion);
         contenido.add(Box.createVerticalGlue());
 
-        JScrollPane scroll = new JScrollPane(contenido);
-        scroll.setBorder(null);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
-        root.add(scroll, BorderLayout.CENTER);
+        root.add(contenido, BorderLayout.CENTER);
         return root;
     }
 
     private JPanel crearPanelProveedor() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "🤖 CONFIGURACIÓN DE PROVEEDOR AI",
-            javax.swing.border.TitledBorder.LEFT,
-            javax.swing.border.TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "🤖 CONFIGURACIÓN DE PROVEEDOR AI",
+                javax.swing.border.TitledBorder.LEFT,
+                javax.swing.border.TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.insets = new Insets(8, 8, 8, 8);
         gbc.anchor = GridBagConstraints.WEST;
 
         int fila = 0;
@@ -221,7 +230,7 @@ public class DialogoConfiguracion extends JDialog {
         comboModelo.setEditable(true);
         panelModelo.add(comboModelo, BorderLayout.CENTER);
 
-        btnRefrescarModelos = new JButton("🔄 Refresh");
+        btnRefrescarModelos = new JButton("🔄 Cargar Modelos");
         btnRefrescarModelos.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnRefrescarModelos.setToolTipText("Actualizar lista de modelos disponibles para el proveedor");
         btnRefrescarModelos.addActionListener(e -> refrescarModelosDesdeAPI());
@@ -256,15 +265,18 @@ public class DialogoConfiguracion extends JDialog {
 
     private JPanel crearPanelPrompt() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         JPanel panelInstrucciones = new JPanel(new BorderLayout(0, 8));
-        panelInstrucciones.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(new Color(120, 140, 255), 1),
-            "📝 INSTRUCCIONES",
-            javax.swing.border.TitledBorder.LEFT,
-            javax.swing.border.TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelInstrucciones.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(120, 140, 255), 1),
+                "📝 INSTRUCCIONES",
+                javax.swing.border.TitledBorder.LEFT,
+                javax.swing.border.TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
         panelInstrucciones.setBackground(new Color(244, 248, 255));
 
@@ -300,12 +312,15 @@ public class DialogoConfiguracion extends JDialog {
         panel.add(panelInstrucciones, BorderLayout.NORTH);
 
         JPanel panelEditor = new JPanel(new BorderLayout());
-        panelEditor.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "✍️ PROMPT DE ANÁLISIS",
-            javax.swing.border.TitledBorder.LEFT,
-            javax.swing.border.TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelEditor.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "✍️ PROMPT DE ANÁLISIS",
+                javax.swing.border.TitledBorder.LEFT,
+                javax.swing.border.TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         // Área de texto para el prompt
@@ -397,12 +412,15 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panelDescripcion = new JPanel(new BorderLayout());
         panelDescripcion.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelDescripcion.setMaximumSize(new Dimension(760, Integer.MAX_VALUE));
-        panelDescripcion.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "RESUMEN",
-            javax.swing.border.TitledBorder.LEFT,
-            javax.swing.border.TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelDescripcion.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "RESUMEN",
+                javax.swing.border.TitledBorder.LEFT,
+                javax.swing.border.TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         JTextArea descripcion = new JTextArea();
@@ -416,11 +434,12 @@ public class DialogoConfiguracion extends JDialog {
             "modelos de Inteligencia Artificial para analizar tráfico HTTP e identificar " +
             "vulnerabilidades de seguridad de forma automatizada.\n\n" +
             "Características principales:\n" +
-            "• Análisis automático con múltiples proveedores de IA\n" +
             "• Compatibilidad con OpenAI, Claude, Gemini, Z.ai, Minimax y Ollama\n" +
-            "• Detección pasiva de vulnerabilidades en aplicaciones web\n" +
-            "• Prompt configurable para análisis personalizados\n" +
-            "• Interfaz intuitiva con estadísticas en tiempo real"
+            "• De-duplicación inteligente de peticiones para optimizar la cuota de API\n" +
+            "• Gestión asíncrona mediante colas de tareas paralelizables\n" +
+            "• Integración con site map (Issues), Repeater, Intruder y Scanner Pro\n" +
+            "• Prompt totalmente configurable para análisis a medida\n" +
+            "• Exportación nativa de reportes de hallazgos a CSV y JSON"
         );
         descripcion.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         panelDescripcion.add(descripcion, BorderLayout.CENTER);
@@ -431,12 +450,15 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panelAutor = new JPanel(new BorderLayout(0, 8));
         panelAutor.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelAutor.setMaximumSize(new Dimension(760, 140));
-        panelAutor.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            "DESARROLLADO POR",
-            javax.swing.border.TitledBorder.CENTER,
-            javax.swing.border.TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panelAutor.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                "DESARROLLADO POR",
+                javax.swing.border.TitledBorder.CENTER,
+                javax.swing.border.TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
         JLabel nombreAutor = new JLabel("Jaime Andrés Restrepo", SwingConstants.CENTER);
@@ -648,29 +670,13 @@ public class DialogoConfiguracion extends JDialog {
         Integer maxTokensGuardado = config.obtenerMaxTokensParaProveedor(proveedorSeleccionado);
         txtMaxTokens.setText(String.valueOf(maxTokensGuardado));
 
-        comboModelo.removeAllItems();
-        comboModelo.addItem(MODELO_CUSTOM);
-        for (String modelo : configProveedor.obtenerModelosDisponibles()) {
-            comboModelo.addItem(modelo);
-        }
+        List<String> modelosProveedor = configProveedor.obtenerModelosDisponibles();
 
         String modeloGuardado = config.obtenerModeloParaProveedor(proveedorSeleccionado);
         if (modeloGuardado == null || modeloGuardado.trim().isEmpty()) {
             modeloGuardado = configProveedor.obtenerModeloPorDefecto();
         }
-
-        boolean modeloEncontrado = false;
-        for (int i = 0; i < comboModelo.getItemCount(); i++) {
-            if (modeloGuardado.equals(comboModelo.getItemAt(i))) {
-                comboModelo.setSelectedIndex(i);
-                modeloEncontrado = true;
-                break;
-            }
-        }
-        if (!modeloEncontrado) {
-            comboModelo.setSelectedItem(MODELO_CUSTOM);
-            comboModelo.getEditor().setItem(modeloGuardado);
-        }
+        cargarModelosEnCombo(modelosProveedor, modeloGuardado);
     }
 
     private String obtenerModeloSeleccionado() {
@@ -679,10 +685,10 @@ public class DialogoConfiguracion extends JDialog {
             return "";
         }
         if (!MODELO_CUSTOM.equals(modeloActual)) {
-            return modeloActual.trim();
+            return normalizarModeloSeleccionado(modeloActual);
         }
         Object editorValue = comboModelo.getEditor().getItem();
-        return editorValue != null ? editorValue.toString().trim() : "";
+        return editorValue != null ? normalizarModeloSeleccionado(editorValue.toString()) : "";
     }
 
     private void refrescarModelosDesdeAPI() {
@@ -690,7 +696,7 @@ public class DialogoConfiguracion extends JDialog {
         if (proveedorSeleccionado == null) return;
 
         btnRefrescarModelos.setEnabled(false);
-        btnRefrescarModelos.setText("🔄 Refreshing...");
+        btnRefrescarModelos.setText("🔄 Actualizando...");
 
         SwingWorker<java.util.List<String>, Void> worker = new SwingWorker<>() {
             @Override
@@ -713,16 +719,7 @@ public class DialogoConfiguracion extends JDialog {
                 try {
                     java.util.List<String> modelos = get();
                     if (modelos != null && !modelos.isEmpty()) {
-                        comboModelo.removeAllItems();
-                        comboModelo.addItem(MODELO_CUSTOM);
-
-                        for (String modelo : modelos) {
-                            comboModelo.addItem(modelo);
-                        }
-
-                        if (comboModelo.getItemCount() > 1) {
-                            comboModelo.setSelectedIndex(1);
-                        }
+                        cargarModelosEnCombo(modelos, modelos.get(0));
 
                         JOptionPane.showMessageDialog(DialogoConfiguracion.this,
                                 "Se cargaron " + modelos.size() + " modelos para " + proveedorSeleccionado,
@@ -736,7 +733,7 @@ public class DialogoConfiguracion extends JDialog {
                             JOptionPane.ERROR_MESSAGE);
                 } finally {
                     btnRefrescarModelos.setEnabled(true);
-                    btnRefrescarModelos.setText("🔄 Refresh");
+                    btnRefrescarModelos.setText("🔄 Cargar Modelos");
                 }
             }
         };
@@ -773,22 +770,9 @@ public class DialogoConfiguracion extends JDialog {
                 }
 
                 String json = respuesta.toString();
-                if (json.contains("\"models\"")) {
-                    int inicio = json.indexOf("[");
-                    int fin = json.lastIndexOf("]");
-                    if (inicio > 0 && fin > inicio) {
-                        String modelosJson = json.substring(inicio, fin + 1);
-                        String[] partes = modelosJson.split("\"name\"");
-                        for (int i = 1; i < partes.length; i++) {
-                            int finNombre = partes[i].indexOf("\"");
-                            if (finNombre > 0) {
-                                String nombre = partes[i].substring(0, finNombre).replace(":\"", "").replace("\":\"", "").trim();
-                                if (!nombre.isEmpty()) {
-                                    modelos.add(nombre);
-                                }
-                            }
-                        }
-                    }
+                modelos = ParserModelosOllama.extraerModelosDesdeTags(json);
+                if (modelos.isEmpty()) {
+                    throw new RuntimeException("Ollama respondió sin modelos válidos en /api/tags");
                 }
             } else {
                 throw new RuntimeException("Ollama respondió con código HTTP " + codigoRespuesta + ". " +
@@ -810,7 +794,68 @@ public class DialogoConfiguracion extends JDialog {
         return modelos;
     }
 
+    private void cargarModelosEnCombo(List<String> modelos, String preferido) {
+        comboModelo.removeAllItems();
+        comboModelo.addItem(MODELO_CUSTOM);
+
+        List<String> modelosNormalizados = normalizarModelos(modelos);
+        for (String modelo : modelosNormalizados) {
+            comboModelo.addItem(modelo);
+        }
+
+        String preferidoNormalizado = normalizarModeloSeleccionado(preferido);
+        if (preferidoNormalizado.isEmpty() && !modelosNormalizados.isEmpty()) {
+            preferidoNormalizado = modelosNormalizados.get(0);
+        }
+
+        for (int i = 0; i < comboModelo.getItemCount(); i++) {
+            if (preferidoNormalizado.equals(comboModelo.getItemAt(i))) {
+                comboModelo.setSelectedIndex(i);
+                return;
+            }
+        }
+
+        comboModelo.setSelectedItem(MODELO_CUSTOM);
+        comboModelo.getEditor().setItem(preferidoNormalizado);
+    }
+
+    private List<String> normalizarModelos(List<String> modelos) {
+        Set<String> unicos = new LinkedHashSet<>();
+        if (modelos != null) {
+            for (String modelo : modelos) {
+                String limpio = normalizarModeloSeleccionado(modelo);
+                if (!limpio.isEmpty()) {
+                    unicos.add(limpio);
+                }
+            }
+        }
+        return new ArrayList<>(unicos);
+    }
+
+    private String normalizarModeloSeleccionado(String modelo) {
+        if (modelo == null) {
+            return "";
+        }
+        String limpio = modelo.trim();
+        return ":".equals(limpio) ? "" : limpio;
+    }
+
     private java.util.List<String> obtenerModelosDesdeAPI(String proveedor) {
+        if ("Gemini".equals(proveedor)) {
+            try {
+                okhttp3.OkHttpClient cliente = new okhttp3.OkHttpClient.Builder()
+                    .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
+                    .build();
+                return ConstructorSolicitudesProveedor.listarModelosGemini(
+                    txtUrl.getText().trim(),
+                    new String(txtClave.getPassword()).trim(),
+                    cliente
+                );
+            } catch (Exception e) {
+                throw new RuntimeException("No se pudieron obtener modelos Gemini: " + e.getMessage(), e);
+            }
+        }
         return ProveedorAI.obtenerModelosDisponibles(proveedor);
     }
 

@@ -19,6 +19,13 @@ class ParserRespuestasAITest {
     }
 
     @Test
+    @DisplayName("Extrae contenido formato OpenAI Responses API")
+    void testExtraerOpenAiResponsesApi() {
+        String json = "{\"output_text\":\"OK desde Responses\"}";
+        assertEquals("OK desde Responses", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+    }
+
+    @Test
     @DisplayName("Extrae reasoning_content cuando content viene vacío")
     void testExtraerReasoningContent() {
         String json = "{\"choices\":[{\"message\":{\"content\":\"\",\"reasoning_content\":\"Analisis interno\"}}]}";
@@ -60,5 +67,19 @@ class ParserRespuestasAITest {
     void testValidarRespuestaConexion() {
         assertTrue(ParserRespuestasAI.validarRespuestaConexion("contenido cualquiera"));
         assertFalse(ParserRespuestasAI.validarRespuestaConexion(""));
+    }
+
+    @Test
+    @DisplayName("Elimina bloques <think> antes de retornar contenido")
+    void testEliminaBloquesThink() {
+        String json = "{\"choices\":[{\"message\":{\"content\":\"<think>paso interno</think>{\\\"hallazgos\\\":[]}\"}}]}";
+        assertEquals("{\"hallazgos\":[]}", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+    }
+
+    @Test
+    @DisplayName("Elimina múltiples bloques de pensamiento y mantiene JSON final")
+    void testEliminaMultiplesBloquesThink() {
+        String json = "{\"choices\":[{\"message\":{\"content\":\"<think>uno</think> <thinking>dos</thinking> {\\\"ok\\\":true}\"}}]}";
+        assertEquals("{\"ok\":true}", ParserRespuestasAI.extraerContenido(json, "Z.ai"));
     }
 }

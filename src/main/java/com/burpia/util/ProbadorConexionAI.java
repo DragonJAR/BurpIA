@@ -36,10 +36,12 @@ public class ProbadorConexionAI {
                 config.obtenerUrlApi(),
                 config.obtenerModelo()
             );
-            String respuesta = realizarSolicitudPrueba(endpointProbado);
+            ResultadoHttpPrueba resultadoHttp = realizarSolicitudPrueba(endpointProbado);
+            String respuesta = resultadoHttp.respuesta;
+            String endpointFinal = resultadoHttp.endpoint;
 
             if (respuesta != null && !respuesta.isEmpty()) {
-                String mensaje = analizarRespuesta(respuesta, endpointProbado);
+                String mensaje = analizarRespuesta(respuesta, endpointFinal, resultadoHttp.modeloUsado, resultadoHttp.advertencia);
                 return new ResultadoPrueba(true, mensaje, respuesta);
             } else {
                 return new ResultadoPrueba(false, "No se recibio respuesta del servidor", null);
@@ -50,94 +52,23 @@ public class ProbadorConexionAI {
         }
     }
 
-    private String realizarSolicitudPrueba(String endpointProbado) throws IOException {
-        String proveedor = config.obtenerProveedorAI();
-        String claveApi = config.obtenerClaveApi();
-        String cuerpo = construirCuerpoPrueba(proveedor);
+    private ResultadoHttpPrueba realizarSolicitudPrueba(String endpointProbado) throws IOException {
+        ConstructorSolicitudesProveedor.SolicitudPreparada preparada =
+            ConstructorSolicitudesProveedor.construirSolicitud(config, "Responde exactamente con OK", clienteHttp);
 
-        Request.Builder solicitudBuilder = new Request.Builder()
-                .url(endpointProbado)
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Accept", "application/json")
-                .post(RequestBody.create(
-                        cuerpo,
-                        MediaType.parse("application/json")
-                ));
-
-        switch (proveedor) {
-            case "OpenAI":
-                solicitudBuilder.addHeader("Authorization", "Bearer " + claveApi);
-                break;
-            case "Claude":
-                solicitudBuilder.addHeader("x-api-key", claveApi);
-                solicitudBuilder.addHeader("anthropic-version", "2023-06-01");
-                break;
-            case "Gemini":
-                solicitudBuilder.addHeader("x-goog-api-key", claveApi);
-                break;
-            case "Z.ai":
-            case "minimax":
-                solicitudBuilder.addHeader("Authorization", "Bearer " + claveApi);
-                break;
-            case "Ollama":
-                // Ollama no requiere API key
-                break;
-        }
-
-        Request solicitud = solicitudBuilder.build();
-
+        Request solicitud = preparada.request;
         try (Response respuesta = clienteHttp.newCall(solicitud).execute()) {
-            if (!respuesta.isSuccessful()) {
-                String cuerpoError = respuesta.body() != null ? respuesta.body().string() : "sin cuerpo";
-                throw new IOException("HTTP " + respuesta.code() + ": " + cuerpoError);
+            if (respuesta.isSuccessful()) {
+                String respuestaBody = respuesta.body() != null ? respuesta.body().string() : "";
+                return new ResultadoHttpPrueba(preparada.endpoint, respuestaBody, preparada.modeloUsado, preparada.advertencia);
             }
 
-            return respuesta.body().string();
+            String cuerpoError = respuesta.body() != null ? respuesta.body().string() : "sin cuerpo";
+            throw new IOException("HTTP " + respuesta.code() + ": " + cuerpoError);
         }
     }
 
-    private String construirCuerpoPrueba(String proveedor) {
-        StringBuilder cuerpo = new StringBuilder();
-        String mensajePrueba = "Responde exactamente con OK";
-
-        switch (proveedor) {
-            case "OpenAI":
-            case "Z.ai":
-            case "minimax":
-                cuerpo.append("{");
-                cuerpo.append("\"model\": \"").append(config.obtenerModelo()).append("\",");
-                cuerpo.append("\"messages\": [{\"role\": \"user\", \"content\": \"").append(mensajePrueba).append("\"}],");
-                cuerpo.append("\"max_tokens\": 50");
-                cuerpo.append("}");
-                break;
-
-            case "Claude":
-                cuerpo.append("{");
-                cuerpo.append("\"model\": \"").append(config.obtenerModelo()).append("\",");
-                cuerpo.append("\"max_tokens\": 50,");
-                cuerpo.append("\"messages\": [{\"role\": \"user\", \"content\": \"").append(mensajePrueba).append("\"}]");
-                cuerpo.append("}");
-                break;
-
-            case "Gemini":
-                cuerpo.append("{");
-                cuerpo.append("\"contents\": [{\"parts\": [{\"text\": \"").append(mensajePrueba).append("\"}]}]");
-                cuerpo.append("}");
-                break;
-
-            case "Ollama":
-                cuerpo.append("{");
-                cuerpo.append("\"model\": \"").append(config.obtenerModelo()).append("\",");
-                cuerpo.append("\"stream\": false,");
-                cuerpo.append("\"messages\": [{\"role\": \"user\", \"content\": \"").append(mensajePrueba).append("\"}]");
-                cuerpo.append("}");
-                break;
-        }
-
-        return cuerpo.toString();
-    }
-
-    private String analizarRespuesta(String respuesta, String endpointProbado) {
+    private String analizarRespuesta(String respuesta, String endpointProbado, String modeloUsado, String advertenciaModelo) {
         String proveedor = config.obtenerProveedorAI();
 
         StringBuilder mensaje = new StringBuilder();
@@ -148,9 +79,12 @@ public class ProbadorConexionAI {
         boolean conexionValida = ParserRespuestasAI.validarRespuestaConexion(contenidoRespuesta);
 
         mensaje.append("📋 Configuración:\n");
-        mensaje.append("   Modelo: ").append(config.obtenerModelo()).append("\n");
+        mensaje.append("   Modelo: ").append(modeloUsado).append("\n");
         mensaje.append("   URL base: ").append(ConfiguracionAPI.extraerUrlBase(endpointProbado)).append("\n");
         mensaje.append("   Endpoint probado: ").append(endpointProbado).append("\n\n");
+        if (advertenciaModelo != null && !advertenciaModelo.isEmpty()) {
+            mensaje.append("ℹ️ ").append(advertenciaModelo).append("\n\n");
+        }
 
         if (respuestaValida) {
             mensaje.append("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n");
@@ -250,6 +184,20 @@ public class ProbadorConexionAI {
             this.exito = exito;
             this.mensaje = mensaje;
             this.respuestaRaw = respuestaRaw;
+        }
+    }
+
+    private static class ResultadoHttpPrueba {
+        private final String endpoint;
+        private final String respuesta;
+        private final String modeloUsado;
+        private final String advertencia;
+
+        private ResultadoHttpPrueba(String endpoint, String respuesta, String modeloUsado, String advertencia) {
+            this.endpoint = endpoint;
+            this.respuesta = respuesta;
+            this.modeloUsado = modeloUsado;
+            this.advertencia = advertencia;
         }
     }
 }

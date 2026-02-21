@@ -2,6 +2,7 @@ package com.burpia;
 
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.core.BurpSuiteEdition;
 import burp.api.montoya.http.handler.HttpResponseReceived;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
@@ -118,6 +119,8 @@ public class ExtensionBurpIA implements BurpExtension {
             api, config, pestaniaPrincipal, stdout, stderr, limitador,
             estadisticas, gestorTareas, gestorConsola, modeloTablaHallazgos
         );
+        pestaniaPrincipal.establecerManejadorToggleCaptura(this::alternarCapturaDesdeUI);
+        pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
         api.http().registerHttpHandler(manejadorHttp);
         registrar("Manejador HTTP registrado exitosamente");
 
@@ -164,7 +167,15 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void crearYRegistrarPestaniaPrincipal() {
         Runnable crearUi = () -> {
-            pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas, modeloTablaHallazgos);
+            pestaniaPrincipal = new PestaniaPrincipal(
+                api,
+                estadisticas,
+                gestorTareas,
+                gestorConsola,
+                modeloTablaTareas,
+                modeloTablaHallazgos,
+                esProfessional
+            );
             pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
             api.userInterface().registerSuiteTab("BurpIA", pestaniaPrincipal.obtenerPanel());
             registrar("Pestania de UI registrada exitosamente");
@@ -193,6 +204,19 @@ public class ExtensionBurpIA implements BurpExtension {
     private void registrarError(String mensaje) {
         stderr.println("[BurpIA] [ERROR] " + mensaje);
         stderr.flush();
+    }
+
+    private void alternarCapturaDesdeUI() {
+        if (manejadorHttp == null || pestaniaPrincipal == null) {
+            return;
+        }
+        if (manejadorHttp.estaCapturaActiva()) {
+            manejadorHttp.pausarCaptura();
+        } else {
+            manejadorHttp.reanudarCaptura();
+        }
+        pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
+        registrar("Estado de captura actualizado: " + (manejadorHttp.estaCapturaActiva() ? "ACTIVA" : "PAUSADA"));
     }
 
     public void unload() {
@@ -279,33 +303,19 @@ public class ExtensionBurpIA implements BurpExtension {
      */
     private boolean detectarBurpProfessional(MontoyaApi api) {
         try {
-            // Método 1: Verificar si Scanner está disponible (solo Pro)
-            if (api.scanner() != null) {
-                return true;
+            if (api.burpSuite() != null && api.burpSuite().version() != null) {
+                BurpSuiteEdition edicion = api.burpSuite().version().edition();
+                return edicion == BurpSuiteEdition.PROFESSIONAL;
             }
-        } catch (Exception e) {
-            // Scanner no disponible
+        } catch (Exception ignored) {
+            // Fallback defensivo abajo
         }
-        
+
         try {
-            // Método 2: Verificar si AI está disponible (solo Pro)
-            if (api.ai() != null && api.ai().isEnabled()) {
-                return true;
-            }
-        } catch (Exception e) {
-            // AI no disponible
+            return api.ai() != null && api.ai().isEnabled();
+        } catch (Exception ignored) {
+            return false;
         }
-        
-        try {
-            // Método 3: Verificar si Collaborator está disponible (solo Pro)
-            if (api.collaborator() != null) {
-                return true;
-            }
-        } catch (Exception e) {
-            // Collaborator no disponible
-        }
-        
-        return false;
     }
 
     /**

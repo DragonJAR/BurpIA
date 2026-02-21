@@ -39,7 +39,7 @@ class ConfiguracionAPITest {
         config.establecerMaximoConcurrente(5);
         config.establecerDetallado(true);
 
-        assertEquals("https://api.test.com/v1/chat/completions", config.obtenerUrlApi());
+        assertEquals("https://api.test.com/v1/responses", config.obtenerUrlApi());
         assertEquals("test-key-123", config.obtenerClaveApi());
         assertEquals("gpt-4", config.obtenerModelo());
         assertEquals(10, config.obtenerRetrasoSegundos());
@@ -148,5 +148,26 @@ class ConfiguracionAPITest {
 
         config.establecerMaximoHallazgosTabla(999999);
         assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA, config.obtenerMaximoHallazgosTabla());
+    }
+
+    @Test
+    @DisplayName("Snapshot de configuracion no se contamina por cambios posteriores")
+    void testSnapshotInmutablePorCopia() {
+        config.establecerProveedorAI("Ollama");
+        config.establecerModeloParaProveedor("Ollama", "llama3.2:latest");
+        config.establecerUrlBaseParaProveedor("Ollama", "http://localhost:11434");
+        config.establecerApiKeyParaProveedor("Ollama", "");
+
+        ConfiguracionAPI snapshot = config.crearSnapshot();
+
+        config.establecerProveedorAI("OpenAI");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5.2-pro");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerApiKeyParaProveedor("OpenAI", "new-key");
+
+        assertEquals("Ollama", snapshot.obtenerProveedorAI());
+        assertEquals("llama3.2:latest", snapshot.obtenerModeloParaProveedor("Ollama"));
+        assertEquals("http://localhost:11434", snapshot.obtenerUrlBaseParaProveedor("Ollama"));
+        assertEquals("", snapshot.obtenerApiKeyParaProveedor("Ollama"));
     }
 }

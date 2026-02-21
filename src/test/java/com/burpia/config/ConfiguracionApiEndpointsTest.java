@@ -9,10 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ConfiguracionApiEndpointsTest {
 
     @Test
-    @DisplayName("Construye endpoint OpenAI/Z.ai/minimax con chat completions")
+    @DisplayName("Construye endpoint OpenAI responses y Z.ai/minimax chat completions")
     void testEndpointChatCompletions() {
         assertEquals(
-            "https://api.openai.com/v1/chat/completions",
+            "https://api.openai.com/v1/responses",
             ConfiguracionAPI.construirUrlApiProveedor("OpenAI", "https://api.openai.com/v1", "gpt-4o")
         );
 
@@ -64,6 +64,10 @@ class ConfiguracionApiEndpointsTest {
         assertEquals(
             "https://api.z.ai/api/paas/v4",
             ConfiguracionAPI.extraerUrlBase("https://api.z.ai/api/paas/v4/chat/completions")
+        );
+        assertEquals(
+            "https://api.openai.com/v1",
+            ConfiguracionAPI.extraerUrlBase("https://api.openai.com/v1/responses")
         );
         assertEquals(
             "https://api.anthropic.com/v1",

@@ -19,7 +19,9 @@ public class PanelEstadisticas extends JPanel {
     private final IntSupplier proveedorLimiteHallazgos;
     private Timer timerActualizacion;
     private final JButton botonConfiguracion;
-    private final JButton botonLimpiar;
+    private final JButton botonCaptura;
+    private Runnable manejadorToggleCaptura;
+    private volatile boolean capturaActiva = true;
 
     private JPanel panelContenidoCentral;
     private JPanel panelHallazgos;
@@ -29,9 +31,9 @@ public class PanelEstadisticas extends JPanel {
     private JPanel panelLineaOperativo;
 
     private static final int UMBRAL_RESPONSIVE = 900;
-    private static final int TAMANIO_FIJO_BOTON = 30;
-    private static final int AJUSTE_Y_BOTONES = -10;
-    private static final int ESPACIADO_BOTONES = 4;
+    private static final int TAMANIO_FIJO_BOTON = 51;
+    private static final int ESPACIADO_BOTONES = 8;
+    private static final int AJUSTE_Y_BOTONES = -3;
 
     public PanelEstadisticas(Estadisticas estadisticas, IntSupplier proveedorLimiteHallazgos) {
         this.estadisticas = estadisticas;
@@ -41,7 +43,7 @@ public class PanelEstadisticas extends JPanel {
         this.etiquetaLimiteHallazgos = new JLabel();
         this.etiquetaResumenOperativo = new JLabel();
         this.botonConfiguracion = new JButton();
-        this.botonLimpiar = new JButton();
+        this.botonCaptura = new JButton();
         initComponents();
     }
 
@@ -55,8 +57,8 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private void initComponents() {
-        setLayout(new BorderLayout(8, 2));
-        setBorder(BorderFactory.createEmptyBorder(4, 8, 2, 8));
+        setLayout(new BorderLayout(12, 6));
+        setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
 
         panelHallazgos = crearPanelHallazgos();
         panelOperativo = crearPanelOperativo();
@@ -71,9 +73,9 @@ public class PanelEstadisticas extends JPanel {
 
                 if (esLayoutHorizontal != ultimoLayoutHorizontal) {
                     if (esLayoutHorizontal) {
-                        setLayout(new GridLayout(1, 2, 8, 0));
+                        setLayout(new GridLayout(1, 2, 12, 0));
                     } else {
-                        setLayout(new GridLayout(2, 1, 0, 6));
+                        setLayout(new GridLayout(2, 1, 0, 10));
                     }
                     ultimoLayoutHorizontal = esLayoutHorizontal;
                 }
@@ -99,7 +101,7 @@ public class PanelEstadisticas extends JPanel {
             }
         };
         panelLateral.setOpaque(false);
-        panelLateral.add(botonLimpiar);
+        panelLateral.add(botonCaptura);
         panelLateral.add(botonConfiguracion);
 
         addComponentListener(new ComponentAdapter() {
@@ -123,9 +125,8 @@ public class PanelEstadisticas extends JPanel {
     private JPanel crearPanelHallazgos() {
         JPanel panel = crearPanelSeccion("🎯 POSIBLES HALLAZGOS Y CRITICIDADES");
 
-        panelLineaHallazgos = new JPanel(new FlowLayout(FlowLayout.CENTER, 5, 0));
+        panelLineaHallazgos = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
         panelLineaHallazgos.setOpaque(false);
-        panelLineaHallazgos.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
 
         etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
         etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204));
@@ -149,7 +150,7 @@ public class PanelEstadisticas extends JPanel {
         etiquetaLimiteHallazgos.setForeground(new Color(80, 80, 80));
         panelLineaHallazgos.add(etiquetaLimiteHallazgos);
 
-        panel.add(panelLineaHallazgos, BorderLayout.NORTH);
+        panel.add(panelLineaHallazgos, BorderLayout.CENTER);
         return panel;
     }
 
@@ -159,51 +160,48 @@ public class PanelEstadisticas extends JPanel {
         etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumenOperativo.setForeground(new Color(90, 90, 90));
 
-        panelLineaOperativo = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        panelLineaOperativo = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
         panelLineaOperativo.setOpaque(false);
-        panelLineaOperativo.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
         panelLineaOperativo.add(etiquetaResumenOperativo);
 
-        panel.add(panelLineaOperativo, BorderLayout.NORTH);
+        panel.add(panelLineaOperativo, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel crearPanelSeccion(String titulo) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        panel.setBorder(BorderFactory.createTitledBorder(
-            BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-            titulo,
-            TitledBorder.LEFT,
-            TitledBorder.TOP,
-            EstilosUI.FUENTE_NEGRITA
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                titulo,
+                TitledBorder.LEFT,
+                TitledBorder.TOP,
+                EstilosUI.FUENTE_NEGRITA
+            ),
+            BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
         return panel;
     }
 
     private void configurarBotones() {
-        botonLimpiar.setText("🧹");
-        botonLimpiar.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
-        botonLimpiar.setToolTipText("Limpiar estadísticas");
-        botonLimpiar.setFocusable(false);
-        botonLimpiar.addActionListener(e -> {
-            int confirmacion = JOptionPane.showConfirmDialog(
-                this,
-                "¿Estás seguro de que deseas limpiar todas las estadísticas?",
-                "Confirmar limpieza",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-            );
-            if (confirmacion == JOptionPane.YES_OPTION) {
-                estadisticas.reiniciar();
-                actualizar();
+        botonCaptura.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
+        botonCaptura.setFocusable(false);
+        botonCaptura.setMargin(new Insets(0, 0, 0, 0));
+        botonCaptura.putClientProperty("JButton.buttonType", "square");
+        botonCaptura.addActionListener(e -> {
+            if (manejadorToggleCaptura != null) {
+                manejadorToggleCaptura.run();
             }
         });
+        actualizarEstadoCapturaUI();
 
         botonConfiguracion.setText("⚙️");
         botonConfiguracion.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
         botonConfiguracion.setToolTipText("Abrir ajustes");
         botonConfiguracion.setFocusable(false);
+        botonConfiguracion.setMargin(new Insets(0, 0, 0, 0));
+        botonConfiguracion.putClientProperty("JButton.buttonType", "square");
     }
 
     private void ajustarDimensionBotones() {
@@ -215,7 +213,7 @@ public class PanelEstadisticas extends JPanel {
         int ladoBoton = TAMANIO_FIJO_BOTON;
 
         Dimension tamano = new Dimension(ladoBoton, ladoBoton);
-        aplicarDimensionBotonCuadrado(botonLimpiar, tamano);
+        aplicarDimensionBotonCuadrado(botonCaptura, tamano);
         aplicarDimensionBotonCuadrado(botonConfiguracion, tamano);
         actualizarTamanoIcono(ladoBoton);
 
@@ -225,10 +223,10 @@ public class PanelEstadisticas extends JPanel {
         int yHallazgos = calcularOffsetSuperiorBotones(franjaHallazgos);
         if (layoutVertical) {
             int yOperativo = calcularOffsetSuperiorBotones(franjaOperativo);
-            botonLimpiar.setBounds(0, yHallazgos, ladoBoton, ladoBoton);
+            botonCaptura.setBounds(0, yHallazgos, ladoBoton, ladoBoton);
             botonConfiguracion.setBounds(0, yOperativo, ladoBoton, ladoBoton);
         } else {
-            botonLimpiar.setBounds(0, yHallazgos, ladoBoton, ladoBoton);
+            botonCaptura.setBounds(0, yHallazgos, ladoBoton, ladoBoton);
             botonConfiguracion.setBounds(ladoBoton + ESPACIADO_BOTONES, yHallazgos, ladoBoton, ladoBoton);
         }
 
@@ -249,7 +247,7 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private int calcularOffsetSuperiorBotones(Rectangle franjaBotones) {
-        return Math.max(0, franjaBotones.y + AJUSTE_Y_BOTONES);
+        return Math.max(0, franjaBotones.y + (franjaBotones.height - TAMANIO_FIJO_BOTON) / 2 + AJUSTE_Y_BOTONES);
     }
 
     private int calcularAnchoLateralPreferido() {
@@ -269,7 +267,7 @@ public class PanelEstadisticas extends JPanel {
     private void actualizarTamanoIcono(int ladoBoton) {
         int tamanioFuente = Math.max(18, (int) Math.round(ladoBoton * 0.45));
         Font fuenteIcono = new Font(Font.SANS_SERIF, Font.PLAIN, tamanioFuente);
-        botonLimpiar.setFont(fuenteIcono);
+        botonCaptura.setFont(fuenteIcono);
         botonConfiguracion.setFont(fuenteIcono);
     }
 
@@ -300,6 +298,28 @@ public class PanelEstadisticas extends JPanel {
 
             ajustarDimensionBotones();
         });
+    }
+
+    public void establecerManejadorToggleCaptura(Runnable manejador) {
+        this.manejadorToggleCaptura = manejador;
+    }
+
+    public void establecerEstadoCaptura(boolean activa) {
+        this.capturaActiva = activa;
+        SwingUtilities.invokeLater(() -> {
+            actualizarEstadoCapturaUI();
+            actualizar();
+        });
+    }
+
+    private void actualizarEstadoCapturaUI() {
+        if (capturaActiva) {
+            botonCaptura.setText("⏸️");
+            botonCaptura.setToolTipText("Pausar captura de peticiones");
+        } else {
+            botonCaptura.setText("▶️");
+            botonCaptura.setToolTipText("Reanudar captura de peticiones");
+        }
     }
 
     public Estadisticas obtenerEstadisticas() {

@@ -9,6 +9,7 @@ import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
+import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.ParserRespuestasAI;
 import com.burpia.util.ReparadorJson;
@@ -189,8 +190,13 @@ public class AnalizadorAI implements Runnable {
         rastrear("Longitud de prompt: " + prompt.length() + " caracteres");
         rastrear("Prompt (preview):\n" + resumirParaLog(prompt));
 
-        Request solicitudHttp = construirSolicitudApi(prompt);
-        registrar("Llamando a API: " + config.obtenerUrlApi() + " con modelo: " + config.obtenerModelo());
+        ConstructorSolicitudesProveedor.SolicitudPreparada preparada =
+            ConstructorSolicitudesProveedor.construirSolicitud(config, prompt, clienteHttp);
+        Request solicitudHttp = preparada.request;
+        registrar("Llamando a API: " + preparada.endpoint + " con modelo: " + preparada.modeloUsado);
+        if (preparada.advertencia != null && !preparada.advertencia.isEmpty()) {
+            registrar(preparada.advertencia);
+        }
 
         // SECURITY FIX: NO loggear la API key ni parcialmente
         // Los logs pueden ser accedidos por usuarios no autorizados
@@ -203,7 +209,11 @@ public class AnalizadorAI implements Runnable {
             if (!respuesta.isSuccessful()) {
                 String cuerpoError = respuesta.body() != null ? respuesta.body().string() : "null";
                 registrarError("Cuerpo de respuesta de error de API: " + cuerpoError);
-                throw new IOException("Error de API: " + respuesta.code() + " - " + cuerpoError);
+                String mensajeError = "Error de API: " + respuesta.code() + " - " + cuerpoError;
+                if (esErrorNoRecuperable(respuesta.code(), cuerpoError)) {
+                    throw new NonRetryableApiException(mensajeError);
+                }
+                throw new IOException(mensajeError);
             }
 
             String cuerpoRespuesta = respuesta.body().string();
@@ -220,79 +230,6 @@ public class AnalizadorAI implements Runnable {
             rastrear("Stack trace de la excepción:", e);
             throw new IOException("Error inesperado: " + e.getMessage(), e);
         }
-    }
-
-    private Request construirSolicitudApi(String prompt) {
-        String proveedor = config.obtenerProveedorAI();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
-            proveedor = "OpenAI";
-        }
-
-        JsonObject carga = new JsonObject();
-        Request.Builder builder = new Request.Builder()
-                .url(config.obtenerUrlApi())
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Accept", "application/json");
-
-        switch (proveedor) {
-            case "Claude":
-                carga.addProperty("model", config.obtenerModelo());
-                carga.addProperty("max_tokens", config.obtenerMaxTokensParaProveedor(proveedor));
-                JsonArray mensajesClaude = new JsonArray();
-                JsonObject mensajeClaude = new JsonObject();
-                mensajeClaude.addProperty("role", "user");
-                mensajeClaude.addProperty("content", prompt);
-                mensajesClaude.add(mensajeClaude);
-                carga.add("messages", mensajesClaude);
-                builder.addHeader("x-api-key", config.obtenerClaveApi());
-                builder.addHeader("anthropic-version", "2023-06-01");
-                break;
-
-            case "Gemini":
-                JsonArray contenidos = new JsonArray();
-                JsonObject contenido = new JsonObject();
-                JsonArray partes = new JsonArray();
-                JsonObject parte = new JsonObject();
-                parte.addProperty("text", prompt);
-                partes.add(parte);
-                contenido.add("parts", partes);
-                contenidos.add(contenido);
-                carga.add("contents", contenidos);
-                builder.addHeader("x-goog-api-key", config.obtenerClaveApi());
-                break;
-
-            case "Ollama":
-                carga.addProperty("model", config.obtenerModelo());
-                carga.addProperty("stream", false);
-                JsonArray mensajesOllama = new JsonArray();
-                JsonObject mensajeOllama = new JsonObject();
-                mensajeOllama.addProperty("role", "user");
-                mensajeOllama.addProperty("content", prompt);
-                mensajesOllama.add(mensajeOllama);
-                carga.add("messages", mensajesOllama);
-                break;
-
-            case "OpenAI":
-            case "Z.ai":
-            case "minimax":
-            default:
-                carga.addProperty("model", config.obtenerModelo());
-                JsonArray mensajes = new JsonArray();
-                JsonObject mensajeUsuario = new JsonObject();
-                mensajeUsuario.addProperty("role", "user");
-                mensajeUsuario.addProperty("content", prompt);
-                mensajes.add(mensajeUsuario);
-                carga.add("messages", mensajes);
-                builder.addHeader("Authorization", "Bearer " + config.obtenerClaveApi());
-                break;
-        }
-
-        String cadenaCarga = carga.toString();
-        rastrear("Carga de API:\n" + cadenaCarga);
-        return builder.post(RequestBody.create(
-            cadenaCarga,
-            MediaType.parse("application/json")
-        )).build();
     }
 
     /**
@@ -315,6 +252,8 @@ public class AnalizadorAI implements Runnable {
                 esperarSiPausada();
                 registrar("Intento inmediato #" + (i + 1) + " de 3");
                 return llamarAPIAI();
+            } catch (NonRetryableApiException e) {
+                throw e;
             } catch (IOException e) {
                 ultimaExcepcion = e;
                 registrar("Intento #" + (i + 1) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
@@ -345,6 +284,8 @@ public class AnalizadorAI implements Runnable {
                 esperarSiPausada();
                 registrar("Reintento #" + (4 + i) + " después de esperar " + esperaSegundos + " segundos");
                 return llamarAPIAI();
+            } catch (NonRetryableApiException e) {
+                throw e;
             } catch (IOException e) {
                 ultimaExcepcion = e;
                 registrar("Reintento #" + (4 + i) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
@@ -360,6 +301,23 @@ public class AnalizadorAI implements Runnable {
                       ultimaExcepcion.getMessage());
 
         throw ultimaExcepcion;
+    }
+
+    private boolean esErrorNoRecuperable(int statusCode, String cuerpoError) {
+        if (statusCode == 400 || statusCode == 404) {
+            String error = cuerpoError != null ? cuerpoError.toLowerCase() : "";
+            return error.contains("model is required") ||
+                error.contains("not found for api version") ||
+                error.contains("invalid_request_error") ||
+                error.contains("does not exist");
+        }
+        return false;
+    }
+
+    private static final class NonRetryableApiException extends IOException {
+        private NonRetryableApiException(String message) {
+            super(message);
+        }
     }
 
     private void rastrear(String mensaje, Throwable e) {

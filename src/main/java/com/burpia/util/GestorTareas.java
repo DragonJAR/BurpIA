@@ -66,49 +66,45 @@ public class GestorTareas {
     }
 
     public void cancelarTodas() {
-        candado.lock();
-        try {
-            int canceladas = 0;
-            for (Tarea tarea : tareas.values()) {
-                String estado = tarea.obtenerEstado();
-                if (estado.equals(Tarea.ESTADO_EN_COLA) ||
-                    estado.equals(Tarea.ESTADO_ANALIZANDO) ||
-                    estado.equals(Tarea.ESTADO_PAUSADO)) {
-                    tarea.establecerEstado(Tarea.ESTADO_CANCELADO);
-                    actualizarFilaTabla(tarea);
-                    canceladas++;
-                }
-            }
-            logger.accept("Tareas canceladas: " + canceladas);
-        } finally {
-            candado.unlock();
-        }
+        int canceladas = actualizarEstadosMasivo(Tarea::esActiva, Tarea.ESTADO_CANCELADO);
+        logger.accept("Tareas canceladas: " + canceladas);
     }
 
     public void pausarReanudarTodas() {
+        if (obtenerNumeroTareasPausadas() > 0) {
+            reanudarTodasPausadas();
+        } else {
+            pausarTodasActivas();
+        }
+    }
+
+    public void pausarTodasActivas() {
+        int pausadas = actualizarEstadosMasivo(
+            tarea -> Tarea.ESTADO_EN_COLA.equals(tarea.obtenerEstado()) ||
+                Tarea.ESTADO_ANALIZANDO.equals(tarea.obtenerEstado()),
+            Tarea.ESTADO_PAUSADO
+        );
+        logger.accept("Tareas pausadas: " + pausadas);
+    }
+
+    public void reanudarTodasPausadas() {
+        int reanudadas = actualizarEstadosMasivo(
+            tarea -> Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado()),
+            Tarea.ESTADO_EN_COLA
+        );
+        logger.accept("Tareas reanudadas: " + reanudadas);
+    }
+
+    public int obtenerNumeroTareasPausadas() {
         candado.lock();
         try {
             int pausadas = 0;
-            int reanudadas = 0;
-
             for (Tarea tarea : tareas.values()) {
-                String estado = tarea.obtenerEstado();
-                if (estado.equals(Tarea.ESTADO_ANALIZANDO)) {
-                    tarea.establecerEstado(Tarea.ESTADO_PAUSADO);
-                    actualizarFilaTabla(tarea);
+                if (Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado())) {
                     pausadas++;
-                } else if (estado.equals(Tarea.ESTADO_PAUSADO)) {
-                    tarea.establecerEstado(Tarea.ESTADO_ANALIZANDO);
-                    actualizarFilaTabla(tarea);
-                    reanudadas++;
                 }
             }
-
-            if (pausadas > 0) {
-                logger.accept("Tareas pausadas: " + pausadas);
-            } else if (reanudadas > 0) {
-                logger.accept("Tareas reanudadas: " + reanudadas);
-            }
+            return pausadas;
         } finally {
             candado.unlock();
         }
@@ -221,9 +217,8 @@ public class GestorTareas {
         try {
             Tarea tarea = tareas.get(id);
             if (tarea != null) {
-                String estado = tarea.obtenerEstado();
-                if (estado.equals(Tarea.ESTADO_EN_COLA) ||
-                    estado.equals(Tarea.ESTADO_ANALIZANDO)) {
+                if (Tarea.ESTADO_EN_COLA.equals(tarea.obtenerEstado()) ||
+                    Tarea.ESTADO_ANALIZANDO.equals(tarea.obtenerEstado())) {
                     tarea.establecerEstado(Tarea.ESTADO_PAUSADO);
                     actualizarFilaTabla(tarea);
                     logger.accept("Tarea pausada: " + tarea.obtenerUrl());
@@ -239,10 +234,9 @@ public class GestorTareas {
         try {
             Tarea tarea = tareas.get(id);
             if (tarea != null) {
-                String estado = tarea.obtenerEstado();
-                if (estado.equals(Tarea.ESTADO_PAUSADO) ||
-                    estado.equals(Tarea.ESTADO_ERROR) ||
-                    estado.equals(Tarea.ESTADO_CANCELADO)) {
+                if (Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado()) ||
+                    Tarea.ESTADO_ERROR.equals(tarea.obtenerEstado()) ||
+                    Tarea.ESTADO_CANCELADO.equals(tarea.obtenerEstado())) {
                     tarea.establecerEstado(Tarea.ESTADO_EN_COLA);
                     actualizarFilaTabla(tarea);
                     logger.accept("Tarea reanudada: " + tarea.obtenerUrl());
@@ -258,10 +252,9 @@ public class GestorTareas {
         try {
             Tarea tarea = tareas.get(id);
             if (tarea != null) {
-                String estado = tarea.obtenerEstado();
-                if (estado.equals(Tarea.ESTADO_EN_COLA) ||
-                    estado.equals(Tarea.ESTADO_ANALIZANDO) ||
-                    estado.equals(Tarea.ESTADO_PAUSADO)) {
+                if (Tarea.ESTADO_EN_COLA.equals(tarea.obtenerEstado()) ||
+                    Tarea.ESTADO_ANALIZANDO.equals(tarea.obtenerEstado()) ||
+                    Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado())) {
                     tarea.establecerEstado(Tarea.ESTADO_CANCELADO);
                     actualizarFilaTabla(tarea);
                     logger.accept("Tarea cancelada: " + tarea.obtenerUrl());
@@ -342,6 +335,23 @@ public class GestorTareas {
                 return estado.equals(Tarea.ESTADO_PAUSADO);
             }
             return false;
+        } finally {
+            candado.unlock();
+        }
+    }
+
+    private int actualizarEstadosMasivo(java.util.function.Predicate<Tarea> filtro, String nuevoEstado) {
+        candado.lock();
+        try {
+            int total = 0;
+            for (Tarea tarea : tareas.values()) {
+                if (filtro.test(tarea)) {
+                    tarea.establecerEstado(nuevoEstado);
+                    actualizarFilaTabla(tarea);
+                    total++;
+                }
+            }
+            return total;
         } finally {
             candado.unlock();
         }
