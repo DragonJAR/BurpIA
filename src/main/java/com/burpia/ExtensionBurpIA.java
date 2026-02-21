@@ -248,6 +248,11 @@ public class ExtensionBurpIA implements BurpExtension {
             pestaniaPrincipal = null;
         }
 
+        if (gestorConsola != null) {
+            gestorConsola.shutdown();
+            gestorConsola = null;
+        }
+
         if (gestorTareas != null) {
             gestorTareas.shutdown();
             gestorTareas = null;
