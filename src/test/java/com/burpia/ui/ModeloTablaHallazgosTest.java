@@ -49,4 +49,16 @@ class ModeloTablaHallazgosTest {
         assertEquals(1, modelo.getRowCount());
         assertEquals(0, modelo.obtenerNumeroIgnorados());
     }
+
+    @Test
+    @DisplayName("Actualizar con hallazgo null no altera datos")
+    void testActualizarHallazgoNullNoRompe() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
+        modelo.agregarHallazgo(new Hallazgo("https://example.com/x", "Hallazgo X", "Low", "Low"));
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertDoesNotThrow(() -> modelo.actualizarHallazgo(0, null));
+        SwingUtilities.invokeAndWait(() -> {});
+        assertEquals(1, modelo.getRowCount());
+    }
 }

@@ -12,7 +12,9 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class PanelTareas extends JPanel {
     private final ModeloTablaTareas modelo;
@@ -245,7 +247,11 @@ public class PanelTareas extends JPanel {
 
             crearMenuUnaTarea(menuContextual, tareaId, estado, filaModelo);
         } else {
-            crearMenuMultipleTareas(menuContextual, filas);
+            List<TareaSeleccionada> seleccion = capturarSeleccion(filas);
+            if (seleccion.isEmpty()) {
+                return;
+            }
+            crearMenuMultipleTareas(menuContextual, seleccion);
         }
 
         menuContextual.show(tabla, x, y);
@@ -347,15 +353,14 @@ public class PanelTareas extends JPanel {
         }
     }
 
-    private void crearMenuMultipleTareas(JPopupMenu menu, int[] filas) {
+    private void crearMenuMultipleTareas(JPopupMenu menu, List<TareaSeleccionada> seleccion) {
         int erroresCanceladas = 0;
         int activas = 0;
         int pausadas = 0;
         int finalizadas = 0;
 
-        for (int fila : filas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
+        for (TareaSeleccionada tarea : seleccion) {
+            String estado = tarea.estado;
 
             if (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado)) {
                 erroresCanceladas++;
@@ -372,7 +377,7 @@ public class PanelTareas extends JPanel {
             JMenuItem menuItemReintentar = new JMenuItem(I18nUI.Tareas.MENU_REINTENTAR_MULTIPLES(erroresCanceladas));
             menuItemReintentar.setFont(EstilosUI.FUENTE_ESTANDAR);
             menuItemReintentar.setToolTipText(TooltipsUI.Tareas.MENU_REINTENTAR_MULTIPLES());
-            menuItemReintentar.addActionListener(e -> reintentarTareas(filas));
+            menuItemReintentar.addActionListener(e -> reintentarTareas(seleccion));
             menu.add(menuItemReintentar);
         }
 
@@ -380,7 +385,7 @@ public class PanelTareas extends JPanel {
             JMenuItem menuItemPausar = new JMenuItem(I18nUI.Tareas.MENU_PAUSAR_MULTIPLES(activas));
             menuItemPausar.setFont(EstilosUI.FUENTE_ESTANDAR);
             menuItemPausar.setToolTipText(TooltipsUI.Tareas.MENU_PAUSAR_MULTIPLES());
-            menuItemPausar.addActionListener(e -> pausarTareas(filas));
+            menuItemPausar.addActionListener(e -> pausarTareas(seleccion));
             menu.add(menuItemPausar);
         }
 
@@ -388,7 +393,7 @@ public class PanelTareas extends JPanel {
             JMenuItem menuItemReanudar = new JMenuItem(I18nUI.Tareas.MENU_REANUDAR_MULTIPLES(pausadas));
             menuItemReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
             menuItemReanudar.setToolTipText(TooltipsUI.Tareas.MENU_REANUDAR_MULTIPLES());
-            menuItemReanudar.addActionListener(e -> reanudarTareas(filas));
+            menuItemReanudar.addActionListener(e -> reanudarTareas(seleccion));
             menu.add(menuItemReanudar);
         }
 
@@ -398,7 +403,7 @@ public class PanelTareas extends JPanel {
             JMenuItem menuItemCancelar = new JMenuItem(I18nUI.Tareas.MENU_CANCELAR_MULTIPLES(activas + pausadas));
             menuItemCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
             menuItemCancelar.setToolTipText(TooltipsUI.Tareas.MENU_CANCELAR_MULTIPLES());
-            menuItemCancelar.addActionListener(e -> cancelarTareas(filas));
+            menuItemCancelar.addActionListener(e -> cancelarTareas(seleccion));
             menu.add(menuItemCancelar);
         }
 
@@ -409,17 +414,16 @@ public class PanelTareas extends JPanel {
             JMenuItem menuItemLimpiar = new JMenuItem(I18nUI.Tareas.MENU_ELIMINAR_MULTIPLES(totalFinalizadas));
             menuItemLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
             menuItemLimpiar.setToolTipText(TooltipsUI.Tareas.MENU_ELIMINAR_MULTIPLES());
-            menuItemLimpiar.addActionListener(e -> eliminarTareasSeleccionadas(filas));
+            menuItemLimpiar.addActionListener(e -> eliminarTareasSeleccionadas(seleccion));
             menu.add(menuItemLimpiar);
         }
     }
 
-    private void reintentarTareas(int[] filas) {
+    private void reintentarTareas(List<TareaSeleccionada> seleccion) {
         int contador = 0;
-        for (int fila : filas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
-            String tareaId = modelo.obtenerIdTarea(filaModelo);
+        for (TareaSeleccionada tarea : seleccion) {
+            String estado = tarea.estado;
+            String tareaId = tarea.tareaId;
             if (tareaId != null && (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado))) {
                 gestorTareas.reanudarTarea(tareaId);
                 contador++;
@@ -429,12 +433,11 @@ public class PanelTareas extends JPanel {
         mostrarMensaje(I18nUI.Tareas.MSG_REINTENTOS(contador));
     }
 
-    private void pausarTareas(int[] filas) {
+    private void pausarTareas(List<TareaSeleccionada> seleccion) {
         int contador = 0;
-        for (int fila : filas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
-            String tareaId = modelo.obtenerIdTarea(filaModelo);
+        for (TareaSeleccionada tarea : seleccion) {
+            String estado = tarea.estado;
+            String tareaId = tarea.tareaId;
             if (tareaId != null && (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado))) {
                 gestorTareas.pausarTarea(tareaId);
                 contador++;
@@ -444,12 +447,11 @@ public class PanelTareas extends JPanel {
         mostrarMensaje(I18nUI.Tareas.MSG_PAUSADAS(contador));
     }
 
-    private void reanudarTareas(int[] filas) {
+    private void reanudarTareas(List<TareaSeleccionada> seleccion) {
         int contador = 0;
-        for (int fila : filas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
-            String tareaId = modelo.obtenerIdTarea(filaModelo);
+        for (TareaSeleccionada tarea : seleccion) {
+            String estado = tarea.estado;
+            String tareaId = tarea.tareaId;
             if (tareaId != null && Tarea.ESTADO_PAUSADO.equals(estado)) {
                 gestorTareas.reanudarTarea(tareaId);
                 contador++;
@@ -459,11 +461,10 @@ public class PanelTareas extends JPanel {
         mostrarMensaje(I18nUI.Tareas.MSG_REANUDADAS(contador));
     }
 
-    private void cancelarTareas(int[] filas) {
+    private void cancelarTareas(List<TareaSeleccionada> seleccion) {
         int total = 0;
-        for (int fila : filas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
+        for (TareaSeleccionada tarea : seleccion) {
+            String estado = tarea.estado;
             if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado) || Tarea.ESTADO_PAUSADO.equals(estado)) {
                 total++;
             }
@@ -479,10 +480,9 @@ public class PanelTareas extends JPanel {
         if (confirmacion != JOptionPane.YES_OPTION) return;
 
         int contador = 0;
-        for (int fila : filas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
-            String estado = (String) modelo.getValueAt(filaModelo, 2);
-            String tareaId = modelo.obtenerIdTarea(filaModelo);
+        for (TareaSeleccionada tarea : seleccion) {
+            String estado = tarea.estado;
+            String tareaId = tarea.tareaId;
             if (tareaId != null && (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado) || Tarea.ESTADO_PAUSADO.equals(estado))) {
                 gestorTareas.cancelarTarea(tareaId);
                 contador++;
@@ -492,20 +492,17 @@ public class PanelTareas extends JPanel {
         mostrarMensaje(I18nUI.Tareas.MSG_CANCELADAS(contador));
     }
 
-    private void eliminarTareasSeleccionadas(int[] filas) {
+    private void eliminarTareasSeleccionadas(List<TareaSeleccionada> seleccion) {
         List<String> idsAEliminar = new ArrayList<>();
 
-        for (int fila : filas) {
-            int filaModelo = tabla.convertRowIndexToModel(fila);
-            if (filaModelo >= 0 && filaModelo < modelo.getRowCount()) {
-                String estado = (String) modelo.getValueAt(filaModelo, 2);
-                if (Tarea.ESTADO_COMPLETADO.equals(estado) ||
-                    Tarea.ESTADO_ERROR.equals(estado) ||
-                    Tarea.ESTADO_CANCELADO.equals(estado)) {
-                    String tareaId = modelo.obtenerIdTarea(filaModelo);
-                    if (tareaId != null) {
-                        idsAEliminar.add(tareaId);
-                    }
+        for (TareaSeleccionada tarea : seleccion) {
+            String estado = tarea.estado;
+            if (Tarea.ESTADO_COMPLETADO.equals(estado) ||
+                Tarea.ESTADO_ERROR.equals(estado) ||
+                Tarea.ESTADO_CANCELADO.equals(estado)) {
+                String tareaId = tarea.tareaId;
+                if (tareaId != null) {
+                    idsAEliminar.add(tareaId);
                 }
             }
         }
@@ -518,6 +515,29 @@ public class PanelTareas extends JPanel {
 
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_ELIMINADAS(contador));
+    }
+
+    private List<TareaSeleccionada> capturarSeleccion(int[] filasVista) {
+        if (filasVista == null || filasVista.length == 0) {
+            return new ArrayList<>();
+        }
+        List<TareaSeleccionada> seleccion = new ArrayList<>();
+        Set<Integer> filasModeloVistas = new HashSet<>();
+
+        for (int filaVista : filasVista) {
+            if (filaVista < 0 || filaVista >= tabla.getRowCount()) {
+                continue;
+            }
+            int filaModelo = tabla.convertRowIndexToModel(filaVista);
+            if (filaModelo < 0 || filaModelo >= modelo.getRowCount() || !filasModeloVistas.add(filaModelo)) {
+                continue;
+            }
+            String tareaId = modelo.obtenerIdTarea(filaModelo);
+            String estado = (String) modelo.getValueAt(filaModelo, 2);
+            seleccion.add(new TareaSeleccionada(tareaId, estado));
+        }
+
+        return seleccion;
     }
 
     private void mostrarMensaje(String mensaje) {
@@ -657,6 +677,16 @@ public class PanelTareas extends JPanel {
             this.completadas = completadas;
             this.errores = errores;
             this.finalizadas = finalizadas;
+        }
+    }
+
+    private static final class TareaSeleccionada {
+        private final String tareaId;
+        private final String estado;
+
+        private TareaSeleccionada(String tareaId, String estado) {
+            this.tareaId = tareaId;
+            this.estado = estado;
         }
     }
 }

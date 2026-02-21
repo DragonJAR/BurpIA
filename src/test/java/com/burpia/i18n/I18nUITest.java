@@ -52,5 +52,11 @@ class I18nUITest {
         assertTrue(cancelado.startsWith("Result discarded because task was canceled"));
         assertTrue(I18nLogs.tr("Hallazgo sin evidencia HTTP: no se puede crear AuditIssue")
             .startsWith("Finding without HTTP evidence"));
+        assertEquals("Received response is null", I18nLogs.tr("Respuesta recibida es null"));
+        assertEquals("Initiating request is null", I18nLogs.tr("Solicitud iniciadora es null"));
+        assertEquals("Task created: Analisis HTTP - https://target",
+            I18nLogs.tr("Tarea creada: Analisis HTTP - https://target"));
+        assertTrue(I18nLogs.tr("Stack trace de la excepción:")
+            .startsWith("Exception stack trace"));
     }
 }

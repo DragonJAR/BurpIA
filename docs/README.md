@@ -32,10 +32,10 @@ wget https://github.com/jaimearestrepo/BurpIA/releases/download/v1.0.0/BurpIA-1.
 # Or build from source
 git clone https://github.com/jaimearestrepo/BurpIA.git
 cd BurpIA
-./gradlew fatJar
+./build-jar.sh
 
 # Load in Burp Suite Professional
-# Extender → Extensions → Add → Select BurpIA-1.0.0.jar
+# Extender → Extensions → Add → Select build/libs/BurpIA-1.0.0.jar
 ```
 
 ### Requirements

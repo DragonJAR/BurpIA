@@ -52,13 +52,21 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (tarea == null) {
             return;
         }
+        String idTarea = tarea.obtenerId();
+        if (idTarea == null || idTarea.isEmpty()) {
+            return;
+        }
         lock.lock();
         try {
             for (int i = 0; i < datos.size(); i++) {
-                if (datos.get(i).obtenerId().equals(tarea.obtenerId())) {
+                Tarea tareaActual = datos.get(i);
+                if (tareaActual != null && idTarea.equals(tareaActual.obtenerId())) {
                     datos.set(i, tarea);
                     final int fila = i;
                     SwingUtilities.invokeLater(() -> {
+                        if (fila < 0 || fila >= getRowCount()) {
+                            return;
+                        }
                         Object[] filaDatos = tarea.aFilaTabla();
                         for (int j = 0; j < filaDatos.length; j++) {
                             setValueAt(filaDatos[j], fila, j);
@@ -143,11 +151,14 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public int buscarIndicePorId(String idTarea) {
+        if (idTarea == null || idTarea.isEmpty()) {
+            return -1;
+        }
         lock.lock();
         try {
             for (int i = 0; i < datos.size(); i++) {
                 Tarea tarea = datos.get(i);
-                if (tarea != null && tarea.obtenerId().equals(idTarea)) {
+                if (tarea != null && idTarea.equals(tarea.obtenerId())) {
                     return i;
                 }
             }
@@ -158,6 +169,9 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public void eliminarTareaPorId(String idTarea) {
+        if (idTarea == null || idTarea.isEmpty()) {
+            return;
+        }
         int indice = buscarIndicePorId(idTarea);
         if (indice >= 0) {
             eliminarTarea(indice);
@@ -174,11 +188,14 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public int contarPorEstado(String estado) {
+        if (estado == null || estado.isEmpty()) {
+            return 0;
+        }
         lock.lock();
         try {
             int count = 0;
             for (Tarea tarea : datos) {
-                if (tarea.obtenerEstado().equals(estado)) {
+                if (tarea != null && estado.equals(tarea.obtenerEstado())) {
                     count++;
                 }
             }
@@ -189,6 +206,9 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public void eliminarPorEstado(String... estados) {
+        if (estados == null || estados.length == 0) {
+            return;
+        }
         List<Integer> indicesAEliminar = new ArrayList<>();
 
         lock.lock();
@@ -196,7 +216,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
             for (int i = 0; i < datos.size(); i++) {
                 Tarea tarea = datos.get(i);
                 for (String estado : estados) {
-                    if (tarea.obtenerEstado().equals(estado)) {
+                    if (tarea != null && estado != null && estado.equals(tarea.obtenerEstado())) {
                         indicesAEliminar.add(i);
                         break;
                     }

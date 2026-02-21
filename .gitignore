@@ -25,3 +25,4 @@ replay_pid*
 
 # Local runtime config (contains API keys)
 .burpia.json
+BurpIA.zip
