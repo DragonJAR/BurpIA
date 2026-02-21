@@ -30,3 +30,5 @@ build-jar.sh
 build.gradle
 gradlew
 /gradle
+/docs
+settings.gradle
