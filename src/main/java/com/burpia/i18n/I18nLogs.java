@@ -1,6 +1,8 @@
 package com.burpia.i18n;
 
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class I18nLogs {
     private static final String[][] REEMPLAZOS_INGLES = new String[][]{
@@ -168,6 +170,25 @@ public final class I18nLogs {
         {"Tarea reanudada", "Task resumed"},
         {"Tarea cancelada", "Task canceled"},
         {"Tarea limpiada", "Task cleaned"},
+        {"Error en manejador de cancelacion", "Error in cancellation handler"},
+        {"Retencion aplicada en tareas finalizadas", "Retention applied on completed tasks"},
+        {"No existe contexto para reintentar tarea", "No context found to retry task"},
+        {"No se pudo reencolar tarea", "Could not re-queue task"},
+        {"Tarea reencolada", "Task re-queued"},
+        {"No se pudo programar analisis", "Could not schedule analysis"},
+        {"Cancelacion activa aplicada para tarea", "Active cancellation applied for task"},
+        {"No se pudo marcar tarea como analizando (estado no valido)",
+            "Could not mark task as analyzing (invalid state)"},
+        {"Estado cola analisis", "Analysis queue status"},
+        {"activos", "active"},
+        {"enCola", "queued"},
+        {"completadas", "completed"},
+        {"[RASTREO]", "[TRACE]"},
+        {"ALERTA: Configuracion de IA no disponible", "ALERT: AI configuration is unavailable"},
+        {"ALERTA: Proveedor de AI no configurado o no valido", "ALERT: AI provider is not configured or is invalid"},
+        {"ALERTA: URL de API no configurada", "ALERT: API URL is not configured"},
+        {"ALERTA: Modelo no configurado para", "ALERT: Model is not configured for"},
+        {"ALERTA: Clave de API requerida para", "ALERT: API key is required for"},
         {"Configuracion", "Configuration"},
         {"configuracion", "configuration"}
     };
@@ -197,9 +218,28 @@ public final class I18nLogs {
                                             int indiceDestino) {
         String resultado = texto;
         for (String[] reemplazo : reemplazosOrdenados) {
-            resultado = resultado.replace(reemplazo[indiceOrigen], reemplazo[indiceDestino]);
+            resultado = reemplazarLiteralSeguro(
+                resultado,
+                reemplazo[indiceOrigen],
+                reemplazo[indiceDestino]
+            );
         }
         return resultado;
+    }
+
+    private static String reemplazarLiteralSeguro(String texto, String origen, String destino) {
+        if (texto == null || texto.isEmpty() || origen == null || origen.isEmpty()) {
+            return texto;
+        }
+        if (esPalabraSimple(origen) && esPalabraSimple(destino)) {
+            String patron = "(?<!\\p{L})" + Pattern.quote(origen) + "(?!\\p{L})";
+            return Pattern.compile(patron).matcher(texto).replaceAll(Matcher.quoteReplacement(destino));
+        }
+        return texto.replace(origen, destino);
+    }
+
+    private static boolean esPalabraSimple(String texto) {
+        return texto != null && texto.matches("\\p{L}+");
     }
 
     private static String[][] crearReemplazosOrdenados(int indiceOrigen) {

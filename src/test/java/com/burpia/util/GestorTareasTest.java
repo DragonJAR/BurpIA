@@ -9,11 +9,15 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.SwingUtilities;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("GestorTareas Integration Tests")
@@ -144,6 +148,58 @@ class GestorTareasTest {
         } finally {
             gestorSinLogger.detener();
         }
+    }
+
+    @Test
+    @DisplayName("Marca una tarea como analizando solo si estaba en cola")
+    void testMarcarTareaAnalizando() throws Exception {
+        Tarea enCola = gestor.crearTarea("A", "https://example.com/cola", Tarea.ESTADO_EN_COLA, "");
+        Tarea pausada = gestor.crearTarea("B", "https://example.com/pause", Tarea.ESTADO_PAUSADO, "");
+        flushEdt();
+
+        assertTrue(gestor.marcarTareaAnalizando(enCola.obtenerId(), "inicio"));
+        assertFalse(gestor.marcarTareaAnalizando(pausada.obtenerId(), "inicio"));
+        flushEdt();
+
+        assertEquals(Tarea.ESTADO_ANALIZANDO, gestor.obtenerTarea(enCola.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(pausada.obtenerId()).obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Retencion elimina primero finalizadas mas antiguas")
+    void testRetencionFinalizadas() throws Exception {
+        GestorTareas gestorRetencion = new GestorTareas(new ModeloTablaTareas(100), logs::add, 2);
+        try {
+            Tarea t1 = gestorRetencion.crearTarea("A", "https://example.com/1", Tarea.ESTADO_EN_COLA, "");
+            Tarea t2 = gestorRetencion.crearTarea("B", "https://example.com/2", Tarea.ESTADO_EN_COLA, "");
+            Tarea t3 = gestorRetencion.crearTarea("C", "https://example.com/3", Tarea.ESTADO_EN_COLA, "");
+            flushEdt();
+
+            gestorRetencion.actualizarTarea(t1.obtenerId(), Tarea.ESTADO_COMPLETADO, "ok");
+            Thread.sleep(5);
+            gestorRetencion.actualizarTarea(t2.obtenerId(), Tarea.ESTADO_ERROR, "err");
+            Thread.sleep(5);
+            gestorRetencion.actualizarTarea(t3.obtenerId(), Tarea.ESTADO_CANCELADO, "cancel");
+            flushEdt();
+
+            assertNull(gestorRetencion.obtenerTarea(t1.obtenerId()));
+            assertNotNull(gestorRetencion.obtenerTarea(t2.obtenerId()));
+            assertNotNull(gestorRetencion.obtenerTarea(t3.obtenerId()));
+        } finally {
+            gestorRetencion.detener();
+        }
+    }
+
+    @Test
+    @DisplayName("Id de tarea se mantiene unico bajo creacion masiva")
+    void testIdUnicoEnAltaConcurrencia() {
+        int total = 1000;
+        Set<String> ids = new HashSet<>();
+        for (int i = 0; i < total; i++) {
+            Tarea tarea = gestor.crearTarea("A", "https://example.com/" + i, Tarea.ESTADO_EN_COLA, "");
+            ids.add(tarea.obtenerId());
+        }
+        assertEquals(total, ids.size());
     }
 
     private void flushEdt() throws Exception {

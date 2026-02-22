@@ -69,6 +69,20 @@ class ParserRespuestasAITest {
     }
 
     @Test
+    @DisplayName("OpenAI concatena todas las partes de message.content array")
+    void testOpenAiContentArrayMultiparte() {
+        String json = "{\"choices\":[{\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"hallazgos\\\":\"},{\"type\":\"text\",\"text\":\"[]}\"}]}}]}";
+        assertEquals("{\"hallazgos\":[]}", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+    }
+
+    @Test
+    @DisplayName("Responses API concatena contenido multiparte de output.content")
+    void testResponsesApiConcatenaOutputMultiparte() {
+        String json = "{\"output\":[{\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"ok\\\":\"},{\"type\":\"output_text\",\"text\":\"true}\"}]}]}";
+        assertEquals("{\"ok\":true}", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+    }
+
+    @Test
     @DisplayName("Gemini ignora candidatos inválidos y toma primer texto util")
     void testGeminiCandidatosInvalidos() {
         String json = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":{}}]}},{\"content\":{\"parts\":[{\"text\":\"OK Gemini 2\"}]}}]}";

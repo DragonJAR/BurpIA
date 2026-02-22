@@ -13,9 +13,11 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("PanelTareas Actions Tests")
 class PanelTareasActionsTest {
@@ -93,6 +95,27 @@ class PanelTareasActionsTest {
         estado.setAccessible(true);
         assertEquals(enCola.obtenerId(), tareaId.get(item));
         assertEquals(Tarea.ESTADO_EN_COLA, estado.get(item));
+    }
+
+    @Test
+    @DisplayName("Reintentar usa manejador real de reencolado cuando existe")
+    void testReintentarUsaManejadorReencolado() throws Exception {
+        Tarea error = gestor.crearTarea("A", "https://example.com/error", Tarea.ESTADO_ERROR, "");
+        flushEdt();
+
+        AtomicReference<String> tareaReintentada = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> panel.establecerManejadorReintento(tareaId -> {
+            tareaReintentada.set(tareaId);
+            return true;
+        }));
+
+        Method reencolar = PanelTareas.class.getDeclaredMethod("reencolarTarea", String.class);
+        reencolar.setAccessible(true);
+        boolean resultado = (boolean) reencolar.invoke(panel, error.obtenerId());
+
+        assertTrue(resultado);
+        assertEquals(error.obtenerId(), tareaReintentada.get());
+        assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado());
     }
 
     private JButton obtenerBotonPrincipal() throws Exception {

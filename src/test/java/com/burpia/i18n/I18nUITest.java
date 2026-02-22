@@ -42,6 +42,9 @@ class I18nUITest {
             I18nLogs.tr("Analysis completed: https://target"));
         assertEquals("Configuracion guardada exitosamente en: /tmp/.burpia.json",
             I18nLogs.tr("Configuration saved successfully to: /tmp/.burpia.json"));
+        assertEquals("  - Modelo: glm-5", I18nLogs.tr("  - Modelo: glm-5"));
+        assertEquals("Estado cola analisis: activos=2, enCola=1, completadas=10",
+            I18nLogs.tr("Analysis queue status: active=2, queued=1, completed=10"));
     }
 
     @Test
@@ -64,5 +67,19 @@ class I18nUITest {
             .startsWith("Exception stack trace"));
         assertEquals("Configuration saved successfully to: /tmp/.burpia.json",
             I18nLogs.tr("Configuracion guardada exitosamente en: /tmp/.burpia.json"));
+        assertEquals("ALERT: API key is required for OpenAI",
+            I18nLogs.tr("ALERTA: Clave de API requerida para OpenAI"));
+        assertEquals("[TRACE]", I18nLogs.tr("[RASTREO]"));
+        assertEquals("Could not re-queue task: tarea-1",
+            I18nLogs.tr("No se pudo reencolar tarea: tarea-1"));
+        assertEquals("Task re-queued: tarea-1 -> tarea-2",
+            I18nLogs.tr("Tarea reencolada: tarea-1 -> tarea-2"));
+        assertEquals("Active cancellation applied for task: tarea-3",
+            I18nLogs.tr("Cancelacion activa aplicada para tarea: tarea-3"));
+        String estadoCola = I18nLogs.tr("Estado cola analisis: activos=2, enCola=1, completadas=10");
+        assertTrue(estadoCola.startsWith("Analysis queue status"));
+        assertTrue(estadoCola.contains("active=2"));
+        assertTrue(estadoCola.contains("queued=1"));
+        assertTrue(estadoCola.contains("completed=10"));
     }
 }

@@ -1,5 +1,6 @@
 package com.burpia.model;
 
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 
 import java.awt.Color;
@@ -23,22 +24,51 @@ public class Hallazgo {
     private final String severidad;
     private final String confianza;
     private final HttpRequest solicitudHttp;
+    private final HttpRequestResponse evidenciaHttp;
 
     public Hallazgo(String url, String hallazgo, String severidad, String confianza) {
-        this(url, hallazgo, severidad, confianza, null);
+        this(url, hallazgo, severidad, confianza, (HttpRequest) null, (HttpRequestResponse) null);
     }
 
     public Hallazgo(String url, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
-        this(LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")), url, hallazgo, severidad, confianza, solicitudHttp);
+        this(url, hallazgo, severidad, confianza, solicitudHttp, null);
+    }
+
+    public Hallazgo(String url,
+                    String hallazgo,
+                    String severidad,
+                    String confianza,
+                    HttpRequest solicitudHttp,
+                    HttpRequestResponse evidenciaHttp) {
+        this(
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")),
+            url,
+            hallazgo,
+            severidad,
+            confianza,
+            solicitudHttp,
+            evidenciaHttp
+        );
     }
 
     public Hallazgo(String horaDescubrimiento, String url, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
+        this(horaDescubrimiento, url, hallazgo, severidad, confianza, solicitudHttp, null);
+    }
+
+    public Hallazgo(String horaDescubrimiento,
+                    String url,
+                    String hallazgo,
+                    String severidad,
+                    String confianza,
+                    HttpRequest solicitudHttp,
+                    HttpRequestResponse evidenciaHttp) {
         this.horaDescubrimiento = horaDescubrimiento;
         this.url = url;
         this.hallazgo = hallazgo;
         this.severidad = severidad;
         this.confianza = confianza;
         this.solicitudHttp = solicitudHttp;
+        this.evidenciaHttp = evidenciaHttp;
     }
 
     public String obtenerHoraDescubrimiento() {
@@ -65,6 +95,25 @@ public class Hallazgo {
         return solicitudHttp;
     }
 
+    public HttpRequestResponse obtenerEvidenciaHttp() {
+        return evidenciaHttp;
+    }
+
+    public Hallazgo conEvidenciaHttp(HttpRequestResponse evidenciaHttp) {
+        if (evidenciaHttp == null || this.evidenciaHttp == evidenciaHttp) {
+            return this;
+        }
+        return new Hallazgo(
+            horaDescubrimiento,
+            url,
+            hallazgo,
+            severidad,
+            confianza,
+            solicitudHttp,
+            evidenciaHttp
+        );
+    }
+
     public Object[] aFilaTabla() {
         return new Object[]{
             horaDescubrimiento,
@@ -76,30 +125,36 @@ public class Hallazgo {
     }
 
     public static Color obtenerColorSeveridad(String severidad) {
+        if (severidad == null) {
+            return Color.GRAY;
+        }
         switch (severidad) {
             case SEVERIDAD_CRITICAL:
-                return new Color(128, 0, 128); // Purple
+                return new Color(128, 0, 128);
             case SEVERIDAD_HIGH:
-                return new Color(204, 0, 0); // Rojo
+                return new Color(204, 0, 0);
             case SEVERIDAD_MEDIUM:
-                return new Color(255, 153, 0); // Naranja
+                return new Color(255, 153, 0);
             case SEVERIDAD_LOW:
-                return new Color(0, 153, 0); // Verde
+                return new Color(0, 153, 0);
             case SEVERIDAD_INFO:
-                return new Color(0, 120, 215); // Azul
+                return new Color(0, 120, 215);
             default:
                 return Color.GRAY;
         }
     }
 
     public static Color obtenerColorConfianza(String confianza) {
+        if (confianza == null) {
+            return Color.GRAY;
+        }
         switch (confianza) {
             case CONFIANZA_ALTA:
-                return new Color(0, 153, 0); // Verde
+                return new Color(0, 153, 0);
             case CONFIANZA_MEDIA:
-                return new Color(255, 153, 0); // Naranja
+                return new Color(255, 153, 0);
             case CONFIANZA_BAJA:
-                return new Color(204, 0, 0); // Rojo
+                return new Color(204, 0, 0);
             default:
                 return Color.GRAY;
         }
@@ -129,5 +184,44 @@ public class Hallazgo {
         return CONFIANZA_ALTA.equals(confianza) ||
                CONFIANZA_MEDIA.equals(confianza) ||
                CONFIANZA_BAJA.equals(confianza);
+    }
+
+    public static String normalizarSeveridad(String severidad) {
+        if (severidad == null || severidad.trim().isEmpty()) {
+            return SEVERIDAD_INFO;
+        }
+
+        String valor = severidad.trim().toLowerCase();
+        if (valor.contains("critical") || valor.contains("critica")) {
+            return SEVERIDAD_CRITICAL;
+        }
+        if (valor.contains("high") || valor.contains("alta") || valor.contains("severa")) {
+            return SEVERIDAD_HIGH;
+        }
+        if (valor.contains("medium") || valor.contains("media") || valor.contains("moderada")) {
+            return SEVERIDAD_MEDIUM;
+        }
+        if (valor.contains("low") || valor.contains("baja")) {
+            return SEVERIDAD_LOW;
+        }
+        return SEVERIDAD_INFO;
+    }
+
+    public static String normalizarConfianza(String confianza) {
+        if (confianza == null || confianza.trim().isEmpty()) {
+            return CONFIANZA_MEDIA;
+        }
+
+        String valor = confianza.trim().toLowerCase();
+        if (valor.contains("high") || valor.contains("alta") || valor.contains("certain")) {
+            return CONFIANZA_ALTA;
+        }
+        if (valor.contains("low") || valor.contains("baja") || valor.contains("tentative")) {
+            return CONFIANZA_BAJA;
+        }
+        if (valor.contains("medium") || valor.contains("media") || valor.contains("firm")) {
+            return CONFIANZA_MEDIA;
+        }
+        return CONFIANZA_MEDIA;
     }
 }

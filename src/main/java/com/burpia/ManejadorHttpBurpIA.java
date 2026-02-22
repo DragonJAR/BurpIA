@@ -29,16 +29,21 @@ import java.net.URI;
 import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class ManejadorHttpBurpIA implements HttpHandler {
+    private static final String ORIGEN_LOG = "ManejadorBurpIA";
     private final MontoyaApi api;
     private final ConfiguracionAPI config;
     private final PestaniaPrincipal pestaniaPrincipal;
@@ -74,6 +79,22 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final GestorTareas gestorTareas;
     private final GestorConsolaGUI gestorConsola;
     private final ModeloTablaHallazgos modeloTablaHallazgos;
+    private final Map<String, ContextoReintento> contextosReintento;
+    private final Map<String, Future<?>> ejecucionesActivas;
+
+    private static final class ContextoReintento {
+        private final SolicitudAnalisis solicitudAnalisis;
+        private final HttpRequestResponse evidenciaHttp;
+        private final String tipoTarea;
+
+        private ContextoReintento(SolicitudAnalisis solicitudAnalisis,
+                                  HttpRequestResponse evidenciaHttp,
+                                  String tipoTarea) {
+            this.solicitudAnalisis = solicitudAnalisis;
+            this.evidenciaHttp = evidenciaHttp;
+            this.tipoTarea = tipoTarea;
+        }
+    }
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
                              PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
@@ -90,6 +111,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.gestorTareas = gestorTareas;
         this.gestorConsola = gestorConsola;
         this.modeloTablaHallazgos = modeloTablaHallazgos;
+        this.contextosReintento = new ConcurrentHashMap<>();
+        this.ejecucionesActivas = new ConcurrentHashMap<>();
         this.capturaActiva = config == null || config.escaneoPasivoHabilitado();
 
         int maxThreads = config.obtenerMaximoConcurrente() > 0 ? config.obtenerMaximoConcurrente() : 10;
@@ -306,9 +329,54 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         );
     }
 
-    private void programarAnalisis(SolicitudAnalisis solicitudAnalisis,
-                                   HttpRequestResponse evidenciaHttp,
-                                   String tipoTarea) {
+    public boolean reencolarTarea(String tareaId) {
+        if (tareaId == null || tareaId.isEmpty()) {
+            return false;
+        }
+        depurarContextosHuerfanos();
+        ContextoReintento contexto = contextosReintento.get(tareaId);
+        if (contexto == null) {
+            registrarError("No existe contexto para reintentar tarea: " + tareaId);
+            return false;
+        }
+
+        String nuevoId = programarAnalisis(
+            contexto.solicitudAnalisis,
+            contexto.evidenciaHttp,
+            contexto.tipoTarea
+        );
+        if (nuevoId == null) {
+            registrarError("No se pudo reencolar tarea: " + tareaId);
+            return false;
+        }
+
+        contextosReintento.remove(tareaId);
+        registrar("Tarea reencolada: " + tareaId + " -> " + nuevoId);
+        return true;
+    }
+
+    public void cancelarEjecucionActiva(String tareaId) {
+        if (tareaId == null || tareaId.isEmpty()) {
+            return;
+        }
+        Future<?> future = ejecucionesActivas.remove(tareaId);
+        if (future != null) {
+            boolean cancelada = future.cancel(true);
+            if (cancelada) {
+                rastrear("Cancelacion activa aplicada para tarea: " + tareaId);
+            }
+        }
+    }
+
+    private String programarAnalisis(SolicitudAnalisis solicitudAnalisis,
+                                     HttpRequestResponse evidenciaHttp,
+                                     String tipoTarea) {
+        if (solicitudAnalisis == null) {
+            registrarError("No se pudo programar analisis: solicitud null");
+            return null;
+        }
+
+        depurarContextosHuerfanos();
         final String url = solicitudAnalisis.obtenerUrl();
         final AtomicReference<String> tareaIdRef = new AtomicReference<>();
 
@@ -320,6 +388,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 "Esperando analisis"
             );
             tareaIdRef.set(tarea.obtenerId());
+            contextosReintento.put(
+                tarea.obtenerId(),
+                new ContextoReintento(solicitudAnalisis, evidenciaHttp, tipoTarea)
+            );
         }
 
         SwingUtilities.invokeLater(() -> {
@@ -338,6 +410,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 @Override
                 public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
                     String tareaId = tareaIdRef.get();
+                    finalizarEjecucionActiva(tareaId);
+                    contextosReintento.remove(tareaId);
                     boolean cancelada = gestorTareas != null && tareaId != null && gestorTareas.estaTareaCancelada(tareaId);
                     if (cancelada) {
                         registrar("Resultado descartado porque la tarea fue cancelada: " + url);
@@ -363,16 +437,17 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                                 continue;
                             }
 
-                            hallazgosValidos.add(hallazgo);
+                            Hallazgo hallazgoConEvidencia = adjuntarEvidenciaSiDisponible(hallazgo, evidenciaHttp);
+                            hallazgosValidos.add(hallazgoConEvidencia);
 
                             if (estadisticas != null) {
-                                String severidad = hallazgo.obtenerSeveridad();
+                                String severidad = hallazgoConEvidencia.obtenerSeveridad();
                                 if (severidad != null) {
                                     estadisticas.incrementarHallazgoSeveridad(severidad);
                                 }
                             }
 
-                            guardarHallazgoEnIssuesSiAplica(hallazgo, evidenciaHttp);
+                            guardarHallazgoEnIssuesSiAplica(hallazgoConEvidencia, evidenciaHttp);
                         }
 
                         if (modeloTablaHallazgos != null && !hallazgosValidos.isEmpty()) {
@@ -396,6 +471,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 @Override
                 public void alErrorAnalisis(String error) {
                     String tareaId = tareaIdRef.get();
+                    finalizarEjecucionActiva(tareaId);
                     boolean cancelada = gestorTareas != null && tareaId != null && gestorTareas.estaTareaCancelada(tareaId);
 
                     if (cancelada) {
@@ -429,10 +505,21 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 @Override
                 public void alCanceladoAnalisis() {
                     String tareaId = tareaIdRef.get();
+                    finalizarEjecucionActiva(tareaId);
                     if (gestorTareas != null && tareaId != null) {
                         gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
                     }
                     registrar("Analisis cancelado por usuario: " + url);
+                }
+            },
+            () -> {
+                String tareaId = tareaIdRef.get();
+                if (gestorTareas == null || tareaId == null) {
+                    return;
+                }
+                boolean marcada = gestorTareas.marcarTareaAnalizando(tareaId, "Analizando");
+                if (!marcada) {
+                    rastrear("No se pudo marcar tarea como analizando (estado no valido): " + tareaId);
                 }
             },
             gestorConsola,
@@ -447,10 +534,18 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         );
 
         try {
-            executorService.submit(analizador);
+            Future<?> future = executorService.submit(analizador);
+            String tareaId = tareaIdRef.get();
+            if (tareaId != null) {
+                ejecucionesActivas.put(tareaId, future);
+            }
             registrar("Hilo de analisis iniciado para: " + url);
+            rastrearEstadoCola();
+            return tareaId;
         } catch (RejectedExecutionException ex) {
             String tareaId = tareaIdRef.get();
+            finalizarEjecucionActiva(tareaId);
+            contextosReintento.remove(tareaId);
             if (gestorTareas != null && tareaId != null) {
                 gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_ERROR, "Descartada por saturación de cola");
             }
@@ -458,6 +553,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 estadisticas.incrementarErrores();
             }
             registrarError("Cola de análisis saturada, solicitud descartada: " + url);
+            return null;
         }
     }
 
@@ -499,11 +595,49 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
     }
 
+    private void finalizarEjecucionActiva(String tareaId) {
+        if (tareaId == null || tareaId.isEmpty()) {
+            return;
+        }
+        ejecucionesActivas.remove(tareaId);
+    }
+
+    private void depurarContextosHuerfanos() {
+        if (gestorTareas == null || contextosReintento.isEmpty()) {
+            return;
+        }
+        Iterator<Map.Entry<String, ContextoReintento>> it = contextosReintento.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, ContextoReintento> entry = it.next();
+            if (entry == null) {
+                continue;
+            }
+            String tareaId = entry.getKey();
+            if (tareaId == null || gestorTareas.obtenerTarea(tareaId) == null) {
+                contextosReintento.remove(tareaId, entry.getValue());
+            }
+        }
+    }
+
+    private void rastrearEstadoCola() {
+        if (!config.esDetallado()) {
+            return;
+        }
+        rastrear(
+            "Estado cola analisis: activos=" + executorService.getActiveCount() +
+                ", enCola=" + executorService.getQueue().size() +
+                ", completadas=" + executorService.getCompletedTaskCount()
+        );
+    }
+
     private void guardarHallazgoEnIssuesSiAplica(Hallazgo hallazgo, HttpRequestResponse evidenciaHttp) {
         if (hallazgo == null) {
             return;
         }
-        if (evidenciaHttp == null) {
+        HttpRequestResponse evidenciaIssue = evidenciaHttp != null
+            ? evidenciaHttp
+            : hallazgo.obtenerEvidenciaHttp();
+        if (evidenciaIssue == null) {
             rastrear("Hallazgo sin evidencia HTTP: no se puede crear AuditIssue");
             return;
         }
@@ -521,7 +655,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 registrarError("No se pudo guardar AuditIssue: SiteMap API no disponible");
                 return;
             }
-            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidenciaHttp);
+            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidenciaIssue);
             if (!guardado) {
                 rastrear("AuditIssue no creado: hallazgo sin datos suficientes");
                 return;
@@ -531,6 +665,16 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
             rastrear("Stack trace:", e);
         }
+    }
+
+    private Hallazgo adjuntarEvidenciaSiDisponible(Hallazgo hallazgo, HttpRequestResponse evidenciaHttp) {
+        if (hallazgo == null) {
+            return null;
+        }
+        if (hallazgo.obtenerEvidenciaHttp() != null || evidenciaHttp == null) {
+            return hallazgo;
+        }
+        return hallazgo.conEvidenciaHttp(evidenciaHttp);
     }
 
     private boolean estaEnScope(HttpRequest solicitud) {
@@ -714,34 +858,28 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void registrar(String mensaje) {
-        String mensajeLocalizado = I18nLogs.tr(mensaje);
-        synchronized (logLock) {
-            if (gestorConsola != null) {
-                gestorConsola.registrarInfo(mensajeLocalizado);
-            }
-            escribirSalida(false, "[ManejadorBurpIA] " + mensajeLocalizado);
-        }
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[ManejadorBurpIA] ");
     }
 
     private void rastrear(String mensaje) {
         if (config.esDetallado()) {
-            String mensajeLocalizado = I18nLogs.tr(mensaje);
-            synchronized (logLock) {
-                if (gestorConsola != null) {
-                    gestorConsola.registrarVerbose(mensajeLocalizado);
-                }
-                escribirSalida(false, "[ManejadorBurpIA] [RASTREO] " + mensajeLocalizado);
-            }
+            registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[ManejadorBurpIA] [RASTREO] ");
         }
     }
 
     private void registrarError(String mensaje) {
-        String mensajeLocalizado = I18nLogs.tr(mensaje);
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.ERROR, true, "[ManejadorBurpIA] [ERROR] ");
+    }
+
+    private void registrarInterno(String mensaje, GestorConsolaGUI.TipoLog tipo, boolean error, String prefijoSalida) {
+        String mensajeSeguro = mensaje != null ? mensaje : "";
         synchronized (logLock) {
             if (gestorConsola != null) {
-                gestorConsola.registrarError(mensajeLocalizado);
+                gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
+                return;
             }
-            escribirSalida(true, "[ManejadorBurpIA] [ERROR] " + mensajeLocalizado);
+            String prefijoLocalizado = I18nLogs.tr(prefijoSalida);
+            escribirSalida(error, prefijoLocalizado + I18nLogs.tr(mensajeSeguro));
         }
     }
 
@@ -775,6 +913,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void shutdown() {
+        for (Map.Entry<String, Future<?>> entry : ejecucionesActivas.entrySet()) {
+            if (entry != null && entry.getValue() != null) {
+                entry.getValue().cancel(true);
+            }
+        }
+        ejecucionesActivas.clear();
+        contextosReintento.clear();
+
         if (executorService != null && !executorService.isShutdown()) {
             registrar("Deteniendo ExecutorService de ManejadorHttpBurpIA...");
             executorService.shutdown();

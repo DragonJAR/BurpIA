@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.scanner.AuditConfiguration;
 import burp.api.montoya.scanner.BuiltInAuditConfiguration;
@@ -648,7 +649,8 @@ public class PanelHallazgos extends JPanel {
                 if (api == null || api.siteMap() == null) {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_SITEMAP_NO_DISPONIBLE());
                 }
-                boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
+                HttpRequestResponse evidencia = hallazgo.obtenerEvidenciaHttp();
+                boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidencia);
                 if (!guardado) {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE());
                 }
@@ -667,8 +669,17 @@ public class PanelHallazgos extends JPanel {
                                     String resumen,
                                     boolean requiereRequest,
                                     AccionSobreSolicitud accion) {
-        List<EntradaAccion> entradas = capturarEntradasAccion(filas);
+        ResultadoCapturaAccion captura = capturarEntradasAccion(filas);
+        List<EntradaAccion> entradas = captura.entradas;
         if (entradas.isEmpty()) {
+            if (captura.totalIgnorados > 0) {
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
+                    PanelHallazgos.this,
+                    I18nUI.Hallazgos.MSG_ACCION_SOLO_IGNORADOS(captura.totalIgnorados),
+                    I18nUI.Hallazgos.TITULO_INFORMACION(),
+                    JOptionPane.INFORMATION_MESSAGE
+                ));
+            }
             return;
         }
         new Thread(() -> {
@@ -709,6 +720,8 @@ public class PanelHallazgos extends JPanel {
 
             final int totalExitosos = exitosos;
             final int totalSinRequest = sinRequest;
+            final int totalSeleccionados = captura.totalSeleccionados;
+            final int totalIgnorados = captura.totalIgnorados;
             final String detalleFinal = detalle.toString();
 
             SwingUtilities.invokeLater(() -> {
@@ -717,8 +730,9 @@ public class PanelHallazgos extends JPanel {
                     I18nUI.Hallazgos.MSG_RESULTADO_ACCION(
                         resumen,
                         totalExitosos,
-                        entradas.size(),
+                        totalSeleccionados,
                         totalSinRequest,
+                        totalIgnorados,
                         detalleFinal
                     ),
                     titulo,
@@ -803,10 +817,15 @@ public class PanelHallazgos extends JPanel {
         return filasModelo;
     }
 
-    private List<EntradaAccion> capturarEntradasAccion(int[] filasVista) {
+    private ResultadoCapturaAccion capturarEntradasAccion(int[] filasVista) {
         int[] filasModelo = convertirFilasVistaAModelo(filasVista);
         List<EntradaAccion> entradas = new ArrayList<>(filasModelo.length);
+        int ignorados = 0;
         for (int filaModelo : filasModelo) {
+            if (modelo.estaIgnorado(filaModelo)) {
+                ignorados++;
+                continue;
+            }
             Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
             HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
             String urlReferencia = hallazgo != null
@@ -814,7 +833,7 @@ public class PanelHallazgos extends JPanel {
                 : I18nUI.tr("URL desconocida", "Unknown URL");
             entradas.add(new EntradaAccion(solicitud, hallazgo, urlReferencia));
         }
-        return entradas;
+        return new ResultadoCapturaAccion(entradas, filasModelo.length, ignorados);
     }
 
     private static final class EntradaAccion {
@@ -826,6 +845,18 @@ public class PanelHallazgos extends JPanel {
             this.solicitud = solicitud;
             this.hallazgo = hallazgo;
             this.urlReferencia = urlReferencia;
+        }
+    }
+
+    private static final class ResultadoCapturaAccion {
+        private final List<EntradaAccion> entradas;
+        private final int totalSeleccionados;
+        private final int totalIgnorados;
+
+        private ResultadoCapturaAccion(List<EntradaAccion> entradas, int totalSeleccionados, int totalIgnorados) {
+            this.entradas = entradas;
+            this.totalSeleccionados = totalSeleccionados;
+            this.totalIgnorados = totalIgnorados;
         }
     }
 

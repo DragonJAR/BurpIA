@@ -10,6 +10,7 @@ import com.burpia.util.GestorTareas;
 import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class PestaniaPrincipal extends JPanel {
     private final PanelEstadisticas panelEstadisticas;
@@ -107,6 +108,10 @@ public class PestaniaPrincipal extends JPanel {
 
     public void establecerManejadorAutoScrollConsola(Consumer<Boolean> manejador) {
         panelConsola.establecerManejadorCambioAutoScroll(manejador);
+    }
+
+    public void establecerManejadorReintentoTareas(Function<String, Boolean> manejador) {
+        panelTareas.establecerManejadorReintento(manejador);
     }
 
     public void aplicarIdioma() {

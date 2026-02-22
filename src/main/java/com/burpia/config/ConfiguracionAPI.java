@@ -394,6 +394,32 @@ public class ConfiguracionAPI {
         return apiKey != null && !apiKey.trim().isEmpty();
     }
 
+    public String validarParaConsultaModelo() {
+        asegurarMapas();
+
+        String proveedor = obtenerProveedorAI();
+        if (proveedor == null || proveedor.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
+            return "ALERTA: Proveedor de AI no configurado o no valido";
+        }
+
+        String urlApi = obtenerUrlApi();
+        if (urlApi == null || urlApi.trim().isEmpty()) {
+            return "ALERTA: URL de API no configurada";
+        }
+
+        String modelo = obtenerModelo();
+        if (modelo == null || modelo.trim().isEmpty()) {
+            return "ALERTA: Modelo no configurado para " + proveedor;
+        }
+
+        ProveedorAI.ConfiguracionProveedor proveedorConfig = ProveedorAI.obtenerProveedor(proveedor);
+        if (proveedorConfig != null && proveedorConfig.requiereClaveApi() && !tieneApiKey()) {
+            return "ALERTA: Clave de API requerida para " + proveedor;
+        }
+
+        return "";
+    }
+
     public Map<String, String> obtenerApiKeysPorProveedor() {
         asegurarMapas();
         return apiKeysPorProveedor;

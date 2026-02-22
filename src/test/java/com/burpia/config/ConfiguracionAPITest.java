@@ -97,6 +97,29 @@ class ConfiguracionAPITest {
     }
 
     @Test
+    @DisplayName("Validacion para consulta exige API key en proveedores que la requieren")
+    void testValidarParaConsultaExigeApiKey() {
+        config.establecerProveedorAI("OpenAI");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerApiKeyParaProveedor("OpenAI", "");
+
+        String alerta = config.validarParaConsultaModelo();
+        assertTrue(alerta.contains("ALERTA: Clave de API requerida para OpenAI"));
+    }
+
+    @Test
+    @DisplayName("Validacion para consulta permite proveedores sin API key obligatoria")
+    void testValidarParaConsultaPermiteProveedorSinApiKey() {
+        config.establecerProveedorAI("Ollama");
+        config.establecerModeloParaProveedor("Ollama", "gemma3:12b");
+        config.establecerUrlBaseParaProveedor("Ollama", "http://localhost:11434");
+        config.establecerApiKeyParaProveedor("Ollama", "");
+
+        assertEquals("", config.validarParaConsultaModelo());
+    }
+
+    @Test
     @DisplayName("Prompt por defecto no es null ni vacio")
     void testPromptPorDefecto() {
         String prompt = ConfiguracionAPI.obtenerPromptPorDefecto();

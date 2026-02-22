@@ -1,6 +1,7 @@
 package com.burpia;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import com.burpia.model.Hallazgo;
 import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.util.GestorConsolaGUI;
@@ -14,6 +15,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
@@ -79,6 +81,42 @@ class ExtensionBurpIATest {
         boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
 
         assertFalse(guardado);
+    }
+
+    @Test
+    @DisplayName("Crear AuditIssue mapea severidad Info a INFORMATION")
+    void testCrearAuditIssueMapeaInfoAInformation() {
+        assertEquals(
+            burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.INFORMATION,
+            invocarConvertirSeveridad(Hallazgo.SEVERIDAD_INFO)
+        );
+    }
+
+    @Test
+    @DisplayName("Crear AuditIssue usa evidencia embebida en hallazgo cuando no se pasa evidencia explicita")
+    void testCrearAuditIssueUsaEvidenciaEmbebida() {
+        HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
+        Hallazgo hallazgo = new Hallazgo(
+            "https://example.com",
+            "Posible SQLi",
+            Hallazgo.SEVERIDAD_HIGH,
+            Hallazgo.CONFIANZA_ALTA,
+            null,
+            evidencia
+        );
+        assertEquals(evidencia, ExtensionBurpIA.resolverEvidenciaIssue(hallazgo, null));
+        HttpRequestResponse explicita = mock(HttpRequestResponse.class);
+        assertEquals(explicita, ExtensionBurpIA.resolverEvidenciaIssue(hallazgo, explicita));
+    }
+
+    private static burp.api.montoya.scanner.audit.issues.AuditIssueSeverity invocarConvertirSeveridad(String severidad) {
+        try {
+            Method metodo = ExtensionBurpIA.class.getDeclaredMethod("convertirSeveridad", String.class);
+            metodo.setAccessible(true);
+            return (burp.api.montoya.scanner.audit.issues.AuditIssueSeverity) metodo.invoke(null, severidad);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static void establecerCampo(Object objetivo, String nombre, Object valor) throws Exception {

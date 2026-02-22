@@ -2,6 +2,7 @@ package com.burpia.model;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import java.awt.Color;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Hallazgo Model Tests")
@@ -91,5 +92,23 @@ class HallazgoTest {
         assertEquals("SQL Injection", fila[2]);
         assertEquals("Critical", fila[3]);
         assertEquals("High", fila[4]);
+    }
+
+    @Test
+    @DisplayName("Colores de severidad y confianza toleran null")
+    void testColoresToleranNull() {
+        assertEquals(Color.GRAY, Hallazgo.obtenerColorSeveridad(null));
+        assertEquals(Color.GRAY, Hallazgo.obtenerColorConfianza(null));
+    }
+
+    @Test
+    @DisplayName("Normaliza severidad y confianza a valores canonicos")
+    void testNormalizacionCanonica() {
+        assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("alta"));
+        assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("critical"));
+        assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad(null));
+        assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("certain"));
+        assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("low"));
+        assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza(null));
     }
 }

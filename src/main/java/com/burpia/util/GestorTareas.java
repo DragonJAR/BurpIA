@@ -15,15 +15,24 @@ public class GestorTareas {
     private final javax.swing.Timer temporizadorVerificacion;
     private final ModeloTablaTareas modeloTabla;
     private final Consumer<String> logger;
+    private volatile Consumer<String> manejadorCancelacion;
+    private final int maxTareasFinalizadasRetenidas;
 
     private static final long INTERVALO_VERIFICACION_MS = 30000;
     private static final long TAREA_ATASCADA_MS = 300000;
+    private static final int MAX_TAREAS_FINALIZADAS_RETENIDAS_POR_DEFECTO = 2000;
 
     public GestorTareas(ModeloTablaTareas modeloTabla, Consumer<String> logger) {
+        this(modeloTabla, logger, MAX_TAREAS_FINALIZADAS_RETENIDAS_POR_DEFECTO);
+    }
+
+    public GestorTareas(ModeloTablaTareas modeloTabla, Consumer<String> logger, int maxTareasFinalizadasRetenidas) {
         this.tareas = new ConcurrentHashMap<>();
         this.candado = new ReentrantLock();
         this.modeloTabla = modeloTabla;
         this.logger = logger != null ? logger : mensaje -> { };
+        this.manejadorCancelacion = null;
+        this.maxTareasFinalizadasRetenidas = Math.max(1, maxTareasFinalizadasRetenidas);
 
         this.temporizadorVerificacion = new javax.swing.Timer(
             (int) INTERVALO_VERIFICACION_MS,
@@ -33,7 +42,7 @@ public class GestorTareas {
     }
 
     public Tarea crearTarea(String tipo, String url, String estado, String mensajeInfo) {
-        String id = UUID.randomUUID().toString().substring(0, 8);
+        String id = UUID.randomUUID().toString();
         Tarea tarea = new Tarea(id, tipo, url, estado);
         tarea.establecerMensajeInfo(mensajeInfo);
 
@@ -46,6 +55,7 @@ public class GestorTareas {
             candado.unlock();
         }
 
+        aplicarRetencionFinalizadas();
         return tarea;
     }
 
@@ -63,11 +73,17 @@ public class GestorTareas {
         } finally {
             candado.unlock();
         }
+        if (Tarea.ESTADO_COMPLETADO.equals(nuevoEstado) ||
+            Tarea.ESTADO_ERROR.equals(nuevoEstado) ||
+            Tarea.ESTADO_CANCELADO.equals(nuevoEstado)) {
+            aplicarRetencionFinalizadas();
+        }
     }
 
     public void cancelarTodas() {
-        int canceladas = actualizarEstadosMasivo(Tarea::esActiva, Tarea.ESTADO_CANCELADO);
-        registrar("Tareas canceladas: " + canceladas);
+        List<String> idsCanceladas = actualizarEstadosMasivoConIds(Tarea::esActiva, Tarea.ESTADO_CANCELADO);
+        registrar("Tareas canceladas: " + idsCanceladas.size());
+        notificarCancelaciones(idsCanceladas);
     }
 
     public void pausarReanudarTodas() {
@@ -245,7 +261,36 @@ public class GestorTareas {
         }
     }
 
+    public boolean marcarTareaAnalizando(String id, String mensajeInfo) {
+        candado.lock();
+        try {
+            Tarea tarea = tareas.get(id);
+            if (tarea == null) {
+                return false;
+            }
+            String estadoActual = tarea.obtenerEstado();
+            if (Tarea.ESTADO_CANCELADO.equals(estadoActual)) {
+                return false;
+            }
+            if (Tarea.ESTADO_ANALIZANDO.equals(estadoActual)) {
+                return true;
+            }
+            if (!Tarea.ESTADO_EN_COLA.equals(estadoActual)) {
+                return false;
+            }
+            tarea.establecerEstado(Tarea.ESTADO_ANALIZANDO);
+            if (mensajeInfo != null && !mensajeInfo.isEmpty()) {
+                tarea.establecerMensajeInfo(mensajeInfo);
+            }
+            actualizarFilaTabla(tarea);
+            return true;
+        } finally {
+            candado.unlock();
+        }
+    }
+
     public void cancelarTarea(String id) {
+        boolean cancelada = false;
         candado.lock();
         try {
             Tarea tarea = tareas.get(id);
@@ -256,10 +301,14 @@ public class GestorTareas {
                     tarea.establecerEstado(Tarea.ESTADO_CANCELADO);
                     actualizarFilaTabla(tarea);
                     registrar("Tarea cancelada: " + tarea.obtenerUrl());
+                    cancelada = true;
                 }
             }
         } finally {
             candado.unlock();
+        }
+        if (cancelada) {
+            notificarCancelacion(id);
         }
     }
 
@@ -324,21 +373,97 @@ public class GestorTareas {
         }
     }
 
+    public void establecerManejadorCancelacion(Consumer<String> manejadorCancelacion) {
+        this.manejadorCancelacion = manejadorCancelacion;
+    }
+
     private int actualizarEstadosMasivo(java.util.function.Predicate<Tarea> filtro, String nuevoEstado) {
+        return actualizarEstadosMasivoConIds(filtro, nuevoEstado).size();
+    }
+
+    private List<String> actualizarEstadosMasivoConIds(java.util.function.Predicate<Tarea> filtro, String nuevoEstado) {
+        List<String> idsActualizadas = new ArrayList<>();
         candado.lock();
         try {
-            int total = 0;
             for (Tarea tarea : tareas.values()) {
                 if (filtro.test(tarea)) {
                     tarea.establecerEstado(nuevoEstado);
                     actualizarFilaTabla(tarea);
-                    total++;
+                    idsActualizadas.add(tarea.obtenerId());
                 }
             }
-            return total;
+            return idsActualizadas;
         } finally {
             candado.unlock();
         }
+    }
+
+    private void notificarCancelaciones(List<String> idsCanceladas) {
+        if (idsCanceladas == null || idsCanceladas.isEmpty()) {
+            return;
+        }
+        for (String id : idsCanceladas) {
+            notificarCancelacion(id);
+        }
+    }
+
+    private void notificarCancelacion(String id) {
+        Consumer<String> manejador = this.manejadorCancelacion;
+        if (manejador == null || id == null || id.isEmpty()) {
+            return;
+        }
+        try {
+            manejador.accept(id);
+        } catch (Exception e) {
+            registrar("Error en manejador de cancelacion: " + e.getMessage());
+        }
+    }
+
+    private void aplicarRetencionFinalizadas() {
+        List<String> idsAEliminar = new ArrayList<>();
+        candado.lock();
+        try {
+            List<Tarea> finalizadas = new ArrayList<>();
+            for (Tarea tarea : tareas.values()) {
+                if (tarea != null && tarea.esFinalizada()) {
+                    finalizadas.add(tarea);
+                }
+            }
+            int excedente = finalizadas.size() - maxTareasFinalizadasRetenidas;
+            if (excedente <= 0) {
+                return;
+            }
+            finalizadas.sort(Comparator.comparingLong(this::obtenerTimestampFinalizacion));
+            for (int i = 0; i < excedente; i++) {
+                Tarea tarea = finalizadas.get(i);
+                if (tarea != null) {
+                    String id = tarea.obtenerId();
+                    if (id != null && tareas.remove(id) != null) {
+                        idsAEliminar.add(id);
+                    }
+                }
+            }
+        } finally {
+            candado.unlock();
+        }
+
+        for (String id : idsAEliminar) {
+            modeloTabla.eliminarTareaPorId(id);
+        }
+        if (!idsAEliminar.isEmpty()) {
+            registrar("Retencion aplicada en tareas finalizadas: " + idsAEliminar.size() + " eliminadas");
+        }
+    }
+
+    private long obtenerTimestampFinalizacion(Tarea tarea) {
+        if (tarea == null) {
+            return Long.MAX_VALUE;
+        }
+        long fin = tarea.obtenerTiempoFin();
+        if (fin > 0) {
+            return fin;
+        }
+        return tarea.obtenerTiempoInicio();
     }
 
     private void registrar(String mensaje) {
