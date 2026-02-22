@@ -94,7 +94,7 @@ public class GestorConsolaGUI {
         agregarPendiente(new EntradaLog(mensajeFormateado, tipo));
         programarFlush();
 
-        duplicarAStreamOriginal(origenSeguro, mensajeSeguro, tipo, hora);
+        duplicarAStreamOriginal(origenSeguro, mensajeLocalizado, tipo, hora);
     }
 
     public void registrarInfo(String mensaje) {
@@ -133,6 +133,7 @@ public class GestorConsolaGUI {
                 contadorVerbose.set(0);
                 contadorError.set(0);
             } catch (BadLocationException e) {
+                registrarErrorInterno("No se pudo limpiar consola: " + e.getMessage());
             }
         });
     }
@@ -180,8 +181,7 @@ public class GestorConsolaGUI {
         }
     }
 
-    private void duplicarAStreamOriginal(String origen, String mensaje, TipoLog tipo, String hora) {
-        String mensajeLocalizado = I18nLogs.tr(mensaje);
+    private void duplicarAStreamOriginal(String origen, String mensajeLocalizado, TipoLog tipo, String hora) {
         String etiquetaNivel = etiquetaNivel(tipo);
         String mensajeConPrefijo = String.format("[%s]%s [%s] %s%n", origen, etiquetaNivel, hora, mensajeLocalizado);
         if (tipo == TipoLog.ERROR) {
@@ -230,6 +230,7 @@ public class GestorConsolaGUI {
                 consola.setCaretPosition(documento.getLength());
             }
         } catch (BadLocationException ignored) {
+            registrarErrorInterno("No se pudo renderizar log en consola GUI");
         } finally {
             flushProgramado.set(false);
             if (documento != null && logsPendientes.get() > 0) {
@@ -296,6 +297,16 @@ public class GestorConsolaGUI {
             return I18nUI.tr(" [RASTREO]", " [TRACE]");
         }
         return "";
+    }
+
+    private void registrarErrorInterno(String mensaje) {
+        String texto = "[BurpIA] [ERROR] " + (mensaje != null ? mensaje : "Error interno de consola");
+        if (stderrOriginal != null) {
+            stderrOriginal.println(texto);
+            stderrOriginal.flush();
+            return;
+        }
+        System.err.println(texto);
     }
 
     private static final class EntradaLog {

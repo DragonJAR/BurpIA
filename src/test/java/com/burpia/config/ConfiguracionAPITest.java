@@ -290,17 +290,19 @@ class ConfiguracionAPITest {
     void testMaxTokensNuloEnMapaUsaDefault() {
         config.establecerProveedorAI("OpenAI");
         int defectoOpenAi = ProveedorAI.obtenerProveedor("OpenAI").obtenerMaxTokensPorDefecto();
-        config.establecerMaxTokensPorProveedor(new java.util.HashMap<>(java.util.Map.of("OpenAI", defectoOpenAi)));
-        config.obtenerMaxTokensPorProveedor().put("OpenAI", null);
+        java.util.HashMap<String, Integer> mapa = new java.util.HashMap<>();
+        mapa.put("OpenAI", null);
+        config.establecerMaxTokensPorProveedor(mapa);
 
         assertEquals(defectoOpenAi, config.obtenerMaxTokensParaProveedor("OpenAI"));
     }
 
     @Test
-    @DisplayName("Validacion tolera tema nulo sin excepcion")
-    void testValidacionTemaNuloNoRompe() {
+    @DisplayName("Tema nulo se normaliza y no genera error de validacion")
+    void testTemaNuloSeNormalizaSinError() {
         config.establecerTema(null);
         Map<String, String> errores = config.validar();
-        assertTrue(errores.containsKey("tema"));
+        assertFalse(errores.containsKey("tema"));
+        assertEquals("Light", config.obtenerTema());
     }
 }

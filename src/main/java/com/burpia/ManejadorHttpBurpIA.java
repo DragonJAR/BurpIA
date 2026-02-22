@@ -232,7 +232,17 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             cadenaSolicitud = metodo + " " + url;
         }
 
-        String hashSolicitud = generarHash(cadenaSolicitud.getBytes(StandardCharsets.UTF_8));
+        String encabezados = extraerEncabezados(respuestaRecibida.initiatingRequest());
+        String cuerpo = extraerCuerpoSolicitud(respuestaRecibida.initiatingRequest());
+        String encabezadosRespuesta = extraerEncabezadosRespuesta(respuestaRecibida);
+        String cuerpoRespuesta = extraerCuerpoRespuesta(respuestaRecibida);
+
+        String hashSolicitud = generarHashSolicitudRespuesta(
+            cadenaSolicitud,
+            codigoEstado,
+            encabezadosRespuesta,
+            cuerpoRespuesta
+        );
         rastrear("Hash de solicitud: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...");
 
         if (deduplicador.esDuplicadoYAgregar(hashSolicitud)) {
@@ -244,11 +254,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         registrar("Nueva solicitud registrada: " + url + " (hash: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...)");
-
-        String encabezados = extraerEncabezados(respuestaRecibida.initiatingRequest());
-        String cuerpo = extraerCuerpoSolicitud(respuestaRecibida.initiatingRequest());
-        String encabezadosRespuesta = extraerEncabezadosRespuesta(respuestaRecibida);
-        String cuerpoRespuesta = extraerCuerpoRespuesta(respuestaRecibida);
 
         int numEncabezados = 0;
         if (respuestaRecibida.initiatingRequest().headers() != null) {
@@ -743,18 +748,62 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private String generarHash(byte[] datos) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(datos);
-            StringBuilder cadenaHexadecimal = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) cadenaHexadecimal.append('0');
-                cadenaHexadecimal.append(hex);
+            if (datos != null && datos.length > 0) {
+                md.update(datos);
             }
-            return cadenaHexadecimal.toString();
+            return convertirDigestHex(md.digest());
         } catch (Exception e) {
             registrarError("Error al generar hash: " + e.getMessage());
             throw new RuntimeException("No se pudo generar hash SHA-256", e);
         }
+    }
+
+    private String generarHashSolicitudRespuesta(String solicitudCruda,
+                                                 int codigoEstadoRespuesta,
+                                                 String encabezadosRespuesta,
+                                                 String cuerpoRespuesta) {
+        return generarHashPartes(
+            solicitudCruda,
+            "\n|status|\n",
+            String.valueOf(codigoEstadoRespuesta),
+            "\n|response_headers|\n",
+            encabezadosRespuesta,
+            "\n|response_body|\n",
+            cuerpoRespuesta
+        );
+    }
+
+    private String generarHashPartes(String... partes) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            if (partes != null) {
+                for (String parte : partes) {
+                    if (parte != null && !parte.isEmpty()) {
+                        md.update(parte.getBytes(StandardCharsets.UTF_8));
+                    }
+                    md.update((byte) 0);
+                }
+            }
+            return convertirDigestHex(md.digest());
+        } catch (Exception e) {
+            registrarError("Error al generar hash: " + e.getMessage());
+            throw new RuntimeException("No se pudo generar hash SHA-256", e);
+        }
+    }
+
+    private String convertirDigestHex(byte[] hash) {
+        StringBuilder cadenaHexadecimal = new StringBuilder();
+        if (hash == null) {
+            return "";
+        }
+        for (byte b : hash) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                cadenaHexadecimal.append('0');
+            }
+            cadenaHexadecimal.append(hex);
+        }
+        return cadenaHexadecimal.toString();
     }
 
     private String extraerEncabezados(HttpRequest solicitud) {

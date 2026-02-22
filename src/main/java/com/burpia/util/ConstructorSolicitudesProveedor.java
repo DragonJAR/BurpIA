@@ -197,6 +197,37 @@ public final class ConstructorSolicitudesProveedor {
         }
     }
 
+    public static List<String> listarModelosOllama(String urlBase, OkHttpClient clienteHttp) throws IOException {
+        String base = ConfiguracionAPI.extraerUrlBase(urlBase);
+        if (base == null || base.trim().isEmpty()) {
+            throw new IOException("URL base de Ollama vacia o invalida");
+        }
+
+        String endpoint = base.endsWith("/api/tags") ? base : base + "/api/tags";
+        HttpUrl urlTags = HttpUrl.parse(endpoint);
+        if (urlTags == null) {
+            throw new IOException("URL base de Ollama invalida: " + base);
+        }
+
+        Request request = new Request.Builder()
+            .url(urlTags)
+            .addHeader("Accept", "application/json")
+            .build();
+
+        try (Response response = clienteHttp.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                String err = response.body() != null ? response.body().string() : "sin cuerpo";
+                throw new IOException("HTTP " + response.code() + ": " + err);
+            }
+            String body = response.body() != null ? response.body().string() : "{}";
+            List<String> modelos = ParserModelosOllama.extraerModelosDesdeTags(body);
+            if (modelos.isEmpty()) {
+                throw new IOException("Ollama no reportó modelos válidos en /api/tags");
+            }
+            return modelos;
+        }
+    }
+
     private static List<String> parsearModelosGemini(String body) {
         JsonElement element;
         try {

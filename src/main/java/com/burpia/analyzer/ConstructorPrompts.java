@@ -84,7 +84,11 @@ public class ConstructorPrompts {
         String cuerpo = valorNoVacio(solicitud.obtenerCuerpo(), "");
         if (!cuerpo.isEmpty()) {
             requestBuilder.append("\nBODY:\n")
-                .append(truncarTexto(cuerpo, MAX_CARACTERES_CUERPO_REQUEST, "request body"));
+                .append(truncarTexto(
+                    cuerpo,
+                    MAX_CARACTERES_CUERPO_REQUEST,
+                    trPrompt("cuerpo de solicitud", "request body")
+                ));
         }
 
         return requestBuilder.toString();
@@ -114,7 +118,11 @@ public class ConstructorPrompts {
 
         if (!cuerpo.isEmpty()) {
             responseBuilder.append("\nBODY:\n")
-                .append(truncarTexto(cuerpo, MAX_CARACTERES_CUERPO_RESPONSE, "response body"));
+                .append(truncarTexto(
+                    cuerpo,
+                    MAX_CARACTERES_CUERPO_RESPONSE,
+                    trPrompt("cuerpo de respuesta", "response body")
+                ));
         } else {
             responseBuilder.append("\nBODY:\n[EMPTY]");
         }

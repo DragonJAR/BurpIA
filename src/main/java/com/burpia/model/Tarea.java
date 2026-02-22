@@ -49,10 +49,10 @@ public class Tarea {
 
     public void establecerEstado(String estado) {
         synchronized (candado) {
-            this.estado = estado;
-            if (estado.equals(ESTADO_COMPLETADO) ||
-                estado.equals(ESTADO_ERROR) ||
-                estado.equals(ESTADO_CANCELADO)) {
+            this.estado = estado != null ? estado : ESTADO_ERROR;
+            if (ESTADO_COMPLETADO.equals(this.estado) ||
+                ESTADO_ERROR.equals(this.estado) ||
+                ESTADO_CANCELADO.equals(this.estado)) {
                 this.tiempoFin = System.currentTimeMillis();
             }
         }

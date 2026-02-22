@@ -8,40 +8,33 @@ public class ProveedorAI {
     public static final String URL_CUSTOM_ES = "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1";
 
     public static class ConfiguracionProveedor {
-        private final String nombre;
         private final String urlApi;
         private final String modeloPorDefecto;
         private final List<String> modelosDisponibles;
         private final boolean requiereClaveApi;
         private final int maxTokensPorDefecto;
-        private final int maxTokensVentana;
 
-        public ConfiguracionProveedor(String nombre, String urlApi, String modeloPorDefecto,
-                                     List<String> modelosDisponibles, boolean requiereClaveApi,
-                                     int maxTokensPorDefecto, int maxTokensVentana) {
-            this.nombre = nombre;
+        public ConfiguracionProveedor(String urlApi, String modeloPorDefecto,
+                                      List<String> modelosDisponibles, boolean requiereClaveApi,
+                                      int maxTokensPorDefecto) {
             this.urlApi = urlApi;
             this.modeloPorDefecto = modeloPorDefecto;
             this.modelosDisponibles = new ArrayList<>(modelosDisponibles);
             this.requiereClaveApi = requiereClaveApi;
             this.maxTokensPorDefecto = maxTokensPorDefecto;
-            this.maxTokensVentana = maxTokensVentana;
         }
 
-        public String obtenerNombre() { return nombre; }
         public String obtenerUrlApi() { return urlApi; }
         public String obtenerModeloPorDefecto() { return modeloPorDefecto; }
         public List<String> obtenerModelosDisponibles() { return new ArrayList<>(modelosDisponibles); }
         public boolean requiereClaveApi() { return requiereClaveApi; }
         public int obtenerMaxTokensPorDefecto() { return maxTokensPorDefecto; }
-        public int obtenerMaxTokensVentana() { return maxTokensVentana; }
     }
 
     private static final Map<String, ConfiguracionProveedor> PROVEEDORES = new LinkedHashMap<>();
 
     static {
         PROVEEDORES.put("Ollama", new ConfiguracionProveedor(
-            "Ollama",
             "http://localhost:11434",
             "gemma3:12b",
             Arrays.asList(
@@ -55,12 +48,10 @@ public class ProveedorAI {
                 "codellama"
             ),
             false,
-            4096,
-            32768
+            4096
         ));
 
         PROVEEDORES.put("OpenAI", new ConfiguracionProveedor(
-            "OpenAI",
             "https://api.openai.com/v1",
             "gpt-5.2-pro",
             Arrays.asList(
@@ -73,12 +64,10 @@ public class ProveedorAI {
                 "gpt-4-turbo", "gpt-3.5-turbo"
             ),
             true,
-            4096,
-            128000
+            4096
         ));
 
         PROVEEDORES.put("Claude", new ConfiguracionProveedor(
-            "Claude",
             "https://api.anthropic.com/v1",
             "claude-sonnet-4-6",
             Arrays.asList(
@@ -91,12 +80,10 @@ public class ProveedorAI {
                 "claude-3-opus-20240229"
             ),
             true,
-            8192,
-            200000
+            8192
         ));
 
         PROVEEDORES.put("Gemini", new ConfiguracionProveedor(
-            "Gemini",
             "https://generativelanguage.googleapis.com/v1beta",
             "gemini-1.5-pro-002",
             Arrays.asList(
@@ -104,12 +91,10 @@ public class ProveedorAI {
                 "gemini-1.5-flash-002"
             ),
             true,
-            8192,
-            1000000
+            8192
         ));
 
         PROVEEDORES.put("Z.ai", new ConfiguracionProveedor(
-            "Z.ai",
             "https://api.z.ai/api/paas/v4",
             "glm-5",
             Arrays.asList(
@@ -120,12 +105,10 @@ public class ProveedorAI {
                 "glm-4-long"
             ),
             true,
-            4096,
-            128000
+            4096
         ));
 
         PROVEEDORES.put("minimax", new ConfiguracionProveedor(
-            "minimax",
             "https://api.minimax.io/v1",
             "minimax-m2.5",
             Arrays.asList(
@@ -136,18 +119,15 @@ public class ProveedorAI {
                 "abab6-chat"
             ),
             true,
-            4096,
-            32000
+            4096
         ));
 
         PROVEEDORES.put(PROVEEDOR_CUSTOM, new ConfiguracionProveedor(
-            PROVEEDOR_CUSTOM,
             URL_CUSTOM_ES,
             "",
             Collections.emptyList(),
             false,
-            4096,
-            128000
+            4096
         ));
     }
 
@@ -161,10 +141,6 @@ public class ProveedorAI {
 
     public static boolean existeProveedor(String nombre) {
         return PROVEEDORES.containsKey(nombre);
-    }
-
-    public static String obtenerUrlApi(String nombreProveedor) {
-        return obtenerUrlApiPorDefecto(nombreProveedor, null);
     }
 
     public static String obtenerUrlApiPorDefecto(String nombreProveedor, String idiomaUi) {
