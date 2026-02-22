@@ -447,6 +447,7 @@ public class PanelTareas extends JPanel {
             try {
                 return Boolean.TRUE.equals(manejador.apply(tareaId));
             } catch (Exception ignored) {
+                return false;
             }
         }
         gestorTareas.reanudarTarea(tareaId);

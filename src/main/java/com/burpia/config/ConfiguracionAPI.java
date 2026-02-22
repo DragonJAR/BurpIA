@@ -109,10 +109,12 @@ public class ConfiguracionAPI {
     }
 
     public int obtenerTiempoEsperaAI() { return tiempoEsperaAI; }
-    public void establecerTiempoEsperaAI(int tiempoEsperaAI) { this.tiempoEsperaAI = tiempoEsperaAI; }
+    public void establecerTiempoEsperaAI(int tiempoEsperaAI) {
+        this.tiempoEsperaAI = normalizarTiempoEspera(tiempoEsperaAI);
+    }
 
     public String obtenerTema() { return tema; }
-    public void establecerTema(String tema) { this.tema = tema; }
+    public void establecerTema(String tema) { this.tema = normalizarTema(tema); }
 
     public String obtenerIdiomaUi() { return idiomaUi; }
     public void establecerIdiomaUi(String idiomaUi) { this.idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo(); }
@@ -138,7 +140,7 @@ public class ConfiguracionAPI {
     public static String construirUrlApiProveedor(String proveedor, String urlBase, String modelo) {
         String baseNormalizada = normalizarUrlBase(urlBase);
         String proveedorNormalizado = proveedor != null ? proveedor : "";
-        String modeloNormalizado = (modelo != null && !modelo.trim().isEmpty()) ? modelo.trim() : "gemini-1.5-pro";
+        String modeloNormalizado = (modelo != null && !modelo.trim().isEmpty()) ? modelo.trim() : "gemini-1.5-pro-002";
 
         switch (proveedorNormalizado) {
             case "Claude":
@@ -246,6 +248,22 @@ public class ConfiguracionAPI {
             return;
         }
         modelosPorProveedor.put(proveedor, modelo != null ? modelo : "");
+    }
+
+    public String obtenerUrlBaseGuardadaParaProveedor(String proveedor) {
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return null;
+        }
+        return urlsBasePorProveedor.get(proveedor);
+    }
+
+    public Integer obtenerMaxTokensConfiguradoParaProveedor(String proveedor) {
+        asegurarMapas();
+        if (proveedor == null || proveedor.trim().isEmpty()) {
+            return null;
+        }
+        return maxTokensPorProveedor.get(proveedor);
     }
 
     public int obtenerMaxTokensParaProveedor(String proveedor) {
@@ -422,38 +440,38 @@ public class ConfiguracionAPI {
 
     public Map<String, String> obtenerApiKeysPorProveedor() {
         asegurarMapas();
-        return apiKeysPorProveedor;
+        return new HashMap<>(apiKeysPorProveedor);
     }
 
     public void establecerApiKeysPorProveedor(Map<String, String> apiKeysPorProveedor) {
-        this.apiKeysPorProveedor = apiKeysPorProveedor != null ? apiKeysPorProveedor : new HashMap<>();
+        this.apiKeysPorProveedor = apiKeysPorProveedor != null ? new HashMap<>(apiKeysPorProveedor) : new HashMap<>();
     }
 
     public Map<String, String> obtenerUrlsBasePorProveedor() {
         asegurarMapas();
-        return urlsBasePorProveedor;
+        return new HashMap<>(urlsBasePorProveedor);
     }
 
     public void establecerUrlsBasePorProveedor(Map<String, String> urlsBasePorProveedor) {
-        this.urlsBasePorProveedor = urlsBasePorProveedor != null ? urlsBasePorProveedor : new HashMap<>();
+        this.urlsBasePorProveedor = urlsBasePorProveedor != null ? new HashMap<>(urlsBasePorProveedor) : new HashMap<>();
     }
 
     public Map<String, String> obtenerModelosPorProveedor() {
         asegurarMapas();
-        return modelosPorProveedor;
+        return new HashMap<>(modelosPorProveedor);
     }
 
     public void establecerModelosPorProveedor(Map<String, String> modelosPorProveedor) {
-        this.modelosPorProveedor = modelosPorProveedor != null ? modelosPorProveedor : new HashMap<>();
+        this.modelosPorProveedor = modelosPorProveedor != null ? new HashMap<>(modelosPorProveedor) : new HashMap<>();
     }
 
     public Map<String, Integer> obtenerMaxTokensPorProveedor() {
         asegurarMapas();
-        return maxTokensPorProveedor;
+        return new HashMap<>(maxTokensPorProveedor);
     }
 
     public void establecerMaxTokensPorProveedor(Map<String, Integer> maxTokensPorProveedor) {
-        this.maxTokensPorProveedor = maxTokensPorProveedor != null ? maxTokensPorProveedor : new HashMap<>();
+        this.maxTokensPorProveedor = maxTokensPorProveedor != null ? new HashMap<>(maxTokensPorProveedor) : new HashMap<>();
     }
 
     private void asegurarMapas() {
@@ -473,6 +491,8 @@ public class ConfiguracionAPI {
             proveedorAI = "Z.ai";
         }
         idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo();
+        tiempoEsperaAI = normalizarTiempoEspera(tiempoEsperaAI);
+        tema = normalizarTema(tema);
         maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
     }
 
@@ -484,6 +504,23 @@ public class ConfiguracionAPI {
             return MAXIMO_HALLAZGOS_TABLA;
         }
         return valor;
+    }
+
+    private static int normalizarTiempoEspera(int valor) {
+        if (valor < 10) {
+            return 10;
+        }
+        if (valor > 300) {
+            return 300;
+        }
+        return valor;
+    }
+
+    private static String normalizarTema(String tema) {
+        if ("Dark".equals(tema)) {
+            return "Dark";
+        }
+        return "Light";
     }
 
     private int obtenerMaxTokensPorDefectoProveedor(String proveedor) {

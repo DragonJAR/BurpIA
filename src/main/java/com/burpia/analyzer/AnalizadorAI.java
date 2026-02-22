@@ -24,6 +24,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
@@ -44,12 +46,12 @@ public class AnalizadorAI implements Runnable {
     private final BooleanSupplier tareaPausada;
     private final Object logLock;
     private static final int MAX_CHARS_LOG_DETALLADO = 4000;
-
-    private static final OkHttpClient CLIENTE_COMPARTIDO = new OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(180, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
-            .build();
+    private static final int TIEMPO_ESPERA_MIN_SEGUNDOS = 10;
+    private static final int TIEMPO_ESPERA_MAX_SEGUNDOS = 300;
+    private static final int MAX_INTENTOS_RETRY = 5;
+    private static final long BACKOFF_INICIAL_MS = 1000L;
+    private static final long BACKOFF_MAXIMO_MS = 8000L;
+    private static final Map<Integer, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = new ConcurrentHashMap<>();
 
     public interface Callback {
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
@@ -76,7 +78,7 @@ public class AnalizadorAI implements Runnable {
         };
         this.alInicioAnalisis = alInicioAnalisis;
         this.gestorConsola = gestorConsola;
-        this.clienteHttp = CLIENTE_COMPARTIDO;
+        this.clienteHttp = obtenerClienteHttp(this.config.obtenerTiempoEsperaAI());
         this.gson = new Gson();
         this.constructorPrompt = new ConstructorPrompts(this.config);
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
@@ -105,6 +107,13 @@ public class AnalizadorAI implements Runnable {
         String nombreHilo = Thread.currentThread().getName();
         long tiempoInicio = System.currentTimeMillis();
         boolean permisoAdquirido = false;
+
+        if (solicitud == null) {
+            String error = "Solicitud de analisis no disponible";
+            registrarError("[" + nombreHilo + "] " + error);
+            callback.alErrorAnalisis(error);
+            return;
+        }
 
         registrar("[" + nombreHilo + "] AnalizadorAI iniciado para URL: " + solicitud.obtenerUrl());
         rastrear("[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud());
@@ -155,8 +164,10 @@ public class AnalizadorAI implements Runnable {
         } catch (Exception e) {
             long duracion = System.currentTimeMillis() - tiempoInicio;
             registrarError("[" + nombreHilo + "] Analisis fallido despues de " + duracion + "ms: " + e.getMessage());
+            String cuerpoSolicitud = solicitud.obtenerCuerpo();
+            int longitudCuerpo = cuerpoSolicitud != null ? cuerpoSolicitud.length() : 0;
             rastrear("[" + nombreHilo + "] Detalles de solicitud: metodo=" + solicitud.obtenerMetodo() +
-                    ", url=" + solicitud.obtenerUrl() + ", longitud_cuerpo=" + solicitud.obtenerCuerpo().length());
+                    ", url=" + solicitud.obtenerUrl() + ", longitud_cuerpo=" + longitudCuerpo);
             callback.alErrorAnalisis(e.getMessage());
         } finally {
             if (permisoAdquirido) {
@@ -276,56 +287,39 @@ public class AnalizadorAI implements Runnable {
 
     private String llamarAPIAIConRetries() throws IOException {
         IOException ultimaExcepcion = null;
+        long backoffActualMs = BACKOFF_INICIAL_MS;
 
-        registrar("Sistema de retry: Iniciando 3 intentos inmediatos...");
-        for (int i = 0; i < 3; i++) {
+        registrar("Sistema de retry: hasta " + MAX_INTENTOS_RETRY + " intentos con backoff exponencial");
+        for (int intento = 1; intento <= MAX_INTENTOS_RETRY; intento++) {
             try {
                 verificarCancelacion();
                 esperarSiPausada();
-                registrar("Intento inmediato #" + (i + 1) + " de 3");
+                registrar("Intento #" + intento + " de " + MAX_INTENTOS_RETRY);
                 return llamarAPIAI();
             } catch (NonRetryableApiException e) {
                 throw e;
             } catch (IOException e) {
                 ultimaExcepcion = e;
-                registrar("Intento #" + (i + 1) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                registrar("Intento #" + intento + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                if (intento >= MAX_INTENTOS_RETRY) {
+                    break;
+                }
+                long esperaSegundos = Math.max(1L, (backoffActualMs + 999L) / 1000L);
+                registrar("Esperando " + esperaSegundos + " segundos antes del próximo reintento");
+                try {
+                    esperarConControl(backoffActualMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Sistema de retry cancelado/interrumpido", ie);
+                }
+                backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IOException("Sistema de retry cancelado/interrumpido", e);
             }
         }
 
-        int[] esperasSegundos = {30, 60, 90};
-
-        for (int i = 0; i < esperasSegundos.length; i++) {
-            int esperaSegundos = esperasSegundos[i];
-            registrar("Todos los intentos inmediatos fallaron. Esperando " + esperaSegundos +
-                     " segundos antes del próximo reintento (intentos: " + (3 + i + 1) + " de 6)");
-
-            try {
-                esperarConControl(esperaSegundos * 1000L);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                throw new IOException("Sistema de retry interrumpido", ie);
-            }
-
-            try {
-                verificarCancelacion();
-                esperarSiPausada();
-                registrar("Reintento #" + (4 + i) + " después de esperar " + esperaSegundos + " segundos");
-                return llamarAPIAI();
-            } catch (NonRetryableApiException e) {
-                throw e;
-            } catch (IOException e) {
-                ultimaExcepcion = e;
-                registrar("Reintento #" + (4 + i) + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException("Sistema de retry cancelado/interrumpido", e);
-            }
-        }
-
-        registrar("Todos los reintentos fallaron despues de 6 intentos");
+        registrar("Todos los reintentos fallaron despues de " + MAX_INTENTOS_RETRY + " intentos");
         registrarError("SUGERENCIA: Considera cambiar de proveedor de API.");
         if (ultimaExcepcion == null) {
             ultimaExcepcion = new IOException("Fallo de retry sin detalle de excepción");
@@ -334,6 +328,27 @@ public class AnalizadorAI implements Runnable {
             ultimaExcepcion.getMessage());
 
         throw ultimaExcepcion;
+    }
+
+    private static OkHttpClient obtenerClienteHttp(int tiempoEsperaSegundos) {
+        int timeoutNormalizado = normalizarTiempoEsperaSegundos(tiempoEsperaSegundos);
+        return CLIENTES_HTTP_POR_TIMEOUT.computeIfAbsent(timeoutNormalizado,
+            timeout -> new OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(timeout, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .build()
+        );
+    }
+
+    private static int normalizarTiempoEsperaSegundos(int valor) {
+        if (valor < TIEMPO_ESPERA_MIN_SEGUNDOS) {
+            return TIEMPO_ESPERA_MIN_SEGUNDOS;
+        }
+        if (valor > TIEMPO_ESPERA_MAX_SEGUNDOS) {
+            return TIEMPO_ESPERA_MAX_SEGUNDOS;
+        }
+        return valor;
     }
 
     private boolean esErrorNoRecuperable(int statusCode, String cuerpoError) {

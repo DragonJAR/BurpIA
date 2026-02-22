@@ -33,6 +33,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 
 public class PanelHallazgos extends JPanel {
@@ -63,12 +66,14 @@ public class PanelHallazgos extends JPanel {
     private JMenuItem menuItemIssues;
     private JMenuItem menuItemIgnorar;
     private JMenuItem menuItemBorrar;
+    private final ExecutorService ejecutorAcciones;
 
     public PanelHallazgos(MontoyaApi api) {
         this.api = api;
         this.esBurpProfessional = false;
         this.modelo = new ModeloTablaHallazgos(1000);
         this.tabla = new JTable(modelo);
+        this.ejecutorAcciones = crearEjecutorAcciones();
         initComponents();
     }
 
@@ -81,6 +86,7 @@ public class PanelHallazgos extends JPanel {
         this.esBurpProfessional = esBurpProfessional;
         this.modelo = modeloCompartido != null ? modeloCompartido : new ModeloTablaHallazgos(1000);
         this.tabla = new JTable(modelo);
+        this.ejecutorAcciones = crearEjecutorAcciones();
         initComponents();
     }
 
@@ -578,6 +584,7 @@ public class PanelHallazgos extends JPanel {
             I18nUI.Hallazgos.TITULO_ACCION_REPEATER(),
             I18nUI.Hallazgos.RESUMEN_ACCION_REPEATER(),
             true,
+            false,
             (solicitud, hallazgo) -> {
                 String nombreTab = "BurpIA-" + (hallazgo != null ? hallazgo.obtenerSeveridad() : "Hallazgo");
                 api.repeater().sendToRepeater(solicitud, nombreTab);
@@ -593,6 +600,7 @@ public class PanelHallazgos extends JPanel {
             I18nUI.Hallazgos.TITULO_ACCION_INTRUDER(),
             I18nUI.Hallazgos.RESUMEN_ACCION_INTRUDER(),
             true,
+            false,
             (solicitud, hallazgo) -> {
                 api.intruder().sendToIntruder(solicitud);
                 return "✅ " + solicitud.url() + " " + I18nUI.tr("(enviado a Intruder)", "(sent to Intruder)");
@@ -606,6 +614,7 @@ public class PanelHallazgos extends JPanel {
             "BurpIA-Scanner",
             I18nUI.Hallazgos.TITULO_ACCION_SCANNER(),
             I18nUI.Hallazgos.RESUMEN_ACCION_SCANNER(),
+            true,
             true,
             new AccionSobreSolicitud() {
                 private Audit auditoriaActiva;
@@ -642,6 +651,7 @@ public class PanelHallazgos extends JPanel {
             I18nUI.Hallazgos.TITULO_ACCION_ISSUES(),
             I18nUI.Hallazgos.RESUMEN_ACCION_ISSUES(),
             false,
+            false,
             (solicitud, hallazgo) -> {
                 if (hallazgo == null) {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_HALLAZGO_NO_DISPONIBLE());
@@ -668,6 +678,7 @@ public class PanelHallazgos extends JPanel {
                                     String titulo,
                                     String resumen,
                                     boolean requiereRequest,
+                                    boolean registrarErroresScanner,
                                     AccionSobreSolicitud accion) {
         ResultadoCapturaAccion captura = capturarEntradasAccion(filas);
         List<EntradaAccion> entradas = captura.entradas;
@@ -682,7 +693,7 @@ public class PanelHallazgos extends JPanel {
             }
             return;
         }
-        new Thread(() -> {
+        Runnable tarea = () -> {
             int exitosos = 0;
             int sinRequest = 0;
             StringBuilder detalle = new StringBuilder();
@@ -709,7 +720,7 @@ public class PanelHallazgos extends JPanel {
                         .append(I18nUI.tr(" (error: ", " (error: "))
                         .append(mensaje)
                         .append(")\n");
-                    if (titulo.contains("Scanner")) {
+                    if (registrarErroresScanner && api != null) {
                         api.logging().logToError(I18nUI.tr(
                             "[BurpIA] Error al enviar a Scanner Pro: ",
                             "[BurpIA] Error sending to Scanner Pro: "
@@ -739,7 +750,24 @@ public class PanelHallazgos extends JPanel {
                     totalExitosos > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
                 );
             });
-        }, nombreHilo).start();
+        };
+
+        try {
+            ejecutorAcciones.execute(() -> {
+                Thread.currentThread().setName(nombreHilo);
+                tarea.run();
+            });
+        } catch (RejectedExecutionException ex) {
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
+                PanelHallazgos.this,
+                I18nUI.tr(
+                    "No se pudo ejecutar la accion: el panel se esta cerrando.",
+                    "Action could not be executed: the panel is shutting down."
+                ),
+                titulo,
+                JOptionPane.WARNING_MESSAGE
+            ));
+        }
     }
 
     @FunctionalInterface
@@ -995,5 +1023,18 @@ public class PanelHallazgos extends JPanel {
         if (notificarCambio && manejadorCambioGuardadoIssues != null) {
             manejadorCambioGuardadoIssues.accept(activo);
         }
+    }
+
+    public void destruir() {
+        ejecutorAcciones.shutdownNow();
+    }
+
+    private ExecutorService crearEjecutorAcciones() {
+        return Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable);
+            thread.setName("BurpIA-Hallazgos");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 }

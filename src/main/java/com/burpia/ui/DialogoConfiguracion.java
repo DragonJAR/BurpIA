@@ -6,7 +6,6 @@ import com.burpia.config.ProveedorAI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
-import com.burpia.util.ParserModelosOllama;
 import com.burpia.util.ProbadorConexionAI;
 
 import javax.swing.*;
@@ -41,6 +40,8 @@ public class DialogoConfiguracion extends JDialog {
     private JTextField txtMaxTokens;
 
     private static final String MODELO_CUSTOM = "-- Custom --";
+    private static final int TIMEOUT_CONEXION_MODELOS_SEG = 8;
+    private static final int TIMEOUT_LECTURA_MODELOS_SEG = 12;
 
     public DialogoConfiguracion(Window padre, ConfiguracionAPI config, GestorConfiguracion gestorConfig, Runnable alGuardar) {
         super(padre, I18nUI.Configuracion.TITULO_DIALOGO(), Dialog.ModalityType.APPLICATION_MODAL);
@@ -709,7 +710,7 @@ public class DialogoConfiguracion extends JDialog {
             return;
         }
 
-        String urlGuardada = config.obtenerUrlsBasePorProveedor().get(proveedorSeleccionado);
+        String urlGuardada = config.obtenerUrlBaseGuardadaParaProveedor(proveedorSeleccionado);
         boolean tieneUrlGuardada = urlGuardada != null && !urlGuardada.trim().isEmpty();
         if (!tieneUrlGuardada && ProveedorAI.PROVEEDOR_CUSTOM.equals(proveedorSeleccionado)) {
             IdiomaUI idiomaSeleccionado = (IdiomaUI) comboIdioma.getSelectedItem();
@@ -725,7 +726,7 @@ public class DialogoConfiguracion extends JDialog {
         String apiKeyGuardada = config.obtenerApiKeyParaProveedor(proveedorSeleccionado);
         txtClave.setText(apiKeyGuardada != null ? apiKeyGuardada : "");
 
-        Integer maxTokensGuardado = config.obtenerMaxTokensPorProveedor().get(proveedorSeleccionado);
+        Integer maxTokensGuardado = config.obtenerMaxTokensConfiguradoParaProveedor(proveedorSeleccionado);
         int maxTokensMostrar = (maxTokensGuardado != null && maxTokensGuardado > 0)
             ? maxTokensGuardado
             : configProveedor.obtenerMaxTokensPorDefecto();
@@ -762,36 +763,30 @@ public class DialogoConfiguracion extends JDialog {
         SwingWorker<java.util.List<String>, Void> worker = new SwingWorker<>() {
             @Override
             protected java.util.List<String> doInBackground() {
-                try {
-                    String urlApi = txtUrl.getText().trim();
-
-                    if (proveedorSeleccionado.equals("Ollama")) {
-                        return obtenerModelosOllama(urlApi);
-                    } else {
-                        return obtenerModelosDesdeAPI(proveedorSeleccionado);
-                    }
-                } catch (Exception e) {
-                    return null;
-                }
+                return obtenerModelosDesdeAPI(proveedorSeleccionado);
             }
 
             @Override
             protected void done() {
                 try {
                     java.util.List<String> modelos = get();
-                    if (modelos != null && !modelos.isEmpty()) {
-                        cargarModelosEnCombo(modelos, modelos.get(0));
-
-                        JOptionPane.showMessageDialog(DialogoConfiguracion.this,
-                                I18nUI.Configuracion.MSG_MODELOS_ACTUALIZADOS(modelos.size(), proveedorSeleccionado),
-                                I18nUI.Configuracion.TITULO_MODELOS_ACTUALIZADOS(),
-                                JOptionPane.INFORMATION_MESSAGE);
+                    if (modelos == null || modelos.isEmpty()) {
+                        throw new IllegalStateException(I18nUI.tr(
+                            "La API no devolvio modelos para " + proveedorSeleccionado,
+                            "The API returned no models for " + proveedorSeleccionado
+                        ));
                     }
-                } catch (Exception e) {
+                    cargarModelosEnCombo(modelos, modelos.get(0));
                     JOptionPane.showMessageDialog(DialogoConfiguracion.this,
-                            I18nUI.Configuracion.MSG_ERROR_PROCESAR_MODELOS(e.getMessage()),
-                            I18nUI.Configuracion.TITULO_ERROR(),
-                            JOptionPane.ERROR_MESSAGE);
+                        I18nUI.Configuracion.MSG_MODELOS_ACTUALIZADOS(modelos.size(), proveedorSeleccionado),
+                        I18nUI.Configuracion.TITULO_MODELOS_ACTUALIZADOS(),
+                        JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) {
+                    String detalleError = extraerMensajeError(e);
+                    JOptionPane.showMessageDialog(DialogoConfiguracion.this,
+                        I18nUI.Configuracion.MSG_ERROR_PROCESAR_MODELOS(detalleError),
+                        I18nUI.Configuracion.TITULO_ERROR(),
+                        JOptionPane.ERROR_MESSAGE);
                 } finally {
                     btnRefrescarModelos.setEnabled(true);
                     btnRefrescarModelos.setText(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
@@ -800,74 +795,6 @@ public class DialogoConfiguracion extends JDialog {
         };
 
         worker.execute();
-    }
-
-    private java.util.List<String> obtenerModelosOllama(String urlApi) {
-        java.util.List<String> modelos = new java.util.ArrayList<>();
-
-        try {
-            String urlBase = ConfiguracionAPI.extraerUrlBase(urlApi);
-            if (!urlBase.endsWith("/api/tags")) {
-                urlBase = urlBase + "/api/tags";
-            }
-
-            java.net.URL url = new java.net.URL(urlBase);
-            java.net.HttpURLConnection conexion = (java.net.HttpURLConnection) url.openConnection();
-            conexion.setRequestMethod("GET");
-            conexion.setRequestProperty("Accept", "application/json");
-            conexion.setConnectTimeout(5000);
-            conexion.setReadTimeout(5000);
-
-            int codigoRespuesta = conexion.getResponseCode();
-
-            if (codigoRespuesta == 200) {
-                StringBuilder respuesta = new StringBuilder();
-                try (java.io.BufferedReader br = new java.io.BufferedReader(
-                        new java.io.InputStreamReader(conexion.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
-                    String linea;
-                    while ((linea = br.readLine()) != null) {
-                        respuesta.append(linea);
-                    }
-                }
-
-                String json = respuesta.toString();
-                modelos = ParserModelosOllama.extraerModelosDesdeTags(json);
-                if (modelos.isEmpty()) {
-                    throw new RuntimeException(I18nUI.tr(
-                        "Ollama respondio sin modelos validos en /api/tags",
-                        "Ollama responded without valid models at /api/tags"
-                    ));
-                }
-            } else {
-                throw new RuntimeException(I18nUI.tr(
-                    "Ollama respondio con codigo HTTP ",
-                    "Ollama responded with HTTP code "
-                ) + codigoRespuesta + ". " + I18nUI.tr(
-                    "Asegurate de que Ollama este corriendo en ",
-                    "Make sure Ollama is running at "
-                ) + urlBase.replace("/api/tags", ""));
-            }
-
-            conexion.disconnect();
-        } catch (java.net.ConnectException e) {
-            throw new RuntimeException(I18nUI.tr(
-                "No se puede conectar con Ollama. Asegurate de que Ollama este corriendo en http://localhost:11434",
-                "Unable to connect to Ollama. Make sure Ollama is running at http://localhost:11434"
-            ));
-        } catch (java.net.SocketTimeoutException e) {
-            throw new RuntimeException(I18nUI.tr(
-                "Tiempo de espera agotado al conectar con Ollama. Verifica que Ollama este corriendo.",
-                "Connection timed out when connecting to Ollama. Verify Ollama is running."
-            ));
-        } catch (Exception e) {
-            throw new RuntimeException(I18nUI.tr("Error al conectar con Ollama: ", "Error connecting to Ollama: ")
-                + e.getMessage() + ". " + I18nUI.tr(
-                    "Asegurate de que Ollama este corriendo en http://localhost:11434",
-                    "Make sure Ollama is running at http://localhost:11434"
-                ));
-        }
-
-        return modelos;
     }
 
     private void cargarModelosEnCombo(List<String> modelos, String preferido) {
@@ -917,12 +844,9 @@ public class DialogoConfiguracion extends JDialog {
     }
 
     private java.util.List<String> obtenerModelosDesdeAPI(String proveedor) {
+        okhttp3.OkHttpClient cliente = crearClienteModelos();
         if ("Gemini".equals(proveedor)) {
             try {
-                okhttp3.OkHttpClient cliente = new okhttp3.OkHttpClient.Builder()
-                    .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
-                    .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
-                    .build();
                 return ConstructorSolicitudesProveedor.listarModelosGemini(
                     txtUrl.getText().trim(),
                     new String(txtClave.getPassword()).trim(),
@@ -935,7 +859,46 @@ public class DialogoConfiguracion extends JDialog {
                 ) + e.getMessage(), e);
             }
         }
-        return ProveedorAI.obtenerModelosDisponibles(proveedor);
+        if ("Ollama".equals(proveedor)) {
+            try {
+                return ConstructorSolicitudesProveedor.listarModelosOllama(
+                    txtUrl.getText().trim(),
+                    cliente
+                );
+            } catch (Exception e) {
+                throw new RuntimeException(I18nUI.tr(
+                    "No se pudieron obtener modelos Ollama: ",
+                    "Could not retrieve Ollama models: "
+                ) + e.getMessage(), e);
+            }
+        }
+        List<String> modelos = ProveedorAI.obtenerModelosDisponibles(proveedor);
+        if (modelos == null || modelos.isEmpty()) {
+            throw new RuntimeException(I18nUI.tr(
+                "Este proveedor no expone una lista automatica de modelos. Escribe el modelo manualmente en el campo Modelo.",
+                "This provider does not expose an automatic model list. Enter the model manually in the Model field."
+            ));
+        }
+        return modelos;
+    }
+
+    private okhttp3.OkHttpClient crearClienteModelos() {
+        return new okhttp3.OkHttpClient.Builder()
+            .connectTimeout(TIMEOUT_CONEXION_MODELOS_SEG, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(TIMEOUT_LECTURA_MODELOS_SEG, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+    }
+
+    private String extraerMensajeError(Exception error) {
+        Throwable causa = error;
+        if (error instanceof java.util.concurrent.ExecutionException && error.getCause() != null) {
+            causa = error.getCause();
+        }
+        String mensaje = causa != null ? causa.getMessage() : null;
+        if (mensaje == null || mensaje.trim().isEmpty()) {
+            return I18nUI.tr("Sin detalle de error", "No error details available");
+        }
+        return mensaje.trim();
     }
 
     private void probarConexion() {

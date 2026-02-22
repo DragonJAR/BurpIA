@@ -6,13 +6,16 @@ import com.burpia.ui.ModeloTablaTareas;
 import javax.swing.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 public class GestorTareas {
     private final Map<String, Tarea> tareas;
     private final ReentrantLock candado;
-    private final javax.swing.Timer temporizadorVerificacion;
+    private final ScheduledExecutorService monitorVerificacion;
     private final ModeloTablaTareas modeloTabla;
     private final Consumer<String> logger;
     private volatile Consumer<String> manejadorCancelacion;
@@ -34,11 +37,13 @@ public class GestorTareas {
         this.manejadorCancelacion = null;
         this.maxTareasFinalizadasRetenidas = Math.max(1, maxTareasFinalizadasRetenidas);
 
-        this.temporizadorVerificacion = new javax.swing.Timer(
-            (int) INTERVALO_VERIFICACION_MS,
-            e -> verificarTareasAtascadas()
+        this.monitorVerificacion = crearMonitorVerificacion();
+        this.monitorVerificacion.scheduleAtFixedRate(
+            this::verificarTareasAtascadas,
+            INTERVALO_VERIFICACION_MS,
+            INTERVALO_VERIFICACION_MS,
+            TimeUnit.MILLISECONDS
         );
-        this.temporizadorVerificacion.start();
     }
 
     public Tarea crearTarea(String tipo, String url, String estado, String mensajeInfo) {
@@ -174,7 +179,9 @@ public class GestorTareas {
 
             for (Tarea tarea : tareasAtascadas) {
                 tarea.establecerEstado(Tarea.ESTADO_ERROR);
-                tarea.establecerMensajeInfo("Tarea atascada - timeout");
+                tarea.establecerMensajeInfo(
+                    com.burpia.i18n.I18nUI.tr("Tarea atascada - timeout", "Stuck task - timeout")
+                );
             }
         } finally {
             candado.unlock();
@@ -182,7 +189,10 @@ public class GestorTareas {
 
         for (Tarea tarea : tareasAtascadas) {
             actualizarFilaTabla(tarea);
-            registrar("Tarea atascada detectada: " + tarea.obtenerId());
+            registrar(com.burpia.i18n.I18nUI.tr(
+                "Tarea atascada detectada: ",
+                "Stuck task detected: "
+            ) + tarea.obtenerId());
         }
     }
 
@@ -329,8 +339,8 @@ public class GestorTareas {
     }
 
     public void detener() {
-        if (temporizadorVerificacion != null) {
-            temporizadorVerificacion.stop();
+        if (monitorVerificacion != null && !monitorVerificacion.isShutdown()) {
+            monitorVerificacion.shutdownNow();
         }
         candado.lock();
         try {
@@ -471,5 +481,14 @@ public class GestorTareas {
             logger.accept(mensaje);
         } catch (Exception ignored) {
         }
+    }
+
+    private ScheduledExecutorService crearMonitorVerificacion() {
+        return Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread hilo = new Thread(runnable);
+            hilo.setName("BurpIA-GestorTareas");
+            hilo.setDaemon(true);
+            return hilo;
+        });
     }
 }

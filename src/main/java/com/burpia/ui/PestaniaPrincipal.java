@@ -131,5 +131,6 @@ public class PestaniaPrincipal extends JPanel {
         panelEstadisticas.destruir();
         panelConsola.destruir();
         panelTareas.destruir();
+        panelHallazgos.destruir();
     }
 }
