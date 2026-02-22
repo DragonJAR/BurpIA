@@ -30,7 +30,6 @@ build-jar.sh
 build.gradle
 gradlew
 /gradle
-/src/test
 /docs
 /src/test
 settings.gradle
