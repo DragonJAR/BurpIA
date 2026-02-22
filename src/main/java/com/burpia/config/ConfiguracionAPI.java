@@ -237,10 +237,12 @@ public class ConfiguracionAPI {
             return 4096;
         }
         if (maxTokensPorProveedor.containsKey(proveedor)) {
-            return maxTokensPorProveedor.get(proveedor);
+            Integer valor = maxTokensPorProveedor.get(proveedor);
+            if (valor != null && valor > 0) {
+                return valor;
+            }
         }
-        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
-        return config != null ? config.obtenerMaxTokensPorDefecto() : 4096;
+        return obtenerMaxTokensPorDefectoProveedor(proveedor);
     }
 
     public void establecerMaxTokensParaProveedor(String proveedor, int maxTokens) {
@@ -248,7 +250,8 @@ public class ConfiguracionAPI {
         if (proveedor == null || proveedor.trim().isEmpty()) {
             return;
         }
-        maxTokensPorProveedor.put(proveedor, maxTokens);
+        int valorNormalizado = maxTokens > 0 ? maxTokens : obtenerMaxTokensPorDefectoProveedor(proveedor);
+        maxTokensPorProveedor.put(proveedor, valorNormalizado);
     }
 
     public Map<String, String> validar() {
@@ -289,7 +292,7 @@ public class ConfiguracionAPI {
             errores.put("tiempoEsperaAI", "Tiempo de espera debe estar entre 10 y 300 segundos");
         }
 
-        if (!tema.equals("Light") && !tema.equals("Dark")) {
+        if (!"Light".equals(tema) && !"Dark".equals(tema)) {
             errores.put("tema", "Tema debe ser 'Light' o 'Dark'");
         }
 
@@ -324,6 +327,9 @@ public class ConfiguracionAPI {
                "RESPONSE:\n" +
                "{RESPONSE}\n" +
                "\n" +
+               "OUTPUT LANGUAGE:\n" +
+               "{OUTPUT_LANGUAGE}\n" +
+               "\n" +
                "SEVERITY CRITERIA:\n" +
                "- Critical: Direct code execution, authentication bypass, full data exposure\n" +
                "- High: SQL injection, stored XSS, SSRF, significant data leakage\n" +
@@ -342,7 +348,8 @@ public class ConfiguracionAPI {
                "3. Every finding must have exactly these three fields: \"descripcion\", \"severidad\", \"confianza\"\n" +
                "4. \"severidad\" must be exactly one of: Critical, High, Medium, Low, Info\n" +
                "5. \"confianza\" must be exactly one of: High, Medium, Low\n" +
-               "6. If no vulnerabilities found, return: {\"hallazgos\":[]}\n" +
+               "6. Write \"descripcion\" strictly in OUTPUT LANGUAGE\n" +
+               "7. If no vulnerabilities found, return: {\"hallazgos\":[]}\n" +
                "\n" +
                "{\"hallazgos\":[{\"descripcion\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\"}]}";
     }
@@ -434,6 +441,11 @@ public class ConfiguracionAPI {
             return MAXIMO_HALLAZGOS_TABLA;
         }
         return valor;
+    }
+
+    private int obtenerMaxTokensPorDefectoProveedor(String proveedor) {
+        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
+        return config != null ? config.obtenerMaxTokensPorDefecto() : 4096;
     }
 
     public ConfiguracionAPI crearSnapshot() {

@@ -86,7 +86,7 @@ class HallazgoTest {
         Object[] fila = hallazgo.aFilaTabla();
         
         assertEquals(5, fila.length);
-        assertNotNull(fila[0]); // hora
+        assertNotNull(fila[0]);
         assertEquals("https://example.com/test", fila[1]);
         assertEquals("SQL Injection", fila[2]);
         assertEquals("Critical", fila[3]);

@@ -1,5 +1,7 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
@@ -34,7 +36,7 @@ public class GestorConfiguracion {
         }
         this.rutaConfig = Paths.get(userHome, NOMBRE_ARCHIVO);
 
-        this.out.println("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
+        logInfo("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
     }
 
     public ConfiguracionAPI cargarConfiguracion() {
@@ -42,41 +44,41 @@ public class GestorConfiguracion {
             Path path = rutaConfig.toAbsolutePath();
 
             if (!Files.exists(path)) {
-                out.println("[Configuracion] Archivo no existe, creando configuracion por defecto");
+                logInfo("[Configuracion] Archivo no existe, creando configuracion por defecto");
                 return new ConfiguracionAPI();
             }
 
             if (!Files.isReadable(path)) {
-                err.println("[Configuracion] Archivo no es legible: " + path);
+                logError("[Configuracion] Archivo no es legible: " + path);
                 return new ConfiguracionAPI();
             }
 
             String json = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
 
             if (json == null || json.trim().isEmpty()) {
-                out.println("[Configuracion] Archivo vacio, usando configuracion por defecto");
+                logInfo("[Configuracion] Archivo vacio, usando configuracion por defecto");
                 return new ConfiguracionAPI();
             }
 
             ArchivoConfiguracion archivo = gson.fromJson(json, ArchivoConfiguracion.class);
             if (archivo == null) {
-                out.println("[Configuracion] Error al parsear JSON, usando configuracion por defecto");
+                logInfo("[Configuracion] Error al parsear JSON, usando configuracion por defecto");
                 return new ConfiguracionAPI();
             }
 
             ConfiguracionAPI config = construirDesdeArchivo(archivo);
 
-            out.println("[Configuracion] Configuracion cargada exitosamente");
+            logInfo("[Configuracion] Configuracion cargada exitosamente");
             return config;
 
         } catch (JsonSyntaxException e) {
-            err.println("[Configuracion] Error de sintaxis JSON: " + e.getMessage());
+            logError("[Configuracion] Error de sintaxis JSON: " + e.getMessage());
             return new ConfiguracionAPI();
         } catch (IOException e) {
-            err.println("[Configuracion] Error de E/S al cargar: " + e.getMessage());
+            logError("[Configuracion] Error de E/S al cargar: " + e.getMessage());
             return new ConfiguracionAPI();
         } catch (Exception e) {
-            err.println("[Configuracion] Error inesperado al cargar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            logError("[Configuracion] Error inesperado al cargar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             return new ConfiguracionAPI();
         }
     }
@@ -91,17 +93,19 @@ public class GestorConfiguracion {
 
             Path directorioPadre = path.getParent();
             if (directorioPadre != null && !Files.exists(directorioPadre)) {
-                err.println("[Configuracion] Directorio padre no existe: " + directorioPadre);
+                logError("[Configuracion] Directorio padre no existe: " + directorioPadre);
                 if (mensajeError != null) {
-                    mensajeError.append("Directorio no existe: ").append(directorioPadre);
+                    mensajeError.append(I18nUI.tr("Directorio no existe: ", "Directory does not exist: "))
+                        .append(directorioPadre);
                 }
                 return false;
             }
 
             if (directorioPadre != null && !Files.isWritable(directorioPadre)) {
-                err.println("[Configuracion] Directorio no es escribible: " + directorioPadre);
+                logError("[Configuracion] Directorio no es escribible: " + directorioPadre);
                 if (mensajeError != null) {
-                    mensajeError.append("Directorio no escribible: ").append(directorioPadre);
+                    mensajeError.append(I18nUI.tr("Directorio no escribible: ", "Directory is not writable: "))
+                        .append(directorioPadre);
                 }
                 return false;
             }
@@ -119,19 +123,19 @@ public class GestorConfiguracion {
                 Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
 
-            out.println("[Configuracion] Configuracion guardada exitosamente en: " + path);
+            logInfo("[Configuracion] Configuracion guardada exitosamente en: " + path);
             return true;
 
         } catch (IOException e) {
-            err.println("[Configuracion] Error de E/S al guardar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            logError("[Configuracion] Error de E/S al guardar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             if (mensajeError != null) {
-                mensajeError.append("Error de E/S: ").append(e.getMessage());
+                mensajeError.append(I18nUI.tr("Error de E/S: ", "I/O error: ")).append(e.getMessage());
             }
             return false;
         } catch (Exception e) {
-            err.println("[Configuracion] Error inesperado al guardar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            logError("[Configuracion] Error inesperado al guardar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             if (mensajeError != null) {
-                mensajeError.append("Error inesperado: ").append(e.getMessage());
+                mensajeError.append(I18nUI.tr("Error inesperado: ", "Unexpected error: ")).append(e.getMessage());
             }
             return false;
         }
@@ -149,14 +153,22 @@ public class GestorConfiguracion {
         try {
             if (Files.exists(rutaConfig)) {
                 Files.delete(rutaConfig);
-                out.println("[Configuracion] Archivo eliminado: " + rutaConfig);
+                logInfo("[Configuracion] Archivo eliminado: " + rutaConfig);
                 return true;
             }
             return false;
         } catch (IOException e) {
-            err.println("[Configuracion] Error al eliminar: " + e.getMessage());
+            logError("[Configuracion] Error al eliminar: " + e.getMessage());
             return false;
         }
+    }
+
+    private void logInfo(String mensaje) {
+        out.println(I18nLogs.tr(mensaje));
+    }
+
+    private void logError(String mensaje) {
+        err.println(I18nLogs.tr(mensaje));
     }
 
     private ConfiguracionAPI construirDesdeArchivo(ArchivoConfiguracion archivo) {

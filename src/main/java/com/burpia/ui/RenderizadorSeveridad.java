@@ -33,7 +33,6 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
                 Color colorFondo = Hallazgo.obtenerColorSeveridad(severidad);
                 etiqueta.setBackground(colorFondo);
 
-                // Texto blanco para fondos oscuros
                 if (severidad.equals(Hallazgo.SEVERIDAD_CRITICAL) ||
                     severidad.equals(Hallazgo.SEVERIDAD_HIGH)) {
                     etiqueta.setForeground(Color.WHITE);
@@ -42,7 +41,6 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
                 }
             }
 
-            // Icono o indicador opcional
             StringBuilder texto = new StringBuilder(severidad);
             if (severidad.equals(Hallazgo.SEVERIDAD_CRITICAL)) {
                 texto.insert(0, "⚠ ");

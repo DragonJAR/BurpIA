@@ -1,9 +1,12 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nUI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,6 +25,7 @@ class GestorConfiguracionTest {
         if (userHomeOriginal != null) {
             System.setProperty("user.home", userHomeOriginal);
         }
+        I18nUI.establecerIdioma("es");
     }
 
     @Test
@@ -80,5 +84,19 @@ class GestorConfiguracionTest {
         assertFalse(config.esDetallado());
         assertEquals("en", config.obtenerIdiomaUi());
         assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla());
+    }
+
+    @Test
+    @DisplayName("Logs de configuracion se localizan a ingles cuando idioma UI es EN")
+    void testLogsConfiguracionEnIngles() {
+        I18nUI.establecerIdioma("en");
+        StringWriter salida = new StringWriter();
+        StringWriter errores = new StringWriter();
+
+        new GestorConfiguracion(new PrintWriter(salida, true), new PrintWriter(errores, true));
+
+        String log = salida.toString();
+        assertTrue(log.contains("[Configuration]"));
+        assertTrue(log.contains("Configuration path"));
     }
 }

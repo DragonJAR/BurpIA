@@ -33,7 +33,6 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
                 Color colorFondo = Hallazgo.obtenerColorConfianza(confianza);
                 etiqueta.setBackground(colorFondo);
 
-                // Texto blanco o negro segun el fondo
                 if (confianza.equals(Hallazgo.CONFIANZA_BAJA)) {
                     etiqueta.setForeground(Color.WHITE);
                 } else {
@@ -41,7 +40,6 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
                 }
             }
 
-            // Barra visual de confianza
             StringBuilder texto = new StringBuilder(confianza);
             if (confianza.equals(Hallazgo.CONFIANZA_ALTA)) {
                 texto.append(" (███)");

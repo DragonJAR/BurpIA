@@ -49,7 +49,6 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         int fila = 0;
 
-        // URL
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblUrl = new JLabel(I18nUI.DetalleHallazgo.LABEL_URL());
         lblUrl.setToolTipText(TooltipsUI.DetalleHallazgo.URL());
@@ -63,7 +62,6 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         fila++;
 
-        // Severidad y Confianza en la misma fila
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblSeveridad = new JLabel(I18nUI.DetalleHallazgo.LABEL_SEVERIDAD());
         lblSeveridad.setToolTipText(TooltipsUI.DetalleHallazgo.SEVERIDAD());
@@ -100,7 +98,6 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         fila++;
 
-        // Descripción (Hallazgo)
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblDescripcion = new JLabel(I18nUI.DetalleHallazgo.LABEL_DESCRIPCION());
         lblDescripcion.setToolTipText(TooltipsUI.DetalleHallazgo.DESCRIPCION());
@@ -117,12 +114,10 @@ public class DialogoDetalleHallazgo extends JDialog {
         scrollDescripcion.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         panelContenido.add(scrollDescripcion, gbc);
 
-        // Panel Principal con espaciado global
         JPanel panelPrincipal = new JPanel(new BorderLayout());
         panelPrincipal.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
         panelPrincipal.add(panelContenido, BorderLayout.CENTER);
 
-        // Botones de acción
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         panelBotones.setBorder(BorderFactory.createEmptyBorder(0, 15, 15, 15));
 

@@ -142,14 +142,12 @@ public class ProbadorConexionAI {
     }
 
     public void mostrarDialogoPrueba(JFrame padre) {
-        // Mostrar dialogo de carga
         JDialog dialogoCarga = new JDialog(padre, I18nUI.tr("Probando Conexion", "Testing Connection"), true);
         JLabel etiqueta = new JLabel(I18nUI.tr("Conectando a ", "Connecting to ") + config.obtenerProveedorAI() + "...", SwingConstants.CENTER);
         dialogoCarga.add(etiqueta);
         dialogoCarga.setSize(300, 100);
         dialogoCarga.setLocationRelativeTo(padre);
 
-        // Ejecutar prueba en background
         SwingWorker<ResultadoPrueba, Void> worker = new SwingWorker<ResultadoPrueba, Void>() {
             @Override
             protected ResultadoPrueba doInBackground() throws Exception {

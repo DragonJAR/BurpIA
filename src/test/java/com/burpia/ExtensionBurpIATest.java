@@ -1,5 +1,7 @@
 package com.burpia;
 
+import burp.api.montoya.MontoyaApi;
+import com.burpia.model.Hallazgo;
 import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
@@ -9,10 +11,14 @@ import org.junit.jupiter.api.Test;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @DisplayName("ExtensionBurpIA Tests")
 class ExtensionBurpIATest {
@@ -45,6 +51,34 @@ class ExtensionBurpIATest {
         assertNull(obtenerCampo(extension, "pestaniaPrincipal"));
         assertNull(obtenerCampo(extension, "gestorTareas"));
         assertNull(obtenerCampo(extension, "gestorConsola"));
+    }
+
+    @Test
+    @DisplayName("Unload es seguro sin initialize previo")
+    void testUnloadSinInitializeNoFalla() {
+        ExtensionBurpIA extension = new ExtensionBurpIA();
+        assertDoesNotThrow(extension::unload);
+    }
+
+    @Test
+    @DisplayName("Abrir configuracion es seguro sin dependencias inicializadas")
+    void testAbrirConfiguracionSinDependenciasNoFalla() throws Exception {
+        ExtensionBurpIA extension = new ExtensionBurpIA();
+        Method abrirConfiguracion = ExtensionBurpIA.class.getDeclaredMethod("abrirConfiguracion");
+        abrirConfiguracion.setAccessible(true);
+        assertDoesNotThrow(() -> abrirConfiguracion.invoke(extension));
+    }
+
+    @Test
+    @DisplayName("Guardar AuditIssue retorna false si SiteMap no esta disponible")
+    void testGuardarAuditIssueSinSiteMap() {
+        MontoyaApi api = mock(MontoyaApi.class);
+        when(api.siteMap()).thenReturn(null);
+        Hallazgo hallazgo = new Hallazgo("https://example.com", "Possible SQLi", "High", "High");
+
+        boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
+
+        assertFalse(guardado);
     }
 
     private static void establecerCampo(Object objetivo, String nombre, Object valor) throws Exception {

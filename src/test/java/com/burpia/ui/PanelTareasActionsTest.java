@@ -102,8 +102,6 @@ class PanelTareasActionsTest {
     }
 
     private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {
-            // sync EDT
-        });
+        SwingUtilities.invokeAndWait(() -> {});
     }
 }

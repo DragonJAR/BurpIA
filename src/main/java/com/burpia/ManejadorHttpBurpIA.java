@@ -8,7 +8,6 @@ import burp.api.montoya.http.handler.RequestToBeSentAction;
 import burp.api.montoya.http.handler.ResponseReceivedAction;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
-import burp.api.montoya.scanner.audit.issues.AuditIssue;
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
@@ -28,6 +27,7 @@ import javax.swing.*;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -188,8 +188,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         rastrear("Respuesta recibida: " + metodo + " " + url + " (estado: " + codigoEstado + ")");
 
-        // === VERIFICACION DE SCOPE ===
-        // Solo analizar solicitudes que esten dentro del scope de Burp Suite
         if (!estaEnScope(respuestaRecibida.initiatingRequest())) {
             rastrear("FUERA DE SCOPE - Omitiendo: " + url);
             return ResponseReceivedAction.continueWith(respuestaRecibida);
@@ -210,7 +208,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             cadenaSolicitud = metodo + " " + url;
         }
 
-        String hashSolicitud = generarHash(cadenaSolicitud.getBytes());
+        String hashSolicitud = generarHash(cadenaSolicitud.getBytes(StandardCharsets.UTF_8));
         rastrear("Hash de solicitud: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...");
 
         if (deduplicador.esDuplicadoYAgregar(hashSolicitud)) {
@@ -270,7 +268,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         String url = solicitud.url() != null ? solicitud.url() : "[URL NULL]";
         String metodo = solicitud.method() != null ? solicitud.method() : "[METHOD NULL]";
         String cadenaSolicitud = solicitud.toString() != null ? solicitud.toString() : metodo + " " + url;
-        String hashSolicitud = generarHash(cadenaSolicitud.getBytes());
+        String hashSolicitud = generarHash(cadenaSolicitud.getBytes(StandardCharsets.UTF_8));
         String encabezados = extraerEncabezados(solicitud);
         String cuerpo = extraerCuerpoSolicitud(solicitud);
         int codigoEstadoRespuesta = -1;
@@ -518,16 +516,15 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         try {
-            AuditIssue auditIssue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, evidenciaHttp);
-            if (auditIssue == null) {
-                rastrear("AuditIssue no creado: hallazgo sin datos suficientes");
-                return;
-            }
             if (api == null || api.siteMap() == null) {
                 registrarError("No se pudo guardar AuditIssue: SiteMap API no disponible");
                 return;
             }
-            api.siteMap().add(auditIssue);
+            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidenciaHttp);
+            if (!guardado) {
+                rastrear("AuditIssue no creado: hallazgo sin datos suficientes");
+                return;
+            }
             rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
         } catch (Exception e) {
             registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
@@ -555,7 +552,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 return false;
             }
 
-            // Verificar scope usando la API de Burp
             if (api != null && api.scope() != null) {
                 boolean enScope = api.scope().isInScope(url);
 
@@ -730,8 +726,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             if (gestorConsola != null) {
                 gestorConsola.registrarInfo(mensajeLocalizado);
             }
-            stdout.println("[ManejadorBurpIA] " + mensajeLocalizado);
-            stdout.flush();
+            escribirSalida(false, "[ManejadorBurpIA] " + mensajeLocalizado);
         }
     }
 
@@ -742,8 +737,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 if (gestorConsola != null) {
                     gestorConsola.registrarVerbose(mensajeLocalizado);
                 }
-                stdout.println("[ManejadorBurpIA] [RASTREO] " + mensajeLocalizado);
-                stdout.flush();
+                escribirSalida(false, "[ManejadorBurpIA] [RASTREO] " + mensajeLocalizado);
             }
         }
     }
@@ -754,8 +748,28 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             if (gestorConsola != null) {
                 gestorConsola.registrarError(mensajeLocalizado);
             }
-            stderr.println("[ManejadorBurpIA] [ERROR] " + mensajeLocalizado);
-            stderr.flush();
+            escribirSalida(true, "[ManejadorBurpIA] [ERROR] " + mensajeLocalizado);
+        }
+    }
+
+    private void escribirSalida(boolean error, String mensaje) {
+        PrintWriter destino = error ? stderr : stdout;
+        if (destino != null) {
+            destino.println(mensaje);
+            destino.flush();
+            return;
+        }
+
+        if (api != null) {
+            try {
+                if (error) {
+                    api.logging().logToError(mensaje);
+                } else {
+                    api.logging().logToOutput(mensaje);
+                }
+            } catch (Exception ignored) {
+                // Evita romper flujo principal por fallos de logging
+            }
         }
     }
 

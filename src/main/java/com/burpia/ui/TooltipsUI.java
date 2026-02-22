@@ -220,6 +220,11 @@ public final class TooltipsUI {
                 "Send original request to Burp Scanner Pro.");
         }
 
+        public static String MENU_ISSUES() {
+            return I18nUI.tr("Guarda manualmente hallazgos seleccionados en Issues/Site Map de Burp.",
+                "Manually save selected findings into Burp Issues/Site Map.");
+        }
+
         public static String MENU_IGNORAR() {
             return I18nUI.tr("Marca hallazgos para excluirlos de exportaciones.",
                 "Mark findings to exclude them from exports.");

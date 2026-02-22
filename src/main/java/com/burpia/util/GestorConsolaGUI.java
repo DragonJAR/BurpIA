@@ -1,6 +1,7 @@
 package com.burpia.util;
 
 import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 
 import javax.swing.*;
 import javax.swing.text.*;
@@ -135,8 +136,14 @@ public class GestorConsolaGUI {
     }
 
     public String generarResumen() {
-        return String.format("Total: %d | Info: %d | Verbose: %d | Errores: %d",
-            obtenerTotalLogs(), contadorInfo.get(), contadorVerbose.get(), contadorError.get());
+        return I18nUI.trf(
+            "Total: %d | Info: %d | Verbose: %d | Errores: %d",
+            "Total: %d | Info: %d | Verbose: %d | Errors: %d",
+            obtenerTotalLogs(),
+            contadorInfo.get(),
+            contadorVerbose.get(),
+            contadorError.get()
+        );
     }
 
     private Style obtenerEstilo(TipoLog tipo) {
@@ -166,9 +173,6 @@ public class GestorConsolaGUI {
         }
     }
 
-    /**
-     * Método shutdown para limpieza de recursos (llamado por ExtensionBurpIA.unload())
-     */
     public void shutdown() {
         colaPendiente.clear();
         stdoutOriginal = null;
