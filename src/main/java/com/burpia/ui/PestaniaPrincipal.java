@@ -9,6 +9,7 @@ import com.burpia.util.GestorTareas;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.function.Consumer;
 
 public class PestaniaPrincipal extends JPanel {
     private final PanelEstadisticas panelEstadisticas;
@@ -90,6 +91,22 @@ public class PestaniaPrincipal extends JPanel {
 
     public void establecerEstadoCaptura(boolean activa) {
         panelEstadisticas.establecerEstadoCaptura(activa);
+    }
+
+    public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {
+        panelHallazgos.establecerGuardadoAutomaticoIssuesActivo(activo);
+    }
+
+    public void establecerManejadorAutoGuardadoIssues(Consumer<Boolean> manejador) {
+        panelHallazgos.establecerManejadorCambioGuardadoIssues(manejador);
+    }
+
+    public void establecerAutoScrollConsolaActivo(boolean activo) {
+        panelConsola.establecerAutoScrollActivo(activo);
+    }
+
+    public void establecerManejadorAutoScrollConsola(Consumer<Boolean> manejador) {
+        panelConsola.establecerManejadorCambioAutoScroll(manejador);
     }
 
     public void aplicarIdioma() {

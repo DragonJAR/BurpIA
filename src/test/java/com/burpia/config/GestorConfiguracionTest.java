@@ -87,6 +87,33 @@ class GestorConfiguracionTest {
     }
 
     @Test
+    @DisplayName("Guarda y carga preferencias runtime de usuario")
+    void testPersistenciaPreferenciasRuntimeUsuario() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-config-test");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerEscaneoPasivoHabilitado(false);
+        config.establecerAutoGuardadoIssuesHabilitado(false);
+        config.establecerAutoScrollConsolaHabilitado(false);
+
+        assertTrue(gestor.guardarConfiguracion(config));
+
+        ConfiguracionAPI cargada = gestor.cargarConfiguracion();
+        assertFalse(cargada.escaneoPasivoHabilitado());
+        assertFalse(cargada.autoGuardadoIssuesHabilitado());
+        assertFalse(cargada.autoScrollConsolaHabilitado());
+
+        Path configPath = tempDir.resolve(".burpia.json");
+        String json = Files.readString(configPath, StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"escaneoPasivoHabilitado\": false"));
+        assertTrue(json.contains("\"autoGuardadoIssuesHabilitado\": false"));
+        assertTrue(json.contains("\"autoScrollConsolaHabilitado\": false"));
+    }
+
+    @Test
     @DisplayName("Logs de configuracion se localizan a ingles cuando idioma UI es EN")
     void testLogsConfiguracionEnIngles() {
         I18nUI.establecerIdioma("en");

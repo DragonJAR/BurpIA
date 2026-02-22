@@ -12,9 +12,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Modelo de tabla para hallazgos con thread-safety.
- */
 public class ModeloTablaHallazgos extends DefaultTableModel {
     private static final int TOTAL_COLUMNAS = 5;
     private final List<Hallazgo> datos;

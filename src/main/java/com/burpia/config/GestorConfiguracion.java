@@ -199,6 +199,12 @@ public class GestorConfiguracion {
         if (archivo.escaneoPasivoHabilitado != null) {
             config.establecerEscaneoPasivoHabilitado(archivo.escaneoPasivoHabilitado);
         }
+        if (archivo.autoGuardadoIssuesHabilitado != null) {
+            config.establecerAutoGuardadoIssuesHabilitado(archivo.autoGuardadoIssuesHabilitado);
+        }
+        if (archivo.autoScrollConsolaHabilitado != null) {
+            config.establecerAutoScrollConsolaHabilitado(archivo.autoScrollConsolaHabilitado);
+        }
         if (archivo.promptConfigurable != null) {
             config.establecerPromptConfigurable(archivo.promptConfigurable);
         }
@@ -227,6 +233,8 @@ public class GestorConfiguracion {
         archivo.tema = config.obtenerTema();
         archivo.idiomaUi = config.obtenerIdiomaUi();
         archivo.escaneoPasivoHabilitado = config.escaneoPasivoHabilitado();
+        archivo.autoGuardadoIssuesHabilitado = config.autoGuardadoIssuesHabilitado();
+        archivo.autoScrollConsolaHabilitado = config.autoScrollConsolaHabilitado();
         archivo.promptConfigurable = config.obtenerPromptConfigurable();
         archivo.promptModificado = config.esPromptModificado();
         archivo.apiKeysPorProveedor = new HashMap<>(config.obtenerApiKeysPorProveedor());
@@ -272,6 +280,8 @@ public class GestorConfiguracion {
         private String tema;
         private String idiomaUi;
         private Boolean escaneoPasivoHabilitado;
+        private Boolean autoGuardadoIssuesHabilitado;
+        private Boolean autoScrollConsolaHabilitado;
         private String promptConfigurable;
         private Boolean promptModificado;
         private Map<String, String> apiKeysPorProveedor;

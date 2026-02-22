@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class PanelHallazgos extends JPanel {
     private final ModeloTablaHallazgos modelo;
@@ -52,6 +53,8 @@ public class PanelHallazgos extends JPanel {
     private TableRowSorter<ModeloTablaHallazgos> sorter;
     private JCheckBox chkGuardarEnIssues;
     private volatile boolean guardadoAutomaticoIssuesActivo = true;
+    private Consumer<Boolean> manejadorCambioGuardadoIssues;
+    private boolean actualizandoEstadoAutoIssues = false;
     private JPopupMenu menuContextual;
     private JMenuItem menuItemRepeater;
     private JMenuItem menuItemIntruder;
@@ -156,8 +159,10 @@ public class PanelHallazgos extends JPanel {
         chkGuardarEnIssues.setFont(EstilosUI.FUENTE_ESTANDAR);
         chkGuardarEnIssues.setToolTipText(TooltipsUI.Hallazgos.GUARDAR_ISSUES());
         chkGuardarEnIssues.addActionListener(e -> {
-            guardadoAutomaticoIssuesActivo = chkGuardarEnIssues.isSelected();
-            actualizarVisibilidadMenuIssues();
+            if (actualizandoEstadoAutoIssues) {
+                return;
+            }
+            aplicarEstadoGuardadoAutomaticoIssues(chkGuardarEnIssues.isSelected(), true);
         });
 
         panelGuardarProyecto.add(chkGuardarEnIssues);
@@ -933,7 +938,31 @@ public class PanelHallazgos extends JPanel {
         return modelo;
     }
 
+    public void establecerManejadorCambioGuardadoIssues(Consumer<Boolean> manejadorCambioGuardadoIssues) {
+        this.manejadorCambioGuardadoIssues = manejadorCambioGuardadoIssues;
+    }
+
+    public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {
+        aplicarEstadoGuardadoAutomaticoIssues(activo, false);
+    }
+
     public boolean isGuardadoAutomaticoIssuesActivo() {
         return guardadoAutomaticoIssuesActivo;
+    }
+
+    private void aplicarEstadoGuardadoAutomaticoIssues(boolean activo, boolean notificarCambio) {
+        guardadoAutomaticoIssuesActivo = activo;
+        if (chkGuardarEnIssues != null && chkGuardarEnIssues.isSelected() != activo) {
+            actualizandoEstadoAutoIssues = true;
+            try {
+                chkGuardarEnIssues.setSelected(activo);
+            } finally {
+                actualizandoEstadoAutoIssues = false;
+            }
+        }
+        actualizarVisibilidadMenuIssues();
+        if (notificarCambio && manejadorCambioGuardadoIssues != null) {
+            manejadorCambioGuardadoIssues.accept(activo);
+        }
     }
 }

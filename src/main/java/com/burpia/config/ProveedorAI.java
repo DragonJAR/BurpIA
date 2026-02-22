@@ -3,6 +3,9 @@ package com.burpia.config;
 import java.util.*;
 
 public class ProveedorAI {
+    public static final String PROVEEDOR_CUSTOM = "-- Custom --";
+    public static final String URL_CUSTOM_EN = "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1";
+    public static final String URL_CUSTOM_ES = "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1";
 
     public static class ConfiguracionProveedor {
         private final String nombre;
@@ -136,6 +139,16 @@ public class ProveedorAI {
             4096,
             32000
         ));
+
+        PROVEEDORES.put(PROVEEDOR_CUSTOM, new ConfiguracionProveedor(
+            PROVEEDOR_CUSTOM,
+            URL_CUSTOM_ES,
+            "",
+            Collections.emptyList(),
+            false,
+            4096,
+            128000
+        ));
     }
 
     public static ConfiguracionProveedor obtenerProveedor(String nombre) {
@@ -151,6 +164,13 @@ public class ProveedorAI {
     }
 
     public static String obtenerUrlApi(String nombreProveedor) {
+        return obtenerUrlApiPorDefecto(nombreProveedor, null);
+    }
+
+    public static String obtenerUrlApiPorDefecto(String nombreProveedor, String idiomaUi) {
+        if (PROVEEDOR_CUSTOM.equals(nombreProveedor)) {
+            return "en".equalsIgnoreCase(idiomaUi) ? URL_CUSTOM_EN : URL_CUSTOM_ES;
+        }
         ConfiguracionProveedor config = PROVEEDORES.get(nombreProveedor);
         return config != null ? config.obtenerUrlApi() : null;
     }

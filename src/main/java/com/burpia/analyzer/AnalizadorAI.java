@@ -237,15 +237,6 @@ public class AnalizadorAI implements Runnable {
         }
     }
 
-    /**
-     * Sistema de retry con backoff exponencial para llamadas a la API.
-     * Estrategia:
-     * 1. 3 intentos inmediatos (sin espera entre ellos)
-     * 2. Si fallan, esperar 30 segundos y reintentar
-     * 3. Si falla, esperar 60 segundos y reintentar
-     * 4. Si falla, esperar 90 segundos y reintentar
-     * 5. Si falla, preguntar al usuario si desea cambiar de proveedor
-     */
     private String llamarAPIAIConRetries() throws IOException {
         IOException ultimaExcepcion = null;
 

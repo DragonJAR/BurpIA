@@ -86,6 +86,43 @@ class ProbadorConexionAITest {
     }
 
     @Test
+    @DisplayName("Custom prueba /chat/completions")
+    void testEndpointCustom() throws Exception {
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(
+            "{\"choices\":[{\"message\":{\"content\":\"OK\"}}]}"
+        ));
+
+        ConfiguracionAPI config = baseConfig("-- Custom --", "custom-model");
+        config.establecerUrlApi(server.url("/v1").toString());
+
+        ProbadorConexionAI.ResultadoPrueba resultado = new ProbadorConexionAI(config).probarConexion();
+        RecordedRequest request = server.takeRequest();
+
+        assertTrue(resultado.exito);
+        assertEquals("/v1/chat/completions", request.getPath());
+        assertEquals("Bearer test-key", request.getHeader("Authorization"));
+    }
+
+    @Test
+    @DisplayName("Custom omite Authorization cuando API key esta vacia")
+    void testEndpointCustomSinApiKey() throws Exception {
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(
+            "{\"choices\":[{\"message\":{\"content\":\"OK\"}}]}"
+        ));
+
+        ConfiguracionAPI config = baseConfig("-- Custom --", "custom-model");
+        config.establecerClaveApi("");
+        config.establecerUrlApi(server.url("/v1").toString());
+
+        ProbadorConexionAI.ResultadoPrueba resultado = new ProbadorConexionAI(config).probarConexion();
+        RecordedRequest request = server.takeRequest();
+
+        assertTrue(resultado.exito);
+        assertEquals("/v1/chat/completions", request.getPath());
+        assertNull(request.getHeader("Authorization"));
+    }
+
+    @Test
     @DisplayName("Claude prueba /messages con headers Anthropic")
     void testEndpointClaude() throws Exception {
         server.enqueue(new MockResponse().setResponseCode(200).setBody(

@@ -16,6 +16,7 @@ class ParserRespuestasAITest {
         String json = "{\"choices\":[{\"message\":{\"content\":\"OK desde OpenAI\"}}]}";
         assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
         assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "Z.ai"));
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "-- Custom --"));
     }
 
     @Test

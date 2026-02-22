@@ -48,7 +48,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final PrintWriter stderr;
     private final ThreadPoolExecutor executorService;
     private final Object logLock;
-    private volatile boolean capturaActiva = true;
+    private volatile boolean capturaActiva;
 
     private static final Set<String> EXTENSIONES_ESTATICAS;
 
@@ -90,6 +90,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.gestorTareas = gestorTareas;
         this.gestorConsola = gestorConsola;
         this.modeloTablaHallazgos = modeloTablaHallazgos;
+        this.capturaActiva = config == null || config.escaneoPasivoHabilitado();
 
         int maxThreads = config.obtenerMaximoConcurrente() > 0 ? config.obtenerMaximoConcurrente() : 10;
         int capacidadCola = Math.max(50, maxThreads * 20);
@@ -532,13 +533,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
     }
 
-    /**
-     * Verifica si la solicitud esta dentro del scope de Burp Suite.
-     * Esto es CRITICO para asegurar que solo se analicen objetivos autorizados.
-     *
-     * @param solicitud La solicitud HTTP a verificar
-     * @return true si esta en scope, false si esta fuera de scope
-     */
     private boolean estaEnScope(HttpRequest solicitud) {
         if (solicitud == null) {
             rastrear("Solicitud null, no se puede verificar scope");
@@ -585,7 +579,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 ruta = uri.getPath();
             }
         } catch (IllegalArgumentException ignored) {
-            // Mantener la URL original para evaluación best-effort
         }
 
         int ultimoPunto = ruta.lastIndexOf('.');
@@ -768,7 +761,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                     api.logging().logToOutput(mensaje);
                 }
             } catch (Exception ignored) {
-                // Evita romper flujo principal por fallos de logging
             }
         }
     }

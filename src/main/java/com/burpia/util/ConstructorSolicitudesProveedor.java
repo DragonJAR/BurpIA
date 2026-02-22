@@ -1,6 +1,7 @@
 package com.burpia.util;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.ProveedorAI;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -99,12 +100,18 @@ public final class ConstructorSolicitudesProveedor {
                 endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/api/chat";
                 carga.addProperty("model", modeloUsado);
                 carga.addProperty("stream", false);
-                JsonArray mensajesOllama = new JsonArray();
-                JsonObject mensajeOllama = new JsonObject();
-                mensajeOllama.addProperty("role", "user");
-                mensajeOllama.addProperty("content", prompt);
-                mensajesOllama.add(mensajeOllama);
-                carga.add("messages", mensajesOllama);
+                agregarMensajeUsuario(carga, prompt);
+                break;
+
+            case ProveedorAI.PROVEEDOR_CUSTOM:
+                endpoint = ConfiguracionAPI.construirUrlApiProveedor(
+                    proveedor,
+                    ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()),
+                    modeloUsado
+                );
+                carga.addProperty("model", modeloUsado);
+                agregarMensajeUsuario(carga, prompt);
+                agregarAuthorizationSiExiste(builder, config.obtenerClaveApi());
                 break;
 
             case "Z.ai":
@@ -116,12 +123,7 @@ public final class ConstructorSolicitudesProveedor {
                     modeloUsado
                 );
                 carga.addProperty("model", modeloUsado);
-                JsonArray mensajes = new JsonArray();
-                JsonObject mensajeUsuario = new JsonObject();
-                mensajeUsuario.addProperty("role", "user");
-                mensajeUsuario.addProperty("content", prompt);
-                mensajes.add(mensajeUsuario);
-                carga.add("messages", mensajes);
+                agregarMensajeUsuario(carga, prompt);
                 builder.addHeader("Authorization", "Bearer " + config.obtenerClaveApi());
                 break;
         }
@@ -131,6 +133,25 @@ public final class ConstructorSolicitudesProveedor {
             .post(RequestBody.create(carga.toString(), MediaType.parse("application/json")))
             .build();
         return new SolicitudPreparada(request, endpoint, modeloUsado, advertencia);
+    }
+
+    private static void agregarMensajeUsuario(JsonObject carga, String prompt) {
+        JsonArray mensajes = new JsonArray();
+        JsonObject mensajeUsuario = new JsonObject();
+        mensajeUsuario.addProperty("role", "user");
+        mensajeUsuario.addProperty("content", prompt);
+        mensajes.add(mensajeUsuario);
+        carga.add("messages", mensajes);
+    }
+
+    private static void agregarAuthorizationSiExiste(Request.Builder builder, String apiKey) {
+        if (apiKey == null) {
+            return;
+        }
+        String limpia = apiKey.trim();
+        if (!limpia.isEmpty()) {
+            builder.addHeader("Authorization", "Bearer " + limpia);
+        }
     }
 
     public static List<String> listarModelosGemini(String urlBase,
