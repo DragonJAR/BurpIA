@@ -31,4 +31,5 @@ build.gradle
 gradlew
 /gradle
 /docs
+/src/test
 settings.gradle
