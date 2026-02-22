@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 public class PanelTareas extends JPanel {
     private final ModeloTablaTareas modelo;
@@ -27,6 +28,7 @@ public class PanelTareas extends JPanel {
     private Timer timerActualizacion;
     private JPanel panelControles;
     private JPanel panelTablaWrapper;
+    private Function<String, Boolean> manejadorReintento;
 
     private static final int UMBRAL_RESPONSIVE = 800;
 
@@ -34,6 +36,7 @@ public class PanelTareas extends JPanel {
         this.modelo = modelo;
         this.tabla = new JTable(modelo);
         this.gestorTareas = gestorTareas;
+        this.manejadorReintento = null;
         initComponents();
     }
 
@@ -279,7 +282,7 @@ public class PanelTareas extends JPanel {
             menuItemReintentar.setToolTipText(TooltipsUI.Tareas.MENU_REINTENTAR_UNA());
             menuItemReintentar.addActionListener(e -> {
                 if (tareaId != null) {
-                    gestorTareas.reanudarTarea(tareaId);
+                    reencolarTarea(tareaId);
                     actualizarEstadisticas();
                 }
             });
@@ -422,12 +425,32 @@ public class PanelTareas extends JPanel {
             String estado = tarea.estado;
             String tareaId = tarea.tareaId;
             if (tareaId != null && (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado))) {
-                gestorTareas.reanudarTarea(tareaId);
-                contador++;
+                if (reencolarTarea(tareaId)) {
+                    contador++;
+                }
             }
         }
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_REINTENTOS(contador));
+    }
+
+    public void establecerManejadorReintento(Function<String, Boolean> manejadorReintento) {
+        this.manejadorReintento = manejadorReintento;
+    }
+
+    private boolean reencolarTarea(String tareaId) {
+        if (tareaId == null || tareaId.isEmpty()) {
+            return false;
+        }
+        Function<String, Boolean> manejador = this.manejadorReintento;
+        if (manejador != null) {
+            try {
+                return Boolean.TRUE.equals(manejador.apply(tareaId));
+            } catch (Exception ignored) {
+            }
+        }
+        gestorTareas.reanudarTarea(tareaId);
+        return true;
     }
 
     private void pausarTareas(List<TareaSeleccionada> seleccion) {

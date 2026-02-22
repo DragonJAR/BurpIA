@@ -120,15 +120,15 @@ public class Tarea {
             case ESTADO_EN_COLA:
                 return Color.GRAY;
             case ESTADO_ANALIZANDO:
-                return new Color(0, 120, 215); // Azul
+                return new Color(0, 120, 215);
             case ESTADO_COMPLETADO:
-                return new Color(0, 153, 0); // Verde
+                return new Color(0, 153, 0);
             case ESTADO_ERROR:
-                return new Color(204, 0, 0); // Rojo
+                return new Color(204, 0, 0);
             case ESTADO_CANCELADO:
-                return new Color(153, 76, 0); // Naranja oscuro
+                return new Color(153, 76, 0);
             case ESTADO_PAUSADO:
-                return new Color(255, 153, 0); // Naranja
+                return new Color(255, 153, 0);
             default:
                 return Color.BLACK;
         }

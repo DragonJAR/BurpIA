@@ -5,9 +5,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.SwingUtilities;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("ModeloTablaTareas Tests")
 class ModeloTablaTareasTest {
@@ -57,5 +60,28 @@ class ModeloTablaTareasTest {
         assertDoesNotThrow(() -> modelo.eliminarPorEstado((String) null));
         SwingUtilities.invokeAndWait(() -> {});
         assertEquals(1, modelo.getRowCount());
+    }
+
+    @Test
+    @DisplayName("Limite visual elimina primero finalizadas y preserva activas")
+    void testLimiteVisualPriorizaFinalizadas() throws Exception {
+        ModeloTablaTareas modelo = new ModeloTablaTareas(2);
+        Tarea activa = new Tarea("activa", "A", "https://example.com/activa", Tarea.ESTADO_EN_COLA);
+        Tarea finalizadaAntigua = new Tarea("old", "B", "https://example.com/old", Tarea.ESTADO_COMPLETADO);
+        Tarea finalizadaNueva = new Tarea("new", "C", "https://example.com/new", Tarea.ESTADO_ERROR);
+
+        modelo.agregarTarea(activa);
+        modelo.agregarTarea(finalizadaAntigua);
+        modelo.agregarTarea(finalizadaNueva);
+        SwingUtilities.invokeAndWait(() -> {});
+
+        Set<String> idsRestantes = new HashSet<>();
+        for (Tarea tarea : modelo.obtenerTodasLasTareas()) {
+            idsRestantes.add(tarea.obtenerId());
+        }
+
+        assertEquals(2, modelo.obtenerNumeroTareas());
+        assertTrue(idsRestantes.contains("activa"));
+        assertTrue(idsRestantes.contains("new"));
     }
 }

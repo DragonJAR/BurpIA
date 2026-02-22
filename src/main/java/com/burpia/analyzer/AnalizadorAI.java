@@ -28,18 +28,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 public class AnalizadorAI implements Runnable {
+    private static final String ORIGEN_LOG = "AnalizadorAI";
     private final SolicitudAnalisis solicitud;
     private final ConfiguracionAPI config;
     private final PrintWriter stdout;
     private final PrintWriter stderr;
     private final LimitadorTasa limitador;
     private final Callback callback;
+    private final Runnable alInicioAnalisis;
     private final OkHttpClient clienteHttp;
     private final Gson gson;
     private final ConstructorPrompts constructorPrompt;
     private final GestorConsolaGUI gestorConsola;
     private final BooleanSupplier tareaCancelada;
     private final BooleanSupplier tareaPausada;
+    private final Object logLock;
     private static final int MAX_CHARS_LOG_DETALLADO = 4000;
 
     private static final OkHttpClient CLIENTE_COMPARTIDO = new OkHttpClient.Builder()
@@ -55,8 +58,8 @@ public class AnalizadorAI implements Runnable {
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
-                     LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola,
-                     BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
+                     LimitadorTasa limitador, Callback callback, Runnable alInicioAnalisis,
+                     GestorConsolaGUI gestorConsola, BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
         this.solicitud = solicitud;
         this.config = config != null ? config : new ConfiguracionAPI();
         this.stdout = stdout != null ? stdout : new PrintWriter(OutputStream.nullOutputStream(), true);
@@ -71,22 +74,30 @@ public class AnalizadorAI implements Runnable {
             public void alErrorAnalisis(String error) {
             }
         };
+        this.alInicioAnalisis = alInicioAnalisis;
         this.gestorConsola = gestorConsola;
         this.clienteHttp = CLIENTE_COMPARTIDO;
         this.gson = new Gson();
         this.constructorPrompt = new ConstructorPrompts(this.config);
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
+        this.logLock = new Object();
+    }
+
+    public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
+                     LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola,
+                     BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
+        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, tareaCancelada, tareaPausada);
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback) {
-        this(solicitud, config, stdout, stderr, limitador, callback, null, null, null);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, null, null, null);
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola) {
-        this(solicitud, config, stdout, stderr, limitador, callback, gestorConsola, null, null);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, null, null);
     }
 
     @Override
@@ -101,6 +112,13 @@ public class AnalizadorAI implements Runnable {
         try {
             verificarCancelacion();
             esperarSiPausada();
+            notificarInicioAnalisis();
+            String alertaConfiguracion = validarConfiguracionAntesDeConsulta();
+            if (!alertaConfiguracion.isEmpty()) {
+                registrarError(alertaConfiguracion);
+                callback.alErrorAnalisis(alertaConfiguracion);
+                return;
+            }
 
             rastrear("[" + nombreHilo + "] Adquiriendo permiso del limitador (disponibles: " +
                     limitador.permisosDisponibles() + ")");
@@ -147,6 +165,25 @@ public class AnalizadorAI implements Runnable {
                         limitador.permisosDisponibles() + ")");
             }
         }
+    }
+
+    private void notificarInicioAnalisis() {
+        if (alInicioAnalisis == null) {
+            return;
+        }
+        try {
+            alInicioAnalisis.run();
+        } catch (Exception e) {
+            rastrear("No se pudo notificar inicio de analisis: " + e.getMessage());
+        }
+    }
+
+    private String validarConfiguracionAntesDeConsulta() {
+        if (config == null) {
+            return "ALERTA: Configuracion de IA no disponible";
+        }
+        String error = config.validarParaConsultaModelo();
+        return error != null ? error.trim() : "";
     }
 
     private boolean esCancelada() {
@@ -378,11 +415,12 @@ public class AnalizadorAI implements Runnable {
                         }
                         JsonObject obj = elemento.getAsJsonObject();
                         String descripcion = obtenerCampoTexto(obj, "descripcion", "Sin descripción");
-                        String severidad = obtenerCampoTexto(obj, "severidad", "Info");
-                        String confianza = obtenerCampoTexto(obj, "confianza", "Low");
-
-                        severidad = normalizarSeveridad(severidad);
-                        confianza = normalizarConfianza(confianza);
+                        String severidad = Hallazgo.normalizarSeveridad(
+                            obtenerCampoTexto(obj, "severidad", Hallazgo.SEVERIDAD_INFO)
+                        );
+                        String confianza = Hallazgo.normalizarConfianza(
+                            obtenerCampoTexto(obj, "confianza", Hallazgo.CONFIANZA_BAJA)
+                        );
 
                         Hallazgo hallazgo = new Hallazgo(solicitud.obtenerUrl(), descripcion, severidad, confianza, solicitud.obtenerSolicitudHttp());
                         hallazgos.add(hallazgo);
@@ -418,8 +456,8 @@ public class AnalizadorAI implements Runnable {
             hallazgosError.add(new Hallazgo(
                 solicitud.obtenerUrl(),
                 "Error al parsear respuesta: " + e.getMessage(),
-                "Info",
-                "Low",
+                Hallazgo.SEVERIDAD_INFO,
+                Hallazgo.CONFIANZA_BAJA,
                 solicitud.obtenerSolicitudHttp()
             ));
 
@@ -436,8 +474,8 @@ public class AnalizadorAI implements Runnable {
         try {
             String[] lineas = contenido.split("\n");
             StringBuilder descripcion = new StringBuilder();
-            String severidad = "Info";
-            String confianza = "Low";
+            String severidad = Hallazgo.SEVERIDAD_INFO;
+            String confianza = Hallazgo.CONFIANZA_BAJA;
 
             for (String linea : lineas) {
                 linea = linea.trim();
@@ -445,7 +483,7 @@ public class AnalizadorAI implements Runnable {
                 if (linea.toLowerCase().contains("severidad:") ||
                     linea.toLowerCase().contains("severity:")) {
                     String sev = linea.replaceAll("(?i)(severidad:|severity:)", "").trim();
-                    severidad = normalizarSeveridad(sev);
+                    severidad = Hallazgo.normalizarSeveridad(sev);
                 } else if (linea.toLowerCase().contains("vulnerabilidad") ||
                            linea.toLowerCase().contains("descripcion:") ||
                            linea.toLowerCase().contains("description:")) {
@@ -465,7 +503,13 @@ public class AnalizadorAI implements Runnable {
 
             if (hallazgos.isEmpty() && contenido.length() > 0) {
                 String sev = extraerSeveridad(contenido);
-                hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), contenido.substring(0, Math.min(200, contenido.length())), sev, "Low", solicitud.obtenerSolicitudHttp()));
+                hallazgos.add(new Hallazgo(
+                    solicitud.obtenerUrl(),
+                    contenido.substring(0, Math.min(200, contenido.length())),
+                    sev,
+                    Hallazgo.CONFIANZA_BAJA,
+                    solicitud.obtenerSolicitudHttp()
+                ));
             }
 
         } catch (Exception e) {
@@ -475,40 +519,11 @@ public class AnalizadorAI implements Runnable {
         return hallazgos;
     }
 
-    private String normalizarSeveridad(String severidad) {
-        if (severidad == null) return "Info";
-
-        String s = severidad.toLowerCase();
-        if (s.contains("critica") || s.contains("critical")) return "Critical";
-        if (s.contains("alta") || s.contains("high")) return "High";
-        if (s.contains("media") || s.contains("medium") || s.contains("moderada")) return "Medium";
-        if (s.contains("baja") || s.contains("low")) return "Low";
-        return "Info";
-    }
-
-    private String normalizarConfianza(String confianza) {
-        if (confianza == null) return "Medium";
-
-        String c = confianza.toLowerCase();
-        if (c.contains("alta") || c.contains("high")) return "High";
-        if (c.contains("baja") || c.contains("low")) return "Low"; // Correcto: baja → Low
-        return "Medium";
-    }
-
     private String extraerSeveridad(String contenido) {
-        String minusculas = contenido.toLowerCase();
-        String severidad;
-
-        if (minusculas.contains("alta") || minusculas.contains("high") || minusculas.contains("critica") ||
-                minusculas.contains("critical") || minusculas.contains("severa")) {
-            severidad = "High";
-        } else if (minusculas.contains("media") || minusculas.contains("medium") ||
-                minusculas.contains("moderada")) {
-            severidad = "Medium";
-        } else {
-            severidad = "Low";
+        String severidad = Hallazgo.normalizarSeveridad(contenido);
+        if (Hallazgo.SEVERIDAD_INFO.equals(severidad)) {
+            severidad = Hallazgo.SEVERIDAD_LOW;
         }
-
         rastrear("Severidad extraida: " + severidad + " del contenido");
         return severidad;
     }
@@ -530,32 +545,33 @@ public class AnalizadorAI implements Runnable {
     }
 
     private void registrar(String mensaje) {
-        String mensajeLocalizado = I18nLogs.tr(mensaje);
-        if (gestorConsola != null) {
-            gestorConsola.registrarInfo(mensajeLocalizado);
-        }
-        stdout.println("[BurpIA] " + mensajeLocalizado);
-        stdout.flush();
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[BurpIA] ");
     }
 
     private void rastrear(String mensaje) {
         if (config.esDetallado()) {
-            String mensajeLocalizado = I18nLogs.tr(mensaje);
-            if (gestorConsola != null) {
-                gestorConsola.registrarVerbose(mensajeLocalizado);
-            }
-            stdout.println("[BurpIA] [RASTREO] " + mensajeLocalizado);
-            stdout.flush();
+            registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
         }
     }
 
     private void registrarError(String mensaje) {
-        String mensajeLocalizado = I18nLogs.tr(mensaje);
-        if (gestorConsola != null) {
-            gestorConsola.registrarError(mensajeLocalizado);
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.ERROR, true, "[BurpIA] [ERROR] ");
+    }
+
+    private void registrarInterno(String mensaje, GestorConsolaGUI.TipoLog tipo, boolean esError, String prefijoSalida) {
+        String mensajeSeguro = mensaje != null ? mensaje : "";
+        synchronized (logLock) {
+            if (gestorConsola != null) {
+                gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
+                return;
+            }
+
+            String prefijoLocalizado = I18nLogs.tr(prefijoSalida);
+            String mensajeLocalizado = I18nLogs.tr(mensajeSeguro);
+            PrintWriter destino = esError ? stderr : stdout;
+            destino.println(prefijoLocalizado + mensajeLocalizado);
+            destino.flush();
         }
-        stderr.println("[BurpIA] [ERROR] " + mensajeLocalizado);
-        stderr.flush();
     }
 
     private String resumirParaLog(String texto) {

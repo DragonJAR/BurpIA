@@ -11,6 +11,7 @@ import javax.swing.JComboBox;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -72,6 +73,46 @@ class PanelHallazgosFiltrosTest {
         SwingUtilities.invokeAndWait(checkbox::doClick);
         flushEdt();
         assertTrue(panel.isGuardadoAutomaticoIssuesActivo());
+    }
+
+    @Test
+    @DisplayName("Acciones omiten hallazgos ignorados en la captura de filas")
+    void testCapturaAccionOmiteIgnorados() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, false));
+        PanelHallazgos panel = holder[0];
+
+        modelo.agregarHallazgos(List.of(
+            new Hallazgo("https://example.com/a", "Hallazgo A", "High", "High"),
+            new Hallazgo("https://example.com/b", "Hallazgo B", "Low", "Medium")
+        ));
+        flushEdt();
+
+        modelo.marcarComoIgnorado(0);
+        flushEdt();
+
+        Method metodo = PanelHallazgos.class.getDeclaredMethod("capturarEntradasAccion", int[].class);
+        metodo.setAccessible(true);
+        Object resultado = metodo.invoke(panel, new Object[]{new int[]{0, 1}});
+
+        Field campoEntradas = resultado.getClass().getDeclaredField("entradas");
+        campoEntradas.setAccessible(true);
+        List<?> entradas = (List<?>) campoEntradas.get(resultado);
+
+        Field campoIgnorados = resultado.getClass().getDeclaredField("totalIgnorados");
+        campoIgnorados.setAccessible(true);
+        int ignorados = (int) campoIgnorados.get(resultado);
+
+        Field campoSeleccionados = resultado.getClass().getDeclaredField("totalSeleccionados");
+        campoSeleccionados.setAccessible(true);
+        int seleccionados = (int) campoSeleccionados.get(resultado);
+
+        assertEquals(1, entradas.size());
+        assertEquals(1, ignorados);
+        assertEquals(2, seleccionados);
     }
 
     @SuppressWarnings("unchecked")

@@ -440,12 +440,27 @@ public final class I18nUI {
             return trf("%nSin request original: %d", "%nMissing original request: %d", total);
         }
 
-        public static String MSG_RESULTADO_ACCION(String resumen, int exitosos, int total, int sinRequest, String detalle) {
+        public static String MSG_IGNORADOS_OMITIDOS(int total) {
+            return trf("%nIgnorados omitidos: %d", "%nIgnored skipped: %d", total);
+        }
+
+        public static String MSG_RESULTADO_ACCION(String resumen, int exitosos, int total, int sinRequest, int ignorados, String detalle) {
             String texto = resumen + ": " + exitosos + "/" + total;
             if (sinRequest > 0) {
                 texto += MSG_SIN_REQUEST_ORIGINAL(sinRequest);
             }
+            if (ignorados > 0) {
+                texto += MSG_IGNORADOS_OMITIDOS(ignorados);
+            }
             return texto + "\n\n" + detalle;
+        }
+
+        public static String MSG_ACCION_SOLO_IGNORADOS(int total) {
+            return trf(
+                "No hay hallazgos operables: los %d seleccionados estan marcados como ignorados.",
+                "No actionable findings: the %d selected are marked as ignored.",
+                total
+            );
         }
 
         public static String MSG_HALLAZGOS_IGNORADOS(int total) {

@@ -83,6 +83,8 @@ public class ExtensionBurpIA implements BurpExtension {
         gestorConfig = new GestorConfiguracion(stdout, stderr);
         config = gestorConfig.cargarConfiguracion();
         I18nUI.establecerIdioma(config.obtenerIdiomaUi());
+        gestorConsola = new GestorConsolaGUI();
+        gestorConsola.capturarStreamsOriginales(stdout, stderr);
 
         registrar("==================================================");
         registrar(" BurpIA v1.0.0 - Complemento de Seguridad con IA");
@@ -111,10 +113,16 @@ public class ExtensionBurpIA implements BurpExtension {
         modeloTablaHallazgos = new ModeloTablaHallazgos(config.obtenerMaximoHallazgosTabla());
 
         gestorTareas = new GestorTareas(modeloTablaTareas,
-            mensaje -> stdout.println("[GestorTareas] " + I18nLogs.tr(mensaje)));
-
-        gestorConsola = new GestorConsolaGUI();
-        gestorConsola.capturarStreamsOriginales(stdout, stderr);
+            mensaje -> {
+                if (gestorConsola != null) {
+                    gestorConsola.registrarInfo("GestorTareas", mensaje);
+                    return;
+                }
+                if (stdout != null) {
+                    stdout.println("[GestorTareas] " + I18nLogs.tr(mensaje));
+                    stdout.flush();
+                }
+            });
 
         crearYRegistrarPestaniaPrincipal();
         inicializarPreferenciasUsuarioEnUI();
@@ -123,6 +131,12 @@ public class ExtensionBurpIA implements BurpExtension {
             api, config, pestaniaPrincipal, stdout, stderr, limitador,
             estadisticas, gestorTareas, gestorConsola, modeloTablaHallazgos
         );
+        if (gestorTareas != null) {
+            gestorTareas.establecerManejadorCancelacion(manejadorHttp::cancelarEjecucionActiva);
+        }
+        if (pestaniaPrincipal != null) {
+            pestaniaPrincipal.establecerManejadorReintentoTareas(manejadorHttp::reencolarTarea);
+        }
         pestaniaPrincipal.establecerManejadorToggleCaptura(this::alternarCapturaDesdeUI);
         pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
         api.http().registerHttpHandler(manejadorHttp);
@@ -135,21 +149,6 @@ public class ExtensionBurpIA implements BurpExtension {
         });
         api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
         registrar("Menu contextual de BurpIA registrado exitosamente");
-
-        api.logging().logToOutput("==================================================");
-        api.logging().logToOutput(I18nUI.tr(
-            " BurpIA v1.0.0 - Complemento de Seguridad con IA Cargado",
-            " BurpIA v1.0.0 - AI Security Plugin Loaded"
-        ));
-        api.logging().logToOutput(I18nUI.tr(
-            " Modo detallado: ",
-            " Verbose mode: "
-        ) + (config.esDetallado() ? I18nUI.tr("ACTIVADO", "ENABLED") : I18nUI.tr("desactivado", "disabled")));
-        api.logging().logToOutput(I18nUI.tr(
-            " Ve a la pestania 'BurpIA' y configura tu clave de API",
-            " Go to the 'BurpIA' tab and configure your API key"
-        ));
-        api.logging().logToOutput("==================================================");
 
         registrar("Inicialización de BurpIA completada exitosamente");
     }
@@ -235,6 +234,10 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void registrar(String mensaje) {
+        if (gestorConsola != null) {
+            gestorConsola.registrarInfo("BurpIA", mensaje);
+            return;
+        }
         String mensajeLocalizado = I18nLogs.tr(mensaje);
         if (stdout != null) {
             stdout.println("[BurpIA] " + mensajeLocalizado);
@@ -250,6 +253,10 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void registrarError(String mensaje) {
+        if (gestorConsola != null) {
+            gestorConsola.registrarError("BurpIA", mensaje);
+            return;
+        }
         String mensajeLocalizado = I18nLogs.tr(mensaje);
         if (stderr != null) {
             stderr.println("[BurpIA] [ERROR] " + mensajeLocalizado);
@@ -360,8 +367,10 @@ public class ExtensionBurpIA implements BurpExtension {
         burp.api.montoya.scanner.audit.issues.AuditIssueSeverity severity = convertirSeveridad(hallazgo.obtenerSeveridad());
         burp.api.montoya.scanner.audit.issues.AuditIssueConfidence confidence = convertirConfianza(hallazgo.obtenerConfianza());
 
-        HttpRequestResponse[] evidencias = solicitudRespuestaEvidencia != null
-            ? new HttpRequestResponse[] { solicitudRespuestaEvidencia }
+        HttpRequestResponse evidenciaFinal = resolverEvidenciaIssue(hallazgo, solicitudRespuestaEvidencia);
+
+        HttpRequestResponse[] evidencias = evidenciaFinal != null
+            ? new HttpRequestResponse[] { evidenciaFinal }
             : new HttpRequestResponse[0];
 
         String detalleIssue = I18nUI.tr(
@@ -387,6 +396,13 @@ public class ExtensionBurpIA implements BurpExtension {
         );
     }
 
+    static HttpRequestResponse resolverEvidenciaIssue(Hallazgo hallazgo, HttpRequestResponse solicitudRespuestaEvidencia) {
+        if (solicitudRespuestaEvidencia != null) {
+            return solicitudRespuestaEvidencia;
+        }
+        return hallazgo != null ? hallazgo.obtenerEvidenciaHttp() : null;
+    }
+
     public static boolean guardarAuditIssueDesdeHallazgo(
             MontoyaApi api,
             Hallazgo hallazgo,
@@ -404,27 +420,30 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private static burp.api.montoya.scanner.audit.issues.AuditIssueSeverity convertirSeveridad(String severidad) {
-        switch (severidad) {
-            case "Critical":
-            case "High":
+        String severidadNormalizada = Hallazgo.normalizarSeveridad(severidad);
+        switch (severidadNormalizada) {
+            case Hallazgo.SEVERIDAD_CRITICAL:
+            case Hallazgo.SEVERIDAD_HIGH:
                 return burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.HIGH;
-            case "Medium":
+            case Hallazgo.SEVERIDAD_MEDIUM:
                 return burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.MEDIUM;
-            case "Low":
-            case "Info":
+            case Hallazgo.SEVERIDAD_LOW:
                 return burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.LOW;
+            case Hallazgo.SEVERIDAD_INFO:
+                return burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.INFORMATION;
             default:
-                return burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.LOW;
+                return burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.INFORMATION;
         }
     }
 
     private static burp.api.montoya.scanner.audit.issues.AuditIssueConfidence convertirConfianza(String confianza) {
-        switch (confianza) {
-            case "High":
+        String confianzaNormalizada = Hallazgo.normalizarConfianza(confianza);
+        switch (confianzaNormalizada) {
+            case Hallazgo.CONFIANZA_ALTA:
                 return burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.CERTAIN;
-            case "Medium":
+            case Hallazgo.CONFIANZA_MEDIA:
                 return burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.FIRM;
-            case "Low":
+            case Hallazgo.CONFIANZA_BAJA:
                 return burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.TENTATIVE;
             default:
                 return burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.TENTATIVE;

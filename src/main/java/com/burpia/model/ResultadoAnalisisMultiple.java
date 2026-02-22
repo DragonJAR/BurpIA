@@ -19,7 +19,7 @@ public class ResultadoAnalisisMultiple {
     public ResultadoAnalisisMultiple(String url, String marcaTiempo, List<Hallazgo> hallazgos, HttpRequest solicitudHttp) {
         this.url = url;
         this.marcaTiempo = marcaTiempo;
-        this.hallazgos = new ArrayList<>(hallazgos);
+        this.hallazgos = hallazgos != null ? new ArrayList<>(hallazgos) : new ArrayList<>();
         this.solicitudHttp = solicitudHttp;
     }
 
@@ -52,6 +52,9 @@ public class ResultadoAnalisisMultiple {
         String severidadMax = "Info";
 
         for (Hallazgo hallazgo : hallazgos) {
+            if (hallazgo == null) {
+                continue;
+            }
             int peso = Hallazgo.obtenerPesoSeveridad(hallazgo.obtenerSeveridad());
             if (peso > maxPeso) {
                 maxPeso = peso;

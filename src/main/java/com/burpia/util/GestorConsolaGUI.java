@@ -29,7 +29,9 @@ public class GestorConsolaGUI {
     private final DateTimeFormatter formateadorHora;
     private final ConcurrentLinkedQueue<EntradaLog> colaPendiente;
     private final AtomicBoolean flushProgramado;
+    private final AtomicInteger logsPendientes;
     private static final int MAXIMO_CARACTERES = 200_000;
+    private static final int MAXIMO_BACKLOG_SIN_CONSOLA = 5000;
 
     private Style estiloInfo;
     private Style estiloVerbose;
@@ -46,6 +48,7 @@ public class GestorConsolaGUI {
         this.formateadorHora = DateTimeFormatter.ofPattern("HH:mm:ss");
         this.colaPendiente = new ConcurrentLinkedQueue<>();
         this.flushProgramado = new AtomicBoolean(false);
+        this.logsPendientes = new AtomicInteger(0);
     }
 
     public void establecerConsola(JTextPane consola) {
@@ -65,6 +68,8 @@ public class GestorConsolaGUI {
         StyleConstants.setForeground(estiloError, Color.RED);
         StyleConstants.setFontFamily(estiloError, Font.MONOSPACED);
         StyleConstants.setBold(estiloError, true);
+
+        programarFlush();
     }
 
     public void capturarStreamsOriginales(PrintWriter stdout, PrintWriter stderr) {
@@ -73,30 +78,47 @@ public class GestorConsolaGUI {
     }
 
     public void registrar(String mensaje, TipoLog tipo) {
-        String mensajeLocalizado = I18nLogs.tr(mensaje);
+        registrar("BurpIA", mensaje, tipo);
+    }
+
+    public void registrar(String origen, String mensaje, TipoLog tipo) {
+        String origenSeguro = normalizarOrigen(origen);
+        String mensajeSeguro = mensaje != null ? mensaje : "";
+        String mensajeLocalizado = I18nLogs.tr(mensajeSeguro);
         incrementarContador(tipo);
 
         String hora = LocalTime.now().format(formateadorHora);
-        String mensajeFormateado = String.format("[%s] %s%n", hora, mensajeLocalizado);
+        String etiquetaNivel = etiquetaNivel(tipo);
+        String mensajeFormateado = String.format("[%s] [%s]%s %s%n", hora, origenSeguro, etiquetaNivel, mensajeLocalizado);
 
-        if (documento != null) {
-            colaPendiente.add(new EntradaLog(mensajeFormateado, tipo));
-            programarFlush();
-        }
+        agregarPendiente(new EntradaLog(mensajeFormateado, tipo));
+        programarFlush();
 
-        duplicarAStreamOriginal(mensajeFormateado, tipo);
+        duplicarAStreamOriginal(origenSeguro, mensajeSeguro, tipo, hora);
     }
 
     public void registrarInfo(String mensaje) {
         registrar(mensaje, TipoLog.INFO);
     }
 
+    public void registrarInfo(String origen, String mensaje) {
+        registrar(origen, mensaje, TipoLog.INFO);
+    }
+
     public void registrarVerbose(String mensaje) {
         registrar(mensaje, TipoLog.VERBOSE);
     }
 
+    public void registrarVerbose(String origen, String mensaje) {
+        registrar(origen, mensaje, TipoLog.VERBOSE);
+    }
+
     public void registrarError(String mensaje) {
         registrar(mensaje, TipoLog.ERROR);
+    }
+
+    public void registrarError(String origen, String mensaje) {
+        registrar(origen, mensaje, TipoLog.ERROR);
     }
 
     public void limpiarConsola() {
@@ -106,6 +128,7 @@ public class GestorConsolaGUI {
                     documento.remove(0, documento.getLength());
                 }
                 colaPendiente.clear();
+                logsPendientes.set(0);
                 contadorInfo.set(0);
                 contadorVerbose.set(0);
                 contadorError.set(0);
@@ -157,8 +180,10 @@ public class GestorConsolaGUI {
         }
     }
 
-    private void duplicarAStreamOriginal(String mensaje, TipoLog tipo) {
-        String mensajeConPrefijo = "[BurpIA] " + mensaje;
+    private void duplicarAStreamOriginal(String origen, String mensaje, TipoLog tipo, String hora) {
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
+        String etiquetaNivel = etiquetaNivel(tipo);
+        String mensajeConPrefijo = String.format("[%s]%s [%s] %s%n", origen, etiquetaNivel, hora, mensajeLocalizado);
         if (tipo == TipoLog.ERROR) {
             if (stderrOriginal != null) {
                 stderrOriginal.print(mensajeConPrefijo);
@@ -174,11 +199,15 @@ public class GestorConsolaGUI {
 
     public void shutdown() {
         colaPendiente.clear();
+        logsPendientes.set(0);
         stdoutOriginal = null;
         stderrOriginal = null;
     }
 
     private void programarFlush() {
+        if (documento == null) {
+            return;
+        }
         if (flushProgramado.compareAndSet(false, true)) {
             SwingUtilities.invokeLater(this::flushPendientesEnEdt);
         }
@@ -192,6 +221,7 @@ public class GestorConsolaGUI {
 
             EntradaLog entrada;
             while ((entrada = colaPendiente.poll()) != null) {
+                logsPendientes.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
                 documento.insertString(documento.getLength(), entrada.mensaje, obtenerEstilo(entrada.tipo));
             }
 
@@ -202,7 +232,7 @@ public class GestorConsolaGUI {
         } catch (BadLocationException ignored) {
         } finally {
             flushProgramado.set(false);
-            if (!colaPendiente.isEmpty()) {
+            if (documento != null && logsPendientes.get() > 0) {
                 programarFlush();
             }
         }
@@ -230,6 +260,42 @@ public class GestorConsolaGUI {
                 contadorInfo.incrementAndGet();
                 break;
         }
+    }
+
+    private void agregarPendiente(EntradaLog entrada) {
+        colaPendiente.add(entrada);
+        int total = logsPendientes.incrementAndGet();
+        if (documento == null && total > MAXIMO_BACKLOG_SIN_CONSOLA) {
+            recortarBacklogSinConsola();
+        }
+    }
+
+    private void recortarBacklogSinConsola() {
+        while (logsPendientes.get() > MAXIMO_BACKLOG_SIN_CONSOLA) {
+            EntradaLog eliminado = colaPendiente.poll();
+            if (eliminado == null) {
+                logsPendientes.set(0);
+                return;
+            }
+            logsPendientes.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
+        }
+    }
+
+    private String normalizarOrigen(String origen) {
+        if (origen == null || origen.trim().isEmpty()) {
+            return "BurpIA";
+        }
+        return origen.trim();
+    }
+
+    private String etiquetaNivel(TipoLog tipo) {
+        if (tipo == TipoLog.ERROR) {
+            return " [ERROR]";
+        }
+        if (tipo == TipoLog.VERBOSE) {
+            return I18nUI.tr(" [RASTREO]", " [TRACE]");
+        }
+        return "";
     }
 
     private static final class EntradaLog {

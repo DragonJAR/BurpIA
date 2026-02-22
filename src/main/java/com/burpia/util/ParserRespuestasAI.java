@@ -84,19 +84,17 @@ public class ParserRespuestasAI {
 
         JsonArray output = obtenerArreglo(raiz, "output");
         if (output != null) {
+            StringBuilder contenidoCompleto = new StringBuilder();
             for (JsonElement outputItem : output) {
                 JsonObject outputObject = obtenerObjeto(outputItem);
                 JsonArray contenidos = obtenerArreglo(outputObject, "content");
                 if (contenidos == null) {
                     continue;
                 }
-                for (JsonElement contenidoItem : contenidos) {
-                    JsonObject contenidoObjeto = obtenerObjeto(contenidoItem);
-                    String texto = obtenerTexto(contenidoObjeto, "text");
-                    if (!texto.isEmpty()) {
-                        return texto;
-                    }
-                }
+                anexarTexto(contenidoCompleto, extraerTextoDesdeArreglo(contenidos));
+            }
+            if (contenidoCompleto.length() > 0) {
+                return contenidoCompleto.toString();
             }
         }
 
@@ -138,6 +136,7 @@ public class ParserRespuestasAI {
 
             if (content.isJsonArray()) {
                 var contentArray = content.getAsJsonArray();
+                StringBuilder contenidoCompleto = new StringBuilder();
                 for (JsonElement item : contentArray) {
                     JsonObject obj = obtenerObjeto(item);
                     if (obj == null) {
@@ -146,8 +145,11 @@ public class ParserRespuestasAI {
                     String tipo = obtenerTexto(obj, "type");
                     String texto = obtenerTexto(obj, "text");
                     if (!texto.isEmpty() && ("text".equals(tipo) || tipo.isEmpty())) {
-                        return texto;
+                        anexarTexto(contenidoCompleto, texto);
                     }
+                }
+                if (contenidoCompleto.length() > 0) {
+                    return contenidoCompleto.toString();
                 }
             }
             else if (content.isJsonPrimitive()) {
@@ -169,12 +171,9 @@ public class ParserRespuestasAI {
             if (parts == null) {
                 continue;
             }
-            for (JsonElement partItem : parts) {
-                JsonObject part = obtenerObjeto(partItem);
-                String text = obtenerTexto(part, "text");
-                if (!text.isEmpty()) {
-                    return text;
-                }
+            String textoCandidato = extraerTextoDesdeArreglo(parts);
+            if (!textoCandidato.isEmpty()) {
+                return textoCandidato;
             }
         }
         return "";
@@ -284,24 +283,41 @@ public class ParserRespuestasAI {
         if (arreglo == null) {
             return "";
         }
+        StringBuilder texto = new StringBuilder();
         for (JsonElement item : arreglo) {
-            String directo = obtenerTexto(item);
-            if (!directo.isEmpty()) {
-                return directo;
-            }
-            JsonObject objeto = obtenerObjeto(item);
-            if (objeto == null) {
-                continue;
-            }
-            String text = obtenerTexto(objeto, "text");
-            if (!text.isEmpty()) {
-                return text;
-            }
-            String content = obtenerTexto(objeto, "content");
-            if (!content.isEmpty()) {
-                return content;
-            }
+            anexarTexto(texto, extraerTextoDesdeElemento(item));
         }
-        return "";
+        return texto.toString();
+    }
+
+    private static String extraerTextoDesdeElemento(JsonElement elemento) {
+        if (elemento == null) {
+            return "";
+        }
+
+        String directo = obtenerTexto(elemento);
+        if (!directo.isEmpty()) {
+            return directo;
+        }
+
+        JsonObject objeto = obtenerObjeto(elemento);
+        if (objeto == null) {
+            return "";
+        }
+
+        StringBuilder texto = new StringBuilder();
+        anexarTexto(texto, obtenerTexto(objeto, "text"));
+        anexarTexto(texto, obtenerTexto(objeto, "content"));
+        anexarTexto(texto, obtenerTexto(objeto, "reasoning_content"));
+        anexarTexto(texto, extraerTextoDesdeArreglo(obtenerArreglo(objeto, "content")));
+        anexarTexto(texto, extraerTextoDesdeArreglo(obtenerArreglo(objeto, "parts")));
+        return texto.toString();
+    }
+
+    private static void anexarTexto(StringBuilder destino, String texto) {
+        if (destino == null || texto == null || texto.isEmpty()) {
+            return;
+        }
+        destino.append(texto);
     }
 }

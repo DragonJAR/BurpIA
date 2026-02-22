@@ -87,15 +87,32 @@ public class ModeloTablaTareas extends DefaultTableModel {
             if (getRowCount() > limiteFilas) {
                 int filasAEliminar = getRowCount() - limiteFilas;
                 for (int i = 0; i < filasAEliminar; i++) {
-                    removeRow(0);
-                    if (!datos.isEmpty()) {
-                        datos.remove(0);
+                    int indice = buscarIndicePurgablePorLimite();
+                    if (indice < 0 || indice >= getRowCount()) {
+                        break;
+                    }
+                    removeRow(indice);
+                    if (indice < datos.size()) {
+                        datos.remove(indice);
                     }
                 }
             }
         } finally {
             lock.unlock();
         }
+    }
+
+    private int buscarIndicePurgablePorLimite() {
+        for (int i = 0; i < datos.size(); i++) {
+            Tarea tarea = datos.get(i);
+            if (tarea != null && tarea.esFinalizada()) {
+                return i;
+            }
+        }
+        if (datos.isEmpty()) {
+            return -1;
+        }
+        return 0;
     }
 
     public void limpiar() {
