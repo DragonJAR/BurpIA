@@ -4,6 +4,8 @@ BurpIA es una extension para Burp Suite que analiza trafico HTTP con LLMs para a
 
 Version actual: `1.0.0`
 
+English version: [README.en.md](README.en.md)
+
 ## Que obtienes con BurpIA
 
 - Analisis pasivo y manual sobre evidencia HTTP real (`request` + `response`).
