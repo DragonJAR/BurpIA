@@ -85,13 +85,26 @@ class ManejadorHttpBurpIATest {
         });
     }
 
-    private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {
+    @Test
+    @DisplayName("Inicializa captura segun escaneoPasivoHabilitado en configuracion")
+    void testEstadoInicialCapturaDesdeConfiguracion() {
         ConfiguracionAPI config = new ConfiguracionAPI();
-        config.establecerDetallado(false);
+        config.establecerEscaneoPasivoHabilitado(false);
 
+        ManejadorHttpBurpIA manejador = crearManejador(null, config);
+        assertFalse(manejador.estaCapturaActiva());
+    }
+
+    private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {
+        return crearManejador(api, null);
+    }
+
+    private ManejadorHttpBurpIA crearManejador(MontoyaApi api, ConfiguracionAPI config) {
+        ConfiguracionAPI configFinal = config != null ? config : new ConfiguracionAPI();
+        configFinal.establecerDetallado(false);
         ManejadorHttpBurpIA manejador = new ManejadorHttpBurpIA(
             api,
-            config,
+            configFinal,
             null,
             new PrintWriter(new StringWriter(), true),
             new PrintWriter(new StringWriter(), true),

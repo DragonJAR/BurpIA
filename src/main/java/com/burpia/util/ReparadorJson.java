@@ -168,10 +168,8 @@ public class ReparadorJson {
     }
 
     private static String repararComillasEscapadas(String texto) {
-        // Reparar comillas dobles escapadas incorrectamente
         texto = texto.replace("\\\"", "\"");
 
-        // Escapar comillas dentro de valores de cadena
         Pattern patron = Pattern.compile(": \"([^\"]*)\"");
         Matcher matcher = patron.matcher(texto);
         StringBuffer sb = new StringBuffer();

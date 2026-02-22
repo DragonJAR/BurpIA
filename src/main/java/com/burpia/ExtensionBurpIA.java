@@ -117,6 +117,7 @@ public class ExtensionBurpIA implements BurpExtension {
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
 
         crearYRegistrarPestaniaPrincipal();
+        inicializarPreferenciasUsuarioEnUI();
 
         manejadorHttp = new ManejadorHttpBurpIA(
             api, config, pestaniaPrincipal, stdout, stderr, limitador,
@@ -244,7 +245,6 @@ public class ExtensionBurpIA implements BurpExtension {
             try {
                 api.logging().logToOutput("[BurpIA] " + mensajeLocalizado);
             } catch (Exception ignored) {
-                // Evita romper el flujo de descarga por fallos de logging
             }
         }
     }
@@ -260,7 +260,6 @@ public class ExtensionBurpIA implements BurpExtension {
             try {
                 api.logging().logToError("[BurpIA] [ERROR] " + mensajeLocalizado);
             } catch (Exception ignored) {
-                // Evita romper el flujo por fallos de logging
             }
         }
     }
@@ -274,8 +273,49 @@ public class ExtensionBurpIA implements BurpExtension {
         } else {
             manejadorHttp.reanudarCaptura();
         }
+        config.establecerEscaneoPasivoHabilitado(manejadorHttp.estaCapturaActiva());
+        guardarConfiguracionSilenciosa("captura");
         pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
         registrar("Estado de captura actualizado: " + (manejadorHttp.estaCapturaActiva() ? "ACTIVA" : "PAUSADA"));
+    }
+
+    private void inicializarPreferenciasUsuarioEnUI() {
+        if (pestaniaPrincipal == null || config == null) {
+            return;
+        }
+
+        pestaniaPrincipal.establecerGuardadoAutomaticoIssuesActivo(config.autoGuardadoIssuesHabilitado());
+        pestaniaPrincipal.establecerAutoScrollConsolaActivo(config.autoScrollConsolaHabilitado());
+
+        pestaniaPrincipal.establecerManejadorAutoGuardadoIssues(activo -> {
+            if (config.autoGuardadoIssuesHabilitado() == activo) {
+                return;
+            }
+            config.establecerAutoGuardadoIssuesHabilitado(activo);
+            guardarConfiguracionSilenciosa("auto-issues");
+        });
+
+        pestaniaPrincipal.establecerManejadorAutoScrollConsola(activo -> {
+            if (config.autoScrollConsolaHabilitado() == activo) {
+                return;
+            }
+            config.establecerAutoScrollConsolaHabilitado(activo);
+            guardarConfiguracionSilenciosa("auto-scroll");
+        });
+    }
+
+    private void guardarConfiguracionSilenciosa(String origen) {
+        if (gestorConfig == null || config == null) {
+            return;
+        }
+        StringBuilder mensajeError = new StringBuilder();
+        if (!gestorConfig.guardarConfiguracion(config, mensajeError)) {
+            String detalle = mensajeError.toString().trim();
+            if (detalle.isEmpty()) {
+                detalle = "Error desconocido";
+            }
+            registrarError("No se pudo persistir configuracion (" + origen + "): " + detalle);
+        }
     }
 
     public void unload() {

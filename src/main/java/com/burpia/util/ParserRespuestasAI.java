@@ -1,26 +1,15 @@
 package com.burpia.util;
 
+import com.burpia.config.ProveedorAI;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonArray;
 
-/**
- * Utilidad para parsear respuestas de APIs de IA de forma robusta.
- * Usa Gson para parsing en lugar de manipulación de strings manual.
- */
 public class ParserRespuestasAI {
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
         java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
 
-    /**
-     * Extrae el contenido de texto de una respuesta de API de IA.
-     * Soporta múltiples formatos: OpenAI, Claude, Gemini, Ollama.
-     *
-     * @param respuestaJson JSON crudo de la respuesta
-     * @param proveedor Nombre del proveedor (OpenAI, Claude, Gemini, Ollama)
-     * @return Contenido de texto extraído, o cadena vacía si no se puede extraer
-     */
     public static String extraerContenido(String respuestaJson, String proveedor) {
         if (respuestaJson == null || respuestaJson.trim().isEmpty()) {
             return "";
@@ -46,6 +35,7 @@ public class ParserRespuestasAI {
                 case "OpenAI":
                 case "Z.ai":
                 case "minimax":
+                case ProveedorAI.PROVEEDOR_CUSTOM:
                     contenido = extraerContenidoOpenAI(raiz);
                     break;
 
@@ -77,9 +67,6 @@ public class ParserRespuestasAI {
         }
     }
 
-    /**
-     * Formato Ollama: {"message": {"content": "..."}}
-     */
     private static String extraerContenidoOllama(JsonObject raiz) {
         JsonObject message = obtenerObjeto(raiz, "message");
         String contenido = obtenerTexto(message, "content");
@@ -89,9 +76,6 @@ public class ParserRespuestasAI {
         return "";
     }
 
-    /**
-     * Formato OpenAI/Z.ai/minimax: {"choices": [{"message": {"content": "..."}}]}
-     */
     private static String extraerContenidoOpenAI(JsonObject raiz) {
         String outputText = obtenerTexto(raiz, "output_text");
         if (!outputText.isEmpty()) {
@@ -148,10 +132,6 @@ public class ParserRespuestasAI {
         return "";
     }
 
-    /**
-     * Formato Claude: {"content": [{"type": "text", "text": "..."}]}
-     * O formato alternativo: {"content": "..."}
-     */
     private static String extraerContenidoClaude(JsonObject raiz) {
         if (raiz.has("content")) {
             JsonElement content = raiz.get("content");
@@ -177,9 +157,6 @@ public class ParserRespuestasAI {
         return "";
     }
 
-    /**
-     * Formato Gemini: {"candidates": [{"content": {"parts": [{"text": "..."}]}}]}
-     */
     private static String extraerContenidoGemini(JsonObject raiz) {
         JsonArray candidates = obtenerArreglo(raiz, "candidates");
         if (candidates == null) {
@@ -203,9 +180,6 @@ public class ParserRespuestasAI {
         return "";
     }
 
-    /**
-     * Intento genérico de extraer contenido buscando campos comunes.
-     */
     private static String extraerContenidoGenerico(JsonObject raiz) {
         String[] campos = {"content", "text", "message", "response", "output", "reasoning_content"};
 
@@ -236,12 +210,6 @@ public class ParserRespuestasAI {
         return "";
     }
 
-    /**
-     * Valida si la respuesta contiene "OK" o "Hola" (case-insensitive).
-     *
-     * @param contenido Contenido de texto a validar
-     * @return true si contiene "OK" o "Hola", false en caso contrario
-     */
     public static boolean validarRespuestaPrueba(String contenido) {
         if (contenido == null || contenido.trim().isEmpty()) {
             return false;
@@ -251,10 +219,6 @@ public class ParserRespuestasAI {
         return contenidoUpper.contains("OK") || contenidoUpper.contains("HOLA");
     }
 
-    /**
-     * Validación flexible para pruebas de conexión:
-     * si hay contenido no vacío, la conexión y el parseo son considerados correctos.
-     */
     public static boolean validarRespuestaConexion(String contenido) {
         return contenido != null && !contenido.trim().isEmpty();
     }

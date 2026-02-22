@@ -110,7 +110,6 @@ public class GestorConsolaGUI {
                 contadorVerbose.set(0);
                 contadorError.set(0);
             } catch (BadLocationException e) {
-                // Ignorar errores de UI
             }
         });
     }
@@ -201,7 +200,6 @@ public class GestorConsolaGUI {
                 consola.setCaretPosition(documento.getLength());
             }
         } catch (BadLocationException ignored) {
-            // Ignorar errores de inserción en UI
         } finally {
             flushProgramado.set(false);
             if (!colaPendiente.isEmpty()) {

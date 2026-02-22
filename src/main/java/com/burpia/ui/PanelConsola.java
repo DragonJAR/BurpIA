@@ -8,6 +8,7 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.util.function.Consumer;
 
 public class PanelConsola extends JPanel {
     private final JTextPane consola;
@@ -18,6 +19,8 @@ public class PanelConsola extends JPanel {
     private final Timer timerActualizacion;
     private final JPanel panelControles;
     private final JPanel panelConsolaWrapper;
+    private Consumer<Boolean> manejadorCambioAutoScroll;
+    private boolean actualizandoAutoScroll = false;
 
     public PanelConsola(GestorConsolaGUI gestorConsola) {
         this.gestorConsola = gestorConsola;
@@ -79,7 +82,10 @@ public class PanelConsola extends JPanel {
         gestorConsola.establecerConsola(consola);
 
         checkboxAutoScroll.addActionListener(e -> {
-            gestorConsola.establecerAutoScroll(checkboxAutoScroll.isSelected());
+            if (actualizandoAutoScroll) {
+                return;
+            }
+            aplicarAutoScroll(checkboxAutoScroll.isSelected(), true);
         });
 
         botonLimpiar.addActionListener(e -> {
@@ -158,5 +164,32 @@ public class PanelConsola extends JPanel {
 
     public GestorConsolaGUI obtenerGestorConsola() {
         return gestorConsola;
+    }
+
+    public void establecerManejadorCambioAutoScroll(Consumer<Boolean> manejadorCambioAutoScroll) {
+        this.manejadorCambioAutoScroll = manejadorCambioAutoScroll;
+    }
+
+    public void establecerAutoScrollActivo(boolean activo) {
+        aplicarAutoScroll(activo, false);
+    }
+
+    public boolean isAutoScrollActivo() {
+        return checkboxAutoScroll.isSelected();
+    }
+
+    private void aplicarAutoScroll(boolean activo, boolean notificarCambio) {
+        if (checkboxAutoScroll.isSelected() != activo) {
+            actualizandoAutoScroll = true;
+            try {
+                checkboxAutoScroll.setSelected(activo);
+            } finally {
+                actualizandoAutoScroll = false;
+            }
+        }
+        gestorConsola.establecerAutoScroll(activo);
+        if (notificarCambio && manejadorCambioAutoScroll != null) {
+            manejadorCambioAutoScroll.accept(activo);
+        }
     }
 }

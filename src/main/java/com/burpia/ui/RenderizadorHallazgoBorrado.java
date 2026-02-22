@@ -7,10 +7,6 @@ import java.awt.font.TextAttribute;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Renderizador que muestra las celdas de hallazgos ignorados en gris y tachado.
- * Envuelve a otros renderizadores y aplica el estilo si la fila está marcada como ignorada.
- */
 public class RenderizadorHallazgoBorrado implements TableCellRenderer {
     private final TableCellRenderer rendererOriginal;
     private final JTable tabla;

@@ -59,6 +59,15 @@ class ConfiguracionApiEndpointsTest {
     }
 
     @Test
+    @DisplayName("Construye endpoint Custom OpenAI-compatible")
+    void testEndpointCustom() {
+        assertEquals(
+            "https://example.local/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor("-- Custom --", "https://example.local/v1", "my-model")
+        );
+    }
+
+    @Test
     @DisplayName("Extrae URL base desde endpoint completo")
     void testExtraerUrlBase() {
         assertEquals(

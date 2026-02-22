@@ -140,7 +140,6 @@ public class GestorTareas {
     }
 
     private void verificarTareasAtascadas() {
-        // Primero: recopilar tareas atascadas (con lock)
         List<Tarea> tareasAtascadas = new ArrayList<>();
 
         candado.lock();
@@ -165,7 +164,6 @@ public class GestorTareas {
             candado.unlock();
         }
 
-        // Segundo: actualizar UI SIN lock (fuera del bloque sincronizado)
         for (Tarea tarea : tareasAtascadas) {
             actualizarFilaTabla(tarea);
             registrar("Tarea atascada detectada: " + tarea.obtenerId());
@@ -347,7 +345,6 @@ public class GestorTareas {
         try {
             logger.accept(mensaje);
         } catch (Exception ignored) {
-            // No bloquear flujo de tareas por fallos de logging externo
         }
     }
 }

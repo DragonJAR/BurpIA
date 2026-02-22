@@ -19,6 +19,8 @@ public class ConfiguracionAPI {
     private String tema;
     private String idiomaUi;
     private boolean escaneoPasivoHabilitado;
+    private boolean autoGuardadoIssuesHabilitado;
+    private boolean autoScrollConsolaHabilitado;
     private String promptConfigurable;
 
     private Map<String, String> apiKeysPorProveedor;
@@ -37,6 +39,8 @@ public class ConfiguracionAPI {
         this.tema = "Light";
         this.idiomaUi = IdiomaUI.porDefecto().codigo();
         this.escaneoPasivoHabilitado = true;
+        this.autoGuardadoIssuesHabilitado = true;
+        this.autoScrollConsolaHabilitado = true;
         this.promptModificado = false;
 
         this.promptConfigurable = obtenerPromptPorDefecto();
@@ -118,6 +122,16 @@ public class ConfiguracionAPI {
         this.escaneoPasivoHabilitado = escaneoPasivoHabilitado;
     }
 
+    public boolean autoGuardadoIssuesHabilitado() { return autoGuardadoIssuesHabilitado; }
+    public void establecerAutoGuardadoIssuesHabilitado(boolean autoGuardadoIssuesHabilitado) {
+        this.autoGuardadoIssuesHabilitado = autoGuardadoIssuesHabilitado;
+    }
+
+    public boolean autoScrollConsolaHabilitado() { return autoScrollConsolaHabilitado; }
+    public void establecerAutoScrollConsolaHabilitado(boolean autoScrollConsolaHabilitado) {
+        this.autoScrollConsolaHabilitado = autoScrollConsolaHabilitado;
+    }
+
     public boolean esPromptModificado() { return promptModificado; }
     public void establecerPromptModificado(boolean modificado) { this.promptModificado = modificado; }
 
@@ -196,10 +210,13 @@ public class ConfiguracionAPI {
             return "";
         }
         if (urlsBasePorProveedor.containsKey(proveedor)) {
-            return urlsBasePorProveedor.get(proveedor);
+            String urlGuardada = urlsBasePorProveedor.get(proveedor);
+            if (urlGuardada != null && !urlGuardada.trim().isEmpty()) {
+                return urlGuardada;
+            }
         }
-        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
-        return config != null ? config.obtenerUrlApi() : "";
+        String urlPorDefecto = ProveedorAI.obtenerUrlApiPorDefecto(proveedor, idiomaUi);
+        return urlPorDefecto != null ? urlPorDefecto : "";
     }
 
     public void establecerUrlBaseParaProveedor(String proveedor, String urlBase) {
@@ -460,6 +477,8 @@ public class ConfiguracionAPI {
         snapshot.tema = this.tema;
         snapshot.idiomaUi = this.idiomaUi;
         snapshot.escaneoPasivoHabilitado = this.escaneoPasivoHabilitado;
+        snapshot.autoGuardadoIssuesHabilitado = this.autoGuardadoIssuesHabilitado;
+        snapshot.autoScrollConsolaHabilitado = this.autoScrollConsolaHabilitado;
         snapshot.promptConfigurable = this.promptConfigurable;
         snapshot.promptModificado = this.promptModificado;
 
@@ -485,6 +504,8 @@ public class ConfiguracionAPI {
         this.tema = origen.tema;
         this.idiomaUi = origen.idiomaUi;
         this.escaneoPasivoHabilitado = origen.escaneoPasivoHabilitado;
+        this.autoGuardadoIssuesHabilitado = origen.autoGuardadoIssuesHabilitado;
+        this.autoScrollConsolaHabilitado = origen.autoScrollConsolaHabilitado;
         this.promptConfigurable = origen.promptConfigurable;
         this.promptModificado = origen.promptModificado;
 

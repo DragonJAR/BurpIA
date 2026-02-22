@@ -177,6 +177,26 @@ class ConfiguracionAPITest {
     }
 
     @Test
+    @DisplayName("Snapshot y aplicarDesde conservan preferencias runtime")
+    void testSnapshotYAplicarDesdeConservanPreferenciasRuntime() {
+        ConfiguracionAPI origen = new ConfiguracionAPI();
+        origen.establecerEscaneoPasivoHabilitado(false);
+        origen.establecerAutoGuardadoIssuesHabilitado(false);
+        origen.establecerAutoScrollConsolaHabilitado(false);
+
+        ConfiguracionAPI snapshot = origen.crearSnapshot();
+        assertFalse(snapshot.escaneoPasivoHabilitado());
+        assertFalse(snapshot.autoGuardadoIssuesHabilitado());
+        assertFalse(snapshot.autoScrollConsolaHabilitado());
+
+        ConfiguracionAPI destino = new ConfiguracionAPI();
+        destino.aplicarDesde(origen);
+        assertFalse(destino.escaneoPasivoHabilitado());
+        assertFalse(destino.autoGuardadoIssuesHabilitado());
+        assertFalse(destino.autoScrollConsolaHabilitado());
+    }
+
+    @Test
     @DisplayName("Idioma UI invalido vuelve a espanol")
     void testIdiomaInvalidoVuelveAEspanol() {
         config.establecerIdiomaUi("fr");
@@ -184,6 +204,24 @@ class ConfiguracionAPITest {
 
         config.establecerIdiomaUi("en");
         assertEquals("en", config.obtenerIdiomaUi());
+    }
+
+    @Test
+    @DisplayName("Custom sin URL guardada usa default por idioma")
+    void testCustomDefaultUrlByLanguage() {
+        ConfiguracionAPI configEs = new ConfiguracionAPI();
+        configEs.establecerIdiomaUi("es");
+        assertEquals(
+            "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1",
+            configEs.obtenerUrlBaseParaProveedor("-- Custom --")
+        );
+
+        ConfiguracionAPI configEn = new ConfiguracionAPI();
+        configEn.establecerIdiomaUi("en");
+        assertEquals(
+            "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1",
+            configEn.obtenerUrlBaseParaProveedor("-- Custom --")
+        );
     }
 
     @Test

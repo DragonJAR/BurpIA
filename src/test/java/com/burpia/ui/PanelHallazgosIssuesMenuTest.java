@@ -67,6 +67,23 @@ class PanelHallazgosIssuesMenuTest {
         assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), menuItemIssues.getText());
     }
 
+    @Test
+    @DisplayName("Permite establecer autoguardado de Issues programaticamente")
+    void testSetterProgramaticoAutoguardadoIssues() throws Exception {
+        PanelHallazgos panel = crearPanel();
+        JMenuItem menuItemIssues = obtenerCampo(panel, "menuItemIssues", JMenuItem.class);
+
+        SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
+        flushEdt();
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo());
+        assertTrue(menuItemIssues.isVisible());
+
+        SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(true));
+        flushEdt();
+        assertTrue(panel.isGuardadoAutomaticoIssuesActivo());
+        assertFalse(menuItemIssues.isVisible());
+    }
+
     private PanelHallazgos crearPanel() throws Exception {
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         final PanelHallazgos[] holder = new PanelHallazgos[1];

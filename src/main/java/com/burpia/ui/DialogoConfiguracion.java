@@ -709,14 +709,27 @@ public class DialogoConfiguracion extends JDialog {
             return;
         }
 
-        String urlGuardada = config.obtenerUrlBaseParaProveedor(proveedorSeleccionado);
-        txtUrl.setText(urlGuardada != null ? urlGuardada : configProveedor.obtenerUrlApi());
+        String urlGuardada = config.obtenerUrlsBasePorProveedor().get(proveedorSeleccionado);
+        boolean tieneUrlGuardada = urlGuardada != null && !urlGuardada.trim().isEmpty();
+        if (!tieneUrlGuardada && ProveedorAI.PROVEEDOR_CUSTOM.equals(proveedorSeleccionado)) {
+            IdiomaUI idiomaSeleccionado = (IdiomaUI) comboIdioma.getSelectedItem();
+            String codigoIdioma = idiomaSeleccionado != null ? idiomaSeleccionado.codigo() : config.obtenerIdiomaUi();
+            txtUrl.setText(ProveedorAI.obtenerUrlApiPorDefecto(proveedorSeleccionado, codigoIdioma));
+        } else {
+            String urlBase = tieneUrlGuardada
+                ? urlGuardada
+                : config.obtenerUrlBaseParaProveedor(proveedorSeleccionado);
+            txtUrl.setText(urlBase != null ? urlBase : configProveedor.obtenerUrlApi());
+        }
 
         String apiKeyGuardada = config.obtenerApiKeyParaProveedor(proveedorSeleccionado);
         txtClave.setText(apiKeyGuardada != null ? apiKeyGuardada : "");
 
-        Integer maxTokensGuardado = config.obtenerMaxTokensParaProveedor(proveedorSeleccionado);
-        txtMaxTokens.setText(String.valueOf(maxTokensGuardado));
+        Integer maxTokensGuardado = config.obtenerMaxTokensPorProveedor().get(proveedorSeleccionado);
+        int maxTokensMostrar = (maxTokensGuardado != null && maxTokensGuardado > 0)
+            ? maxTokensGuardado
+            : configProveedor.obtenerMaxTokensPorDefecto();
+        txtMaxTokens.setText(String.valueOf(maxTokensMostrar));
 
         List<String> modelosProveedor = configProveedor.obtenerModelosDisponibles();
 
