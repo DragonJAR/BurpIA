@@ -38,6 +38,10 @@ class I18nUITest {
         I18nUI.establecerIdioma("es");
         String mensaje = "Analisis completado: https://target";
         assertEquals(mensaje, I18nLogs.tr(mensaje));
+        assertEquals("Analisis completado: https://target",
+            I18nLogs.tr("Analysis completed: https://target"));
+        assertEquals("Configuracion guardada exitosamente en: /tmp/.burpia.json",
+            I18nLogs.tr("Configuration saved successfully to: /tmp/.burpia.json"));
     }
 
     @Test
@@ -58,5 +62,7 @@ class I18nUITest {
             I18nLogs.tr("Tarea creada: Analisis HTTP - https://target"));
         assertTrue(I18nLogs.tr("Stack trace de la excepción:")
             .startsWith("Exception stack trace"));
+        assertEquals("Configuration saved successfully to: /tmp/.burpia.json",
+            I18nLogs.tr("Configuracion guardada exitosamente en: /tmp/.burpia.json"));
     }
 }

@@ -33,7 +33,6 @@ public class RenderizadorEstado extends DefaultTableCellRenderer {
                 Color colorFondo = Tarea.obtenerColorEstado(estado);
                 etiqueta.setBackground(colorFondo);
 
-                // Texto en blanco u oscuro segun el fondo
                 if (estado.equals(Tarea.ESTADO_EN_COLA) ||
                     estado.equals(Tarea.ESTADO_ERROR) ||
                     estado.equals(Tarea.ESTADO_CANCELADO)) {
@@ -43,7 +42,6 @@ public class RenderizadorEstado extends DefaultTableCellRenderer {
                 }
             }
 
-            // Icono opcional segun estado
             etiqueta.setText(estado);
         }
 

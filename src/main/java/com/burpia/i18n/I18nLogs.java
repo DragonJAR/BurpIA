@@ -1,5 +1,7 @@
 package com.burpia.i18n;
 
+import java.util.Arrays;
+
 public final class I18nLogs {
     private static final String[][] REEMPLAZOS_INGLES = new String[][]{
         {"Inicialización", "Initialization"},
@@ -10,6 +12,21 @@ public final class I18nLogs {
         {"Configuracion actualizada", "Configuration updated"},
         {"Configuracion cargada", "Configuration loaded"},
         {"Configuracion cargada:", "Loaded configuration:"},
+        {"Ruta de configuracion", "Configuration path"},
+        {"Archivo no existe, creando configuracion por defecto", "File does not exist, creating default configuration"},
+        {"Archivo no es legible", "File is not readable"},
+        {"Archivo vacio, usando configuracion por defecto", "Empty file, using default configuration"},
+        {"Error al parsear JSON, usando configuracion por defecto", "Error parsing JSON, using default configuration"},
+        {"Error de sintaxis JSON", "JSON syntax error"},
+        {"Error de E/S al cargar", "I/O error while loading"},
+        {"Error inesperado al cargar", "Unexpected error while loading"},
+        {"Directorio padre no existe", "Parent directory does not exist"},
+        {"Directorio no es escribible", "Parent directory is not writable"},
+        {"Configuracion guardada exitosamente en", "Configuration saved successfully to"},
+        {"Error de E/S al guardar", "I/O error while saving"},
+        {"Error inesperado al guardar", "Unexpected error while saving"},
+        {"Archivo eliminado", "Deleted file"},
+        {"Error al eliminar", "Error deleting"},
         {"URL de API", "API URL"},
         {"Modelo", "Model"},
         {"Abriendo dialogo de configuracion", "Opening settings dialog"},
@@ -154,6 +171,8 @@ public final class I18nLogs {
         {"Configuracion", "Configuration"},
         {"configuracion", "configuration"}
     };
+    private static final String[][] REEMPLAZOS_ES_A_EN = crearReemplazosOrdenados(0);
+    private static final String[][] REEMPLAZOS_EN_A_ES = crearReemplazosOrdenados(1);
 
     private I18nLogs() {
     }
@@ -162,14 +181,34 @@ public final class I18nLogs {
         if (mensaje == null) {
             return "";
         }
+        if (I18nUI.obtenerIdioma() == IdiomaUI.ES) {
+            return aplicarReemplazos(mensaje, REEMPLAZOS_EN_A_ES, 1, 0);
+        }
         if (I18nUI.obtenerIdioma() != IdiomaUI.EN) {
             return mensaje;
         }
 
-        String traducido = mensaje;
-        for (String[] reemplazo : REEMPLAZOS_INGLES) {
-            traducido = traducido.replace(reemplazo[0], reemplazo[1]);
+        return aplicarReemplazos(mensaje, REEMPLAZOS_ES_A_EN, 0, 1);
+    }
+
+    private static String aplicarReemplazos(String texto,
+                                            String[][] reemplazosOrdenados,
+                                            int indiceOrigen,
+                                            int indiceDestino) {
+        String resultado = texto;
+        for (String[] reemplazo : reemplazosOrdenados) {
+            resultado = resultado.replace(reemplazo[indiceOrigen], reemplazo[indiceDestino]);
         }
-        return traducido;
+        return resultado;
+    }
+
+    private static String[][] crearReemplazosOrdenados(int indiceOrigen) {
+        String[][] copia = new String[REEMPLAZOS_INGLES.length][2];
+        for (int i = 0; i < REEMPLAZOS_INGLES.length; i++) {
+            copia[i][0] = REEMPLAZOS_INGLES[i][0];
+            copia[i][1] = REEMPLAZOS_INGLES[i][1];
+        }
+        Arrays.sort(copia, (a, b) -> Integer.compare(b[indiceOrigen].length(), a[indiceOrigen].length()));
+        return copia;
     }
 }

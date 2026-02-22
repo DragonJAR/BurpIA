@@ -14,6 +14,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -63,6 +64,25 @@ class ManejadorHttpBurpIATest {
         when(solicitud.url()).thenReturn("https://example.com");
 
         assertFalse(invocarEstaEnScope(manejador, solicitud));
+    }
+
+    @Test
+    @DisplayName("Creacion es segura cuando streams de salida son nulos")
+    void testCreacionConStreamsNulosNoFalla() {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerDetallado(false);
+
+        assertDoesNotThrow(() -> {
+            ManejadorHttpBurpIA manejador = new ManejadorHttpBurpIA(
+                null,
+                config,
+                null,
+                null,
+                null,
+                new LimitadorTasa(1)
+            );
+            manejadores.add(manejador);
+        });
     }
 
     private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {

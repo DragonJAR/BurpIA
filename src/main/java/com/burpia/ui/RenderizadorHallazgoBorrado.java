@@ -37,7 +37,6 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
 
         int filaModelo = tabla.convertRowIndexToModel(row);
 
-        // Verificar si el hallazgo está ignorado
         if (modelo.estaIgnorado(filaModelo)) {
             if (componente instanceof JLabel) {
                 JLabel etiqueta = (JLabel) componente;

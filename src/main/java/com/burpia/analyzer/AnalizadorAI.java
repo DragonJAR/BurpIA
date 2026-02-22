@@ -18,6 +18,7 @@ import com.burpia.util.ReparadorJson;
 import okhttp3.*;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -57,15 +58,23 @@ public class AnalizadorAI implements Runnable {
                      LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola,
                      BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
         this.solicitud = solicitud;
-        this.config = config;
-        this.stdout = stdout;
-        this.stderr = stderr;
-        this.limitador = limitador;
-        this.callback = callback;
+        this.config = config != null ? config : new ConfiguracionAPI();
+        this.stdout = stdout != null ? stdout : new PrintWriter(OutputStream.nullOutputStream(), true);
+        this.stderr = stderr != null ? stderr : new PrintWriter(OutputStream.nullOutputStream(), true);
+        this.limitador = limitador != null ? limitador : new LimitadorTasa(1);
+        this.callback = callback != null ? callback : new Callback() {
+            @Override
+            public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
+            }
+
+            @Override
+            public void alErrorAnalisis(String error) {
+            }
+        };
         this.gestorConsola = gestorConsola;
         this.clienteHttp = CLIENTE_COMPARTIDO;
         this.gson = new Gson();
-        this.constructorPrompt = new ConstructorPrompts(config);
+        this.constructorPrompt = new ConstructorPrompts(this.config);
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
     }
@@ -372,10 +381,14 @@ public class AnalizadorAI implements Runnable {
                     rastrear("Se encontraron " + arrayHallazgos.size() + " hallazgos en JSON");
 
                     for (JsonElement elemento : arrayHallazgos) {
+                        if (elemento == null || !elemento.isJsonObject()) {
+                            rastrear("Elemento de hallazgo invalido, se omite");
+                            continue;
+                        }
                         JsonObject obj = elemento.getAsJsonObject();
-                        String descripcion = obj.has("descripcion") ? obj.get("descripcion").getAsString() : "Sin descripción";
-                        String severidad = obj.has("severidad") ? obj.get("severidad").getAsString() : "Info";
-                        String confianza = obj.has("confianza") ? obj.get("confianza").getAsString() : "Low";
+                        String descripcion = obtenerCampoTexto(obj, "descripcion", "Sin descripción");
+                        String severidad = obtenerCampoTexto(obj, "severidad", "Info");
+                        String confianza = obtenerCampoTexto(obj, "confianza", "Low");
 
                         severidad = normalizarSeveridad(severidad);
                         confianza = normalizarConfianza(confianza);
@@ -425,6 +438,9 @@ public class AnalizadorAI implements Runnable {
 
     private List<Hallazgo> parsearTextoPlano(String contenido) {
         List<Hallazgo> hallazgos = new ArrayList<>();
+        if (contenido == null || contenido.trim().isEmpty()) {
+            return hallazgos;
+        }
 
         try {
             String[] lineas = contenido.split("\n");
@@ -504,6 +520,22 @@ public class AnalizadorAI implements Runnable {
 
         rastrear("Severidad extraida: " + severidad + " del contenido");
         return severidad;
+    }
+
+    private String obtenerCampoTexto(JsonObject obj, String campo, String porDefecto) {
+        if (obj == null || campo == null || campo.trim().isEmpty()) {
+            return porDefecto;
+        }
+        try {
+            JsonElement valor = obj.get(campo);
+            if (valor == null || valor.isJsonNull()) {
+                return porDefecto;
+            }
+            String texto = valor.getAsString();
+            return texto != null && !texto.trim().isEmpty() ? texto : porDefecto;
+        } catch (Exception ignored) {
+            return porDefecto;
+        }
     }
 
     private void registrar(String mensaje) {

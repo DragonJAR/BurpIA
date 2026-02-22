@@ -105,6 +105,7 @@ class ConfiguracionAPITest {
         assertFalse(prompt.isEmpty());
         assertTrue(prompt.contains("{REQUEST}"));
         assertTrue(prompt.contains("{RESPONSE}"));
+        assertTrue(prompt.contains("{OUTPUT_LANGUAGE}"));
     }
 
     @Test
@@ -208,5 +209,37 @@ class ConfiguracionAPITest {
 
         origen.establecerApiKeyParaProveedor("OpenAI", "otro-valor");
         assertEquals("key-openai", config.obtenerApiKeyParaProveedor("OpenAI"));
+    }
+
+    @Test
+    @DisplayName("Max tokens por proveedor normaliza valores invalidos")
+    void testMaxTokensPorProveedorNormalizaInvalidos() {
+        config.establecerProveedorAI("OpenAI");
+        int defectoOpenAi = ProveedorAI.obtenerProveedor("OpenAI").obtenerMaxTokensPorDefecto();
+
+        config.establecerMaxTokensParaProveedor("OpenAI", 0);
+        assertEquals(defectoOpenAi, config.obtenerMaxTokensParaProveedor("OpenAI"));
+
+        config.establecerMaxTokensParaProveedor("OpenAI", -50);
+        assertEquals(defectoOpenAi, config.obtenerMaxTokensParaProveedor("OpenAI"));
+    }
+
+    @Test
+    @DisplayName("Max tokens nulo en mapa no rompe y usa default")
+    void testMaxTokensNuloEnMapaUsaDefault() {
+        config.establecerProveedorAI("OpenAI");
+        int defectoOpenAi = ProveedorAI.obtenerProveedor("OpenAI").obtenerMaxTokensPorDefecto();
+        config.establecerMaxTokensPorProveedor(new java.util.HashMap<>(java.util.Map.of("OpenAI", defectoOpenAi)));
+        config.obtenerMaxTokensPorProveedor().put("OpenAI", null);
+
+        assertEquals(defectoOpenAi, config.obtenerMaxTokensParaProveedor("OpenAI"));
+    }
+
+    @Test
+    @DisplayName("Validacion tolera tema nulo sin excepcion")
+    void testValidacionTemaNuloNoRompe() {
+        config.establecerTema(null);
+        Map<String, String> errores = config.validar();
+        assertTrue(errores.containsKey("tema"));
     }
 }

@@ -23,7 +23,7 @@ public class GestorTareas {
         this.tareas = new ConcurrentHashMap<>();
         this.candado = new ReentrantLock();
         this.modeloTabla = modeloTabla;
-        this.logger = logger;
+        this.logger = logger != null ? logger : mensaje -> { };
 
         this.temporizadorVerificacion = new javax.swing.Timer(
             (int) INTERVALO_VERIFICACION_MS,
@@ -41,7 +41,7 @@ public class GestorTareas {
         try {
             tareas.put(id, tarea);
             modeloTabla.agregarTarea(tarea);
-            logger.accept("Tarea creada: " + tipo + " - " + url);
+            registrar("Tarea creada: " + tipo + " - " + url);
         } finally {
             candado.unlock();
         }
@@ -67,7 +67,7 @@ public class GestorTareas {
 
     public void cancelarTodas() {
         int canceladas = actualizarEstadosMasivo(Tarea::esActiva, Tarea.ESTADO_CANCELADO);
-        logger.accept("Tareas canceladas: " + canceladas);
+        registrar("Tareas canceladas: " + canceladas);
     }
 
     public void pausarReanudarTodas() {
@@ -84,7 +84,7 @@ public class GestorTareas {
                 Tarea.ESTADO_ANALIZANDO.equals(tarea.obtenerEstado()),
             Tarea.ESTADO_PAUSADO
         );
-        logger.accept("Tareas pausadas: " + pausadas);
+        registrar("Tareas pausadas: " + pausadas);
     }
 
     public void reanudarTodasPausadas() {
@@ -92,7 +92,7 @@ public class GestorTareas {
             tarea -> Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado()),
             Tarea.ESTADO_EN_COLA
         );
-        logger.accept("Tareas reanudadas: " + reanudadas);
+        registrar("Tareas reanudadas: " + reanudadas);
     }
 
     public int obtenerNumeroTareasPausadas() {
@@ -133,7 +133,7 @@ public class GestorTareas {
                 Tarea.ESTADO_CANCELADO
             );
 
-            logger.accept("Tareas limpiadas: " + idsAEliminar.size());
+            registrar("Tareas limpiadas: " + idsAEliminar.size());
         } finally {
             candado.unlock();
         }
@@ -168,7 +168,7 @@ public class GestorTareas {
         // Segundo: actualizar UI SIN lock (fuera del bloque sincronizado)
         for (Tarea tarea : tareasAtascadas) {
             actualizarFilaTabla(tarea);
-            logger.accept("Tarea atascada detectada: " + tarea.obtenerId());
+            registrar("Tarea atascada detectada: " + tarea.obtenerId());
         }
     }
 
@@ -221,7 +221,7 @@ public class GestorTareas {
                     Tarea.ESTADO_ANALIZANDO.equals(tarea.obtenerEstado())) {
                     tarea.establecerEstado(Tarea.ESTADO_PAUSADO);
                     actualizarFilaTabla(tarea);
-                    logger.accept("Tarea pausada: " + tarea.obtenerUrl());
+                    registrar("Tarea pausada: " + tarea.obtenerUrl());
                 }
             }
         } finally {
@@ -239,7 +239,7 @@ public class GestorTareas {
                     Tarea.ESTADO_CANCELADO.equals(tarea.obtenerEstado())) {
                     tarea.establecerEstado(Tarea.ESTADO_EN_COLA);
                     actualizarFilaTabla(tarea);
-                    logger.accept("Tarea reanudada: " + tarea.obtenerUrl());
+                    registrar("Tarea reanudada: " + tarea.obtenerUrl());
                 }
             }
         } finally {
@@ -257,7 +257,7 @@ public class GestorTareas {
                     Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado())) {
                     tarea.establecerEstado(Tarea.ESTADO_CANCELADO);
                     actualizarFilaTabla(tarea);
-                    logger.accept("Tarea cancelada: " + tarea.obtenerUrl());
+                    registrar("Tarea cancelada: " + tarea.obtenerUrl());
                 }
             }
         } finally {
@@ -278,14 +278,13 @@ public class GestorTareas {
 
         modeloTabla.eliminarTareaPorId(id);
 
-        logger.accept("Tarea limpiada: " + id);
+        registrar("Tarea limpiada: " + id);
     }
 
     public void detener() {
         if (temporizadorVerificacion != null) {
             temporizadorVerificacion.stop();
         }
-        // Limpiar recursos
         candado.lock();
         try {
             tareas.clear();
@@ -295,18 +294,10 @@ public class GestorTareas {
         }
     }
 
-    /**
-     * Método shutdown para limpieza de recursos (llamado por ExtensionBurpIA.unload())
-     */
     public void shutdown() {
         detener();
     }
 
-    /**
-     * Verifica si una tarea está cancelada.
-     * @param id ID de la tarea
-     * @return true si la tarea está cancelada
-     */
     public boolean estaTareaCancelada(String id) {
         candado.lock();
         try {
@@ -321,11 +312,6 @@ public class GestorTareas {
         }
     }
 
-    /**
-     * Verifica si una tarea está pausada.
-     * @param id ID de la tarea
-     * @return true si la tarea está pausada
-     */
     public boolean estaTareaPausada(String id) {
         candado.lock();
         try {
@@ -354,6 +340,14 @@ public class GestorTareas {
             return total;
         } finally {
             candado.unlock();
+        }
+    }
+
+    private void registrar(String mensaje) {
+        try {
+            logger.accept(mensaje);
+        } catch (Exception ignored) {
+            // No bloquear flujo de tareas por fallos de logging externo
         }
     }
 }

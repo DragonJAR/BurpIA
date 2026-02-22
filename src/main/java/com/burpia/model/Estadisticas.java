@@ -12,7 +12,6 @@ public class Estadisticas {
     private final AtomicInteger hallazgosCreados;
     private final AtomicInteger errores;
 
-    // Contadores de severidad de hallazgos
     private final AtomicInteger hallazgosCritical;
     private final AtomicInteger hallazgosHigh;
     private final AtomicInteger hallazgosMedium;
@@ -39,7 +38,6 @@ public class Estadisticas {
         this.candado = new ReentrantLock();
     }
 
-    // Metodos de incremento
     public void incrementarTotalSolicitudes() { totalSolicitudes.incrementAndGet(); }
     public void incrementarAnalizados() { analizados.incrementAndGet(); }
     public void incrementarOmitidosDuplicado() { omitidosDuplicado.incrementAndGet(); }
@@ -69,7 +67,6 @@ public class Estadisticas {
         hallazgosCreados.incrementAndGet();
     }
 
-    // Getters
     public int obtenerTotalSolicitudes() { return totalSolicitudes.get(); }
     public int obtenerAnalizados() { return analizados.get(); }
     public int obtenerOmitidosDuplicado() { return omitidosDuplicado.get(); }

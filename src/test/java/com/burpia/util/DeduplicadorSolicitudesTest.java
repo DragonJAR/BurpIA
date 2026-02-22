@@ -53,9 +53,9 @@ class DeduplicadorSolicitudesTest {
     void testContarDuplicados() {
         deduplicador.esDuplicadoYAgregar("hash1");
         deduplicador.esDuplicadoYAgregar("hash2");
-        deduplicador.esDuplicadoYAgregar("hash1"); // duplicado
+        deduplicador.esDuplicadoYAgregar("hash1");
         deduplicador.esDuplicadoYAgregar("hash3");
-        deduplicador.esDuplicadoYAgregar("hash2"); // duplicado
+        deduplicador.esDuplicadoYAgregar("hash2");
         
         assertEquals(3, deduplicador.obtenerNumeroHashes());
     }
@@ -86,7 +86,7 @@ class DeduplicadorSolicitudesTest {
         deduplicador.agregarHash("hash1");
         
         assertTrue(deduplicador.contieneHash("hash1"));
-        assertTrue(deduplicador.esDuplicadoYAgregar("hash1")); // ahora es duplicado
+        assertTrue(deduplicador.esDuplicadoYAgregar("hash1"));
     }
 
     @Test

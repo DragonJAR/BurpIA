@@ -59,15 +59,12 @@ public class DialogoConfiguracion extends JDialog {
 
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        // Pestaña 1: Ajustes General
         JPanel panelGeneral = crearPanelGeneral();
         tabbedPane.addTab(I18nUI.Configuracion.TAB_PROVEEDOR(), panelGeneral);
 
-        // Pestaña 2: Ajustes de Prompt
         JPanel panelPrompt = crearPanelPrompt();
         tabbedPane.addTab(I18nUI.Configuracion.TAB_PROMPT(), panelPrompt);
 
-        // Pestaña 3: Acerca de BurpIA
         JPanel panelAcercaDe = crearPanelAcercaDe();
         tabbedPane.addTab(I18nUI.Configuracion.TAB_ACERCA(), panelAcercaDe);
 
@@ -205,7 +202,6 @@ public class DialogoConfiguracion extends JDialog {
 
         int fila = 0;
 
-        // Proveedor AI
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDOR_AI()), gbc);
 
@@ -218,7 +214,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // URL de API
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_URL_API()), gbc);
 
@@ -230,7 +225,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // Clave de API
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_CLAVE_API()), gbc);
 
@@ -242,7 +236,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // Modelo y botón Refresh
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_MODELO()), gbc);
 
@@ -264,7 +257,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // Max Tokens
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblMaxTokens = new JLabel(I18nUI.Configuracion.LABEL_MAX_TOKENS());
         lblMaxTokens.setToolTipText(TooltipsUI.Configuracion.MAX_TOKENS());
@@ -342,7 +334,6 @@ public class DialogoConfiguracion extends JDialog {
             BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
-        // Área de texto para el prompt
         txtPrompt = new JTextArea();
         txtPrompt.setFont(EstilosUI.FUENTE_TABLA);
         txtPrompt.setLineWrap(false);
@@ -386,7 +377,6 @@ public class DialogoConfiguracion extends JDialog {
 
         panel.add(panelEditor, BorderLayout.CENTER);
 
-        // Listener para actualizar contador y marcar prompt como modificado
         txtPrompt.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
@@ -947,7 +937,6 @@ public class DialogoConfiguracion extends JDialog {
             return;
         }
 
-        // Validaciones antes de intentar conexión
         String urlApi = txtUrl.getText().trim();
         if (urlApi.isEmpty()) {
             JOptionPane.showMessageDialog(
@@ -962,7 +951,6 @@ public class DialogoConfiguracion extends JDialog {
 
         String claveApi = new String(txtClave.getPassword()).trim();
 
-        // Validar API key según proveedor
         ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedorSeleccionado);
         if (configProveedor != null && configProveedor.requiereClaveApi()) {
             if (claveApi.isEmpty()) {

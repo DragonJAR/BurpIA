@@ -350,6 +350,10 @@ public final class I18nUI {
             return tr("🛰️ Enviar a Scanner Pro", "🛰️ Send to Scanner Pro");
         }
 
+        public static String MENU_ENVIAR_ISSUES() {
+            return tr("📌 Enviar a Issues de Burp", "📌 Send to Burp Issues");
+        }
+
         public static String MENU_IGNORAR() {
             return tr("🚫 Ignorar", "🚫 Ignore");
         }
@@ -402,6 +406,30 @@ public final class I18nUI {
 
         public static String RESUMEN_ACCION_SCANNER() {
             return tr("Enviados a Scanner Pro", "Sent to Scanner Pro");
+        }
+
+        public static String TITULO_ACCION_ISSUES() {
+            return tr("Enviar a Issues de Burp", "Send to Burp Issues");
+        }
+
+        public static String RESUMEN_ACCION_ISSUES() {
+            return tr("Guardados en Issues de Burp", "Saved to Burp Issues");
+        }
+
+        public static String SUFIJO_ISSUE_GUARDADO() {
+            return tr("(guardado en Issues)", "(saved to Issues)");
+        }
+
+        public static String ERROR_HALLAZGO_NO_DISPONIBLE() {
+            return tr("Hallazgo no disponible", "Finding unavailable");
+        }
+
+        public static String ERROR_SITEMAP_NO_DISPONIBLE() {
+            return tr("Site Map de Burp no disponible", "Burp Site Map unavailable");
+        }
+
+        public static String ERROR_GUARDAR_ISSUE() {
+            return tr("No se pudo crear o guardar el Issue", "Could not create or save the Issue");
         }
 
         public static String MSG_SIN_REQUEST() {

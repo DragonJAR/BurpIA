@@ -3,9 +3,7 @@ package com.burpia.ui;
 import java.awt.Font;
 
 public class EstilosUI {
-    private EstilosUI() {} // Clase de utilidad, no instanciable
-
-    // Toda la interfaz usa Monospaced para consistencia visual
+    private EstilosUI() {}
 
     public static final Font FUENTE_ESTANDAR = new Font(Font.MONOSPACED, Font.PLAIN, 11);
 
@@ -20,8 +18,6 @@ public class EstilosUI {
     public static final Font FUENTE_BOTON_PRINCIPAL = new Font(Font.MONOSPACED, Font.BOLD, 12);
 
     public static final Font FUENTE_CAMPO_TEXTO = new Font(Font.MONOSPACED, Font.PLAIN, 11);
-
-    // Colores inspirados en Burp Suite (tonos oscuros profesionales)
 
     public static final java.awt.Color COLOR_FONDO_PANEL = new java.awt.Color(245, 245, 245);
 

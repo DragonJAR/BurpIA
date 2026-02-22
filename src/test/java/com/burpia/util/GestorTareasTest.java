@@ -11,6 +11,7 @@ import javax.swing.SwingUtilities;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -132,9 +133,20 @@ class GestorTareasTest {
         assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado());
     }
 
+    @Test
+    @DisplayName("Logger nulo no rompe operaciones")
+    void testLoggerNuloNoRompe() throws Exception {
+        GestorTareas gestorSinLogger = new GestorTareas(new ModeloTablaTareas(), null);
+        try {
+            assertDoesNotThrow(() -> gestorSinLogger.crearTarea("A", "https://example.com/null-logger", Tarea.ESTADO_EN_COLA, ""));
+            assertDoesNotThrow(gestorSinLogger::cancelarTodas);
+            flushEdt();
+        } finally {
+            gestorSinLogger.detener();
+        }
+    }
+
     private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {
-            // sin-op, solo esperar cola EDT
-        });
+        SwingUtilities.invokeAndWait(() -> {});
     }
 }

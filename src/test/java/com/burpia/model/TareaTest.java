@@ -95,6 +95,6 @@ class TareaTest {
         assertEquals("Analisis", fila[0]);
         assertEquals("https://example.com", fila[1]);
         assertEquals(Tarea.ESTADO_EN_COLA, fila[2]);
-        assertNotNull(fila[3]); // duracion
+        assertNotNull(fila[3]);
     }
 }

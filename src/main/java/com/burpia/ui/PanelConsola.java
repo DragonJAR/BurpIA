@@ -69,7 +69,6 @@ public class PanelConsola extends JPanel {
             BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
 
-        // Consola con colores
         consola = new JTextPane();
         consola.setEditable(false);
         consola.setFont(EstilosUI.FUENTE_TABLA);
@@ -107,7 +106,6 @@ public class PanelConsola extends JPanel {
             }
         });
 
-        // Timer para actualizar resumen cada segundo
         timerActualizacion = new Timer(1000, e -> actualizarResumen());
         timerActualizacion.start();
 
@@ -116,7 +114,6 @@ public class PanelConsola extends JPanel {
         add(panelControles, BorderLayout.NORTH);
         add(panelConsolaWrapper, BorderLayout.CENTER);
 
-        // Log inicial
         gestorConsola.registrarInfo(I18nUI.Consola.LOG_INICIALIZADA());
     }
 

@@ -82,8 +82,6 @@ class PanelHallazgosFiltrosTest {
     }
 
     private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {
-            // sincroniza EDT
-        });
+        SwingUtilities.invokeAndWait(() -> {});
     }
 }
