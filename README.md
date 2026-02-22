@@ -51,17 +51,12 @@ Version actual: `1.0.0`
 - Gemini
 - Z.ai
 - Minimax
-- `-- Custom --` (compatible con APIs estilo OpenAI)
-
-Defaults de `-- Custom --` segun idioma UI:
-
-- Espanol: `https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1`
-- Ingles: `https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1`
+- Custom (compatible con APIs estilo OpenAI)
 
 Si vas a usar Z.ai o Minimax, aqui tienes opciones de compra con descuento:
 
-- Z.ai: [comprar con descuento](https://z.ai/subscribe?ic=FXSFEPRECU)
-- Minimax: [comprar con descuento](https://platform.minimax.io/subscribe/coding-plan?code=GdktCUVh7E&source=link)
+- [Z.ai con descuento](https://z.ai/subscribe?ic=FXSFEPRECU)
+- [Minimax con descuento](https://platform.minimax.io/subscribe/coding-plan?code=GdktCUVh7E&source=link)
 
 ## Como funciona
 
