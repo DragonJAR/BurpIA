@@ -113,4 +113,4 @@ BurpIA soporta los siguientes tokens para personalizar el análisis:
 ## Limitaciones
 
 - Puede generar falsos positivos; siempre requiere validación humana experta.
-- Si un análisis manual no tiene una respuesta asociada, el modelo analizará únicamente la solicitud (`request`).
+- Si un análisis manual no tiene una respuesta asociada, el modelo analizará únicamente la solicitud (`{REQUEST}`).
