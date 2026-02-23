@@ -26,5 +26,4 @@ build.gradle
 /gradle
 gradlew
 /src/test
-/src/test
 *.gradle
