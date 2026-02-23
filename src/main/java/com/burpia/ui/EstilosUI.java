@@ -26,9 +26,20 @@ public class EstilosUI {
     public static final java.awt.Color COLOR_TEXTO_NORMAL = java.awt.Color.BLACK;
 
     public static final java.awt.Color COLOR_TEXTO_DESHABILITADO = new java.awt.Color(150, 150, 150);
-    public static final int ALTURA_FILA_TABLA = 22;
+    public static final int ALTURA_FILA_TABLA = 32;
 
     public static final int MARGEN_PANEL = 10;
 
     public static final int ESPACIADO_COMPONENTES = 5;
+
+    public static java.awt.Color obtenerColorTextoContraste(java.awt.Color colorFondo) {
+        if (colorFondo == null) return java.awt.Color.BLACK;
+        double y = (299 * colorFondo.getRed() + 587 * colorFondo.getGreen() + 114 * colorFondo.getBlue()) / 1000.0;
+        return y >= 128 ? java.awt.Color.BLACK : java.awt.Color.WHITE;
+    }
+
+    public static boolean esTemaOscuro(java.awt.Color colorFondo) {
+        if (colorFondo == null) return false;
+        return (colorFondo.getRed() + colorFondo.getGreen() + colorFondo.getBlue()) / 3 < 128;
+    }
 }

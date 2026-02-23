@@ -42,7 +42,7 @@ public class RenderizadorEstado extends DefaultTableCellRenderer {
                 }
             }
 
-            etiqueta.setText(estado);
+            etiqueta.setText(com.burpia.i18n.I18nUI.Tareas.TRADUCIR_ESTADO(estado));
         }
 
         return componente;

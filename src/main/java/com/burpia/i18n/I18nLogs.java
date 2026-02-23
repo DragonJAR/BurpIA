@@ -114,6 +114,7 @@ public final class I18nLogs {
         {"Solicitud HTTP fallida", "HTTP request failed"},
         {"Stack trace de la excepción", "Exception stack trace"},
         {"Stack trace de la excepcion", "Exception stack trace"},
+        {"Tiempo de espera agotado, intenta aumentarlo en los ajustes", "Timeout reached, try increasing it in the settings"},
         {"Sistema de retry", "Retry system"},
         {"Intento inmediato", "Immediate attempt"},
         {"Intento #", "Attempt #"},

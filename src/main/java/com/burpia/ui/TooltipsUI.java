@@ -344,6 +344,11 @@ public final class TooltipsUI {
                 "Quick reference for provider context windows.");
         }
 
+        public static String TIMEOUT_MODELO() {
+            return I18nUI.tr("Tiempo maximo de espera de respuesta para el proveedor+modelo seleccionados.",
+                "Maximum response wait time for the selected provider+model.");
+        }
+
         public static String PROMPT_EDITOR() {
             return I18nUI.tr("Define las instrucciones que recibe el modelo.",
                 "Define instructions sent to the model.");

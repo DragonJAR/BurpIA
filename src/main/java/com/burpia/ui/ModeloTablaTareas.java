@@ -38,14 +38,11 @@ public class ModeloTablaTareas extends DefaultTableModel {
         lock.lock();
         try {
             datos.add(tarea);
+            aplicarLimiteFilasEnDatos();
         } finally {
             lock.unlock();
         }
-
-        SwingUtilities.invokeLater(() -> {
-            addRow(tarea.aFilaTabla());
-            aplicarLimiteFilas();
-        });
+        programarSincronizacionTabla();
     }
 
     public void actualizarTarea(Tarea tarea) {
@@ -56,49 +53,32 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (idTarea == null || idTarea.isEmpty()) {
             return;
         }
+        boolean actualizada = false;
         lock.lock();
         try {
             for (int i = 0; i < datos.size(); i++) {
                 Tarea tareaActual = datos.get(i);
                 if (tareaActual != null && idTarea.equals(tareaActual.obtenerId())) {
                     datos.set(i, tarea);
-                    final int fila = i;
-                    SwingUtilities.invokeLater(() -> {
-                        if (fila < 0 || fila >= getRowCount()) {
-                            return;
-                        }
-                        Object[] filaDatos = tarea.aFilaTabla();
-                        for (int j = 0; j < filaDatos.length; j++) {
-                            setValueAt(filaDatos[j], fila, j);
-                        }
-                        fireTableRowsUpdated(fila, fila);
-                    });
-                    return;
+                    actualizada = true;
+                    break;
                 }
             }
         } finally {
             lock.unlock();
         }
+        if (actualizada) {
+            programarSincronizacionTabla();
+        }
     }
 
-    private void aplicarLimiteFilas() {
-        lock.lock();
-        try {
-            if (getRowCount() > limiteFilas) {
-                int filasAEliminar = getRowCount() - limiteFilas;
-                for (int i = 0; i < filasAEliminar; i++) {
-                    int indice = buscarIndicePurgablePorLimite();
-                    if (indice < 0 || indice >= getRowCount()) {
-                        break;
-                    }
-                    removeRow(indice);
-                    if (indice < datos.size()) {
-                        datos.remove(indice);
-                    }
-                }
+    private void aplicarLimiteFilasEnDatos() {
+        while (datos.size() > limiteFilas) {
+            int indice = buscarIndicePurgablePorLimite();
+            if (indice < 0 || indice >= datos.size()) {
+                break;
             }
-        } finally {
-            lock.unlock();
+            datos.remove(indice);
         }
     }
 
@@ -122,10 +102,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
-
-        SwingUtilities.invokeLater(() -> {
-            setRowCount(0);
-        });
+        programarSincronizacionTabla();
     }
 
     public Tarea obtenerTarea(int indiceFila) {
@@ -160,11 +137,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (!eliminado) {
             return;
         }
-        SwingUtilities.invokeLater(() -> {
-            if (indiceFila >= 0 && indiceFila < getRowCount()) {
-                removeRow(indiceFila);
-            }
-        });
+        programarSincronizacionTabla();
     }
 
     public int buscarIndicePorId(String idTarea) {
@@ -226,36 +199,26 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (estados == null || estados.length == 0) {
             return;
         }
-        List<Integer> indicesAEliminar = new ArrayList<>();
+        boolean cambio = false;
 
         lock.lock();
         try {
-            for (int i = 0; i < datos.size(); i++) {
+            for (int i = datos.size() - 1; i >= 0; i--) {
                 Tarea tarea = datos.get(i);
                 for (String estado : estados) {
                     if (tarea != null && estado != null && estado.equals(tarea.obtenerEstado())) {
-                        indicesAEliminar.add(i);
+                        datos.remove(i);
+                        cambio = true;
                         break;
                     }
                 }
             }
-
-            for (int i = indicesAEliminar.size() - 1; i >= 0; i--) {
-                int indice = indicesAEliminar.get(i);
-                datos.remove(indice);
-            }
         } finally {
             lock.unlock();
         }
-
-        SwingUtilities.invokeLater(() -> {
-            for (int i = indicesAEliminar.size() - 1; i >= 0; i--) {
-                int indice = indicesAEliminar.get(i);
-                if (indice < getRowCount()) {
-                    removeRow(indice);
-                }
-            }
-        });
+        if (cambio) {
+            programarSincronizacionTabla();
+        }
     }
 
     public List<Tarea> obtenerTodasLasTareas() {
@@ -268,11 +231,38 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public void refrescarColumnasIdioma() {
-        SwingUtilities.invokeLater(() -> setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_TAREAS()));
+        SwingUtilities.invokeLater(() -> {
+            setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_TAREAS());
+            sincronizarTablaDesdeDatosEnEdt();
+        });
     }
 
     @Override
     public int getColumnCount() {
         return TOTAL_COLUMNAS;
+    }
+
+    private void programarSincronizacionTabla() {
+        SwingUtilities.invokeLater(this::sincronizarTablaDesdeDatosEnEdt);
+    }
+
+    private void sincronizarTablaDesdeDatosEnEdt() {
+        List<Object[]> snapshot = new ArrayList<>();
+        lock.lock();
+        try {
+            aplicarLimiteFilasEnDatos();
+            for (Tarea tarea : datos) {
+                if (tarea != null) {
+                    snapshot.add(tarea.aFilaTabla());
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+
+        setRowCount(0);
+        for (Object[] fila : snapshot) {
+            addRow(fila);
+        }
     }
 }

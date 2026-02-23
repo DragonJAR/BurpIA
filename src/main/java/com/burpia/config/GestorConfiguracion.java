@@ -92,7 +92,15 @@ public class GestorConfiguracion {
     }
 
     public boolean guardarConfiguracion(ConfiguracionAPI config, StringBuilder mensajeError) {
+        Path tempPath = null;
         try {
+            if (config == null) {
+                logError("[Configuracion] No se pudo guardar: configuracion nula");
+                if (mensajeError != null) {
+                    mensajeError.append(I18nUI.tr("Configuracion nula", "Null configuration"));
+                }
+                return false;
+            }
             Path path = rutaConfig.toAbsolutePath();
 
             Path directorioPadre = path.getParent();
@@ -117,7 +125,7 @@ public class GestorConfiguracion {
             ArchivoConfiguracion archivo = construirArchivo(config);
             String json = gson.toJson(archivo);
 
-            Path tempPath = Paths.get(path.toString() + ".tmp");
+            tempPath = Paths.get(path.toString() + ".tmp");
 
             Files.write(tempPath, json.getBytes(StandardCharsets.UTF_8));
             asegurarPermisosPrivados(tempPath);
@@ -144,6 +152,8 @@ public class GestorConfiguracion {
                 mensajeError.append(I18nUI.tr("Error inesperado: ", "Unexpected error: ")).append(e.getMessage());
             }
             return false;
+        } finally {
+            limpiarArchivoTemporal(tempPath);
         }
     }
 
@@ -174,6 +184,17 @@ public class GestorConfiguracion {
             Files.setPosixFilePermissions(path, permisos);
         } catch (Exception e) {
             logError("[Configuracion] No se pudieron ajustar permisos privados del archivo: " + e.getMessage());
+        }
+    }
+
+    private void limpiarArchivoTemporal(Path tempPath) {
+        if (tempPath == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(tempPath);
+        } catch (Exception e) {
+            logError("[Configuracion] No se pudo eliminar archivo temporal: " + tempPath + " (" + e.getMessage() + ")");
         }
     }
 
@@ -225,6 +246,7 @@ public class GestorConfiguracion {
         config.establecerUrlsBasePorProveedor(sanitizarMapaString(archivo.urlsBasePorProveedor));
         config.establecerModelosPorProveedor(sanitizarMapaString(archivo.modelosPorProveedor));
         config.establecerMaxTokensPorProveedor(sanitizarMapaInt(archivo.maxTokensPorProveedor));
+        config.establecerTiempoEsperaPorModelo(sanitizarMapaTimeoutPorModelo(archivo.tiempoEsperaPorModelo));
 
         return config;
     }
@@ -248,6 +270,7 @@ public class GestorConfiguracion {
         archivo.urlsBasePorProveedor = new HashMap<>(config.obtenerUrlsBasePorProveedor());
         archivo.modelosPorProveedor = new HashMap<>(config.obtenerModelosPorProveedor());
         archivo.maxTokensPorProveedor = new HashMap<>(config.obtenerMaxTokensPorProveedor());
+        archivo.tiempoEsperaPorModelo = new HashMap<>(config.obtenerTiempoEsperaPorModelo());
         return archivo;
     }
 
@@ -277,6 +300,23 @@ public class GestorConfiguracion {
         return limpio;
     }
 
+    private Map<String, Integer> sanitizarMapaTimeoutPorModelo(Map<String, Integer> mapa) {
+        Map<String, Integer> limpio = new HashMap<>();
+        if (mapa == null) {
+            return limpio;
+        }
+        for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null) {
+                continue;
+            }
+            String clave = entry.getKey().trim();
+            if (!clave.isEmpty()) {
+                limpio.put(clave, entry.getValue());
+            }
+        }
+        return limpio;
+    }
+
     private static class ArchivoConfiguracion {
         private String proveedorAI;
         private Integer retrasoSegundos;
@@ -295,5 +335,6 @@ public class GestorConfiguracion {
         private Map<String, String> urlsBasePorProveedor;
         private Map<String, String> modelosPorProveedor;
         private Map<String, Integer> maxTokensPorProveedor;
+        private Map<String, Integer> tiempoEsperaPorModelo;
     }
 }

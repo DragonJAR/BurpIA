@@ -162,6 +162,7 @@ public class GestorTareas {
 
     private void verificarTareasAtascadas() {
         List<Tarea> tareasAtascadas = new ArrayList<>();
+        List<String> idsAInterrumpir = new ArrayList<>();
 
         candado.lock();
         try {
@@ -182,6 +183,10 @@ public class GestorTareas {
                 tarea.establecerMensajeInfo(
                     com.burpia.i18n.I18nUI.tr("Tarea atascada - timeout", "Stuck task - timeout")
                 );
+                String id = tarea.obtenerId();
+                if (id != null && !id.isEmpty()) {
+                    idsAInterrumpir.add(id);
+                }
             }
         } finally {
             candado.unlock();
@@ -194,6 +199,7 @@ public class GestorTareas {
                 "Stuck task detected: "
             ) + tarea.obtenerId());
         }
+        notificarCancelaciones(idsAInterrumpir);
     }
 
     private void actualizarFilaTabla(Tarea tarea) {
@@ -452,7 +458,9 @@ public class GestorTareas {
     private void registrar(String mensaje) {
         try {
             logger.accept(mensaje);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            System.err.println("[GestorTareas] Error al registrar log: " +
+                (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
         }
     }
 
