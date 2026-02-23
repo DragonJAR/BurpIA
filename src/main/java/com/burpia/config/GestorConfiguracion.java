@@ -211,11 +211,12 @@ public class GestorConfiguracion {
         if (archivo.autoScrollConsolaHabilitado != null) {
             config.establecerAutoScrollConsolaHabilitado(archivo.autoScrollConsolaHabilitado);
         }
-        if (archivo.promptConfigurable != null) {
+        boolean promptModificado = Boolean.TRUE.equals(archivo.promptModificado);
+        config.establecerPromptModificado(promptModificado);
+        if (promptModificado && archivo.promptConfigurable != null) {
             config.establecerPromptConfigurable(archivo.promptConfigurable);
-        }
-        if (archivo.promptModificado != null) {
-            config.establecerPromptModificado(archivo.promptModificado);
+        } else {
+            config.establecerPromptConfigurable(ConfiguracionAPI.obtenerPromptPorDefecto());
         }
 
         config.establecerDetallado(Boolean.TRUE.equals(archivo.detallado));
