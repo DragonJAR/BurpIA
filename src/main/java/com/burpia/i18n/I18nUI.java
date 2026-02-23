@@ -78,6 +78,19 @@ public final class I18nUI {
     public static final class Tareas {
         private Tareas() {
         }
+        
+        public static String TRADUCIR_ESTADO(String estadoOriginal) {
+            if (estadoOriginal == null) return "";
+            switch (estadoOriginal) {
+                case com.burpia.model.Tarea.ESTADO_EN_COLA: return tr("En Cola", "Queued");
+                case com.burpia.model.Tarea.ESTADO_ANALIZANDO: return tr("Analizando", "Analyzing");
+                case com.burpia.model.Tarea.ESTADO_COMPLETADO: return tr("Completado", "Completed");
+                case com.burpia.model.Tarea.ESTADO_ERROR: return tr("Error", "Error");
+                case com.burpia.model.Tarea.ESTADO_CANCELADO: return tr("Cancelado", "Canceled");
+                case com.burpia.model.Tarea.ESTADO_PAUSADO: return tr("Pausado", "Paused");
+                default: return tr(estadoOriginal, estadoOriginal);
+            }
+        }
 
         public static String TITULO_CONTROLES() {
             return tr("🎮 CONTROLES DE TAREAS", "🎮 TASK CONTROLS");
@@ -268,15 +281,15 @@ public final class I18nUI {
         }
 
         public static String BOTON_EXPORTAR_CSV() {
-            return tr("📄 Exportar CSV", "📄 Export CSV");
+            return tr("📊 Exportar CSV", "📊 Export CSV");
         }
 
         public static String BOTON_EXPORTAR_JSON() {
-            return tr("📋 Exportar JSON", "📋 Export JSON");
+            return tr("📄 Exportar JSON", "📄 Export JSON");
         }
 
         public static String BOTON_LIMPIAR_TODO() {
-            return tr("🗑️ Limpiar", "🗑️ Clear");
+            return tr("🗑️ Limpiar Todo", "🗑️ Erase All");
         }
 
         public static String CHECK_GUARDAR_ISSUES() {
@@ -616,6 +629,10 @@ public final class I18nUI {
 
         public static String TAB_ACERCA() {
             return tr("ℹ️ Acerca de", "ℹ️ About");
+        }
+
+        public static String LABEL_TIMEOUT_MODELO() {
+            return tr("Timeout de Modelo (s):", "Model Timeout (s):");
         }
 
         public static String BOTON_GUARDAR() {

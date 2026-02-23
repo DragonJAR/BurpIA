@@ -100,6 +100,9 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar("Configuracion cargada:");
         registrar("  - URL de API: " + config.obtenerUrlApi());
         registrar("  - Modelo: " + config.obtenerModelo());
+        registrar("  - Timeout AI (global): " + config.obtenerTiempoEsperaAI() + " segundos");
+        registrar("  - Timeout AI (modelo activo): " +
+            config.obtenerTiempoEsperaParaModelo(config.obtenerProveedorAI(), config.obtenerModelo()) + " segundos");
         registrar("  - Retraso: " + config.obtenerRetrasoSegundos() + " segundos");
         registrar("  - Maximo Concurrente: " + config.obtenerMaximoConcurrente());
         registrar("  - Maximo Hallazgos en Tabla: " + config.obtenerMaximoHallazgosTabla());

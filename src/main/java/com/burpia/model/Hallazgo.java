@@ -136,23 +136,45 @@ public class Hallazgo {
         };
     }
 
+    public static final Color COLOR_CRITICAL = new Color(156, 39, 176); // Morado
+    public static final Color COLOR_HIGH     = new Color(220, 53, 69);  // Rojo
+    public static final Color COLOR_MEDIUM   = new Color(253, 126, 20); // Naranja
+    public static final Color COLOR_LOW      = new Color(40, 167, 69);  // Verde
+    public static final Color COLOR_INFO     = new Color(13, 110, 253); // Azul
+
+    public static int obtenerPrioridadSeveridad(String severidad) {
+        if (severidad == null) return 0;
+        switch (severidad) {
+            case SEVERIDAD_CRITICAL: return 5;
+            case SEVERIDAD_HIGH:     return 4;
+            case SEVERIDAD_MEDIUM:   return 3;
+            case SEVERIDAD_LOW:      return 2;
+            case SEVERIDAD_INFO:     return 1;
+            default:                 return 0;
+        }
+    }
+
+    public static int obtenerPrioridadConfianza(String confianza) {
+        if (confianza == null) return 0;
+        switch (confianza) {
+            case CONFIANZA_ALTA:   return 3;
+            case CONFIANZA_MEDIA:  return 2;
+            case CONFIANZA_BAJA:   return 1;
+            default:               return 0;
+        }
+    }
+
     public static Color obtenerColorSeveridad(String severidad) {
         if (severidad == null) {
             return Color.GRAY;
         }
         switch (severidad) {
-            case SEVERIDAD_CRITICAL:
-                return new Color(128, 0, 128);
-            case SEVERIDAD_HIGH:
-                return new Color(204, 0, 0);
-            case SEVERIDAD_MEDIUM:
-                return new Color(255, 153, 0);
-            case SEVERIDAD_LOW:
-                return new Color(0, 153, 0);
-            case SEVERIDAD_INFO:
-                return new Color(0, 120, 215);
-            default:
-                return Color.GRAY;
+            case SEVERIDAD_CRITICAL: return COLOR_CRITICAL;
+            case SEVERIDAD_HIGH:     return COLOR_HIGH;
+            case SEVERIDAD_MEDIUM:   return COLOR_MEDIUM;
+            case SEVERIDAD_LOW:      return COLOR_LOW;
+            case SEVERIDAD_INFO:     return COLOR_INFO;
+            default:                 return Color.GRAY;
         }
     }
 
@@ -162,11 +184,11 @@ public class Hallazgo {
         }
         switch (confianza) {
             case CONFIANZA_ALTA:
-                return new Color(0, 153, 0);
+                return obtenerColorSeveridad(SEVERIDAD_HIGH);
             case CONFIANZA_MEDIA:
-                return new Color(255, 153, 0);
+                return obtenerColorSeveridad(SEVERIDAD_MEDIUM);
             case CONFIANZA_BAJA:
-                return new Color(204, 0, 0);
+                return obtenerColorSeveridad(SEVERIDAD_LOW);
             default:
                 return Color.GRAY;
         }

@@ -18,6 +18,8 @@ public class Tarea {
     private String estado;
     private String mensajeInfo;
     private long tiempoFin;
+    private long tiempoAcumulado;
+    private long tiempoUltimoInicioAnalisis;
     private final Object candado = new Object();
 
     public Tarea(String id, String tipo, String url, String estado) {
@@ -27,6 +29,12 @@ public class Tarea {
         this.estado = estado;
         this.tiempoInicio = System.currentTimeMillis();
         this.mensajeInfo = "";
+        this.tiempoAcumulado = 0;
+        this.tiempoUltimoInicioAnalisis = 0;
+        
+        if (ESTADO_ANALIZANDO.equals(this.estado)) {
+            this.tiempoUltimoInicioAnalisis = System.currentTimeMillis();
+        }
     }
 
     public String obtenerId() {
@@ -47,9 +55,22 @@ public class Tarea {
         }
     }
 
-    public void establecerEstado(String estado) {
+    public void establecerEstado(String estadoNuevo) {
         synchronized (candado) {
-            this.estado = estado != null ? estado : ESTADO_ERROR;
+            String estadoAnterior = this.estado;
+            this.estado = estadoNuevo != null ? estadoNuevo : ESTADO_ERROR;
+            
+            if (ESTADO_ANALIZANDO.equals(estadoAnterior) && !ESTADO_ANALIZANDO.equals(this.estado)) {
+                if (tiempoUltimoInicioAnalisis > 0) {
+                    tiempoAcumulado += (System.currentTimeMillis() - tiempoUltimoInicioAnalisis);
+                    tiempoUltimoInicioAnalisis = 0;
+                }
+            }
+            
+            if (!ESTADO_ANALIZANDO.equals(estadoAnterior) && ESTADO_ANALIZANDO.equals(this.estado)) {
+                tiempoUltimoInicioAnalisis = System.currentTimeMillis();
+            }
+
             if (ESTADO_COMPLETADO.equals(this.estado) ||
                 ESTADO_ERROR.equals(this.estado) ||
                 ESTADO_CANCELADO.equals(this.estado)) {
@@ -82,10 +103,11 @@ public class Tarea {
 
     public long obtenerDuracionMilisegundos() {
         synchronized (candado) {
-            if (tiempoFin > 0) {
-                return tiempoFin - tiempoInicio;
+            long total = tiempoAcumulado;
+            if (ESTADO_ANALIZANDO.equals(estado) && tiempoUltimoInicioAnalisis > 0) {
+                total += (System.currentTimeMillis() - tiempoUltimoInicioAnalisis);
             }
-            return System.currentTimeMillis() - tiempoInicio;
+            return total;
         }
     }
 

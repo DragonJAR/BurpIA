@@ -13,10 +13,14 @@ public class ProbadorConexionAI {
 
     public ProbadorConexionAI(ConfiguracionAPI config) {
         this.config = config;
+        int timeoutLectura = config.obtenerTiempoEsperaParaModelo(
+            config.obtenerProveedorAI(),
+            config.obtenerModelo()
+        );
         this.clienteHttp = new OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS)
-                .readTimeout(config.obtenerTiempoEsperaAI(), TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(timeoutLectura, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
                 .build();
     }
 

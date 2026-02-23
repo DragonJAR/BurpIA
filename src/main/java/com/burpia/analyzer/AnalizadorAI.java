@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AnalizadorAI implements Runnable {
     private static final String ORIGEN_LOG = "AnalizadorAI";
@@ -54,6 +56,22 @@ public class AnalizadorAI implements Runnable {
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
     private static final Map<Integer, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = new ConcurrentHashMap<>();
+    private static final Pattern PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO = Pattern.compile(
+        "\"descripcion\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        Pattern.DOTALL
+    );
+    private static final Pattern PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO = Pattern.compile(
+        "\"severidad\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        Pattern.DOTALL
+    );
+    private static final Pattern PATRON_CAMPO_CONFIANZA_NO_ESTRICTO = Pattern.compile(
+        "\"confianza\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        Pattern.DOTALL
+    );
+    private static final Pattern PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO = Pattern.compile(
+        "\"evidencia\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        Pattern.DOTALL
+    );
 
     public interface Callback {
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
@@ -81,7 +99,11 @@ public class AnalizadorAI implements Runnable {
         };
         this.alInicioAnalisis = alInicioAnalisis;
         this.gestorConsola = gestorConsola;
-        this.clienteHttp = obtenerClienteHttp(this.config.obtenerTiempoEsperaAI());
+        int timeoutEfectivo = this.config.obtenerTiempoEsperaParaModelo(
+            this.config.obtenerProveedorAI(),
+            this.config.obtenerModelo()
+        );
+        this.clienteHttp = obtenerClienteHttp(timeoutEfectivo);
         this.gson = new Gson();
         this.constructorPrompt = new ConstructorPrompts(this.config);
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
@@ -167,12 +189,17 @@ public class AnalizadorAI implements Runnable {
             }
         } catch (Exception e) {
             long duracion = System.currentTimeMillis() - tiempoInicio;
-            registrarError("[" + nombreHilo + "] Analisis fallido despues de " + duracion + "ms: " + e.getMessage());
+            String falloMsg = e.getMessage();
+            if (e instanceof java.net.SocketTimeoutException || 
+               (e.getCause() != null && e.getCause() instanceof java.net.SocketTimeoutException)) {
+                falloMsg = "Tiempo de espera agotado, intenta aumentarlo en los ajustes";
+            }
+            registrarError("[" + nombreHilo + "] Analisis fallido despues de " + duracion + "ms: " + falloMsg);
             String cuerpoSolicitud = solicitud.obtenerCuerpo();
             int longitudCuerpo = cuerpoSolicitud != null ? cuerpoSolicitud.length() : 0;
             rastrear("[" + nombreHilo + "] Detalles de solicitud: metodo=" + solicitud.obtenerMetodo() +
                     ", url=" + solicitud.obtenerUrl() + ", longitud_cuerpo=" + longitudCuerpo);
-            callback.alErrorAnalisis(e.getMessage());
+            callback.alErrorAnalisis(falloMsg);
         } finally {
             if (permisoAdquirido) {
                 limitador.liberar();
@@ -387,8 +414,13 @@ public class AnalizadorAI implements Runnable {
     }
 
     private void registrarFalloIntento(int intento, IOException error) {
+        String falloMsg = error.getMessage();
+        if (error instanceof java.net.SocketTimeoutException || 
+           (error.getCause() != null && error.getCause() instanceof java.net.SocketTimeoutException)) {
+            falloMsg = "Tiempo de espera agotado, intenta aumentarlo en los ajustes";
+        }
         registrar("Intento #" + intento + " falló: " +
-            error.getClass().getSimpleName() + " - " + error.getMessage());
+            error.getClass().getSimpleName() + " - " + falloMsg);
         if (error instanceof ApiHttpException) {
             ApiHttpException apiError = (ApiHttpException) error;
             String cuerpoError = apiError.obtenerCuerpoError();
@@ -405,7 +437,7 @@ public class AnalizadorAI implements Runnable {
         int timeoutNormalizado = normalizarTiempoEsperaSegundos(tiempoEsperaSegundos);
         return CLIENTES_HTTP_POR_TIMEOUT.computeIfAbsent(timeoutNormalizado,
             timeout -> new OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
+                .connectTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(timeout, TimeUnit.SECONDS)
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .build()
@@ -462,12 +494,15 @@ public class AnalizadorAI implements Runnable {
     private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
         rastrear("Parseando respuesta JSON");
         List<Hallazgo> hallazgos = new ArrayList<>();
+        String respuestaOriginal = respuestaJson != null ? respuestaJson : "";
 
         try {
-            String jsonReparado = ReparadorJson.repararJson(respuestaJson);
-            if (jsonReparado != null && !jsonReparado.equals(respuestaJson)) {
+            String jsonReparado = ReparadorJson.repararJson(respuestaOriginal);
+            if (jsonReparado != null && !jsonReparado.equals(respuestaOriginal)) {
                 rastrear("JSON reparado exitosamente");
                 respuestaJson = jsonReparado;
+            } else {
+                respuestaJson = respuestaOriginal;
             }
 
             String proveedor = config.obtenerProveedorAI() != null ? config.obtenerProveedorAI() : "";
@@ -530,8 +565,32 @@ public class AnalizadorAI implements Runnable {
                 }
             } catch (Exception e) {
                 rastrear("No se pudo parsear como JSON de hallazgos: " + e.getMessage());
-                rastrear("Intentando parsing de texto plano como fallback");
-                hallazgos.addAll(parsearTextoPlano(contenido));
+                List<Hallazgo> hallazgosNoEstrictos = parsearHallazgosJsonNoEstricto(contenido);
+                if (!hallazgosNoEstrictos.isEmpty()) {
+                    rastrear("Fallback JSON no estricto recupero " + hallazgosNoEstrictos.size() + " hallazgos");
+                    hallazgos.addAll(hallazgosNoEstrictos);
+                } else {
+                    rastrear("Intentando parsing de texto plano como fallback");
+                    hallazgos.addAll(parsearTextoPlano(contenido));
+                }
+            }
+
+            if (!respuestaJson.equals(respuestaOriginal)) {
+                String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedor);
+                if (contenidoOriginal == null || contenidoOriginal.trim().isEmpty()) {
+                    contenidoOriginal = respuestaOriginal;
+                }
+
+                List<Hallazgo> hallazgosOriginalesNoEstrictos = parsearHallazgosJsonNoEstricto(contenidoOriginal);
+                if (hallazgosOriginalesNoEstrictos.size() > hallazgos.size()) {
+                    rastrear(
+                        "Se detecto perdida de hallazgos tras reparacion JSON; " +
+                        "se conserva parseo no estricto del payload original (" +
+                        hallazgosOriginalesNoEstrictos.size() + " > " + hallazgos.size() + ")"
+                    );
+                    hallazgos.clear();
+                    hallazgos.addAll(hallazgosOriginalesNoEstrictos);
+                }
             }
 
             String marcaTiempo = LocalDateTime.now().format(
@@ -560,6 +619,145 @@ public class AnalizadorAI implements Runnable {
 
             return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), marcaTiempo, hallazgosError, solicitud.obtenerSolicitudHttp());
         }
+    }
+
+    private List<Hallazgo> parsearHallazgosJsonNoEstricto(String contenido) {
+        List<Hallazgo> hallazgos = new ArrayList<>();
+        if (contenido == null || contenido.trim().isEmpty()) {
+            return hallazgos;
+        }
+
+        String bloqueHallazgos = extraerBloqueArrayHallazgos(contenido);
+        if (bloqueHallazgos.isEmpty()) {
+            return hallazgos;
+        }
+
+        String[] objetos = bloqueHallazgos.split("\\}\\s*,\\s*\\{");
+        for (String objeto : objetos) {
+            String bloqueHallazgo = normalizarObjetoNoEstricto(objeto);
+            if (bloqueHallazgo.isEmpty()) {
+                continue;
+            }
+            String descripcion = normalizarCampoNoEstricto(extraerCampoNoEstricto(
+                PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO,
+                bloqueHallazgo
+            ));
+            if (descripcion.isEmpty()) {
+                continue;
+            }
+
+            String severidad = Hallazgo.normalizarSeveridad(normalizarCampoNoEstricto(extraerCampoNoEstricto(
+                PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO,
+                bloqueHallazgo
+            )));
+            String confianza = Hallazgo.normalizarConfianza(normalizarCampoNoEstricto(extraerCampoNoEstricto(
+                PATRON_CAMPO_CONFIANZA_NO_ESTRICTO,
+                bloqueHallazgo
+            )));
+            String evidencia = normalizarCampoNoEstricto(extraerCampoNoEstricto(
+                PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO,
+                bloqueHallazgo
+            ));
+
+            String descripcionFinal = evidencia.isEmpty()
+                ? descripcion
+                : descripcion + "\n" + etiquetaEvidencia() + ": " + evidencia;
+
+            hallazgos.add(new Hallazgo(
+                solicitud.obtenerUrl(),
+                descripcionFinal,
+                severidad,
+                confianza,
+                solicitud.obtenerSolicitudHttp()
+            ));
+        }
+        return hallazgos;
+    }
+
+    private String extraerBloqueArrayHallazgos(String contenido) {
+        int indiceHallazgos = contenido.indexOf("\"hallazgos\"");
+        if (indiceHallazgos < 0) {
+            return "";
+        }
+        int inicioArray = contenido.indexOf('[', indiceHallazgos);
+        if (inicioArray < 0) {
+            return "";
+        }
+
+        int profundidad = 0;
+        boolean enComillas = false;
+        boolean escapado = false;
+        for (int i = inicioArray; i < contenido.length(); i++) {
+            char c = contenido.charAt(i);
+            if (escapado) {
+                escapado = false;
+                continue;
+            }
+            if (c == '\\') {
+                escapado = true;
+                continue;
+            }
+            if (c == '"') {
+                enComillas = !enComillas;
+                continue;
+            }
+            if (!enComillas) {
+                if (c == '[') {
+                    profundidad++;
+                } else if (c == ']') {
+                    profundidad--;
+                    if (profundidad == 0) {
+                        return contenido.substring(inicioArray + 1, i);
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    private String normalizarObjetoNoEstricto(String objeto) {
+        if (objeto == null) {
+            return "";
+        }
+        String bloque = objeto.trim();
+        if (bloque.isEmpty()) {
+            return "";
+        }
+        if (!bloque.startsWith("{")) {
+            bloque = "{" + bloque;
+        }
+        if (!bloque.endsWith("}")) {
+            bloque = bloque + "}";
+        }
+        return bloque;
+    }
+
+    private String extraerCampoNoEstricto(Pattern patron, String contenido) {
+        if (patron == null || contenido == null || contenido.isEmpty()) {
+            return "";
+        }
+        Matcher matcher = patron.matcher(contenido);
+        if (!matcher.find() || matcher.groupCount() < 1) {
+            return "";
+        }
+        String valor = matcher.group(1);
+        return valor != null ? valor : "";
+    }
+
+    private String normalizarCampoNoEstricto(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        return valor
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+            .replace("\\\"", "\"")
+            .trim();
+    }
+
+    private String etiquetaEvidencia() {
+        return "en".equalsIgnoreCase(config.obtenerIdiomaUi()) ? "Evidence" : "Evidencia";
     }
 
     private List<Hallazgo> parsearTextoPlano(String contenido) {

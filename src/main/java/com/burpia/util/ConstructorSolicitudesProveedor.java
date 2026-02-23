@@ -14,7 +14,10 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ConstructorSolicitudesProveedor {
 
     private static final long CACHE_MODELOS_GEMINI_MS = 5 * 60 * 1000L;
+    private static final int MAX_ENTRADAS_CACHE_GEMINI = 128;
+    private static final char[] HEX = "0123456789abcdef".toCharArray();
     private static final Map<String, CacheModelosGemini> CACHE_GEMINI = new ConcurrentHashMap<>();
 
     private ConstructorSolicitudesProveedor() {
@@ -161,9 +166,11 @@ public final class ConstructorSolicitudesProveedor {
         if (base == null || base.trim().isEmpty()) {
             throw new IOException("URL base de Gemini vacia o invalida");
         }
-        String cacheKey = base + "|" + (apiKey != null ? apiKey.hashCode() : 0);
-        CacheModelosGemini cache = CACHE_GEMINI.get(cacheKey);
         long ahora = System.currentTimeMillis();
+        depurarCacheGemini(ahora);
+
+        String cacheKey = construirClaveCacheGemini(base, apiKey);
+        CacheModelosGemini cache = CACHE_GEMINI.get(cacheKey);
         if (cache != null && (ahora - cache.timestampMs) < CACHE_MODELOS_GEMINI_MS) {
             return cache.modelos;
         }
@@ -194,6 +201,65 @@ public final class ConstructorSolicitudesProveedor {
             }
             CACHE_GEMINI.put(cacheKey, new CacheModelosGemini(modelos, ahora));
             return modelos;
+        }
+    }
+
+    private static String construirClaveCacheGemini(String base, String apiKey) {
+        String claveNormalizada = apiKey != null ? apiKey.trim() : "";
+        return base + "|" + huellaApiKey(claveNormalizada);
+    }
+
+    private static String huellaApiKey(String apiKey) {
+        if (apiKey == null || apiKey.isEmpty()) {
+            return "sin_clave";
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(apiKey.getBytes(StandardCharsets.UTF_8));
+            return convertirHex(hash, 12);
+        } catch (Exception e) {
+            return Integer.toHexString(apiKey.hashCode());
+        }
+    }
+
+    private static String convertirHex(byte[] bytes, int maxBytes) {
+        if (bytes == null || bytes.length == 0) {
+            return "";
+        }
+        int limite = Math.min(bytes.length, Math.max(1, maxBytes));
+        StringBuilder sb = new StringBuilder(limite * 2);
+        for (int i = 0; i < limite; i++) {
+            int valor = bytes[i] & 0xff;
+            sb.append(HEX[valor >>> 4]);
+            sb.append(HEX[valor & 0x0f]);
+        }
+        return sb.toString();
+    }
+
+    private static void depurarCacheGemini(long ahoraMs) {
+        if (CACHE_GEMINI.isEmpty()) {
+            return;
+        }
+
+        CACHE_GEMINI.entrySet().removeIf(entry ->
+            entry == null
+                || entry.getValue() == null
+                || (ahoraMs - entry.getValue().timestampMs) >= CACHE_MODELOS_GEMINI_MS
+        );
+
+        int excedente = CACHE_GEMINI.size() - MAX_ENTRADAS_CACHE_GEMINI;
+        if (excedente <= 0) {
+            return;
+        }
+
+        List<Map.Entry<String, CacheModelosGemini>> entradas = new ArrayList<>(CACHE_GEMINI.entrySet());
+        entradas.sort(Comparator.comparingLong(entry -> entry.getValue().timestampMs));
+
+        for (int i = 0; i < excedente && i < entradas.size(); i++) {
+            Map.Entry<String, CacheModelosGemini> entry = entradas.get(i);
+            if (entry != null) {
+                CACHE_GEMINI.remove(entry.getKey(), entry.getValue());
+            }
         }
     }
 

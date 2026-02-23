@@ -32,14 +32,15 @@ public class ConfiguracionAPI {
     private Map<String, String> urlsBasePorProveedor;
     private Map<String, String> modelosPorProveedor;
     private Map<String, Integer> maxTokensPorProveedor;
+    private Map<String, Integer> tiempoEsperaPorModelo;
     private boolean promptModificado;
 
     public ConfiguracionAPI() {
         this.proveedorAI = "Z.ai";
         this.retrasoSegundos = normalizarRetrasoSegundos(5);
-        this.maximoConcurrente = normalizarMaximoConcurrente(3);
+        this.maximoConcurrente = normalizarMaximoConcurrente(1);
         this.maximoHallazgosTabla = MAXIMO_HALLAZGOS_TABLA_DEFECTO;
-        this.tiempoEsperaAI = 60;
+        this.tiempoEsperaAI = 120;
         this.detallado = false;
         this.tema = "Light";
         this.idiomaUi = IdiomaUI.porDefecto().codigo();
@@ -54,6 +55,7 @@ public class ConfiguracionAPI {
         this.urlsBasePorProveedor = new HashMap<>();
         this.modelosPorProveedor = new HashMap<>();
         this.maxTokensPorProveedor = new HashMap<>();
+        this.tiempoEsperaPorModelo = new HashMap<>();
     }
 
     public String obtenerUrlApi() {
@@ -288,6 +290,32 @@ public class ConfiguracionAPI {
         }
         int valorNormalizado = maxTokens > 0 ? maxTokens : obtenerMaxTokensPorDefectoProveedor(proveedor);
         maxTokensPorProveedor.put(proveedor, valorNormalizado);
+    }
+
+    public Integer obtenerTiempoEsperaConfiguradoParaModelo(String proveedor, String modelo) {
+        asegurarMapas();
+        String clave = construirClaveTiempoEsperaModelo(proveedor, modelo);
+        if (clave.isEmpty()) {
+            return null;
+        }
+        return tiempoEsperaPorModelo.get(clave);
+    }
+
+    public int obtenerTiempoEsperaParaModelo(String proveedor, String modelo) {
+        Integer timeoutConfigurado = obtenerTiempoEsperaConfiguradoParaModelo(proveedor, modelo);
+        if (timeoutConfigurado != null) {
+            return normalizarTiempoEspera(timeoutConfigurado);
+        }
+        return obtenerTiempoEsperaAI();
+    }
+
+    public void establecerTiempoEsperaParaModelo(String proveedor, String modelo, int timeoutSegundos) {
+        asegurarMapas();
+        String clave = construirClaveTiempoEsperaModelo(proveedor, modelo);
+        if (clave.isEmpty()) {
+            return;
+        }
+        tiempoEsperaPorModelo.put(clave, normalizarTiempoEspera(timeoutSegundos));
     }
 
     public Map<String, String> validar() {
@@ -589,6 +617,15 @@ public class ConfiguracionAPI {
         this.maxTokensPorProveedor = maxTokensPorProveedor != null ? new HashMap<>(maxTokensPorProveedor) : new HashMap<>();
     }
 
+    public Map<String, Integer> obtenerTiempoEsperaPorModelo() {
+        asegurarMapas();
+        return new HashMap<>(tiempoEsperaPorModelo);
+    }
+
+    public void establecerTiempoEsperaPorModelo(Map<String, Integer> tiempoEsperaPorModelo) {
+        this.tiempoEsperaPorModelo = normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo);
+    }
+
     private void asegurarMapas() {
         if (apiKeysPorProveedor == null) {
             apiKeysPorProveedor = new HashMap<>();
@@ -602,6 +639,7 @@ public class ConfiguracionAPI {
         if (maxTokensPorProveedor == null) {
             maxTokensPorProveedor = new HashMap<>();
         }
+        tiempoEsperaPorModelo = normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo);
         if (proveedorAI == null || proveedorAI.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedorAI)) {
             proveedorAI = "Z.ai";
         }
@@ -631,6 +669,33 @@ public class ConfiguracionAPI {
             return 300;
         }
         return valor;
+    }
+
+    private static Map<String, Integer> normalizarMapaTiempoEsperaPorModelo(Map<String, Integer> mapa) {
+        Map<String, Integer> limpio = new HashMap<>();
+        if (mapa == null) {
+            return limpio;
+        }
+        for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
+            if (entry == null || entry.getValue() == null) {
+                continue;
+            }
+            String clave = entry.getKey() != null ? entry.getKey().trim() : "";
+            if (clave.isEmpty()) {
+                continue;
+            }
+            limpio.put(clave, normalizarTiempoEspera(entry.getValue()));
+        }
+        return limpio;
+    }
+
+    private static String construirClaveTiempoEsperaModelo(String proveedor, String modelo) {
+        String proveedorNormalizado = proveedor != null ? proveedor.trim() : "";
+        String modeloNormalizado = modelo != null ? modelo.trim() : "";
+        if (proveedorNormalizado.isEmpty() || modeloNormalizado.isEmpty()) {
+            return "";
+        }
+        return proveedorNormalizado + "::" + modeloNormalizado;
     }
 
     private static int normalizarRetrasoSegundos(int valor) {
@@ -686,6 +751,7 @@ public class ConfiguracionAPI {
         snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
         snapshot.modelosPorProveedor = new HashMap<>(this.modelosPorProveedor);
         snapshot.maxTokensPorProveedor = new HashMap<>(this.maxTokensPorProveedor);
+        snapshot.tiempoEsperaPorModelo = new HashMap<>(this.tiempoEsperaPorModelo);
         return snapshot;
     }
 
@@ -713,6 +779,7 @@ public class ConfiguracionAPI {
         this.urlsBasePorProveedor = new HashMap<>(origen.urlsBasePorProveedor);
         this.modelosPorProveedor = new HashMap<>(origen.modelosPorProveedor);
         this.maxTokensPorProveedor = new HashMap<>(origen.maxTokensPorProveedor);
+        this.tiempoEsperaPorModelo = new HashMap<>(origen.tiempoEsperaPorModelo);
         asegurarMapas();
     }
 

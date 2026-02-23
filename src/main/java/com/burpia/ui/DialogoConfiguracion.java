@@ -41,6 +41,7 @@ public class DialogoConfiguracion extends JDialog {
     private JButton btnRefrescarModelos;
     private JButton btnProbarConexion;
     private JTextField txtMaxTokens;
+    private JTextField txtTimeoutModelo;
 
     private static final String MODELO_CUSTOM = "-- Custom --";
     private static final int TIMEOUT_CONEXION_MODELOS_SEG = 8;
@@ -245,6 +246,7 @@ public class DialogoConfiguracion extends JDialog {
         comboModelo.setFont(EstilosUI.FUENTE_ESTANDAR);
         comboModelo.setEditable(true);
         comboModelo.setToolTipText(TooltipsUI.Configuracion.MODELO());
+        comboModelo.addActionListener(e -> actualizarTimeoutModeloSeleccionado());
         panelModelo.add(comboModelo, BorderLayout.CENTER);
 
         btnRefrescarModelos = new JButton(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
@@ -275,6 +277,19 @@ public class DialogoConfiguracion extends JDialog {
         panelMaxTokens.add(lblInfoTokens, BorderLayout.EAST);
 
         panel.add(panelMaxTokens, gbc);
+
+        fila++;
+
+        gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
+        JLabel lblTimeoutModelo = new JLabel(I18nUI.Configuracion.LABEL_TIMEOUT_MODELO());
+        lblTimeoutModelo.setToolTipText(TooltipsUI.Configuracion.TIMEOUT_MODELO());
+        panel.add(lblTimeoutModelo, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 1; gbc.fill = GridBagConstraints.HORIZONTAL;
+        txtTimeoutModelo = new JTextField(30);
+        txtTimeoutModelo.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtTimeoutModelo.setToolTipText(TooltipsUI.Configuracion.TIMEOUT_MODELO());
+        panel.add(txtTimeoutModelo, gbc);
 
         return panel;
     }
@@ -622,7 +637,8 @@ public class DialogoConfiguracion extends JDialog {
         Integer retraso = parsearEntero(txtRetraso.getText());
         Integer maximoConcurrente = parsearEntero(txtMaximoConcurrente.getText());
         Integer maximoHallazgos = parsearEntero(txtMaximoHallazgosTabla.getText());
-        if (retraso == null || maximoConcurrente == null || maximoHallazgos == null) {
+        Integer timeoutModelo = parsearEntero(txtTimeoutModelo.getText());
+        if (retraso == null || maximoConcurrente == null || maximoHallazgos == null || timeoutModelo == null) {
             JOptionPane.showMessageDialog(this,
                 I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO(),
                 I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
@@ -633,6 +649,7 @@ public class DialogoConfiguracion extends JDialog {
         configTemporal.establecerRetrasoSegundos(retraso);
         configTemporal.establecerMaximoConcurrente(maximoConcurrente);
         configTemporal.establecerMaximoHallazgosTabla(maximoHallazgos);
+        configTemporal.establecerTiempoEsperaParaModelo(proveedorConfigurado, modeloSeleccionado, timeoutModelo);
 
         Integer maxTokens = parsearEntero(txtMaxTokens.getText());
         if (maxTokens != null) {
@@ -736,6 +753,7 @@ public class DialogoConfiguracion extends JDialog {
             modeloGuardado = configProveedor.obtenerModeloPorDefecto();
         }
         cargarModelosEnCombo(modelosProveedor, modeloGuardado);
+        actualizarTimeoutModeloSeleccionado();
     }
 
     private String obtenerModeloSeleccionado() {
@@ -817,6 +835,29 @@ public class DialogoConfiguracion extends JDialog {
 
         comboModelo.setSelectedItem(MODELO_CUSTOM);
         comboModelo.getEditor().setItem(preferidoNormalizado);
+        actualizarTimeoutModeloSeleccionado();
+    }
+
+    private void actualizarTimeoutModeloSeleccionado() {
+        if (txtTimeoutModelo == null) {
+            return;
+        }
+        String proveedorSeleccionado = (String) comboProveedor.getSelectedItem();
+        if (proveedorSeleccionado == null || proveedorSeleccionado.trim().isEmpty()) {
+            txtTimeoutModelo.setText(String.valueOf(config.obtenerTiempoEsperaAI()));
+            return;
+        }
+
+        String modelo = obtenerModeloSeleccionado();
+        if (modelo == null || modelo.trim().isEmpty()) {
+            ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedorSeleccionado);
+            if (configProveedor != null) {
+                modelo = configProveedor.obtenerModeloPorDefecto();
+            }
+        }
+
+        int timeout = config.obtenerTiempoEsperaParaModelo(proveedorSeleccionado, modelo);
+        txtTimeoutModelo.setText(String.valueOf(timeout));
     }
 
     private List<String> normalizarModelos(List<String> modelos) {
@@ -950,10 +991,23 @@ public class DialogoConfiguracion extends JDialog {
             return;
         }
 
+        Integer timeoutModelo = parsearEntero(txtTimeoutModelo.getText());
+        if (timeoutModelo == null) {
+            JOptionPane.showMessageDialog(
+                this,
+                I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO(),
+                I18nUI.Configuracion.TITULO_VALIDACION(),
+                JOptionPane.WARNING_MESSAGE
+            );
+            txtTimeoutModelo.requestFocus();
+            return;
+        }
+
         btnProbarConexion.setEnabled(false);
         btnProbarConexion.setText(I18nUI.Configuracion.BOTON_PROBANDO());
 
         final String modeloFinal = modeloAUsar;
+        final int timeoutModeloFinal = timeoutModelo;
         SwingWorker<ProbadorConexionAI.ResultadoPrueba, Void> worker = new SwingWorker<>() {
             @Override
             protected ProbadorConexionAI.ResultadoPrueba doInBackground() {
@@ -969,6 +1023,7 @@ public class DialogoConfiguracion extends JDialog {
                             modeloFinal
                         )
                     );
+                    configTemp.establecerTiempoEsperaParaModelo(proveedorSeleccionado, modeloFinal, timeoutModeloFinal);
 
                     ProbadorConexionAI probador = new ProbadorConexionAI(configTemp);
                     return probador.probarConexion();
