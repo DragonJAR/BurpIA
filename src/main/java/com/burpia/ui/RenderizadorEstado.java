@@ -1,10 +1,11 @@
 package com.burpia.ui;
-
 import com.burpia.model.Tarea;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
+
+
+
 
 public class RenderizadorEstado extends DefaultTableCellRenderer {
     private static final long serialVersionUID = 1L;

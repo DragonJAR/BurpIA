@@ -1,8 +1,6 @@
 package com.burpia.ui;
-
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
-
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
@@ -12,6 +10,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.function.IntSupplier;
+
+
+
 
 public class PanelEstadisticas extends JPanel {
     private final JLabel etiquetaResumenPrincipal;

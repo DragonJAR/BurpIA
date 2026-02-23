@@ -1,11 +1,12 @@
 package com.burpia.model;
-
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
-
 import java.awt.Color;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+
+
+
 
 public class Hallazgo {
     public static final String SEVERIDAD_CRITICAL = "Critical";
@@ -20,21 +21,23 @@ public class Hallazgo {
 
     private final String horaDescubrimiento;
     private final String url;
+    private final String titulo;
     private final String hallazgo;
     private final String severidad;
     private final String confianza;
     private final HttpRequest solicitudHttp;
     private final HttpRequestResponse evidenciaHttp;
 
-    public Hallazgo(String url, String hallazgo, String severidad, String confianza) {
-        this(url, hallazgo, severidad, confianza, (HttpRequest) null, (HttpRequestResponse) null);
+    public Hallazgo(String url, String titulo, String hallazgo, String severidad, String confianza) {
+        this(url, titulo, hallazgo, severidad, confianza, (HttpRequest) null, (HttpRequestResponse) null);
     }
 
-    public Hallazgo(String url, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
-        this(url, hallazgo, severidad, confianza, solicitudHttp, null);
+    public Hallazgo(String url, String titulo, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
+        this(url, titulo, hallazgo, severidad, confianza, solicitudHttp, null);
     }
 
     public Hallazgo(String url,
+                    String titulo,
                     String hallazgo,
                     String severidad,
                     String confianza,
@@ -43,6 +46,7 @@ public class Hallazgo {
         this(
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")),
             url,
+            titulo,
             hallazgo,
             severidad,
             confianza,
@@ -51,12 +55,13 @@ public class Hallazgo {
         );
     }
 
-    public Hallazgo(String horaDescubrimiento, String url, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
-        this(horaDescubrimiento, url, hallazgo, severidad, confianza, solicitudHttp, null);
+    public Hallazgo(String horaDescubrimiento, String url, String titulo, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
+        this(horaDescubrimiento, url, titulo, hallazgo, severidad, confianza, solicitudHttp, null);
     }
 
     public Hallazgo(String horaDescubrimiento,
                     String url,
+                    String titulo,
                     String hallazgo,
                     String severidad,
                     String confianza,
@@ -64,6 +69,7 @@ public class Hallazgo {
                     HttpRequestResponse evidenciaHttp) {
         this.horaDescubrimiento = horaDescubrimiento;
         this.url = url;
+        this.titulo = titulo;
         this.hallazgo = hallazgo;
         this.severidad = severidad;
         this.confianza = confianza;
@@ -77,6 +83,10 @@ public class Hallazgo {
 
     public String obtenerUrl() {
         return url;
+    }
+
+    public String obtenerTitulo() {
+        return titulo;
     }
 
     public String obtenerHallazgo() {
@@ -106,6 +116,7 @@ public class Hallazgo {
         return new Hallazgo(
             horaDescubrimiento,
             url,
+            titulo,
             hallazgo,
             severidad,
             confianza,
@@ -114,10 +125,11 @@ public class Hallazgo {
         );
     }
 
-    public Hallazgo editar(String nuevaUrl, String nuevaDescripcion, String nuevaSeveridad, String nuevaConfianza) {
+    public Hallazgo editar(String nuevaUrl, String nuevoTitulo, String nuevaDescripcion, String nuevaSeveridad, String nuevaConfianza) {
         return new Hallazgo(
             horaDescubrimiento,
             nuevaUrl,
+            nuevoTitulo,
             nuevaDescripcion,
             nuevaSeveridad,
             nuevaConfianza,
@@ -130,17 +142,17 @@ public class Hallazgo {
         return new Object[]{
             horaDescubrimiento,
             url,
-            hallazgo,
+            titulo,
             severidad,
             confianza
         };
     }
 
-    public static final Color COLOR_CRITICAL = new Color(156, 39, 176); // Morado
-    public static final Color COLOR_HIGH     = new Color(220, 53, 69);  // Rojo
-    public static final Color COLOR_MEDIUM   = new Color(253, 126, 20); // Naranja
-    public static final Color COLOR_LOW      = new Color(40, 167, 69);  // Verde
-    public static final Color COLOR_INFO     = new Color(13, 110, 253); // Azul
+    public static final Color COLOR_CRITICAL = new Color(156, 39, 176);
+    public static final Color COLOR_HIGH     = new Color(220, 53, 69);
+    public static final Color COLOR_MEDIUM   = new Color(253, 126, 20);
+    public static final Color COLOR_LOW      = new Color(40, 167, 69);
+    public static final Color COLOR_INFO     = new Color(13, 110, 253);
 
     public static int obtenerPrioridadSeveridad(String severidad) {
         if (severidad == null) return 0;

@@ -1,14 +1,15 @@
 package com.burpia.ui;
-
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorConsolaGUI;
-
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.function.Consumer;
+
+
+
 
 public class PanelConsola extends JPanel {
     private final JTextPane consola;

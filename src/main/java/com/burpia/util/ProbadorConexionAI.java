@@ -1,11 +1,12 @@
 package com.burpia.util;
-
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
-
 import okhttp3.*;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+
+
+
 
 public class ProbadorConexionAI {
     private final ConfiguracionAPI config;

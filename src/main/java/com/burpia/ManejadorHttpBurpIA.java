@@ -1,5 +1,4 @@
 package com.burpia;
-
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.handler.HttpHandler;
 import burp.api.montoya.http.handler.HttpRequestToBeSent;
@@ -25,7 +24,6 @@ import com.burpia.util.LimitadorTasa;
 import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.DeduplicadorSolicitudes;
-
 import javax.swing.*;
 import java.io.PrintWriter;
 import java.net.URI;
@@ -44,6 +42,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
+
+
+
 
 public class ManejadorHttpBurpIA implements HttpHandler {
     private static final String ORIGEN_LOG = "ManejadorBurpIA";
@@ -383,18 +384,18 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return false;
         }
 
-        String nuevoId = programarAnalisis(
+        if (gestorTareas != null) {
+            gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_EN_COLA, "Reintentando...");
+        }
+
+        ejecutarAnalisisExistente(
+            tareaId,
             contexto.solicitudAnalisis,
             contexto.evidenciaHttp,
             contexto.tipoTarea
         );
-        if (nuevoId == null) {
-            registrarError("No se pudo reencolar tarea: " + tareaId);
-            return false;
-        }
 
-        contextosReintento.remove(tareaId);
-        registrar("Tarea reencolada: " + tareaId + " -> " + nuevoId);
+        registrar("Tarea reencolada: " + tareaId);
         return true;
     }
 
@@ -435,11 +436,25 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 tarea.obtenerId(),
                 new ContextoReintento(solicitudAnalisis, evidenciaHttp, tipoTarea)
             );
+            ejecutarAnalisisExistente(tarea.obtenerId(), solicitudAnalisis, evidenciaHttp, tipoTarea);
         }
+        return tareaIdRef.get();
+    }
+
+    private void ejecutarAnalisisExistente(String tareaId,
+                                          SolicitudAnalisis solicitudAnalisis,
+                                          HttpRequestResponse evidenciaHttp,
+                                          String tipoTarea) {
+        if (tareaId == null || solicitudAnalisis == null) {
+            return;
+        }
+
+        final String url = solicitudAnalisis.obtenerUrl();
+        final AtomicReference<String> tareaIdRef = new AtomicReference<>(tareaId);
 
         SwingUtilities.invokeLater(() -> {
             if (pestaniaPrincipal != null) {
-                pestaniaPrincipal.registrar("Iniciando analisis para: " + url);
+                pestaniaPrincipal.registrar("Iniciando análisis (continuar/reintentar) para: " + url);
             }
         });
 
@@ -452,10 +467,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             new AnalizadorAI.Callback() {
                 @Override
                 public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
-                    String tareaId = tareaIdRef.get();
-                    finalizarEjecucionActiva(tareaId);
-                    contextosReintento.remove(tareaId);
-                    boolean cancelada = gestorTareas != null && tareaId != null && gestorTareas.estaTareaCancelada(tareaId);
+                    final String id = tareaIdRef.get();
+                    finalizarEjecucionActiva(id);
+                    contextosReintento.remove(id);
+                    boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
                     if (cancelada) {
                         registrar("Resultado descartado porque la tarea fue cancelada: " + url);
                         return;
@@ -513,9 +528,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
                 @Override
                 public void alErrorAnalisis(String error) {
-                    String tareaId = tareaIdRef.get();
-                    finalizarEjecucionActiva(tareaId);
-                    boolean cancelada = gestorTareas != null && tareaId != null && gestorTareas.estaTareaCancelada(tareaId);
+                    final String id = tareaIdRef.get();
+                    finalizarEjecucionActiva(id);
+                    boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
 
                     if (cancelada) {
                         registrar("Analisis detenido por cancelacion de usuario: " + url);
@@ -526,9 +541,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                         estadisticas.incrementarErrores();
                     }
 
-                    if (gestorTareas != null && tareaId != null) {
+                    if (gestorTareas != null && id != null) {
                         gestorTareas.actualizarTarea(
-                            tareaId,
+                            id,
                             Tarea.ESTADO_ERROR,
                             "Error: " + (error != null ? error : "Error desconocido")
                         );
@@ -547,57 +562,54 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
                 @Override
                 public void alCanceladoAnalisis() {
-                    String tareaId = tareaIdRef.get();
-                    finalizarEjecucionActiva(tareaId);
-                    if (gestorTareas != null && tareaId != null) {
-                        gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
+                    final String id = tareaIdRef.get();
+                    finalizarEjecucionActiva(id);
+                    if (gestorTareas != null && id != null) {
+                        gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
                     }
                     registrar("Analisis cancelado por usuario: " + url);
                 }
             },
             () -> {
-                String tareaId = tareaIdRef.get();
-                if (gestorTareas == null || tareaId == null) {
+                final String id = tareaIdRef.get();
+                if (gestorTareas == null || id == null) {
                     return;
                 }
-                boolean marcada = gestorTareas.marcarTareaAnalizando(tareaId, "Analizando");
+                boolean marcada = gestorTareas.marcarTareaAnalizando(id, "Analizando");
                 if (!marcada) {
-                    rastrear("No se pudo marcar tarea como analizando (estado no valido): " + tareaId);
+                    rastrear("No se pudo marcar tarea como analizando (estado no valido): " + id);
                 }
             },
             gestorConsola,
             () -> {
-                String tareaId = tareaIdRef.get();
-                return gestorTareas != null && tareaId != null && gestorTareas.estaTareaCancelada(tareaId);
+                final String id = tareaIdRef.get();
+                return gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
             },
             () -> {
-                String tareaId = tareaIdRef.get();
-                return gestorTareas != null && tareaId != null && gestorTareas.estaTareaPausada(tareaId);
+                final String id = tareaIdRef.get();
+                return gestorTareas != null && id != null && gestorTareas.estaTareaPausada(id);
             },
             controlBackpressure
         );
 
         try {
             Future<?> future = executorService.submit(analizador);
-            String tareaId = tareaIdRef.get();
-            if (tareaId != null) {
-                ejecucionesActivas.put(tareaId, future);
+            String id = tareaIdRef.get();
+            if (id != null) {
+                ejecucionesActivas.put(id, future);
             }
-            registrar("Hilo de analisis iniciado para: " + url);
+            registrar("Hilo de analisis iniciado para: " + url + " (ID: " + id + ")");
             rastrearEstadoCola();
-            return tareaId;
         } catch (RejectedExecutionException ex) {
-            String tareaId = tareaIdRef.get();
-            finalizarEjecucionActiva(tareaId);
-            contextosReintento.remove(tareaId);
-            if (gestorTareas != null && tareaId != null) {
-                gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_ERROR, "Descartada por saturación de cola");
+            String id = tareaIdRef.get();
+            finalizarEjecucionActiva(id);
+            if (gestorTareas != null && id != null) {
+                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Descartada por saturación de cola");
             }
             if (estadisticas != null) {
                 estadisticas.incrementarErrores();
             }
             registrarError("Cola de análisis saturada, solicitud descartada: " + url);
-            return null;
         }
     }
 

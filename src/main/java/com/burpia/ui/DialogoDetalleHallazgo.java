@@ -1,17 +1,19 @@
 package com.burpia.ui;
-
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
-
 import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
+
+
+
 
 public class DialogoDetalleHallazgo extends JDialog {
     private final Hallazgo hallazgoOriginal;
     private final Consumer<Hallazgo> alGuardar;
 
     private JTextField txtUrl;
+    private JTextField txtTitulo;
     private JTextArea txtDescripcion;
     private JComboBox<String> comboSeveridad;
     private JComboBox<String> comboConfianza;
@@ -63,6 +65,17 @@ public class DialogoDetalleHallazgo extends JDialog {
         fila++;
 
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
+        JLabel lblTitulo = new JLabel(I18nUI.DetalleHallazgo.LABEL_TITULO());
+        panelContenido.add(lblTitulo, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 1;
+        txtTitulo = new JTextField();
+        txtTitulo.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        panelContenido.add(txtTitulo, gbc);
+
+        fila++;
+
+        gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblSeveridad = new JLabel(I18nUI.DetalleHallazgo.LABEL_SEVERIDAD());
         lblSeveridad.setToolTipText(TooltipsUI.DetalleHallazgo.SEVERIDAD());
         panelContenido.add(lblSeveridad, gbc);
@@ -109,7 +122,7 @@ public class DialogoDetalleHallazgo extends JDialog {
         txtDescripcion.setLineWrap(true);
         txtDescripcion.setWrapStyleWord(true);
         txtDescripcion.setToolTipText(TooltipsUI.DetalleHallazgo.DESCRIPCION());
-        
+
         JScrollPane scrollDescripcion = new JScrollPane(txtDescripcion);
         scrollDescripcion.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         panelContenido.add(scrollDescripcion, gbc);
@@ -141,6 +154,7 @@ public class DialogoDetalleHallazgo extends JDialog {
     private void cargarDatos() {
         if (hallazgoOriginal != null) {
             txtUrl.setText(hallazgoOriginal.obtenerUrl());
+            txtTitulo.setText(hallazgoOriginal.obtenerTitulo());
             txtDescripcion.setText(hallazgoOriginal.obtenerHallazgo());
             comboSeveridad.setSelectedItem(hallazgoOriginal.obtenerSeveridad());
             comboConfianza.setSelectedItem(hallazgoOriginal.obtenerConfianza());
@@ -149,11 +163,12 @@ public class DialogoDetalleHallazgo extends JDialog {
 
     private void guardarYSalir() {
         String nuevaUrl = txtUrl.getText().trim();
+        String nuevoTitulo = txtTitulo.getText().trim();
         String nuevaDescripcion = txtDescripcion.getText().trim();
         String nuevaSeveridad = (String) comboSeveridad.getSelectedItem();
         String nuevaConfianza = (String) comboConfianza.getSelectedItem();
 
-        if (nuevaUrl.isEmpty() || nuevaDescripcion.isEmpty()) {
+        if (nuevaUrl.isEmpty() || nuevaDescripcion.isEmpty() || nuevoTitulo.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                 I18nUI.DetalleHallazgo.MSG_VALIDACION(),
                 I18nUI.DetalleHallazgo.TITULO_ERROR_VALIDACION(),
@@ -163,6 +178,7 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         Hallazgo hallazgoEditado = hallazgoOriginal.editar(
             nuevaUrl,
+            nuevoTitulo,
             nuevaDescripcion,
             nuevaSeveridad,
             nuevaConfianza

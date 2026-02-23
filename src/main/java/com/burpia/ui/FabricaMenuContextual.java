@@ -1,18 +1,19 @@
 package com.burpia.ui;
-
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
 import com.burpia.i18n.I18nUI;
-
 import javax.swing.*;
 import java.awt.Component;
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+
+
+
 
 public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final MontoyaApi api;

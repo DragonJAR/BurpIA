@@ -1,5 +1,4 @@
 package com.burpia.ui;
-
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.config.ProveedorAI;
@@ -7,7 +6,6 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.ProbadorConexionAI;
-
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -16,6 +14,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+
+
 
 public class DialogoConfiguracion extends JDialog {
     private static final int ANCHO_DIALOGO = 800;
@@ -328,7 +329,7 @@ public class DialogoConfiguracion extends JDialog {
             BorderFactory.createLineBorder(new Color(210, 210, 210), 1),
             BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        ejemploJson.setText("{\"hallazgos\":[{\"descripcion\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"evidencia\":\"string\"}]}");
+        ejemploJson.setText("{\"hallazgos\":[{\"titulo\":\"string\",\"descripcion\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"evidencia\":\"string\"}]}");
 
         JPanel bloqueInstrucciones = new JPanel(new BorderLayout(0, 8));
         bloqueInstrucciones.setOpaque(false);

@@ -1,8 +1,6 @@
 package com.burpia.util;
-
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
-
 import javax.swing.*;
 import javax.swing.text.*;
 import java.awt.*;
@@ -12,6 +10,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+
+
 
 public class GestorConsolaGUI {
     public enum TipoLog {

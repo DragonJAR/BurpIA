@@ -1,5 +1,6 @@
 package com.burpia.i18n;
 
+
 public enum IdiomaUI {
     ES("es", "Espanol"),
     EN("en", "English");

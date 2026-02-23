@@ -1,8 +1,6 @@
 package com.burpia.util;
-
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaTareas;
-
 import javax.swing.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,6 +10,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
+
+
+
 public class GestorTareas {
     private final Map<String, Tarea> tareas;
     private final ReentrantLock candado;
@@ -19,6 +20,8 @@ public class GestorTareas {
     private final ModeloTablaTareas modeloTabla;
     private final Consumer<String> logger;
     private volatile Consumer<String> manejadorCancelacion;
+    private volatile Consumer<String> manejadorPausa;
+    private volatile Consumer<String> manejadorReanudar;
     private final int maxTareasFinalizadasRetenidas;
 
     private static final long INTERVALO_VERIFICACION_MS = 30000;
@@ -35,6 +38,8 @@ public class GestorTareas {
         this.modeloTabla = modeloTabla;
         this.logger = logger != null ? logger : mensaje -> { };
         this.manejadorCancelacion = null;
+        this.manejadorPausa = null;
+        this.manejadorReanudar = null;
         this.maxTareasFinalizadasRetenidas = Math.max(1, maxTareasFinalizadasRetenidas);
 
         this.monitorVerificacion = crearMonitorVerificacion();
@@ -225,6 +230,11 @@ public class GestorTareas {
                     tarea.establecerEstado(Tarea.ESTADO_PAUSADO);
                     actualizarFilaTabla(tarea);
                     registrar("Tarea pausada: " + tarea.obtenerUrl());
+
+                    Consumer<String> manejador = this.manejadorPausa;
+                    if (manejador != null) {
+                        manejador.accept(id);
+                    }
                 }
             }
         } finally {
@@ -243,6 +253,11 @@ public class GestorTareas {
                     tarea.establecerEstado(Tarea.ESTADO_EN_COLA);
                     actualizarFilaTabla(tarea);
                     registrar("Tarea reanudada: " + tarea.obtenerUrl());
+
+                    Consumer<String> manejador = this.manejadorReanudar;
+                    if (manejador != null) {
+                        manejador.accept(id);
+                    }
                 }
             }
         } finally {
@@ -364,6 +379,14 @@ public class GestorTareas {
 
     public void establecerManejadorCancelacion(Consumer<String> manejadorCancelacion) {
         this.manejadorCancelacion = manejadorCancelacion;
+    }
+
+    public void establecerManejadorPausa(Consumer<String> manejadorPausa) {
+        this.manejadorPausa = manejadorPausa;
+    }
+
+    public void establecerManejadorReanudar(Consumer<String> manejadorReanudar) {
+        this.manejadorReanudar = manejadorReanudar;
     }
 
     private int actualizarEstadosMasivo(java.util.function.Predicate<Tarea> filtro, String nuevoEstado) {

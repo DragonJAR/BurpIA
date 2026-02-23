@@ -1,5 +1,4 @@
 package com.burpia.analyzer;
-
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
@@ -8,6 +7,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Set;
+
+
 
 public final class PoliticaReintentos {
     private static final Set<Integer> CODIGOS_REINTENTABLES = Set.of(408, 409, 425, 429, 500, 502, 503, 504);
@@ -51,6 +52,33 @@ public final class PoliticaReintentos {
             || normalizado.contains("connection reset")
             || normalizado.contains("refused")
             || normalizado.contains("temporarily unavailable");
+    }
+
+    public static String obtenerMensajeErrorAmigable(Throwable e) {
+        if (e == null) {
+            return "Error desconocido";
+        }
+
+        Throwable actual = e;
+
+        if (actual.getCause() != null && (actual instanceof IOException || actual instanceof RuntimeException)) {
+            actual = actual.getCause();
+        }
+
+        if (actual instanceof SocketTimeoutException) {
+            return "Tiempo de espera agotado, intenta aumentarlo en los ajustes";
+        }
+
+        String msg = actual.getMessage();
+        if (msg == null || msg.isEmpty()) {
+            return actual.getClass().getSimpleName();
+        }
+
+        if (msg.contains("timeout") || msg.contains("timed out")) {
+            return "Tiempo de espera agotado, intenta aumentarlo en los ajustes";
+        }
+
+        return msg;
     }
 
     public static long calcularEsperaMs(int statusCode, String retryAfterHeader, long backoffActualMs, int intentoActual) {

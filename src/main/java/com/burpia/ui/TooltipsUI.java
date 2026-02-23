@@ -1,6 +1,7 @@
 package com.burpia.ui;
-
 import com.burpia.i18n.I18nUI;
+
+
 
 public final class TooltipsUI {
     private TooltipsUI() {

@@ -1,5 +1,4 @@
 package com.burpia;
-
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
@@ -18,12 +17,14 @@ import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
-
 import javax.swing.*;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+
+
+
 
 public class ExtensionBurpIA implements BurpExtension {
     private MontoyaApi api;
@@ -136,6 +137,8 @@ public class ExtensionBurpIA implements BurpExtension {
         );
         if (gestorTareas != null) {
             gestorTareas.establecerManejadorCancelacion(manejadorHttp::cancelarEjecucionActiva);
+            gestorTareas.establecerManejadorPausa(manejadorHttp::cancelarEjecucionActiva);
+            gestorTareas.establecerManejadorReanudar(manejadorHttp::reencolarTarea);
         }
         if (pestaniaPrincipal != null) {
             pestaniaPrincipal.establecerManejadorReintentoTareas(manejadorHttp::reencolarTarea);
@@ -393,7 +396,7 @@ public class ExtensionBurpIA implements BurpExtension {
         );
 
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
-            hallazgo.obtenerHallazgo(),
+            hallazgo.obtenerTitulo(),
             hallazgo.obtenerHallazgo() + "\n\nURL: " + hallazgo.obtenerUrl(),
             detalleIssue,
             hallazgo.obtenerUrl(),

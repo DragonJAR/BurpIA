@@ -1,5 +1,4 @@
 package com.burpia.ui;
-
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
@@ -9,7 +8,6 @@ import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
-
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
@@ -19,7 +17,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -37,6 +34,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
+
+
+
 
 public class PanelHallazgos extends JPanel {
     private final ModeloTablaHallazgos modelo;
@@ -198,8 +198,7 @@ public class PanelHallazgos extends JPanel {
         tabla.setFont(EstilosUI.FUENTE_TABLA);
         tabla.setToolTipText(TooltipsUI.Hallazgos.TABLA());
         sorter = new TableRowSorter<>(modelo);
-        tabla.setRowSorter(sorter);
-
+        configurarSorters();
         configurarColumnasTabla();
 
         JScrollPane panelDesplazable = new JScrollPane(tabla);
@@ -374,7 +373,7 @@ public class PanelHallazgos extends JPanel {
         String[] valores = {
             hallazgo != null ? hallazgo.obtenerHoraDescubrimiento() : "",
             hallazgo != null ? hallazgo.obtenerUrl() : "",
-            hallazgo != null ? hallazgo.obtenerHallazgo() : "",
+            hallazgo != null ? hallazgo.obtenerTitulo() : "",
             hallazgo != null ? hallazgo.obtenerSeveridad() : "",
             hallazgo != null ? hallazgo.obtenerConfianza() : ""
         };
@@ -393,6 +392,7 @@ public class PanelHallazgos extends JPanel {
         return "    {\n"
             + "      \"hora\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerHoraDescubrimiento() : "") + "\",\n"
             + "      \"url\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerUrl() : "") + "\",\n"
+            + "      \"titulo\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerTitulo() : "") + "\",\n"
             + "      \"hallazgo\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerHallazgo() : "") + "\",\n"
             + "      \"severidad\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerSeveridad() : "") + "\",\n"
             + "      \"confianza\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerConfianza() : "") + "\"\n"
@@ -989,7 +989,7 @@ public class PanelHallazgos extends JPanel {
         modelo.refrescarColumnasIdioma();
         SwingUtilities.invokeLater(() -> {
             sorter = new TableRowSorter<>(modelo);
-            tabla.setRowSorter(sorter);
+            configurarSorters();
             configurarColumnasTabla();
             aplicarFiltros();
         });
@@ -1004,6 +1004,24 @@ public class PanelHallazgos extends JPanel {
         if (estabaSeleccionadoPrimero || comboSeveridad.getSelectedIndex() < 0) {
             comboSeveridad.setSelectedIndex(0);
         }
+    }
+
+    private void configurarSorters() {
+        if (sorter == null || tabla == null) return;
+
+        sorter.setComparator(3, (o1, o2) -> {
+            String s1 = o1 != null ? o1.toString() : "";
+            String s2 = o2 != null ? o2.toString() : "";
+            return Integer.compare(Hallazgo.obtenerPrioridadSeveridad(s1), Hallazgo.obtenerPrioridadSeveridad(s2));
+        });
+
+        sorter.setComparator(4, (o1, o2) -> {
+            String c1 = o1 != null ? o1.toString() : "";
+            String c2 = o2 != null ? o2.toString() : "";
+            return Integer.compare(Hallazgo.obtenerPrioridadConfianza(c1), Hallazgo.obtenerPrioridadConfianza(c2));
+        });
+
+        tabla.setRowSorter(sorter);
     }
 
     private void configurarColumnasTabla() {
