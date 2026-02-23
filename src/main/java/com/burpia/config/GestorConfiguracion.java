@@ -11,8 +11,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class GestorConfiguracion {
     private static final String NOMBRE_ARCHIVO = ".burpia.json";
@@ -47,6 +49,8 @@ public class GestorConfiguracion {
                 logInfo("[Configuracion] Archivo no existe, creando configuracion por defecto");
                 return new ConfiguracionAPI();
             }
+
+            asegurarPermisosPrivados(path);
 
             if (!Files.isReadable(path)) {
                 logError("[Configuracion] Archivo no es legible: " + path);
@@ -116,12 +120,14 @@ public class GestorConfiguracion {
             Path tempPath = Paths.get(path.toString() + ".tmp");
 
             Files.write(tempPath, json.getBytes(StandardCharsets.UTF_8));
+            asegurarPermisosPrivados(tempPath);
 
             try {
                 Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
             } catch (java.nio.file.AtomicMoveNotSupportedException ex) {
                 Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
+            asegurarPermisosPrivados(path);
 
             logInfo("[Configuracion] Configuracion guardada exitosamente en: " + path);
             return true;
@@ -145,30 +151,30 @@ public class GestorConfiguracion {
         return rutaConfig.toAbsolutePath().toString();
     }
 
-    public boolean existeConfiguracion() {
-        return Files.exists(rutaConfig);
-    }
-
-    public boolean eliminarConfiguracion() {
-        try {
-            if (Files.exists(rutaConfig)) {
-                Files.delete(rutaConfig);
-                logInfo("[Configuracion] Archivo eliminado: " + rutaConfig);
-                return true;
-            }
-            return false;
-        } catch (IOException e) {
-            logError("[Configuracion] Error al eliminar: " + e.getMessage());
-            return false;
-        }
-    }
-
     private void logInfo(String mensaje) {
         out.println(I18nLogs.tr(mensaje));
     }
 
     private void logError(String mensaje) {
         err.println(I18nLogs.tr(mensaje));
+    }
+
+    private void asegurarPermisosPrivados(Path path) {
+        if (path == null || !Files.exists(path)) {
+            return;
+        }
+        try {
+            if (!Files.getFileStore(path).supportsFileAttributeView("posix")) {
+                return;
+            }
+            Set<PosixFilePermission> permisos = Set.of(
+                PosixFilePermission.OWNER_READ,
+                PosixFilePermission.OWNER_WRITE
+            );
+            Files.setPosixFilePermissions(path, permisos);
+        } catch (Exception e) {
+            logError("[Configuracion] No se pudieron ajustar permisos privados del archivo: " + e.getMessage());
+        }
     }
 
     private ConfiguracionAPI construirDesdeArchivo(ArchivoConfiguracion archivo) {

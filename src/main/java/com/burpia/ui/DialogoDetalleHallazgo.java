@@ -161,13 +161,11 @@ public class DialogoDetalleHallazgo extends JDialog {
             return;
         }
 
-        Hallazgo hallazgoEditado = new Hallazgo(
-            hallazgoOriginal.obtenerHoraDescubrimiento(),
+        Hallazgo hallazgoEditado = hallazgoOriginal.editar(
             nuevaUrl,
             nuevaDescripcion,
             nuevaSeveridad,
-            nuevaConfianza,
-            hallazgoOriginal.obtenerSolicitudHttp()
+            nuevaConfianza
         );
 
         alGuardar.accept(hallazgoEditado);

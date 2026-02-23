@@ -26,24 +26,9 @@ public class EstilosUI {
     public static final java.awt.Color COLOR_TEXTO_NORMAL = java.awt.Color.BLACK;
 
     public static final java.awt.Color COLOR_TEXTO_DESHABILITADO = new java.awt.Color(150, 150, 150);
-
-
     public static final int ALTURA_FILA_TABLA = 22;
 
     public static final int MARGEN_PANEL = 10;
 
     public static final int ESPACIADO_COMPONENTES = 5;
-
-
-    public static void aplicarFontEstandar(javax.swing.JComponent componente) {
-        componente.setFont(FUENTE_ESTANDAR);
-    }
-
-    public static void aplicarFontNegrita(javax.swing.JComponent componente) {
-        componente.setFont(FUENTE_NEGRITA);
-    }
-
-    public static void aplicarFontTabla(javax.swing.JComponent componente) {
-        componente.setFont(FUENTE_TABLA);
-    }
 }

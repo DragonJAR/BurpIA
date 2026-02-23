@@ -70,27 +70,21 @@ git checkout -b fix/tu-nombre-descriptivo
 
 **Ejemplo de código thread-safe:**
 ```java
-// ✅ CORRECTO
 private final ReentrantLock lock = new ReentrantLock();
 
 public void metodoThreadSafe() {
     lock.lock();
     try {
-        // Operaciones críticas
     } finally {
         lock.unlock();
     }
 
     SwingUtilities.invokeLater(() -> {
-        // Actualizar UI
     });
 }
 
-// ❌ INCORRECTO
 public void metodoNoThreadSafe() {
-    // Actualizar estado sin sincronización
     SwingUtilities.invokeLater(() -> {
-        // Operaciones que deberían estar sincronizadas
     });
 }
 ```
@@ -217,25 +211,20 @@ Para sugerir nuevas características:
 Agrega Javadoc a clases y métodos públicos:
 
 ```java
-/**
  * Breve descripción de la clase.
  *
  * <p>Descripción más detallada si es necesario.
  *
  * @author Nombre del autor
  * @since 1.0.0
- */
 public class MiClase {
 
-    /**
      * Breve descripción del método.
      *
      * @param parametro1 Descripción del parámetro
      * @return Descripción del retorno
      * @throws MiException Cuando ocurre este error
-     */
     public String miMetodo(String parametro1) throws MiException {
-        // implementación
     }
 }
 ```
@@ -259,14 +248,12 @@ Excepción:
 TODOS los componentes deben ser thread-safe:
 
 ```java
-// ✅ CORRECTO - Thread-safe
 private final AtomicInteger contador = new AtomicInteger(0);
 
 public void incrementar() {
     contador.incrementAndGet();
 }
 
-// ❌ INCORRECTO - No thread-safe
 private int contador = 0;
 
 public void incrementar() {
@@ -279,14 +266,12 @@ public void incrementar() {
 **REGLA DE ORO:** NUNCA llamar a métodos de la API de Burp desde el EDT.
 
 ```java
-// ✅ CORRECTO
 new Thread(() -> {
     api.repeater().sendToRepeater(request, "BurpIA");
     api.scanner().startAudit(config);
     api.siteMap().add(auditIssue);
 }, "BurpIA-API").start();
 
-// ❌ INCORRECTO
 SwingUtilities.invokeLater(() -> {
     api.repeater().sendToRepeater(request, "BurpIA"); // Deadlock!
     api.siteMap().add(auditIssue);
@@ -298,7 +283,6 @@ SwingUtilities.invokeLater(() -> {
 Siempre liberar recursos:
 
 ```java
-// ✅ CORRECTO
 public void shutdown() {
     if (executorService != null) {
         executorService.shutdown();
@@ -313,9 +297,7 @@ public void shutdown() {
     }
 }
 
-// ❌ INCORRECTO
 public void shutdown() {
-    // Memory leak!
 }
 ```
 

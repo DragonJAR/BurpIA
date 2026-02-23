@@ -269,6 +269,42 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         });
     }
 
+    public boolean actualizarHallazgo(Hallazgo hallazgoOriginal, Hallazgo nuevoHallazgo) {
+        if (hallazgoOriginal == null || nuevoHallazgo == null) {
+            return false;
+        }
+
+        int indiceFila;
+        lock.lock();
+        try {
+            indiceFila = -1;
+            for (int i = 0; i < datos.size(); i++) {
+                if (datos.get(i) == hallazgoOriginal) {
+                    indiceFila = i;
+                    break;
+                }
+            }
+            if (indiceFila < 0) {
+                return false;
+            }
+            datos.set(indiceFila, nuevoHallazgo);
+        } finally {
+            lock.unlock();
+        }
+
+        final int indiceActualizado = indiceFila;
+        SwingUtilities.invokeLater(() -> {
+            if (indiceActualizado < getRowCount()) {
+                Object[] filaValores = nuevoHallazgo.aFilaTabla();
+                for (int i = 0; i < TOTAL_COLUMNAS; i++) {
+                    setValueAt(filaValores[i], indiceActualizado, i);
+                }
+                fireTableRowsUpdated(indiceActualizado, indiceActualizado);
+            }
+        });
+        return true;
+    }
+
     public void refrescarColumnasIdioma() {
         SwingUtilities.invokeLater(() -> setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_HALLAZGOS()));
     }

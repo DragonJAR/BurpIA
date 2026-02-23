@@ -1,35 +1,30 @@
-# macOS
 .DS_Store
 
-# IDE
 .idea/
 *.iml
 
-# Build output
 build/
 .gradle/
 .gradle-local/
 out/
 
-# Java artifacts
 *.class
 *.jar
 *.war
 *.nar
 *.ear
 
-# Logs and crash dumps
 *.log
 hs_err_pid*
 replay_pid*
 
-# Local runtime config (contains API keys)
 .burpia.json
 BurpIA.zip
 build-jar.sh
 build.gradle
-gradlew
-/gradle
 /docs
+/gradle
+gradlew
 /src/test
-settings.gradle
+/src/test
+*.gradle

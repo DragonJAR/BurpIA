@@ -5,10 +5,13 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonArray;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ParserRespuestasAI {
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
         java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
+    private static final Logger LOGGER = Logger.getLogger(ParserRespuestasAI.class.getName());
 
     public static String extraerContenido(String respuestaJson, String proveedor) {
         if (respuestaJson == null || respuestaJson.trim().isEmpty()) {
@@ -63,7 +66,8 @@ public class ParserRespuestasAI {
             return limpiarBloquesPensamiento(contenido != null ? contenido : "");
 
         } catch (Exception e) {
-            return "";
+            LOGGER.log(Level.FINE, "No se pudo parsear la respuesta JSON del proveedor", e);
+            return limpiarBloquesPensamiento(respuestaJson.trim());
         }
     }
 
@@ -274,7 +278,8 @@ public class ParserRespuestasAI {
         try {
             String valor = elemento.getAsString();
             return valor != null ? valor : "";
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            LOGGER.log(Level.FINEST, "No se pudo extraer texto desde elemento JSON", e);
             return "";
         }
     }

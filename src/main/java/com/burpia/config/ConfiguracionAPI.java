@@ -1,5 +1,6 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 
 import java.util.HashMap;
@@ -9,6 +10,10 @@ public class ConfiguracionAPI {
     public static final int MAXIMO_HALLAZGOS_TABLA_DEFECTO = 1000;
     public static final int MINIMO_HALLAZGOS_TABLA = 100;
     public static final int MAXIMO_HALLAZGOS_TABLA = 50000;
+    public static final int MINIMO_RETRASO_SEGUNDOS = 0;
+    public static final int MAXIMO_RETRASO_SEGUNDOS = 60;
+    public static final int MINIMO_MAXIMO_CONCURRENTE = 1;
+    public static final int MAXIMO_MAXIMO_CONCURRENTE = 10;
 
     private int retrasoSegundos;
     private int maximoConcurrente;
@@ -31,8 +36,8 @@ public class ConfiguracionAPI {
 
     public ConfiguracionAPI() {
         this.proveedorAI = "Z.ai";
-        this.retrasoSegundos = 5;
-        this.maximoConcurrente = 3;
+        this.retrasoSegundos = normalizarRetrasoSegundos(5);
+        this.maximoConcurrente = normalizarMaximoConcurrente(3);
         this.maximoHallazgosTabla = MAXIMO_HALLAZGOS_TABLA_DEFECTO;
         this.tiempoEsperaAI = 60;
         this.detallado = false;
@@ -81,10 +86,14 @@ public class ConfiguracionAPI {
     }
 
     public int obtenerRetrasoSegundos() { return retrasoSegundos; }
-    public void establecerRetrasoSegundos(int retrasoSegundos) { this.retrasoSegundos = retrasoSegundos; }
+    public void establecerRetrasoSegundos(int retrasoSegundos) {
+        this.retrasoSegundos = normalizarRetrasoSegundos(retrasoSegundos);
+    }
 
     public int obtenerMaximoConcurrente() { return maximoConcurrente; }
-    public void establecerMaximoConcurrente(int maximoConcurrente) { this.maximoConcurrente = maximoConcurrente; }
+    public void establecerMaximoConcurrente(int maximoConcurrente) {
+        this.maximoConcurrente = normalizarMaximoConcurrente(maximoConcurrente);
+    }
 
     public int obtenerMaximoHallazgosTabla() { return maximoHallazgosTabla; }
     public void establecerMaximoHallazgosTabla(int maximoHallazgosTabla) {
@@ -98,14 +107,6 @@ public class ConfiguracionAPI {
     public void establecerProveedorAI(String proveedorAI) {
         this.proveedorAI = (proveedorAI != null && ProveedorAI.existeProveedor(proveedorAI)) ? proveedorAI : "Z.ai";
         asegurarMapas();
-    }
-
-    public int obtenerMaxTokens() {
-        return obtenerMaxTokensParaProveedor(obtenerProveedorAI());
-    }
-
-    public void establecerMaxTokens(int maxTokens) {
-        establecerMaxTokensParaProveedor(obtenerProveedorAI(), maxTokens);
     }
 
     public int obtenerTiempoEsperaAI() { return tiempoEsperaAI; }
@@ -293,46 +294,80 @@ public class ConfiguracionAPI {
         Map<String, String> errores = new HashMap<>();
 
         if (proveedorAI == null || proveedorAI.trim().isEmpty()) {
-            errores.put("proveedorAI", "Proveedor de AI es requerido");
+            errores.put("proveedorAI", I18nUI.tr("Proveedor de AI es requerido", "AI provider is required"));
         } else if (!ProveedorAI.existeProveedor(proveedorAI)) {
-            errores.put("proveedorAI", "Proveedor de AI no reconocido: " + proveedorAI);
+            errores.put(
+                "proveedorAI",
+                I18nUI.trf("Proveedor de AI no reconocido: %s", "Unknown AI provider: %s", proveedorAI)
+            );
         }
 
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedorAI);
         if (config != null && config.requiereClaveApi()) {
             String key = obtenerApiKeyParaProveedor(proveedorAI);
             if (key == null || key.trim().isEmpty()) {
-                errores.put("claveApi", "Clave de API requerida para " + proveedorAI);
+                errores.put(
+                    "claveApi",
+                    I18nUI.trf("Clave de API requerida para %s", "API key is required for %s", proveedorAI)
+                );
             }
         }
 
         if (obtenerModelo().trim().isEmpty()) {
-            errores.put("modelo", "Modelo es requerido");
+            errores.put("modelo", I18nUI.tr("Modelo es requerido", "Model is required"));
         }
 
-        if (retrasoSegundos < 0 || retrasoSegundos > 60) {
-            errores.put("retrasoSegundos", "Retraso debe estar entre 0 y 60 segundos");
+        if (retrasoSegundos < MINIMO_RETRASO_SEGUNDOS || retrasoSegundos > MAXIMO_RETRASO_SEGUNDOS) {
+            errores.put(
+                "retrasoSegundos",
+                I18nUI.trf(
+                    "Retraso debe estar entre %d y %d segundos",
+                    "Delay must be between %d and %d seconds",
+                    MINIMO_RETRASO_SEGUNDOS,
+                    MAXIMO_RETRASO_SEGUNDOS
+                )
+            );
         }
 
-        if (maximoConcurrente < 1 || maximoConcurrente > 10) {
-            errores.put("maximoConcurrente", "Maximo concurrente debe estar entre 1 y 10");
+        if (maximoConcurrente < MINIMO_MAXIMO_CONCURRENTE || maximoConcurrente > MAXIMO_MAXIMO_CONCURRENTE) {
+            errores.put(
+                "maximoConcurrente",
+                I18nUI.trf(
+                    "Maximo concurrente debe estar entre %d y %d",
+                    "Max concurrent must be between %d and %d",
+                    MINIMO_MAXIMO_CONCURRENTE,
+                    MAXIMO_MAXIMO_CONCURRENTE
+                )
+            );
         }
 
         if (maximoHallazgosTabla < MINIMO_HALLAZGOS_TABLA || maximoHallazgosTabla > MAXIMO_HALLAZGOS_TABLA) {
             errores.put("maximoHallazgosTabla",
-                "Maximo de hallazgos en tabla debe estar entre " + MINIMO_HALLAZGOS_TABLA + " y " + MAXIMO_HALLAZGOS_TABLA);
+                I18nUI.trf(
+                    "Maximo de hallazgos en tabla debe estar entre %d y %d",
+                    "Max findings in table must be between %d and %d",
+                    MINIMO_HALLAZGOS_TABLA,
+                    MAXIMO_HALLAZGOS_TABLA
+                ));
         }
 
         if (tiempoEsperaAI < 10 || tiempoEsperaAI > 300) {
-            errores.put("tiempoEsperaAI", "Tiempo de espera debe estar entre 10 y 300 segundos");
+            errores.put(
+                "tiempoEsperaAI",
+                I18nUI.tr("Tiempo de espera debe estar entre 10 y 300 segundos",
+                    "Timeout must be between 10 and 300 seconds")
+            );
         }
 
         if (!"Light".equals(tema) && !"Dark".equals(tema)) {
-            errores.put("tema", "Tema debe ser 'Light' o 'Dark'");
+            errores.put("tema", I18nUI.tr("Tema debe ser 'Light' o 'Dark'", "Theme must be 'Light' or 'Dark'"));
         }
 
         if (promptConfigurable == null || promptConfigurable.trim().isEmpty()) {
-            errores.put("promptConfigurable", "Prompt configurable es requerido");
+            errores.put(
+                "promptConfigurable",
+                I18nUI.tr("Prompt configurable es requerido", "Configurable prompt is required")
+            );
         }
 
         return errores;
@@ -417,22 +452,36 @@ public class ConfiguracionAPI {
 
         String proveedor = obtenerProveedorAI();
         if (proveedor == null || proveedor.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
-            return "ALERTA: Proveedor de AI no configurado o no valido";
+            return I18nUI.tr(
+                "ALERTA: Proveedor de AI no configurado o no valido",
+                "ALERT: AI provider is not configured or is invalid"
+            );
         }
 
         String urlApi = obtenerUrlApi();
         if (urlApi == null || urlApi.trim().isEmpty()) {
-            return "ALERTA: URL de API no configurada";
+            return I18nUI.tr(
+                "ALERTA: URL de API no configurada",
+                "ALERT: API URL is not configured"
+            );
         }
 
         String modelo = obtenerModelo();
         if (modelo == null || modelo.trim().isEmpty()) {
-            return "ALERTA: Modelo no configurado para " + proveedor;
+            return I18nUI.trf(
+                "ALERTA: Modelo no configurado para %s",
+                "ALERT: Model is not configured for %s",
+                proveedor
+            );
         }
 
         ProveedorAI.ConfiguracionProveedor proveedorConfig = ProveedorAI.obtenerProveedor(proveedor);
         if (proveedorConfig != null && proveedorConfig.requiereClaveApi() && !tieneApiKey()) {
-            return "ALERTA: Clave de API requerida para " + proveedor;
+            return I18nUI.trf(
+                "ALERTA: Clave de API requerida para %s",
+                "ALERT: API key is required for %s",
+                proveedor
+            );
         }
 
         return "";
@@ -493,6 +542,8 @@ public class ConfiguracionAPI {
         idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo();
         tiempoEsperaAI = normalizarTiempoEspera(tiempoEsperaAI);
         tema = normalizarTema(tema);
+        retrasoSegundos = normalizarRetrasoSegundos(retrasoSegundos);
+        maximoConcurrente = normalizarMaximoConcurrente(maximoConcurrente);
         maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
     }
 
@@ -512,6 +563,26 @@ public class ConfiguracionAPI {
         }
         if (valor > 300) {
             return 300;
+        }
+        return valor;
+    }
+
+    private static int normalizarRetrasoSegundos(int valor) {
+        if (valor < MINIMO_RETRASO_SEGUNDOS) {
+            return MINIMO_RETRASO_SEGUNDOS;
+        }
+        if (valor > MAXIMO_RETRASO_SEGUNDOS) {
+            return MAXIMO_RETRASO_SEGUNDOS;
+        }
+        return valor;
+    }
+
+    private static int normalizarMaximoConcurrente(int valor) {
+        if (valor < MINIMO_MAXIMO_CONCURRENTE) {
+            return MINIMO_MAXIMO_CONCURRENTE;
+        }
+        if (valor > MAXIMO_MAXIMO_CONCURRENTE) {
+            return MAXIMO_MAXIMO_CONCURRENTE;
         }
         return valor;
     }

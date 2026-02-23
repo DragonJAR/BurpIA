@@ -200,6 +200,13 @@ public final class TooltipsUI {
                 "Automatically save findings into Burp Issues/Site Map.");
         }
 
+        public static String GUARDAR_ISSUES_SOLO_PRO() {
+            return I18nUI.tr(
+                "Disponible solo en Burp Professional. En Community esta opcion no guarda Issues.",
+                "Available only in Burp Professional. In Community this option does not save Issues."
+            );
+        }
+
         public static String TABLA() {
             return I18nUI.tr("Listado de hallazgos; doble clic para editar y clic derecho para acciones.",
                 "Findings list; double click to edit and right click for actions.");
@@ -223,6 +230,13 @@ public final class TooltipsUI {
         public static String MENU_ISSUES() {
             return I18nUI.tr("Guarda manualmente hallazgos seleccionados en Issues/Site Map de Burp.",
                 "Manually save selected findings into Burp Issues/Site Map.");
+        }
+
+        public static String MENU_ISSUES_SOLO_PRO() {
+            return I18nUI.tr(
+                "Disponible solo en Burp Professional.",
+                "Available only in Burp Professional."
+            );
         }
 
         public static String MENU_IGNORAR() {

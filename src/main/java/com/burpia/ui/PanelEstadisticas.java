@@ -353,10 +353,6 @@ public class PanelEstadisticas extends JPanel {
         }
     }
 
-    public Estadisticas obtenerEstadisticas() {
-        return estadisticas;
-    }
-
     public void destruir() {
         timerActualizacion.stop();
     }
