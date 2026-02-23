@@ -21,13 +21,13 @@ import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
+import com.burpia.util.HttpUtils;
 import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.DeduplicadorSolicitudes;
 import javax.swing.*;
 import java.io.PrintWriter;
 import java.net.URI;
-import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -61,25 +61,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private volatile boolean capturaActiva;
     private volatile boolean avisoIssuesNoDisponiblesEmitido;
 
-    private static final Set<String> EXTENSIONES_ESTATICAS;
-
-    static {
-        Set<String> extensions = new HashSet<>();
-        extensions.add(".js");
-        extensions.add(".css");
-        extensions.add(".png");
-        extensions.add(".jpg");
-        extensions.add(".jpeg");
-        extensions.add(".gif");
-        extensions.add(".svg");
-        extensions.add(".ico");
-        extensions.add(".woff");
-        extensions.add(".woff2");
-        extensions.add(".webp");
-        extensions.add(".ttf");
-        extensions.add(".eot");
-        EXTENSIONES_ESTATICAS = java.util.Collections.unmodifiableSet(extensions);
-    }
 
     private final Estadisticas estadisticas;
     private final GestorTareas gestorTareas;
@@ -271,15 +252,18 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             cadenaSolicitud = metodo + " " + url;
         }
 
-        String encabezados = extraerEncabezados(respuestaRecibida.initiatingRequest());
-        String cuerpo = extraerCuerpoSolicitud(respuestaRecibida.initiatingRequest());
-        String encabezadosRespuesta = extraerEncabezadosRespuesta(respuestaRecibida);
-        String cuerpoRespuesta = extraerCuerpoRespuesta(respuestaRecibida);
+        String encabezados = HttpUtils.extraerEncabezados(respuestaRecibida.initiatingRequest());
+        String cuerpo = HttpUtils.extraerCuerpo(respuestaRecibida.initiatingRequest());
+        String encabezadosRespuesta = HttpUtils.extraerEncabezados(respuestaRecibida);
+        String cuerpoRespuesta = HttpUtils.extraerCuerpo(respuestaRecibida);
 
-        String hashSolicitud = generarHashSolicitudRespuesta(
+        String hashSolicitud = HttpUtils.generarHashPartes(
             cadenaSolicitud,
-            codigoEstado,
+            "\n|status|\n",
+            String.valueOf(codigoEstado),
+            "\n|response_headers|\n",
             encabezadosRespuesta,
+            "\n|response_body|\n",
             cuerpoRespuesta
         );
         rastrear("Hash de solicitud: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...");
@@ -336,9 +320,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         String url = solicitud.url() != null ? solicitud.url() : "[URL NULL]";
         String metodo = solicitud.method() != null ? solicitud.method() : "[METHOD NULL]";
         String cadenaSolicitud = solicitud.toString() != null ? solicitud.toString() : metodo + " " + url;
-        String hashSolicitud = generarHash(cadenaSolicitud.getBytes(StandardCharsets.UTF_8));
-        String encabezados = extraerEncabezados(solicitud);
-        String cuerpo = extraerCuerpoSolicitud(solicitud);
+        String hashSolicitud = HttpUtils.generarHash(cadenaSolicitud.getBytes(StandardCharsets.UTF_8));
+        String encabezados = HttpUtils.extraerEncabezados(solicitud);
+        String cuerpo = HttpUtils.extraerCuerpo(solicitud);
         int codigoEstadoRespuesta = -1;
         String encabezadosRespuesta = "";
         String cuerpoRespuesta = "";
@@ -346,8 +330,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             try {
                 if (solicitudRespuestaOriginal.hasResponse() && solicitudRespuestaOriginal.response() != null) {
                     codigoEstadoRespuesta = solicitudRespuestaOriginal.response().statusCode();
-                    encabezadosRespuesta = extraerEncabezadosRespuesta(solicitudRespuestaOriginal.response());
-                    cuerpoRespuesta = extraerCuerpoRespuesta(solicitudRespuestaOriginal.response());
+                    encabezadosRespuesta = HttpUtils.extraerEncabezados(solicitudRespuestaOriginal.response());
+                    cuerpoRespuesta = HttpUtils.extraerCuerpo(solicitudRespuestaOriginal.response());
                 }
             } catch (Exception e) {
                 rastrear("No se pudo capturar la respuesta para analisis manual", e);
@@ -783,28 +767,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         if (url == null || url.isEmpty()) {
             return false;
         }
-
-        String ruta = url;
-        try {
-            URI uri = URI.create(url);
-            if (uri.getPath() != null && !uri.getPath().isEmpty()) {
-                ruta = uri.getPath();
-            }
-        } catch (IllegalArgumentException ignored) {
-        }
-
-        int ultimoPunto = ruta.lastIndexOf('.');
-        if (ultimoPunto == -1) {
-            return false;
-        }
-
-        String extension = ruta.substring(ultimoPunto).toLowerCase(Locale.ROOT);
-        boolean esEstatico = EXTENSIONES_ESTATICAS.contains(extension);
-
+ 
+        boolean esEstatico = HttpUtils.esRecursoEstatico(url);
+ 
         if (esEstatico && config.esDetallado()) {
             rastrear("Recurso coincidio con filtro estatico: " + url);
         }
-
+ 
         return esEstatico;
     }
 
@@ -827,166 +796,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         return "";
     }
 
-    private String generarHash(byte[] datos) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            if (datos != null && datos.length > 0) {
-                md.update(datos);
-            }
-            return convertirDigestHex(md.digest());
-        } catch (Exception e) {
-            registrarError("Error al generar hash: " + e.getMessage());
-            throw new RuntimeException("No se pudo generar hash SHA-256", e);
-        }
-    }
-
-    private String generarHashSolicitudRespuesta(String solicitudCruda,
-                                                 int codigoEstadoRespuesta,
-                                                 String encabezadosRespuesta,
-                                                 String cuerpoRespuesta) {
-        return generarHashPartes(
-            solicitudCruda,
-            "\n|status|\n",
-            String.valueOf(codigoEstadoRespuesta),
-            "\n|response_headers|\n",
-            encabezadosRespuesta,
-            "\n|response_body|\n",
-            cuerpoRespuesta
-        );
-    }
-
-    private String generarHashPartes(String... partes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            if (partes != null) {
-                for (String parte : partes) {
-                    if (parte != null && !parte.isEmpty()) {
-                        md.update(parte.getBytes(StandardCharsets.UTF_8));
-                    }
-                    md.update((byte) 0);
-                }
-            }
-            return convertirDigestHex(md.digest());
-        } catch (Exception e) {
-            registrarError("Error al generar hash: " + e.getMessage());
-            throw new RuntimeException("No se pudo generar hash SHA-256", e);
-        }
-    }
-
-    private String convertirDigestHex(byte[] hash) {
-        StringBuilder cadenaHexadecimal = new StringBuilder();
-        if (hash == null) {
-            return "";
-        }
-        for (byte b : hash) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) {
-                cadenaHexadecimal.append('0');
-            }
-            cadenaHexadecimal.append(hex);
-        }
-        return cadenaHexadecimal.toString();
-    }
-
-    private String extraerEncabezados(HttpRequest solicitud) {
-        if (solicitud == null) {
-            return "[SOLICITUD NULL]";
-        }
-
-        StringBuilder encabezados = new StringBuilder();
-        String metodo = solicitud.method();
-        String url = solicitud.url();
-
-        encabezados.append(metodo != null ? metodo : "[METHOD NULL]")
-                   .append(" ")
-                   .append(url != null ? url : "[URL NULL]")
-                   .append("\n");
-
-        if (solicitud.headers() != null) {
-            solicitud.headers().forEach(encabezado -> {
-                if (encabezado != null) {
-                    encabezados.append(encabezado.name() != null ? encabezado.name() : "[NAME NULL]")
-                               .append(": ")
-                               .append(encabezado.value() != null ? encabezado.value() : "[VALUE NULL]")
-                               .append("\n");
-                }
-            });
-        } else {
-            encabezados.append("[HEADERS NULL]\n");
-        }
-
-        return encabezados.toString();
-    }
-
-    private String extraerCuerpoSolicitud(HttpRequest solicitud) {
-        if (solicitud == null) {
-            return "";
-        }
-        try {
-            byte[] bodyBytes = solicitud.body() != null ? solicitud.body().getBytes() : null;
-            if (bodyBytes == null || bodyBytes.length == 0) {
-                return "";
-            }
-            String cuerpo = solicitud.bodyToString();
-            return cuerpo != null ? cuerpo : "";
-        } catch (Exception ignored) {
-            return "";
-        }
-    }
-
-    private String extraerEncabezadosRespuesta(burp.api.montoya.http.message.responses.HttpResponse respuesta) {
-        if (respuesta == null) {
-            return "[RESPUESTA NULL]";
-        }
-
-        StringBuilder encabezados = new StringBuilder();
-        try {
-            String version = respuesta.httpVersion() != null ? respuesta.httpVersion() : "HTTP/1.1";
-            encabezados.append(version)
-                .append(" ")
-                .append(respuesta.statusCode());
-
-            String reason = respuesta.reasonPhrase();
-            if (reason != null && !reason.trim().isEmpty()) {
-                encabezados.append(" ").append(reason.trim());
-            }
-            encabezados.append("\n");
-
-            if (respuesta.headers() != null) {
-                respuesta.headers().forEach(encabezado -> {
-                    if (encabezado != null) {
-                        encabezados.append(encabezado.name() != null ? encabezado.name() : "[NAME NULL]")
-                            .append(": ")
-                            .append(encabezado.value() != null ? encabezado.value() : "[VALUE NULL]")
-                            .append("\n");
-                    }
-                });
-            } else {
-                encabezados.append("[HEADERS NULL]\n");
-            }
-        } catch (Exception e) {
-            registrarError("Error al extraer encabezados de respuesta: " + e.getMessage());
-            return "[ERROR AL EXTRAER ENCABEZADOS DE RESPUESTA]";
-        }
-
-        return encabezados.toString();
-    }
-
-    private String extraerCuerpoRespuesta(burp.api.montoya.http.message.responses.HttpResponse respuesta) {
-        if (respuesta == null) {
-            return "";
-        }
-        try {
-            byte[] bodyBytes = respuesta.body() != null ? respuesta.body().getBytes() : null;
-            if (bodyBytes == null || bodyBytes.length == 0) {
-                return "";
-            }
-            String cuerpo = respuesta.bodyToString();
-            return cuerpo != null ? cuerpo : "";
-        } catch (Exception ignored) {
-            return "";
-        }
-    }
 
     private void registrar(String mensaje) {
         registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[ManejadorBurpIA] ");

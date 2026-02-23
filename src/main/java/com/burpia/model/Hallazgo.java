@@ -1,6 +1,7 @@
 package com.burpia.model;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import com.burpia.ui.EstilosUI;
 import java.awt.Color;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -148,12 +149,6 @@ public class Hallazgo {
         };
     }
 
-    public static final Color COLOR_CRITICAL = new Color(156, 39, 176);
-    public static final Color COLOR_HIGH     = new Color(220, 53, 69);
-    public static final Color COLOR_MEDIUM   = new Color(253, 126, 20);
-    public static final Color COLOR_LOW      = new Color(40, 167, 69);
-    public static final Color COLOR_INFO     = new Color(13, 110, 253);
-
     public static int obtenerPrioridadSeveridad(String severidad) {
         if (severidad == null) return 0;
         switch (severidad) {
@@ -166,55 +161,39 @@ public class Hallazgo {
         }
     }
 
-    public static int obtenerPrioridadConfianza(String confianza) {
-        if (confianza == null) return 0;
-        switch (confianza) {
-            case CONFIANZA_ALTA:   return 3;
-            case CONFIANZA_MEDIA:  return 2;
-            case CONFIANZA_BAJA:   return 1;
-            default:               return 0;
-        }
+    public static int obtenerPesoSeveridad(String severidad) {
+        return obtenerPrioridadSeveridad(severidad);
     }
 
     public static Color obtenerColorSeveridad(String severidad) {
-        if (severidad == null) {
-            return Color.GRAY;
-        }
+        if (severidad == null) return Color.GRAY;
         switch (severidad) {
-            case SEVERIDAD_CRITICAL: return COLOR_CRITICAL;
-            case SEVERIDAD_HIGH:     return COLOR_HIGH;
-            case SEVERIDAD_MEDIUM:   return COLOR_MEDIUM;
-            case SEVERIDAD_LOW:      return COLOR_LOW;
-            case SEVERIDAD_INFO:     return COLOR_INFO;
+            case SEVERIDAD_CRITICAL: return EstilosUI.COLOR_CRITICAL;
+            case SEVERIDAD_HIGH:     return EstilosUI.COLOR_HIGH;
+            case SEVERIDAD_MEDIUM:   return EstilosUI.COLOR_MEDIUM;
+            case SEVERIDAD_LOW:      return EstilosUI.COLOR_LOW;
+            case SEVERIDAD_INFO:     return EstilosUI.COLOR_INFO;
             default:                 return Color.GRAY;
         }
     }
 
-    public static Color obtenerColorConfianza(String confianza) {
-        if (confianza == null) {
-            return Color.GRAY;
-        }
+    public static int obtenerPrioridadConfianza(String confianza) {
+        if (confianza == null) return 0;
         switch (confianza) {
-            case CONFIANZA_ALTA:
-                return obtenerColorSeveridad(SEVERIDAD_HIGH);
-            case CONFIANZA_MEDIA:
-                return obtenerColorSeveridad(SEVERIDAD_MEDIUM);
-            case CONFIANZA_BAJA:
-                return obtenerColorSeveridad(SEVERIDAD_LOW);
-            default:
-                return Color.GRAY;
+            case CONFIANZA_ALTA:  return 3;
+            case CONFIANZA_MEDIA: return 2;
+            case CONFIANZA_BAJA:  return 1;
+            default:               return 0;
         }
     }
 
-    public static int obtenerPesoSeveridad(String severidad) {
-        if (severidad == null) return 0;
-        switch (severidad) {
-            case SEVERIDAD_CRITICAL: return 5;
-            case SEVERIDAD_HIGH: return 4;
-            case SEVERIDAD_MEDIUM: return 3;
-            case SEVERIDAD_LOW: return 2;
-            case SEVERIDAD_INFO: return 1;
-            default: return 0;
+    public static Color obtenerColorConfianza(String confianza) {
+        if (confianza == null) return Color.GRAY;
+        switch (confianza) {
+            case CONFIANZA_ALTA:  return EstilosUI.COLOR_LOW;    // Green
+            case CONFIANZA_MEDIA: return EstilosUI.COLOR_MEDIUM; // Orange
+            case CONFIANZA_BAJA:  return EstilosUI.COLOR_HIGH;   // Red
+            default:               return Color.GRAY;
         }
     }
 

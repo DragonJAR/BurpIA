@@ -1,4 +1,5 @@
 package com.burpia.model;
+import com.burpia.ui.EstilosUI;
 import java.awt.Color;
 import javax.swing.*;
 
@@ -141,17 +142,17 @@ public class Tarea {
         if (estado == null) return Color.BLACK;
         switch (estado) {
             case ESTADO_EN_COLA:
-                return Color.GRAY;
+                return EstilosUI.COLOR_TASK_EN_COLA;
             case ESTADO_ANALIZANDO:
-                return new Color(0, 120, 215);
+                return EstilosUI.COLOR_TASK_ANALIZANDO;
             case ESTADO_COMPLETADO:
-                return new Color(0, 153, 0);
+                return EstilosUI.COLOR_TASK_COMPLETADO;
             case ESTADO_ERROR:
-                return new Color(204, 0, 0);
+                return EstilosUI.COLOR_TASK_ERROR;
             case ESTADO_CANCELADO:
-                return new Color(153, 76, 0);
+                return EstilosUI.COLOR_TASK_CANCELADO;
             case ESTADO_PAUSADO:
-                return new Color(255, 153, 0);
+                return EstilosUI.COLOR_TASK_PAUSADO;
             default:
                 return Color.BLACK;
         }

@@ -331,8 +331,8 @@ public final class I18nUI {
         }
 
         public static String CSV_HEADER() {
-            return tr("Hora,URL,Hallazgo,Severidad,Confianza",
-                "Time,URL,Finding,Severity,Confidence");
+            return tr("Hora,URL,Hallazgo,Descripcion,Severidad,Confianza",
+                "Time,URL,Finding,Description,Severity,Confidence");
         }
 
         public static String MSG_EXPORTACION_EXITOSA(int total, String archivo, int ignorados) {

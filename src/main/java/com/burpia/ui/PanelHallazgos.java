@@ -374,6 +374,7 @@ public class PanelHallazgos extends JPanel {
             hallazgo != null ? hallazgo.obtenerHoraDescubrimiento() : "",
             hallazgo != null ? hallazgo.obtenerUrl() : "",
             hallazgo != null ? hallazgo.obtenerTitulo() : "",
+            hallazgo != null ? hallazgo.obtenerHallazgo() : "",
             hallazgo != null ? hallazgo.obtenerSeveridad() : "",
             hallazgo != null ? hallazgo.obtenerConfianza() : ""
         };
