@@ -1,111 +1,116 @@
 # BurpIA
 
-BurpIA es una extension para Burp Suite que analiza trafico HTTP con LLMs para ayudarte a detectar hallazgos potenciales de seguridad en menos tiempo.
+BurpIA es una extensión para Burp Suite que analiza tráfico HTTP con LLMs para ayudarte a detectar hallazgos potenciales de seguridad en menos tiempo.
 
-Version actual: `1.0.0`
+**Versión actual:** `1.0.0`
+![BurpIA en Español](src/assets/ES.png)
 
 English version: [README.en.md](README.en.md)
 
-## Que obtienes con BurpIA
+---
 
-- Analisis pasivo con IA sobre evidencia HTTP real (`request` + `response`).
-- Analisis manual desde menu contextual: `Analizar solicitud con BurpIA`.
-- Priorizacion de hallazgos por severidad y confianza, enviados al Proyecto Directamente (si quiere).
-- Flujo rapido de triage: enviar a Repeater, Intruder y Scanner (Si tienes Burpsuite PRO) desde la tabla.
-- Control de carga con cola de tareas, deduplicacion y limite de concurrencia.
-- Exportacion de hallazgos a CSV y JSON.
-- Persistencia de ajustes de usuario entre reinicios del plugin.
-- Interfaz bilingue (espanol/ingles).
+## Qué obtienes con BurpIA
+
+- **Análisis Híbrido con IA:** Escaneo pasivo automático o manual (vía menú contextual) sobre evidencia HTTP real (`request` + `response`).
+- **Triage de Alta Velocidad:** Envío directo de hallazgos a Repeater, Intruder o Scanner desde la tabla centralizada de resultados.
+- **Gestión Inteligente de Hallazgos:** Priorización por severidad/confianza con opción de envío directo al proyecto de Burp Suite.
+- **Deduplicación y Control de Carga:** Sistema de colas con límite de concurrencia y hashes SHA-256 para evitar re-análisis redundantes.
+- **Exportación Flexible:** Soporte para volcado de datos en formatos CSV y JSON para informes externos.
+- **Experiencia de Usuario:** Interfaz bilingüe (Español/Inglés) con persistencia de ajustes entre reinicios del plugin.
+
+---
 
 ## Estado actual (v1.0.0)
 
-- Captura pasiva basada
-- Validacion estricta de `Target Scope` antes de analizar.
-- Filtro de recursos estaticos para reducir ruido.
-- Deduplicacion SHA-256 con cache LRU y expiracion TTL.
-- Gestion de tareas: pausar, reanudar, cancelar, reintentar y limpiar.
-- Guardado automatico opcional en `Site Map > Issues`.
-- Envio manual de uno o varios hallazgos a Issues cuando el autoguardado esta desactivado.
+- **Validación Scope-Aware:** Control estricto del `Target Scope` (Pro/Community) antes de cualquier análisis para evitar ruido fuera de objetivo.
+- **Gestión de Tareas:** Control total del flujo de trabajo (pausar, reanudar, cancelar, reintentar y limpiar tareas).
+- **Control de Hallazgos:** Guardado automático opcional en `Site Map > Issues` o envío manual selectivo.
+- **Deduplicación Inteligente:** Uso de hashes SHA-256 con caché LRU y expiración TTL para evitar procesar duplicados.
+- **Filtro Estático de Alto Rendimiento:** Eliminación de recursos irrelevantes mediante comparación de strings (sin el overhead de URI parsing).
+- **Resiliencia de Datos (Safe JSON Repair):** Recuperación de objetos JSON corruptos o truncados sin pérdida de datos legítimos.
+- **Optimización de Logs:** Sistema de escritura por buffer para prevenir la saturación de la API de Burp Suite.
+- **Captura Pasiva y Arquitectura:** Análisis no intrusivo con una estructura refactorizada y manejadores desacoplados para mayor mantenibilidad.
 
-## Inicio rapido (3 minutos)
+---
 
-1. Descarga el `BurpIA-1.0.0.jar`
-2. Carga la extension en Burp:
+## Inicio rápido (3 minutos)
 
-- `Extensions` -> `Add`
-- Selecciona `BurpIA-1.0.0.jar`
+1. Descarga el archivo `BurpIA-1.0.0.jar`.
+2. Carga la extensión en Burp Suite:
+    - Ve a la pestaña `Extensions` -> `Add`.
+    - Selecciona el archivo `BurpIA-1.0.0.jar`.
+3. Configura BurpIA en la pestaña del plugin:
+    - Selecciona tu **Proveedor LLM**.
+    - Ingresa la **API Key** (si aplica).
+    - Elige el **Modelo**.
+    - Configura el **Idioma de interfaz** y el **Prompt personalizado**.
+4. Usa el botón **Probar Conexión** para validar el endpoint y el modelo antes de capturar tráfico.
 
-3. Configura BurpIA en la pestana del plugin:
-
-- Proveedor LLM
-- API key (si aplica)
-- Modelo
-- Idioma de interfaz
-- Prompt personalizado
-
-4. Usa `Probar Conexion` para validar endpoint/modelo antes de capturar trafico.
+---
 
 ## Proveedores LLM soportados
 
-- Ollama
-- OpenAI
-- Claude
-- Gemini
-- Z.ai
-- Minimax
-- Custom (compatible con APIs estilo OpenAI)
+- **Ollama** (Ideal para modelos locales fine-tuneados).
+- **OpenAI** (GPT-4o, GPT-3.5, etc.).
+- **Claude** (Anthropic).
+- **Gemini** (Google).
+- **Z.ai** / **Minimax**.
+- **Custom** (Cualquier API compatible con el formato de OpenAI).
 
-Si vas a usar Z.ai o Minimax, aqui tienes opciones de compra con descuento:
+> [!TIP]
+> Si vas a usar Z.ai o Minimax, aquí tienes opciones de compra con descuento:
+> - [Z.ai con descuento](https://z.ai/subscribe?ic=FXSFEPRECU)
+> - [Minimax con descuento](https://platform.minimax.io/subscribe/coding-plan?code=GdktCUVh7E&source=link)
 
-- [Z.ai con descuento](https://z.ai/subscribe?ic=FXSFEPRECU)
-- [Minimax con descuento](https://platform.minimax.io/subscribe/coding-plan?code=GdktCUVh7E&source=link)
+---
 
-## Como funciona
+## Cómo funciona
 
 ### Flujo pasivo
-
-1. BurpIA recibe una respuesta HTTP.
-2. Verifica scope, filtros y deduplicacion.
-3. Encola la tarea de analisis.
-4. Construye el prompt con request/response.
-5. Parsea la respuesta del modelo y normaliza hallazgos.
-6. Actualiza tabla, estadisticas y (si aplica) guarda en Issues.
+1. BurpIA intercepta una respuesta HTTP.
+2. Verifica el **Scope**, aplica filtros y realiza la **deduplicación**.
+3. Encola la tarea en el gestor de análisis.
+4. Construye el prompt inyectando la `request` y `response`.
+5. Parsea la respuesta de la IA y normaliza los hallazgos.
+6. Actualiza la tabla de resultados, estadísticas y (si está activo) guarda en **Issues**.
 
 ### Flujo manual
+1. Seleccionas una solicitud cualquiera en cualquier pestaña de Burp.
+2. Clic derecho -> `Analizar solicitud con BurpIA`.
+3. BurpIA analiza la solicitud y su respuesta asociada.
+4. El hallazgo aparece en la tabla para ser editado, exportado o enviado a otras herramientas.
 
-1. Seleccionas una solicitud en Burp.
-2. Ejecutas `Analizar solicitud con BurpIA`.
-3. BurpIA analiza la request y, si existe, su response asociada.
-4. El hallazgo queda en tabla para exportar, editar o enviar a herramientas de Burp.
+---
 
 ## Prompt personalizado
 
-BurpIA soporta estos tokens:
+BurpIA soporta los siguientes tokens para personalizar el análisis:
 
-- `{REQUEST}`: inserta la solicitud HTTP normalizada.
-- `{RESPONSE}`: inserta la respuesta HTTP (si existe).
-- `{OUTPUT_LANGUAGE}`: idioma de salida esperado para `descripcion`.
+- `{REQUEST}`: Inserta la solicitud HTTP normalizada.
+- `{RESPONSE}`: Inserta la respuesta HTTP (si existe).
+- `{OUTPUT_LANGUAGE}`: Indica el idioma de salida esperado para la descripción del hallazgo.
 
-Si omites alguno de esos tokens, BurpIA agrega un bloque fallback automaticamente para mantener contexto minimo y forzar idioma de salida coherente con la configuracion del usuario.
+*Si omites estos tokens, BurpIA fallará al generar el prompt.*
+
+---
 
 ## Requisitos
 
-- Java 17+
-- Burp Suite Community o Professional
-- Conectividad al proveedor IA configurado (local o remoto)
+- **Java 17** o superior.
+- **Burp Suite** (Community o Professional).
+- Conectividad al proveedor de IA configurado (local o remoto).
 
-## Compatibilidad con ediciones de Burp
+---
 
-- BurpIA funciona en Community y Professional.
-- Algunas integraciones dependen de APIs disponibles en tu edicion (por ejemplo, Scanner).
+## Buenas prácticas
 
-## Buenas practicas
+- Activa **"Guardar automáticamente en Issues"** solo si deseas persistencia directa en el archivo de proyecto de Burp.
+- **Valida manualmente** cada hallazgo antes de reportarlo; la IA puede alucinar.
+- Si usas proveedores en la nube, revisa tu política de privacidad antes de enviar tráfico con datos sensibles.
 
-- Activa `Guardar automaticamente en Issues` si quieres persistencia directa en el proyecto de Burp.
-- Valida manualmente cada hallazgo antes de reportarlo.
-- Si usas proveedores remotos, revisa tu politica de datos antes de enviar trafico sensible.
+---
 
 ## Limitaciones
 
-- Puede generar falsos positivos o hallazgos incompletos; siempre requiere validacion humana.
-- Si un analisis manual no tiene response asociada, se analiza solo la request.
+- Puede generar falsos positivos; siempre requiere validación humana experta.
+- Si un análisis manual no tiene una respuesta asociada, el modelo analizará únicamente la solicitud (`request`).
