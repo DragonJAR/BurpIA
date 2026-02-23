@@ -3,7 +3,6 @@ package com.burpia.util;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 
-import javax.swing.*;
 import okhttp3.*;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -139,47 +138,6 @@ public class ProbadorConexionAI {
         }
 
         return mensaje.toString();
-    }
-
-    public void mostrarDialogoPrueba(JFrame padre) {
-        JDialog dialogoCarga = new JDialog(padre, I18nUI.tr("Probando Conexion", "Testing Connection"), true);
-        JLabel etiqueta = new JLabel(I18nUI.tr("Conectando a ", "Connecting to ") + config.obtenerProveedorAI() + "...", SwingConstants.CENTER);
-        dialogoCarga.add(etiqueta);
-        dialogoCarga.setSize(300, 100);
-        dialogoCarga.setLocationRelativeTo(padre);
-
-        SwingWorker<ResultadoPrueba, Void> worker = new SwingWorker<ResultadoPrueba, Void>() {
-            @Override
-            protected ResultadoPrueba doInBackground() throws Exception {
-                return probarConexion();
-            }
-
-            @Override
-            protected void done() {
-                dialogoCarga.dispose();
-                try {
-                    ResultadoPrueba resultado = get();
-                    int tipoMensaje = resultado.exito ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE;
-                    JOptionPane.showMessageDialog(
-                        padre,
-                        resultado.mensaje,
-                        resultado.exito ? I18nUI.tr("Conexion Exitosa", "Connection Successful")
-                            : I18nUI.tr("Error de Conexion", "Connection Error"),
-                        tipoMensaje
-                    );
-                } catch (Exception e) {
-                    JOptionPane.showMessageDialog(
-                        padre,
-                        I18nUI.tr("Error durante la prueba: ", "Error during test: ") + e.getMessage(),
-                        I18nUI.tr("Error", "Error"),
-                        JOptionPane.ERROR_MESSAGE
-                    );
-                }
-            }
-        };
-
-        worker.execute();
-        dialogoCarga.setVisible(true);
     }
 
     public static class ResultadoPrueba {

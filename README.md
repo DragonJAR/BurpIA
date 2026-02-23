@@ -8,18 +8,18 @@ English version: [README.en.md](README.en.md)
 
 ## Que obtienes con BurpIA
 
-- Analisis pasivo y manual sobre evidencia HTTP real (`request` + `response`).
-- Priorizacion de hallazgos por severidad y confianza.
-- Flujo rapido de triage: enviar a Repeater, Intruder y Scanner desde la tabla.
+- Analisis pasivo con IA sobre evidencia HTTP real (`request` + `response`).
+- Analisis manual desde menu contextual: `Analizar solicitud con BurpIA`.
+- Priorizacion de hallazgos por severidad y confianza, enviados al Proyecto Directamente (si quiere).
+- Flujo rapido de triage: enviar a Repeater, Intruder y Scanner (Si tienes Burpsuite PRO) desde la tabla.
 - Control de carga con cola de tareas, deduplicacion y limite de concurrencia.
 - Exportacion de hallazgos a CSV y JSON.
 - Persistencia de ajustes de usuario entre reinicios del plugin.
-- Interfaz bilingue (espanol/ingles), incluyendo tooltips y logs.
+- Interfaz bilingue (espanol/ingles).
 
 ## Estado actual (v1.0.0)
 
-- Captura pasiva basada en `HttpResponseReceived` (Montoya API).
-- Analisis manual desde menu contextual: `Analizar solicitud con BurpIA`.
+- Captura pasiva basada
 - Validacion estricta de `Target Scope` antes de analizar.
 - Filtro de recursos estaticos para reducir ruido.
 - Deduplicacion SHA-256 con cache LRU y expiracion TTL.

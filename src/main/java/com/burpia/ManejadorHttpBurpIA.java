@@ -11,6 +11,7 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
@@ -53,7 +54,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final PrintWriter stderr;
     private final ThreadPoolExecutor executorService;
     private final Object logLock;
+    private final boolean esBurpProfessional;
     private volatile boolean capturaActiva;
+    private volatile boolean avisoIssuesNoDisponiblesEmitido;
 
     private static final Set<String> EXTENSIONES_ESTATICAS;
 
@@ -100,12 +103,12 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                              PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
                              Estadisticas estadisticas, GestorTareas gestorTareas,
                              GestorConsolaGUI gestorConsola, ModeloTablaHallazgos modeloTablaHallazgos) {
+        ConfiguracionAPI configSegura = config != null ? config : new ConfiguracionAPI();
         this.api = api;
-        this.config = config;
+        this.config = configSegura;
         this.pestaniaPrincipal = pestaniaPrincipal;
         this.stdout = stdout;
         this.stderr = stderr;
-        this.limitador = limitador;
         this.deduplicador = new DeduplicadorSolicitudes();
         this.estadisticas = estadisticas;
         this.gestorTareas = gestorTareas;
@@ -113,9 +116,12 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.modeloTablaHallazgos = modeloTablaHallazgos;
         this.contextosReintento = new ConcurrentHashMap<>();
         this.ejecucionesActivas = new ConcurrentHashMap<>();
-        this.capturaActiva = config == null || config.escaneoPasivoHabilitado();
+        this.esBurpProfessional = ExtensionBurpIA.esBurpProfessional(api);
+        this.capturaActiva = configSegura.escaneoPasivoHabilitado();
+        this.avisoIssuesNoDisponiblesEmitido = false;
 
-        int maxThreads = config.obtenerMaximoConcurrente() > 0 ? config.obtenerMaximoConcurrente() : 10;
+        int maxThreads = configSegura.obtenerMaximoConcurrente() > 0 ? configSegura.obtenerMaximoConcurrente() : 10;
+        this.limitador = limitador != null ? limitador : new LimitadorTasa(maxThreads);
         int capacidadCola = Math.max(50, maxThreads * 20);
         this.executorService = new ThreadPoolExecutor(
             maxThreads,
@@ -134,9 +140,17 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         this.logLock = new Object();
 
-        registrar("ManejadorHttpBurpIA inicializado (maximoConcurrente=" + config.obtenerMaximoConcurrente() +
-            ", retraso=" + config.obtenerRetrasoSegundos() + "s, detallado=" + config.esDetallado() + ")");
-        registrar("NOTA: Solo se analizaran solicitudes DENTRO del SCOPE de Burp Suite");
+        registrar(I18nUI.trf(
+            "ManejadorHttpBurpIA inicializado (maximoConcurrente=%d, retraso=%ds, detallado=%s)",
+            "ManejadorHttpBurpIA initialized (maxConcurrent=%d, delay=%ds, verbose=%s)",
+            configSegura.obtenerMaximoConcurrente(),
+            configSegura.obtenerRetrasoSegundos(),
+            configSegura.esDetallado()
+        ));
+        registrar(I18nUI.tr(
+            "NOTA: Solo se analizaran solicitudes DENTRO del SCOPE de Burp Suite",
+            "NOTE: Only requests INSIDE Burp Suite scope will be analyzed"
+        ));
     }
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
@@ -146,6 +160,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void actualizarConfiguracion(ConfiguracionAPI nuevaConfig) {
+        if (nuevaConfig == null) {
+            registrarError("No se pudo actualizar configuracion: objeto de configuracion nulo");
+            return;
+        }
         int nuevoMaximoConcurrente = nuevaConfig.obtenerMaximoConcurrente() > 0
             ? nuevaConfig.obtenerMaximoConcurrente()
             : 10;
@@ -153,8 +171,12 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.limitador = new LimitadorTasa(nuevoMaximoConcurrente);
         actualizarPoolEjecucion(nuevoMaximoConcurrente);
 
-        registrar("Configuracion actualizada: nuevo maximoConcurrente=" + nuevoMaximoConcurrente +
-            ", nuevo retraso=" + nuevaConfig.obtenerRetrasoSegundos() + "s");
+        registrar(I18nUI.trf(
+            "Configuracion actualizada: nuevo maximoConcurrente=%d, nuevo retraso=%ds",
+            "Configuration updated: new maxConcurrent=%d, new delay=%ds",
+            nuevoMaximoConcurrente,
+            nuevaConfig.obtenerRetrasoSegundos()
+        ));
     }
 
     private void actualizarPoolEjecucion(int nuevoMaximoConcurrente) {
@@ -639,6 +661,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         if (hallazgo == null) {
             return;
         }
+        if (!esBurpProfessional) {
+            registrarIssuesNoDisponiblesPorEdicionUnaVez();
+            return;
+        }
         HttpRequestResponse evidenciaIssue = evidenciaHttp != null
             ? evidenciaHttp
             : hallazgo.obtenerEvidenciaHttp();
@@ -670,6 +696,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
             rastrear("Stack trace:", e);
         }
+    }
+
+    private void registrarIssuesNoDisponiblesPorEdicionUnaVez() {
+        if (avisoIssuesNoDisponiblesEmitido) {
+            return;
+        }
+        avisoIssuesNoDisponiblesEmitido = true;
+        registrar("Integracion con Issues deshabilitada: solo disponible en Burp Professional");
     }
 
     private Hallazgo adjuntarEvidenciaSiDisponible(Hallazgo hallazgo, HttpRequestResponse evidenciaHttp) {

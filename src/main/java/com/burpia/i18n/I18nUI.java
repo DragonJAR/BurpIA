@@ -283,6 +283,13 @@ public final class I18nUI {
             return tr("Guardar automaticamente en Issues", "Automatically save to Issues");
         }
 
+        public static String CHECK_GUARDAR_ISSUES_SOLO_PRO() {
+            return tr(
+                "Guardar automaticamente en Issues (solo Burp Professional)",
+                "Automatically save to Issues (Burp Professional only)"
+            );
+        }
+
         public static String MSG_SIN_HALLAZGOS_LIMPIAR() {
             return tr("No hay hallazgos para limpiar.", "There are no findings to clear.");
         }
@@ -352,6 +359,13 @@ public final class I18nUI {
 
         public static String MENU_ENVIAR_ISSUES() {
             return tr("📌 Enviar a Issues de Burp", "📌 Send to Burp Issues");
+        }
+
+        public static String MENU_ENVIAR_ISSUES_SOLO_PRO() {
+            return tr(
+                "📌 Enviar a Issues de Burp (solo Pro)",
+                "📌 Send to Burp Issues (Pro only)"
+            );
         }
 
         public static String MENU_IGNORAR() {
@@ -430,6 +444,13 @@ public final class I18nUI {
 
         public static String ERROR_GUARDAR_ISSUE() {
             return tr("No se pudo crear o guardar el Issue", "Could not create or save the Issue");
+        }
+
+        public static String MSG_ISSUES_SOLO_PRO() {
+            return tr(
+                "Esta accion solo esta disponible en Burp Suite Professional.",
+                "This action is only available in Burp Suite Professional."
+            );
         }
 
         public static String MSG_SIN_REQUEST() {
@@ -683,11 +704,13 @@ public final class I18nUI {
             return tr(
                 "• El token {REQUEST} se reemplaza automaticamente con la solicitud HTTP analizada.\n" +
                     "• El token {RESPONSE} se reemplaza automaticamente con la respuesta HTTP capturada.\n" +
-                    "• Incluye {REQUEST} y {RESPONSE} exactamente donde quieras insertar la evidencia.\n" +
+                    "• El token {OUTPUT_LANGUAGE} se reemplaza con el idioma configurado por el usuario.\n" +
+                    "• Incluye {REQUEST}, {RESPONSE} y {OUTPUT_LANGUAGE} exactamente donde quieras insertar la evidencia.\n" +
                     "• El prompt debe pedir respuesta JSON estricta con este formato:",
                 "• The {REQUEST} token is automatically replaced with the analyzed HTTP request.\n" +
                     "• The {RESPONSE} token is automatically replaced with the captured HTTP response.\n" +
-                    "• Include {REQUEST} and {RESPONSE} exactly where you want the evidence inserted.\n" +
+                    "• The {OUTPUT_LANGUAGE} token is replaced with the user-configured language.\n" +
+                    "• Include {REQUEST}, {RESPONSE}, and {OUTPUT_LANGUAGE} exactly where you want the evidence inserted.\n" +
                     "• The prompt must request strict JSON output in this format:"
             );
         }

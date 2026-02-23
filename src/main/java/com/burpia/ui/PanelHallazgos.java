@@ -49,6 +49,7 @@ public class PanelHallazgos extends JPanel {
     private JButton botonLimpiarTodo;
     private final MontoyaApi api;
     private final boolean esBurpProfessional;
+    private final boolean integracionIssuesDisponible;
     private JPanel panelFiltros;
     private JPanel panelGuardarProyecto;
     private JPanel panelTablaWrapper;
@@ -71,6 +72,7 @@ public class PanelHallazgos extends JPanel {
     public PanelHallazgos(MontoyaApi api) {
         this.api = api;
         this.esBurpProfessional = false;
+        this.integracionIssuesDisponible = false;
         this.modelo = new ModeloTablaHallazgos(1000);
         this.tabla = new JTable(modelo);
         this.ejecutorAcciones = crearEjecutorAcciones();
@@ -84,6 +86,7 @@ public class PanelHallazgos extends JPanel {
     public PanelHallazgos(MontoyaApi api, ModeloTablaHallazgos modeloCompartido, boolean esBurpProfessional) {
         this.api = api;
         this.esBurpProfessional = esBurpProfessional;
+        this.integracionIssuesDisponible = esBurpProfessional;
         this.modelo = modeloCompartido != null ? modeloCompartido : new ModeloTablaHallazgos(1000);
         this.tabla = new JTable(modelo);
         this.ejecutorAcciones = crearEjecutorAcciones();
@@ -161,16 +164,17 @@ public class PanelHallazgos extends JPanel {
             ),
             BorderFactory.createEmptyBorder(12, 16, 12, 16)
         ));
-        chkGuardarEnIssues = new JCheckBox(I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES());
+        chkGuardarEnIssues = new JCheckBox(obtenerEtiquetaGuardadoIssues());
         chkGuardarEnIssues.setSelected(true);
         chkGuardarEnIssues.setFont(EstilosUI.FUENTE_ESTANDAR);
-        chkGuardarEnIssues.setToolTipText(TooltipsUI.Hallazgos.GUARDAR_ISSUES());
+        chkGuardarEnIssues.setToolTipText(obtenerTooltipGuardadoIssues());
         chkGuardarEnIssues.addActionListener(e -> {
             if (actualizandoEstadoAutoIssues) {
                 return;
             }
             aplicarEstadoGuardadoAutomaticoIssues(chkGuardarEnIssues.isSelected(), true);
         });
+        actualizarEstadoControlesIssuesPorEdicion();
 
         panelGuardarProyecto.add(chkGuardarEnIssues);
 
@@ -459,10 +463,11 @@ public class PanelHallazgos extends JPanel {
         }
 
         menuItemIssues = crearMenuItemContextual(
-            I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(),
-            TooltipsUI.Hallazgos.MENU_ISSUES(),
+            obtenerEtiquetaMenuIssues(),
+            obtenerTooltipMenuIssues(),
             e -> enviarAIssues(tabla.getSelectedRows())
         );
+        menuItemIssues.setEnabled(integracionIssuesDisponible);
         menuContextual.add(menuItemIssues);
 
         menuContextual.addSeparator();
@@ -539,11 +544,11 @@ public class PanelHallazgos extends JPanel {
 
     private void abrirDialogoEdicion(int filaVista) {
         int filaModelo = tabla.convertRowIndexToModel(filaVista);
-        Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
-        if (hallazgo != null) {
+        Hallazgo hallazgoOriginal = modelo.obtenerHallazgo(filaModelo);
+        if (hallazgoOriginal != null) {
             Window windowAncestral = SwingUtilities.getWindowAncestor(this);
-            DialogoDetalleHallazgo dialogo = new DialogoDetalleHallazgo(windowAncestral, hallazgo, hallazgoEditado -> {
-                modelo.actualizarHallazgo(filaModelo, hallazgoEditado);
+            DialogoDetalleHallazgo dialogo = new DialogoDetalleHallazgo(windowAncestral, hallazgoOriginal, hallazgoEditado -> {
+                modelo.actualizarHallazgo(hallazgoOriginal, hallazgoEditado);
             });
             dialogo.setVisible(true);
         }
@@ -573,8 +578,43 @@ public class PanelHallazgos extends JPanel {
 
     private void actualizarVisibilidadMenuIssues() {
         if (menuItemIssues != null) {
-            menuItemIssues.setVisible(!guardadoAutomaticoIssuesActivo);
+            menuItemIssues.setVisible(!integracionIssuesDisponible || !guardadoAutomaticoIssuesActivo);
+            menuItemIssues.setEnabled(integracionIssuesDisponible);
         }
+    }
+
+    private void actualizarEstadoControlesIssuesPorEdicion() {
+        if (chkGuardarEnIssues != null) {
+            chkGuardarEnIssues.setEnabled(integracionIssuesDisponible);
+        }
+        if (!integracionIssuesDisponible) {
+            aplicarEstadoGuardadoAutomaticoIssues(false, false);
+        }
+        actualizarVisibilidadMenuIssues();
+    }
+
+    private String obtenerEtiquetaGuardadoIssues() {
+        return integracionIssuesDisponible
+            ? I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES()
+            : I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES_SOLO_PRO();
+    }
+
+    private String obtenerTooltipGuardadoIssues() {
+        return integracionIssuesDisponible
+            ? TooltipsUI.Hallazgos.GUARDAR_ISSUES()
+            : TooltipsUI.Hallazgos.GUARDAR_ISSUES_SOLO_PRO();
+    }
+
+    private String obtenerEtiquetaMenuIssues() {
+        return integracionIssuesDisponible
+            ? I18nUI.Hallazgos.MENU_ENVIAR_ISSUES()
+            : I18nUI.Hallazgos.MENU_ENVIAR_ISSUES_SOLO_PRO();
+    }
+
+    private String obtenerTooltipMenuIssues() {
+        return integracionIssuesDisponible
+            ? TooltipsUI.Hallazgos.MENU_ISSUES()
+            : TooltipsUI.Hallazgos.MENU_ISSUES_SOLO_PRO();
     }
 
     private void enviarARepeater(int[] filas) {
@@ -645,6 +685,15 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void enviarAIssues(int[] filas) {
+        if (!integracionIssuesDisponible) {
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
+                PanelHallazgos.this,
+                I18nUI.Hallazgos.MSG_ISSUES_SOLO_PRO(),
+                I18nUI.Hallazgos.TITULO_INFORMACION(),
+                JOptionPane.INFORMATION_MESSAGE
+            ));
+            return;
+        }
         ejecutarAccionBurp(
             filas,
             "BurpIA-Issues",
@@ -894,7 +943,7 @@ public class PanelHallazgos extends JPanel {
         botonExportarCSV.setText(I18nUI.Hallazgos.BOTON_EXPORTAR_CSV());
         botonExportarJSON.setText(I18nUI.Hallazgos.BOTON_EXPORTAR_JSON());
         botonLimpiarTodo.setText(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
-        chkGuardarEnIssues.setText(I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES());
+        chkGuardarEnIssues.setText(obtenerEtiquetaGuardadoIssues());
         actualizarPrimeraOpcionSeveridad();
 
         etiquetaBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
@@ -904,7 +953,7 @@ public class PanelHallazgos extends JPanel {
         botonExportarCSV.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_CSV());
         botonExportarJSON.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_JSON());
         botonLimpiarTodo.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_TODO());
-        chkGuardarEnIssues.setToolTipText(TooltipsUI.Hallazgos.GUARDAR_ISSUES());
+        chkGuardarEnIssues.setToolTipText(obtenerTooltipGuardadoIssues());
         tabla.setToolTipText(TooltipsUI.Hallazgos.TABLA());
         if (menuItemRepeater != null) {
             menuItemRepeater.setText(I18nUI.Hallazgos.MENU_ENVIAR_REPEATER());
@@ -919,8 +968,8 @@ public class PanelHallazgos extends JPanel {
             menuItemScanner.setToolTipText(TooltipsUI.Hallazgos.MENU_SCANNER());
         }
         if (menuItemIssues != null) {
-            menuItemIssues.setText(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES());
-            menuItemIssues.setToolTipText(TooltipsUI.Hallazgos.MENU_ISSUES());
+            menuItemIssues.setText(obtenerEtiquetaMenuIssues());
+            menuItemIssues.setToolTipText(obtenerTooltipMenuIssues());
         }
         if (menuItemIgnorar != null) {
             menuItemIgnorar.setText(I18nUI.Hallazgos.MENU_IGNORAR());
@@ -935,6 +984,7 @@ public class PanelHallazgos extends JPanel {
         actualizarTituloPanel(panelFiltros, I18nUI.Hallazgos.TITULO_FILTROS());
         actualizarTituloPanel(panelGuardarProyecto, I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO());
         actualizarTituloPanel(panelTablaWrapper, I18nUI.Hallazgos.TITULO_TABLA());
+        actualizarEstadoControlesIssuesPorEdicion();
 
         modelo.refrescarColumnasIdioma();
         SwingUtilities.invokeLater(() -> {
@@ -1010,18 +1060,19 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void aplicarEstadoGuardadoAutomaticoIssues(boolean activo, boolean notificarCambio) {
-        guardadoAutomaticoIssuesActivo = activo;
-        if (chkGuardarEnIssues != null && chkGuardarEnIssues.isSelected() != activo) {
+        boolean activoNormalizado = integracionIssuesDisponible && activo;
+        guardadoAutomaticoIssuesActivo = activoNormalizado;
+        if (chkGuardarEnIssues != null && chkGuardarEnIssues.isSelected() != activoNormalizado) {
             actualizandoEstadoAutoIssues = true;
             try {
-                chkGuardarEnIssues.setSelected(activo);
+                chkGuardarEnIssues.setSelected(activoNormalizado);
             } finally {
                 actualizandoEstadoAutoIssues = false;
             }
         }
         actualizarVisibilidadMenuIssues();
         if (notificarCambio && manejadorCambioGuardadoIssues != null) {
-            manejadorCambioGuardadoIssues.accept(activo);
+            manejadorCambioGuardadoIssues.accept(activoNormalizado);
         }
     }
 

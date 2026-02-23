@@ -263,6 +263,21 @@ public class GestorConsolaGUI {
         }
     }
 
+    private void decrementarContador(TipoLog tipo) {
+        switch (tipo) {
+            case VERBOSE:
+                contadorVerbose.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
+                break;
+            case ERROR:
+                contadorError.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
+                break;
+            case INFO:
+            default:
+                contadorInfo.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
+                break;
+        }
+    }
+
     private void agregarPendiente(EntradaLog entrada) {
         colaPendiente.add(entrada);
         int total = logsPendientes.incrementAndGet();
@@ -279,6 +294,7 @@ public class GestorConsolaGUI {
                 return;
             }
             logsPendientes.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
+            decrementarContador(eliminado.tipo);
         }
     }
 

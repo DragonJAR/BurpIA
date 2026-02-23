@@ -114,6 +114,18 @@ public class Hallazgo {
         );
     }
 
+    public Hallazgo editar(String nuevaUrl, String nuevaDescripcion, String nuevaSeveridad, String nuevaConfianza) {
+        return new Hallazgo(
+            horaDescubrimiento,
+            nuevaUrl,
+            nuevaDescripcion,
+            nuevaSeveridad,
+            nuevaConfianza,
+            solicitudHttp,
+            evidenciaHttp
+        );
+    }
+
     public Object[] aFilaTabla() {
         return new Object[]{
             horaDescubrimiento,

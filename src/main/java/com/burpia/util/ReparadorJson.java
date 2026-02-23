@@ -1,5 +1,8 @@
 package com.burpia.util;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -61,40 +64,9 @@ public class ReparadorJson {
         }
 
         try {
-            int longitud = json.length();
-            int profundidad = 0;
-            boolean enComillas = false;
-            boolean escapado = false;
-
-            for (int i = 0; i < longitud; i++) {
-                char c = json.charAt(i);
-
-                if (escapado) {
-                    escapado = false;
-                    continue;
-                }
-
-                if (c == '\\') {
-                    escapado = true;
-                    continue;
-                }
-
-                if (c == '"') {
-                    enComillas = !enComillas;
-                    continue;
-                }
-
-                if (!enComillas) {
-                    if (c == '{' || c == '[') {
-                        profundidad++;
-                    } else if (c == '}' || c == ']') {
-                        profundidad--;
-                    }
-                }
-            }
-
-            return profundidad == 0 && !enComillas;
-        } catch (Exception e) {
+            JsonElement element = JsonParser.parseString(json);
+            return element != null && (element.isJsonObject() || element.isJsonArray());
+        } catch (Exception ignored) {
             return false;
         }
     }
@@ -247,29 +219,4 @@ public class ReparadorJson {
         return json.toString();
     }
 
-    public static List<String> extraerMultiplesObjetosJson(String texto) {
-        List<String> objetos = new ArrayList<>();
-        String textoRestante = texto;
-
-        while (true) {
-            String objeto = extraerPrimerObjetoJson(textoRestante);
-            if (objeto == null || objeto.isEmpty()) {
-                break;
-            }
-
-            if (esJsonValido(objeto)) {
-                objetos.add(objeto);
-            }
-
-            int longitudObjeto = objeto.length();
-            int indice = textoRestante.indexOf(objeto);
-            if (indice + longitudObjeto < textoRestante.length()) {
-                textoRestante = textoRestante.substring(indice + longitudObjeto);
-            } else {
-                break;
-            }
-        }
-
-        return objetos;
-    }
 }

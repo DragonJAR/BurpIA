@@ -200,37 +200,10 @@ public class GestorTareas {
         modeloTabla.actualizarTarea(tarea);
     }
 
-    public Collection<Tarea> obtenerTareas() {
-        candado.lock();
-        try {
-            return new ArrayList<>(tareas.values());
-        } finally {
-            candado.unlock();
-        }
-    }
-
     public Tarea obtenerTarea(String id) {
         candado.lock();
         try {
             return tareas.get(id);
-        } finally {
-            candado.unlock();
-        }
-    }
-
-    public int obtenerNumeroTareasActivas() {
-        candado.lock();
-        try {
-            int count = 0;
-            for (Tarea tarea : tareas.values()) {
-                String estado = tarea.obtenerEstado();
-                if (estado.equals(Tarea.ESTADO_EN_COLA) ||
-                    estado.equals(Tarea.ESTADO_ANALIZANDO) ||
-                    estado.equals(Tarea.ESTADO_PAUSADO)) {
-                    count++;
-                }
-            }
-            return count;
         } finally {
             candado.unlock();
         }

@@ -54,10 +54,6 @@ public class PestaniaPrincipal extends JPanel {
         panelConsola.obtenerGestorConsola().registrarInfo(mensaje);
     }
 
-    public void limpiarResultados() {
-        panelHallazgos.limpiar();
-    }
-
     public void actualizarEstadisticas() {
         panelEstadisticas.actualizar();
     }
@@ -68,18 +64,6 @@ public class PestaniaPrincipal extends JPanel {
 
     public PanelHallazgos obtenerPanelHallazgos() {
         return panelHallazgos;
-    }
-
-    public PanelTareas obtenerPanelTareas() {
-        return panelTareas;
-    }
-
-    public PanelConsola obtenerPanelConsola() {
-        return panelConsola;
-    }
-
-    public PanelEstadisticas obtenerPanelEstadisticas() {
-        return panelEstadisticas;
     }
 
     public void establecerManejadorConfiguracion(Runnable manejador) {

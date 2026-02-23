@@ -27,10 +27,6 @@ public class ResultadoAnalisisMultiple {
         return url;
     }
 
-    public String obtenerMarcaTiempo() {
-        return marcaTiempo;
-    }
-
     public List<Hallazgo> obtenerHallazgos() {
         return Collections.unmodifiableList(hallazgos);
     }

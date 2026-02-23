@@ -48,7 +48,7 @@ public class ExtensionBurpIA implements BurpExtension {
     @Override
     public void initialize(MontoyaApi api) {
         this.api = api;
-        this.esProfessional = detectarBurpProfessional(api);
+        this.esProfessional = esBurpProfessional(api);
 
         api.extension().setName("BurpIA");
         api.extension().registerUnloadingHandler(() -> {
@@ -291,14 +291,21 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
 
-        pestaniaPrincipal.establecerGuardadoAutomaticoIssuesActivo(config.autoGuardadoIssuesHabilitado());
+        boolean autoGuardadoIssuesPermitido = esProfessional && config.autoGuardadoIssuesHabilitado();
+        if (config.autoGuardadoIssuesHabilitado() != autoGuardadoIssuesPermitido) {
+            config.establecerAutoGuardadoIssuesHabilitado(autoGuardadoIssuesPermitido);
+            guardarConfiguracionSilenciosa("auto-issues-edicion");
+        }
+
+        pestaniaPrincipal.establecerGuardadoAutomaticoIssuesActivo(autoGuardadoIssuesPermitido);
         pestaniaPrincipal.establecerAutoScrollConsolaActivo(config.autoScrollConsolaHabilitado());
 
         pestaniaPrincipal.establecerManejadorAutoGuardadoIssues(activo -> {
-            if (config.autoGuardadoIssuesHabilitado() == activo) {
+            boolean autoGuardadoNormalizado = esProfessional && activo;
+            if (config.autoGuardadoIssuesHabilitado() == autoGuardadoNormalizado) {
                 return;
             }
-            config.establecerAutoGuardadoIssuesHabilitado(activo);
+            config.establecerAutoGuardadoIssuesHabilitado(autoGuardadoNormalizado);
             guardarConfiguracionSilenciosa("auto-issues");
         });
 
@@ -407,7 +414,7 @@ public class ExtensionBurpIA implements BurpExtension {
             MontoyaApi api,
             Hallazgo hallazgo,
             HttpRequestResponse solicitudRespuestaEvidencia) {
-        if (api == null || api.siteMap() == null) {
+        if (!esBurpProfessional(api) || api == null || api.siteMap() == null) {
             return false;
         }
         burp.api.montoya.scanner.audit.issues.AuditIssue issue =
@@ -450,7 +457,10 @@ public class ExtensionBurpIA implements BurpExtension {
         }
     }
 
-    private boolean detectarBurpProfessional(MontoyaApi api) {
+    public static boolean esBurpProfessional(MontoyaApi api) {
+        if (api == null) {
+            return false;
+        }
         try {
             if (api.burpSuite() != null && api.burpSuite().version() != null) {
                 BurpSuiteEdition edicion = api.burpSuite().version().edition();
