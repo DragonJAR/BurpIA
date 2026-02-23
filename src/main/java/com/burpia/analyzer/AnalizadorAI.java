@@ -1,5 +1,4 @@
 package com.burpia.analyzer;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -15,9 +14,7 @@ import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.ParserRespuestasAI;
 import com.burpia.util.ReparadorJson;
-
 import okhttp3.*;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -31,6 +28,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+
+
+
 
 public class AnalizadorAI implements Runnable {
     private static final String ORIGEN_LOG = "AnalizadorAI";
@@ -56,6 +57,10 @@ public class AnalizadorAI implements Runnable {
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
     private static final Map<Integer, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = new ConcurrentHashMap<>();
+    private static final Pattern PATRON_CAMPO_TITULO_NO_ESTRICTO = Pattern.compile(
+        "\"titulo\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        Pattern.DOTALL
+    );
     private static final Pattern PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO = Pattern.compile(
         "\"descripcion\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
         Pattern.DOTALL
@@ -180,6 +185,13 @@ public class AnalizadorAI implements Runnable {
             Thread.currentThread().interrupt();
             long duracion = System.currentTimeMillis() - tiempoInicio;
             String causa = e.getMessage() != null ? e.getMessage() : "interrupción";
+
+            if (esPausada()) {
+                registrar("[" + nombreHilo + "] Analisis pausado y liberando hilo (" + duracion + "ms)");
+
+                return;
+            }
+
             if (esCancelada()) {
                 registrar("[" + nombreHilo + "] Analisis cancelado por usuario (" + duracion + "ms)");
                 callback.alCanceladoAnalisis();
@@ -189,11 +201,8 @@ public class AnalizadorAI implements Runnable {
             }
         } catch (Exception e) {
             long duracion = System.currentTimeMillis() - tiempoInicio;
-            String falloMsg = e.getMessage();
-            if (e instanceof java.net.SocketTimeoutException || 
-               (e.getCause() != null && e.getCause() instanceof java.net.SocketTimeoutException)) {
-                falloMsg = "Tiempo de espera agotado, intenta aumentarlo en los ajustes";
-            }
+            String falloMsg = PoliticaReintentos.obtenerMensajeErrorAmigable(e);
+
             registrarError("[" + nombreHilo + "] Analisis fallido despues de " + duracion + "ms: " + falloMsg);
             String cuerpoSolicitud = solicitud.obtenerCuerpo();
             int longitudCuerpo = cuerpoSolicitud != null ? cuerpoSolicitud.length() : 0;
@@ -414,11 +423,7 @@ public class AnalizadorAI implements Runnable {
     }
 
     private void registrarFalloIntento(int intento, IOException error) {
-        String falloMsg = error.getMessage();
-        if (error instanceof java.net.SocketTimeoutException || 
-           (error.getCause() != null && error.getCause() instanceof java.net.SocketTimeoutException)) {
-            falloMsg = "Tiempo de espera agotado, intenta aumentarlo en los ajustes";
-        }
+        String falloMsg = PoliticaReintentos.obtenerMensajeErrorAmigable(error);
         registrar("Intento #" + intento + " falló: " +
             error.getClass().getSimpleName() + " - " + falloMsg);
         if (error instanceof ApiHttpException) {
@@ -546,6 +551,7 @@ public class AnalizadorAI implements Runnable {
                             continue;
                         }
                         JsonObject obj = elemento.getAsJsonObject();
+                        String titulo = obtenerCampoTexto(obj, "titulo", "Sin título");
                         String descripcion = obtenerCampoTexto(obj, "descripcion", "Sin descripción");
                         String severidad = Hallazgo.normalizarSeveridad(
                             obtenerCampoTexto(obj, "severidad", Hallazgo.SEVERIDAD_INFO)
@@ -554,10 +560,10 @@ public class AnalizadorAI implements Runnable {
                             obtenerCampoTexto(obj, "confianza", Hallazgo.CONFIANZA_BAJA)
                         );
 
-                        Hallazgo hallazgo = new Hallazgo(solicitud.obtenerUrl(), descripcion, severidad, confianza, solicitud.obtenerSolicitudHttp());
+                        Hallazgo hallazgo = new Hallazgo(solicitud.obtenerUrl(), titulo, descripcion, severidad, confianza, solicitud.obtenerSolicitudHttp());
                         hallazgos.add(hallazgo);
 
-                        rastrear("Hallazgo agregado: " + descripcion + " (" + severidad + ", " + confianza + ")");
+                        rastrear("Hallazgo agregado: " + titulo + " (" + severidad + ", " + confianza + ")");
                     }
                 } else {
                     rastrear("JSON no contiene campo 'hallazgos', intentando parsing de texto plano");
@@ -611,6 +617,7 @@ public class AnalizadorAI implements Runnable {
             List<Hallazgo> hallazgosError = new ArrayList<>();
             hallazgosError.add(new Hallazgo(
                 solicitud.obtenerUrl(),
+                "Error de análisis",
                 "Error al parsear respuesta: " + e.getMessage(),
                 Hallazgo.SEVERIDAD_INFO,
                 Hallazgo.CONFIANZA_BAJA,
@@ -638,6 +645,14 @@ public class AnalizadorAI implements Runnable {
             if (bloqueHallazgo.isEmpty()) {
                 continue;
             }
+            String titulo = normalizarCampoNoEstricto(extraerCampoNoEstricto(
+                PATRON_CAMPO_TITULO_NO_ESTRICTO,
+                bloqueHallazgo
+            ));
+            if (titulo.isEmpty()) {
+                titulo = "Sin título";
+            }
+
             String descripcion = normalizarCampoNoEstricto(extraerCampoNoEstricto(
                 PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO,
                 bloqueHallazgo
@@ -665,6 +680,7 @@ public class AnalizadorAI implements Runnable {
 
             hallazgos.add(new Hallazgo(
                 solicitud.obtenerUrl(),
+                titulo,
                 descripcionFinal,
                 severidad,
                 confianza,
@@ -775,15 +791,26 @@ public class AnalizadorAI implements Runnable {
             for (String linea : lineas) {
                 linea = linea.trim();
 
-                if (linea.toLowerCase().contains("severidad:") ||
+                if (linea.toLowerCase().contains("título:") ||
+                    linea.toLowerCase().contains("title:")) {
+
+                    if (descripcion.length() > 0) {
+                        String t = descripcion.substring(0, Math.min(30, descripcion.length())) + "...";
+                        hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), t, descripcion.toString().trim(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
+                        descripcion = new StringBuilder();
+                    }
+
+                    descripcion.append(linea.replaceAll("(?i)(título:|title:)", "").trim()).append(" - ");
+                } else if (linea.toLowerCase().contains("severidad:") ||
                     linea.toLowerCase().contains("severity:")) {
                     String sev = linea.replaceAll("(?i)(severidad:|severity:)", "").trim();
                     severidad = Hallazgo.normalizarSeveridad(sev);
                 } else if (linea.toLowerCase().contains("vulnerabilidad") ||
                            linea.toLowerCase().contains("descripcion:") ||
                            linea.toLowerCase().contains("description:")) {
-                    if (descripcion.length() > 0) {
-                        hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), descripcion.toString(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
+                    if (descripcion.length() > 0 && !descripcion.toString().contains(" - ")) {
+                        String t = descripcion.substring(0, Math.min(30, descripcion.length())) + "...";
+                        hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), t, descripcion.toString().trim(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
                         descripcion = new StringBuilder();
                     }
                     descripcion.append(linea.replaceAll("(?i)(vulnerabilidad|descripcion:|description:)", "").trim());
@@ -793,14 +820,25 @@ public class AnalizadorAI implements Runnable {
             }
 
             if (descripcion.length() > 0) {
-                hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), descripcion.toString().trim(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
+                String descStr = descripcion.toString().trim();
+                String t = descStr;
+                if (t.contains(" - ")) {
+                    String[] partes = t.split(" - ", 2);
+                    t = partes[0];
+                    descStr = partes[1];
+                } else {
+                    t = descStr.substring(0, Math.min(30, descStr.length())) + "...";
+                }
+                hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), t, descStr, severidad, confianza, solicitud.obtenerSolicitudHttp()));
             }
 
             if (hallazgos.isEmpty() && contenido.length() > 0) {
                 String sev = extraerSeveridad(contenido);
+                String t = contenido.substring(0, Math.min(30, contenido.length())) + "...";
                 hallazgos.add(new Hallazgo(
                     solicitud.obtenerUrl(),
-                    contenido.substring(0, Math.min(200, contenido.length())),
+                    "Hallazgo Plano",
+                    contenido.trim(),
                     sev,
                     Hallazgo.CONFIANZA_BAJA,
                     solicitud.obtenerSolicitudHttp()

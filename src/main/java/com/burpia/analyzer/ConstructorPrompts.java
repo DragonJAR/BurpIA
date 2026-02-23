@@ -1,7 +1,8 @@
 package com.burpia.analyzer;
-
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.SolicitudAnalisis;
+
+
 
 public class ConstructorPrompts {
     private static final String TOKEN_REQUEST = "{REQUEST}";

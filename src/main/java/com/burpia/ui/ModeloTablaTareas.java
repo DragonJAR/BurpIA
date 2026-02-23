@@ -1,13 +1,14 @@
 package com.burpia.ui;
-
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
+
+
+
 
 public class ModeloTablaTareas extends DefaultTableModel {
     private static final int TOTAL_COLUMNAS = 4;

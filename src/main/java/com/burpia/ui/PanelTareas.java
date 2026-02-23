@@ -1,9 +1,7 @@
 package com.burpia.ui;
-
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
 import com.burpia.util.GestorTareas;
-
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
@@ -16,6 +14,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+
+
+
 
 public class PanelTareas extends JPanel {
     private final ModeloTablaTareas modelo;

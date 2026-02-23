@@ -1,6 +1,7 @@
 package com.burpia.model;
-
 import burp.api.montoya.http.message.requests.HttpRequest;
+
+
 
 public class SolicitudAnalisis {
     private final String url;

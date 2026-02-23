@@ -1,10 +1,11 @@
 package com.burpia.model;
-
 import burp.api.montoya.http.message.requests.HttpRequest;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+
+
 
 public class ResultadoAnalisisMultiple {
     private final String url;

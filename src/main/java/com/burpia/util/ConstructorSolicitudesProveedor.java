@@ -1,5 +1,4 @@
 package com.burpia.util;
-
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ProveedorAI;
 import com.google.gson.JsonArray;
@@ -12,7 +11,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -22,6 +20,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+
+
 
 public final class ConstructorSolicitudesProveedor {
 

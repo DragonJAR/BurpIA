@@ -1,5 +1,4 @@
 package com.burpia.util;
-
 import com.burpia.config.ProveedorAI;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -7,6 +6,8 @@ import com.google.gson.JsonParser;
 import com.google.gson.JsonArray;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+
 
 public class ParserRespuestasAI {
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =

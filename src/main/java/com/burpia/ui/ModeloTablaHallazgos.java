@@ -1,9 +1,7 @@
 package com.burpia.ui;
-
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
@@ -11,6 +9,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+
+
+
 
 public class ModeloTablaHallazgos extends DefaultTableModel {
     private static final int TOTAL_COLUMNAS = 5;

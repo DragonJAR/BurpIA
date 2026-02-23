@@ -1,5 +1,6 @@
 package com.burpia.i18n;
 
+
 public final class I18nUI {
     private static volatile IdiomaUI idiomaActual = IdiomaUI.porDefecto();
 
@@ -78,7 +79,7 @@ public final class I18nUI {
     public static final class Tareas {
         private Tareas() {
         }
-        
+
         public static String TRADUCIR_ESTADO(String estadoOriginal) {
             if (estadoOriginal == null) return "";
             switch (estadoOriginal) {
@@ -289,7 +290,7 @@ public final class I18nUI {
         }
 
         public static String BOTON_LIMPIAR_TODO() {
-            return tr("🗑️ Limpiar Todo", "🗑️ Erase All");
+            return tr("🗑️ Eliminar Todo", "🗑️ Erase All");
         }
 
         public static String CHECK_GUARDAR_ISSUES() {
@@ -581,6 +582,10 @@ public final class I18nUI {
             return tr("URL:", "URL:");
         }
 
+        public static String LABEL_TITULO() {
+            return tr("Título:", "Title:");
+        }
+
         public static String LABEL_SEVERIDAD() {
             return tr("Severidad:", "Severity:");
         }
@@ -722,7 +727,7 @@ public final class I18nUI {
                 "• El token {REQUEST} se reemplaza automaticamente con la solicitud HTTP analizada.\n" +
                     "• El token {RESPONSE} se reemplaza automaticamente con la respuesta HTTP capturada.\n" +
                     "• El token {OUTPUT_LANGUAGE} se reemplaza con el idioma configurado por el usuario.\n" +
-                    "• Incluye {REQUEST}, {RESPONSE} y {OUTPUT_LANGUAGE} exactamente donde quieras insertar la evidencia.\n" +
+                    "• Incluye {REQUEST}, {RESPONSE} y {OUTPUT_LANGUAGE} donde quieras insertar la evidencia.\n" +
                     "• El prompt debe pedir respuesta JSON estricta con este formato:",
                 "• The {REQUEST} token is automatically replaced with the analyzed HTTP request.\n" +
                     "• The {RESPONSE} token is automatically replaced with the captured HTTP response.\n" +

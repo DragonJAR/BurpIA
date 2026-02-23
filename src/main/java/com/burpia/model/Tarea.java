@@ -1,7 +1,8 @@
 package com.burpia.model;
-
 import java.awt.Color;
 import javax.swing.*;
+
+
 
 public class Tarea {
     public static final String ESTADO_EN_COLA = "En Cola";
@@ -31,7 +32,7 @@ public class Tarea {
         this.mensajeInfo = "";
         this.tiempoAcumulado = 0;
         this.tiempoUltimoInicioAnalisis = 0;
-        
+
         if (ESTADO_ANALIZANDO.equals(this.estado)) {
             this.tiempoUltimoInicioAnalisis = System.currentTimeMillis();
         }
@@ -59,14 +60,14 @@ public class Tarea {
         synchronized (candado) {
             String estadoAnterior = this.estado;
             this.estado = estadoNuevo != null ? estadoNuevo : ESTADO_ERROR;
-            
+
             if (ESTADO_ANALIZANDO.equals(estadoAnterior) && !ESTADO_ANALIZANDO.equals(this.estado)) {
                 if (tiempoUltimoInicioAnalisis > 0) {
                     tiempoAcumulado += (System.currentTimeMillis() - tiempoUltimoInicioAnalisis);
                     tiempoUltimoInicioAnalisis = 0;
                 }
             }
-            
+
             if (!ESTADO_ANALIZANDO.equals(estadoAnterior) && ESTADO_ANALIZANDO.equals(this.estado)) {
                 tiempoUltimoInicioAnalisis = System.currentTimeMillis();
             }

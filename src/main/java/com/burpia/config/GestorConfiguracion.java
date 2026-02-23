@@ -1,11 +1,9 @@
 package com.burpia.config;
-
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
-
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -15,6 +13,9 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+
+
 
 public class GestorConfiguracion {
     private static final String NOMBRE_ARCHIVO = ".burpia.json";

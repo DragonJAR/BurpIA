@@ -1,8 +1,9 @@
 package com.burpia.i18n;
-
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+
 
 public final class I18nLogs {
     private static final String[][] REEMPLAZOS_INGLES = new String[][]{

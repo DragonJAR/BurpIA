@@ -1,11 +1,12 @@
 package com.burpia.ui;
-
 import javax.swing.*;
 import javax.swing.table.TableCellRenderer;
 import java.awt.*;
 import java.awt.font.TextAttribute;
 import java.util.HashMap;
 import java.util.Map;
+
+
 
 public class RenderizadorHallazgoBorrado implements TableCellRenderer {
     private final TableCellRenderer rendererOriginal;
@@ -41,10 +42,10 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
                 if (!isSelected) {
                     Color tableBg = table.getBackground();
                     boolean isDarkTheme = EstilosUI.esTemaOscuro(tableBg);
-                    
+
                     if (isDarkTheme) {
-                        etiqueta.setBackground(new Color(Math.max(0, tableBg.getRed() - 15), 
-                                                         Math.max(0, tableBg.getGreen() - 15), 
+                        etiqueta.setBackground(new Color(Math.max(0, tableBg.getRed() - 15),
+                                                         Math.max(0, tableBg.getGreen() - 15),
                                                          Math.max(0, tableBg.getBlue() - 15)));
                         etiqueta.setForeground(new Color(130, 130, 130));
                     } else {
