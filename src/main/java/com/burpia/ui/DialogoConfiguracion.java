@@ -18,6 +18,9 @@ import java.util.List;
 import java.util.Set;
 
 public class DialogoConfiguracion extends JDialog {
+    private static final int ANCHO_DIALOGO = 800;
+    private static final int ALTO_DIALOGO = 720;
+
     private final ConfiguracionAPI config;
     private final GestorConfiguracion gestorConfig;
     private final Runnable alGuardar;
@@ -55,8 +58,8 @@ public class DialogoConfiguracion extends JDialog {
 
     private void inicializarComponentes() {
         setLayout(new BorderLayout(10, 10));
-        setSize(800, 650);
-        setLocationRelativeTo(getParent());
+        setMinimumSize(new Dimension(ANCHO_DIALOGO, ALTO_DIALOGO));
+        setPreferredSize(new Dimension(ANCHO_DIALOGO, ALTO_DIALOGO));
 
         JTabbedPane tabbedPane = new JTabbedPane();
 
@@ -79,28 +82,32 @@ public class DialogoConfiguracion extends JDialog {
         btnProbarConexion.setToolTipText(TooltipsUI.Configuracion.PROBAR_CONEXION());
         btnProbarConexion.addActionListener(e -> probarConexion());
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        panelBotones.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 6));
+        panelBotones.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         panelBotones.add(btnProbarConexion);
         panelBotones.add(btnGuardar);
 
         add(tabbedPane, BorderLayout.CENTER);
         add(panelBotones, BorderLayout.SOUTH);
+
+        pack();
+        setSize(Math.max(getWidth(), ANCHO_DIALOGO), Math.max(getHeight(), ALTO_DIALOGO));
+        setLocationRelativeTo(getParent());
     }
 
     private JPanel crearPanelGeneral() {
         JPanel root = new JPanel(new BorderLayout());
 
-        JPanel contenido = new JPanel();
-        contenido.setLayout(new BoxLayout(contenido, BoxLayout.Y_AXIS));
-        contenido.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
-        contenido.setOpaque(false);
+        JPanel contenidoGeneral = new JPanel();
+        contenidoGeneral.setLayout(new BoxLayout(contenidoGeneral, BoxLayout.Y_AXIS));
+        contenidoGeneral.setBorder(BorderFactory.createEmptyBorder(16, 20, 8, 20));
+        contenidoGeneral.setOpaque(false);
 
         JPanel panelProveedor = crearPanelProveedor();
         panelProveedor.setAlignmentX(Component.LEFT_ALIGNMENT);
         panelProveedor.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelProveedor.getPreferredSize().height));
-        contenido.add(panelProveedor);
-        contenido.add(Box.createVerticalStrut(12));
+        contenidoGeneral.add(panelProveedor);
+        contenidoGeneral.add(Box.createVerticalStrut(8));
 
         JPanel panelEjecucion = new JPanel(new GridBagLayout());
         panelEjecucion.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -172,15 +179,8 @@ public class DialogoConfiguracion extends JDialog {
 
         panelEjecucion.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelEjecucion.getPreferredSize().height));
 
-        contenido.add(panelEjecucion);
-        JScrollPane scrollGeneral = new JScrollPane(contenido);
-        scrollGeneral.setBorder(BorderFactory.createEmptyBorder());
-        scrollGeneral.setViewportBorder(null);
-        scrollGeneral.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollGeneral.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollGeneral.getVerticalScrollBar().setUnitIncrement(16);
-
-        root.add(scrollGeneral, BorderLayout.CENTER);
+        contenidoGeneral.add(panelEjecucion);
+        root.add(contenidoGeneral, BorderLayout.CENTER);
         return root;
     }
 
@@ -313,7 +313,7 @@ public class DialogoConfiguracion extends JDialog {
             BorderFactory.createLineBorder(new Color(210, 210, 210), 1),
             BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
-        ejemploJson.setText("{\"hallazgos\":[{\"descripcion\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\"}]}");
+        ejemploJson.setText("{\"hallazgos\":[{\"descripcion\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"evidencia\":\"string\"}]}");
 
         JPanel bloqueInstrucciones = new JPanel(new BorderLayout(0, 8));
         bloqueInstrucciones.setOpaque(false);
@@ -519,10 +519,7 @@ public class DialogoConfiguracion extends JDialog {
         gbc.fill = GridBagConstraints.BOTH;
         wrapper.add(Box.createGlue(), gbc);
 
-        JScrollPane scroll = new JScrollPane(wrapper);
-        scroll.setBorder(null);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
-        panel.add(scroll, BorderLayout.CENTER);
+        panel.add(wrapper, BorderLayout.CENTER);
 
         return panel;
     }
