@@ -82,9 +82,17 @@ public class GestorConsolaGUI {
     }
 
     public void registrar(String origen, String mensaje, TipoLog tipo) {
+        registrarInterno(origen, mensaje, tipo, true);
+    }
+
+    public void registrarTecnico(String origen, String mensaje, TipoLog tipo) {
+        registrarInterno(origen, mensaje, tipo, false);
+    }
+
+    private void registrarInterno(String origen, String mensaje, TipoLog tipo, boolean traducirMensaje) {
         String origenSeguro = normalizarOrigen(origen);
         String mensajeSeguro = mensaje != null ? mensaje : "";
-        String mensajeLocalizado = I18nLogs.tr(mensajeSeguro);
+        String mensajeLocalizado = traducirMensaje ? I18nLogs.tr(mensajeSeguro) : I18nLogs.trTecnico(mensajeSeguro);
         incrementarContador(tipo);
 
         String hora = LocalTime.now().format(formateadorHora);

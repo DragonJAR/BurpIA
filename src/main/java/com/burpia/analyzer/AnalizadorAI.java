@@ -10,6 +10,7 @@ import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
+import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.ParserRespuestasAI;
@@ -44,6 +45,7 @@ public class AnalizadorAI implements Runnable {
     private final GestorConsolaGUI gestorConsola;
     private final BooleanSupplier tareaCancelada;
     private final BooleanSupplier tareaPausada;
+    private final ControlBackpressureGlobal controlBackpressure;
     private final Object logLock;
     private static final int MAX_CHARS_LOG_DETALLADO = 4000;
     private static final int TIEMPO_ESPERA_MIN_SEGUNDOS = 10;
@@ -61,7 +63,8 @@ public class AnalizadorAI implements Runnable {
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback, Runnable alInicioAnalisis,
-                     GestorConsolaGUI gestorConsola, BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
+                     GestorConsolaGUI gestorConsola, BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada,
+                     ControlBackpressureGlobal controlBackpressure) {
         this.solicitud = solicitud;
         this.config = config != null ? config : new ConfiguracionAPI();
         this.stdout = stdout != null ? stdout : new PrintWriter(OutputStream.nullOutputStream(), true);
@@ -83,23 +86,24 @@ public class AnalizadorAI implements Runnable {
         this.constructorPrompt = new ConstructorPrompts(this.config);
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
+        this.controlBackpressure = controlBackpressure;
         this.logLock = new Object();
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola,
                      BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
-        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, tareaCancelada, tareaPausada);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, tareaCancelada, tareaPausada, null);
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback) {
-        this(solicitud, config, stdout, stderr, limitador, callback, null, null, null, null);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, null, null, null, null);
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola) {
-        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, null, null);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, null, null, null);
     }
 
     @Override
@@ -229,7 +233,15 @@ public class AnalizadorAI implements Runnable {
         }
     }
 
-    private String llamarAPIAI() throws IOException {
+    private String construirPromptAnalisis() {
+        rastrear("Construyendo prompt para URL: " + solicitud.obtenerUrl());
+        String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
+        rastrear("Longitud de prompt: " + prompt.length() + " caracteres");
+        rastrearTecnico("Prompt (preview):\n" + resumirParaLog(prompt));
+        return prompt;
+    }
+
+    private String llamarAPIAI(String prompt, boolean registrarDetalleSolicitud) throws IOException {
         try {
             verificarCancelacion();
             esperarSiPausada();
@@ -238,12 +250,6 @@ public class AnalizadorAI implements Runnable {
             throw new IOException("Analisis cancelado/interrumpido por usuario", e);
         }
 
-        rastrear("Construyendo prompt para URL: " + solicitud.obtenerUrl());
-
-        String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
-        rastrear("Longitud de prompt: " + prompt.length() + " caracteres");
-        rastrear("Prompt (preview):\n" + resumirParaLog(prompt));
-
         ConstructorSolicitudesProveedor.SolicitudPreparada preparada =
             ConstructorSolicitudesProveedor.construirSolicitud(config, prompt, clienteHttp);
         Request solicitudHttp = preparada.request;
@@ -251,36 +257,31 @@ public class AnalizadorAI implements Runnable {
         if (preparada.advertencia != null && !preparada.advertencia.isEmpty()) {
             registrar(preparada.advertencia);
         }
-
-        rastrear("Encabezados de solicitud: Content-Type=application/json, Authorization=Bearer [OCULTO]");
+        if (registrarDetalleSolicitud) {
+            rastrearTecnico("Encabezados de solicitud: Content-Type=application/json, Authorization=Bearer [OCULTO]");
+        }
 
         try (Response respuesta = clienteHttp.newCall(solicitudHttp).execute()) {
             registrar("Codigo de respuesta de API: " + respuesta.code());
-            rastrear("Encabezados de respuesta de API: " + respuesta.headers());
+            rastrearTecnico("Encabezados de respuesta de API: " + respuesta.headers());
 
             if (!respuesta.isSuccessful()) {
                 String cuerpoError = respuesta.body() != null ? respuesta.body().string() : "null";
-                registrarError("Cuerpo de respuesta de error de API: " + cuerpoError);
+                String retryAfterHeader = respuesta.header("Retry-After");
                 String mensajeError = "Error de API: " + respuesta.code() + " - " + cuerpoError;
-                if (esErrorNoRecuperable(respuesta.code(), cuerpoError)) {
-                    throw new NonRetryableApiException(mensajeError);
-                }
-                throw new IOException(mensajeError);
+                throw new ApiHttpException(respuesta.code(), cuerpoError, retryAfterHeader, mensajeError);
             }
 
             ResponseBody cuerpo = respuesta.body();
             String cuerpoRespuesta = cuerpo != null ? cuerpo.string() : "";
             registrar("Longitud de respuesta de API: " + cuerpoRespuesta.length() + " caracteres");
-            rastrear("Respuesta de API (preview):\n" + resumirParaLog(cuerpoRespuesta));
-
+            rastrearTecnico("Respuesta de API (preview):\n" + resumirParaLog(cuerpoRespuesta));
             return cuerpoRespuesta;
+        } catch (ApiHttpException e) {
+            throw e;
         } catch (IOException e) {
-            registrarError("Solicitud HTTP fallida: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-            rastrear("Stack trace de la excepción:", e);
             throw e;
         } catch (Exception e) {
-            registrarError("Error inesperado en llamada API: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-            rastrear("Stack trace de la excepción:", e);
             throw new IOException("Error inesperado: " + e.getMessage(), e);
         }
     }
@@ -288,30 +289,54 @@ public class AnalizadorAI implements Runnable {
     private String llamarAPIAIConRetries() throws IOException {
         IOException ultimaExcepcion = null;
         long backoffActualMs = BACKOFF_INICIAL_MS;
+        String prompt = construirPromptAnalisis();
 
         registrar("Sistema de retry: hasta " + MAX_INTENTOS_RETRY + " intentos con backoff exponencial");
         for (int intento = 1; intento <= MAX_INTENTOS_RETRY; intento++) {
             try {
                 verificarCancelacion();
                 esperarSiPausada();
+                esperarCooldownGlobalSiAplica();
                 registrar("Intento #" + intento + " de " + MAX_INTENTOS_RETRY);
-                return llamarAPIAI();
+                return llamarAPIAI(prompt, intento == 1);
             } catch (NonRetryableApiException e) {
                 throw e;
-            } catch (IOException e) {
+            } catch (ApiHttpException e) {
                 ultimaExcepcion = e;
-                registrar("Intento #" + intento + " falló: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                if (PoliticaReintentos.esCodigoNoReintentable(e.obtenerCodigoEstado(), e.obtenerCuerpoError())) {
+                    throw new NonRetryableApiException(e.getMessage());
+                }
+                if (!PoliticaReintentos.esCodigoReintentable(e.obtenerCodigoEstado())) {
+                    throw e;
+                }
+                registrarFalloIntento(intento, e);
                 if (intento >= MAX_INTENTOS_RETRY) {
                     break;
                 }
-                long esperaSegundos = Math.max(1L, (backoffActualMs + 999L) / 1000L);
+                long esperaMs = PoliticaReintentos.calcularEsperaMs(
+                    e.obtenerCodigoEstado(),
+                    e.obtenerRetryAfterHeader(),
+                    backoffActualMs,
+                    intento
+                );
+                activarCooldownGlobalSiAplica(e.obtenerCodigoEstado(), esperaMs);
+                long esperaSegundos = Math.max(1L, (esperaMs + 999L) / 1000L);
                 registrar("Esperando " + esperaSegundos + " segundos antes del próximo reintento");
-                try {
-                    esperarConControl(backoffActualMs);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    throw new IOException("Sistema de retry cancelado/interrumpido", ie);
+                esperarReintento(esperaMs);
+                backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
+            } catch (IOException e) {
+                ultimaExcepcion = e;
+                if (!PoliticaReintentos.esExcepcionReintentable(e)) {
+                    throw e;
                 }
+                registrarFalloIntento(intento, e);
+                if (intento >= MAX_INTENTOS_RETRY) {
+                    break;
+                }
+                long esperaMs = PoliticaReintentos.calcularEsperaMs(-1, null, backoffActualMs, intento);
+                long esperaSegundos = Math.max(1L, (esperaMs + 999L) / 1000L);
+                registrar("Esperando " + esperaSegundos + " segundos antes del próximo reintento");
+                esperarReintento(esperaMs);
                 backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -328,6 +353,52 @@ public class AnalizadorAI implements Runnable {
             ultimaExcepcion.getMessage());
 
         throw ultimaExcepcion;
+    }
+
+    private void esperarReintento(long esperaMs) throws IOException {
+        try {
+            esperarConControl(esperaMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Sistema de retry cancelado/interrumpido", e);
+        }
+    }
+
+    private void esperarCooldownGlobalSiAplica() throws InterruptedException {
+        if (controlBackpressure == null) {
+            return;
+        }
+        long restante = controlBackpressure.milisegundosRestantes();
+        if (restante <= 0L) {
+            return;
+        }
+        long segundos = Math.max(1L, (restante + 999L) / 1000L);
+        registrar("Rate limit global activo, esperando " + segundos + " segundos");
+        while ((restante = controlBackpressure.milisegundosRestantes()) > 0L) {
+            esperarConControl(Math.min(restante, 250L));
+        }
+    }
+
+    private void activarCooldownGlobalSiAplica(int statusCode, long esperaMs) {
+        if (controlBackpressure == null || statusCode != 429 || esperaMs <= 0L) {
+            return;
+        }
+        controlBackpressure.activarCooldown(esperaMs);
+    }
+
+    private void registrarFalloIntento(int intento, IOException error) {
+        registrar("Intento #" + intento + " falló: " +
+            error.getClass().getSimpleName() + " - " + error.getMessage());
+        if (error instanceof ApiHttpException) {
+            ApiHttpException apiError = (ApiHttpException) error;
+            String cuerpoError = apiError.obtenerCuerpoError();
+            if (cuerpoError != null && !cuerpoError.trim().isEmpty()) {
+                registrarErrorTecnico("Cuerpo de respuesta de error de API: " + cuerpoError);
+            }
+        }
+        if (config.esDetallado() && (intento == 1 || intento == MAX_INTENTOS_RETRY)) {
+            rastrearTecnico("Stack trace de la excepción:\n" + obtenerStackTrace(error));
+        }
     }
 
     private static OkHttpClient obtenerClienteHttp(int tiempoEsperaSegundos) {
@@ -351,29 +422,40 @@ public class AnalizadorAI implements Runnable {
         return valor;
     }
 
-    private boolean esErrorNoRecuperable(int statusCode, String cuerpoError) {
-        if (statusCode == 400 || statusCode == 404) {
-            String error = cuerpoError != null ? cuerpoError.toLowerCase() : "";
-            return error.contains("model is required") ||
-                error.contains("not found for api version") ||
-                error.contains("invalid_request_error") ||
-                error.contains("does not exist");
-        }
-        return false;
-    }
-
     private static final class NonRetryableApiException extends IOException {
         private NonRetryableApiException(String message) {
             super(message);
         }
     }
 
+    private static final class ApiHttpException extends IOException {
+        private final int codigoEstado;
+        private final String cuerpoError;
+        private final String retryAfterHeader;
+
+        private ApiHttpException(int codigoEstado, String cuerpoError, String retryAfterHeader, String mensaje) {
+            super(mensaje);
+            this.codigoEstado = codigoEstado;
+            this.cuerpoError = cuerpoError != null ? cuerpoError : "";
+            this.retryAfterHeader = retryAfterHeader != null ? retryAfterHeader.trim() : "";
+        }
+
+        private int obtenerCodigoEstado() {
+            return codigoEstado;
+        }
+
+        private String obtenerCuerpoError() {
+            return cuerpoError;
+        }
+
+        private String obtenerRetryAfterHeader() {
+            return retryAfterHeader;
+        }
+    }
+
     private void rastrear(String mensaje, Throwable e) {
         if (config.esDetallado()) {
-            java.io.StringWriter sw = new java.io.StringWriter();
-            java.io.PrintWriter pw = new java.io.PrintWriter(sw);
-            e.printStackTrace(pw);
-            rastrear(mensaje + "\n" + sw.toString());
+            rastrearTecnico(mensaje + "\n" + obtenerStackTrace(e));
         }
     }
 
@@ -395,7 +477,7 @@ public class AnalizadorAI implements Runnable {
             }
 
             rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
-            rastrear("Contenido (preview):\n" + resumirParaLog(contenido));
+            rastrearTecnico("Contenido (preview):\n" + resumirParaLog(contenido));
 
             try {
                 String contenidoLimpio = contenido.trim();
@@ -413,7 +495,7 @@ public class AnalizadorAI implements Runnable {
                 contenidoLimpio = contenidoLimpio.trim();
 
                 if (contenidoLimpio.length() > 0 && !contenidoLimpio.equals(contenido)) {
-                    rastrear("Contenido limpio para parsing (preview):\n" + resumirParaLog(contenidoLimpio));
+                    rastrearTecnico("Contenido limpio para parsing (preview):\n" + resumirParaLog(contenidoLimpio));
                 }
 
                 JsonObject jsonHallazgos = gson.fromJson(contenidoLimpio, JsonObject.class);
@@ -462,7 +544,7 @@ public class AnalizadorAI implements Runnable {
 
         } catch (Exception e) {
             registrarError("Error al parsear respuesta de API: " + e.getMessage());
-            rastrear("JSON fallido (preview):\n" + resumirParaLog(respuestaJson));
+            rastrearTecnico("JSON fallido (preview):\n" + resumirParaLog(respuestaJson));
 
             String marcaTiempo = LocalDateTime.now().format(
                     DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -560,29 +642,54 @@ public class AnalizadorAI implements Runnable {
     }
 
     private void registrar(String mensaje) {
-        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[BurpIA] ");
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[BurpIA] ", false);
     }
 
     private void rastrear(String mensaje) {
         if (config.esDetallado()) {
-            registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
+            registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ", false);
         }
     }
 
     private void registrarError(String mensaje) {
-        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.ERROR, true, "[BurpIA] [ERROR] ");
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.ERROR, true, "[BurpIA] [ERROR] ", false);
     }
 
-    private void registrarInterno(String mensaje, GestorConsolaGUI.TipoLog tipo, boolean esError, String prefijoSalida) {
+    private void registrarErrorTecnico(String mensaje) {
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.ERROR, true, "[BurpIA] [ERROR] ", true);
+    }
+
+    private void rastrearTecnico(String mensaje) {
+        if (config.esDetallado()) {
+            registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ", true);
+        }
+    }
+
+    private String obtenerStackTrace(Throwable throwable) {
+        if (throwable == null) {
+            return "";
+        }
+        java.io.StringWriter sw = new java.io.StringWriter();
+        java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+        throwable.printStackTrace(pw);
+        return sw.toString();
+    }
+
+    private void registrarInterno(String mensaje, GestorConsolaGUI.TipoLog tipo, boolean esError, String prefijoSalida,
+                                  boolean mensajeTecnico) {
         String mensajeSeguro = mensaje != null ? mensaje : "";
         synchronized (logLock) {
             if (gestorConsola != null) {
-                gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
+                if (mensajeTecnico) {
+                    gestorConsola.registrarTecnico(ORIGEN_LOG, mensajeSeguro, tipo);
+                } else {
+                    gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
+                }
                 return;
             }
 
             String prefijoLocalizado = I18nLogs.tr(prefijoSalida);
-            String mensajeLocalizado = I18nLogs.tr(mensajeSeguro);
+            String mensajeLocalizado = mensajeTecnico ? I18nLogs.trTecnico(mensajeSeguro) : I18nLogs.tr(mensajeSeguro);
             PrintWriter destino = esError ? stderr : stdout;
             destino.println(prefijoLocalizado + mensajeLocalizado);
             destino.flush();

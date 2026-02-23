@@ -217,6 +217,10 @@ public final class I18nLogs {
         return aplicarReemplazos(mensaje, REEMPLAZOS_ES_A_EN, 0, 1);
     }
 
+    public static String trTecnico(String mensaje) {
+        return mensaje != null ? mensaje : "";
+    }
+
     private static String aplicarReemplazos(String texto,
                                             String[][] reemplazosOrdenados,
                                             int indiceOrigen,
