@@ -22,6 +22,8 @@ import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
+import com.burpia.util.ControlBackpressureGlobal;
+import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.DeduplicadorSolicitudes;
 
 import javax.swing.*;
@@ -82,6 +84,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final GestorTareas gestorTareas;
     private final GestorConsolaGUI gestorConsola;
     private final ModeloTablaHallazgos modeloTablaHallazgos;
+    private final ControlBackpressureGlobal controlBackpressure;
     private final Map<String, ContextoReintento> contextosReintento;
     private final Map<String, Future<?>> ejecucionesActivas;
 
@@ -114,6 +117,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.gestorTareas = gestorTareas;
         this.gestorConsola = gestorConsola;
         this.modeloTablaHallazgos = modeloTablaHallazgos;
+        this.controlBackpressure = new ControlBackpressureGlobal();
         this.contextosReintento = new ConcurrentHashMap<>();
         this.ejecucionesActivas = new ConcurrentHashMap<>();
         this.esBurpProfessional = ExtensionBurpIA.esBurpProfessional(api);
@@ -246,6 +250,18 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 estadisticas.incrementarOmitidosBajaConfianza();
             }
             registrar("Omitiendo recurso estatico: " + url);
+            return ResponseReceivedAction.continueWith(respuestaRecibida);
+        }
+
+        String contentTypeRespuesta = obtenerContentTypeRespuesta(respuestaRecibida);
+        if (!FiltroContenidoAnalizable.esAnalizable(contentTypeRespuesta, metodo, codigoEstado)) {
+            if (estadisticas != null) {
+                estadisticas.incrementarOmitidosBajaConfianza();
+            }
+            String contentTypeLog = (contentTypeRespuesta == null || contentTypeRespuesta.trim().isEmpty())
+                ? "desconocido"
+                : contentTypeRespuesta.trim();
+            registrar("Omitiendo contenido no analizable: " + url + " (Content-Type: " + contentTypeLog + ")");
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -557,7 +573,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             () -> {
                 String tareaId = tareaIdRef.get();
                 return gestorTareas != null && tareaId != null && gestorTareas.estaTareaPausada(tareaId);
-            }
+            },
+            controlBackpressure
         );
 
         try {
@@ -777,6 +794,25 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         return esEstatico;
+    }
+
+    private String obtenerContentTypeRespuesta(HttpResponseReceived respuestaRecibida) {
+        if (respuestaRecibida == null || respuestaRecibida.headers() == null) {
+            return "";
+        }
+        try {
+            for (burp.api.montoya.http.message.HttpHeader header : respuestaRecibida.headers()) {
+                if (header == null || header.name() == null) {
+                    continue;
+                }
+                if ("Content-Type".equalsIgnoreCase(header.name())) {
+                    return header.value() != null ? header.value() : "";
+                }
+            }
+        } catch (Exception e) {
+            rastrear("No se pudo extraer Content-Type de respuesta", e);
+        }
+        return "";
     }
 
     private String generarHash(byte[] datos) {
