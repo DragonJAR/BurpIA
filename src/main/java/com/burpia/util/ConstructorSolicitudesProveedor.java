@@ -55,13 +55,6 @@ public final class ConstructorSolicitudesProveedor {
         String advertencia = null;
 
         switch (proveedor) {
-            case "OpenAI":
-                endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/responses";
-                carga.addProperty("model", modeloUsado);
-                carga.addProperty("input", prompt);
-                builder.addHeader("Authorization", "Bearer " + config.obtenerClaveApi());
-                break;
-
             case "Claude":
                 endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/messages";
                 carga.addProperty("model", modeloUsado);
@@ -109,28 +102,17 @@ public final class ConstructorSolicitudesProveedor {
                 agregarMensajeUsuario(carga, prompt);
                 break;
 
+            case "OpenAI":
             case ProveedorAI.PROVEEDOR_CUSTOM:
-                endpoint = ConfiguracionAPI.construirUrlApiProveedor(
-                    proveedor,
-                    ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()),
-                    modeloUsado
-                );
-                carga.addProperty("model", modeloUsado);
-                agregarMensajeUsuario(carga, prompt);
-                agregarAuthorizationSiExiste(builder, config.obtenerClaveApi());
-                break;
-
             case "Z.ai":
             case "minimax":
+                endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
+                prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);
+                break;
+
             default:
-                endpoint = ConfiguracionAPI.construirUrlApiProveedor(
-                    proveedor,
-                    ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()),
-                    modeloUsado
-                );
-                carga.addProperty("model", modeloUsado);
-                agregarMensajeUsuario(carga, prompt);
-                builder.addHeader("Authorization", "Bearer " + config.obtenerClaveApi());
+                endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
+                prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);
                 break;
         }
 
@@ -158,6 +140,17 @@ public final class ConstructorSolicitudesProveedor {
         if (!limpia.isEmpty()) {
             builder.addHeader("Authorization", "Bearer " + limpia);
         }
+    }
+
+    private static void prepararSolicitudOpenAICompatible(JsonObject carga, Request.Builder builder, ConfiguracionAPI config, String prompt, String modelo) {
+        carga.addProperty("model", modelo);
+        carga.addProperty("stream", false);
+        if ("OpenAI".equals(config.obtenerProveedorAI())) {
+            carga.addProperty("input", prompt);
+        } else {
+            agregarMensajeUsuario(carga, prompt);
+        }
+        agregarAuthorizationSiExiste(builder, config.obtenerClaveApi());
     }
 
     public static List<String> listarModelosGemini(String urlBase,
@@ -270,14 +263,9 @@ public final class ConstructorSolicitudesProveedor {
             throw new IOException("URL base de Ollama vacia o invalida");
         }
 
-        String endpoint = base.endsWith("/api/tags") ? base : base + "/api/tags";
-        HttpUrl urlTags = HttpUrl.parse(endpoint);
-        if (urlTags == null) {
-            throw new IOException("URL base de Ollama invalida: " + base);
-        }
-
+        String endpoint = base + "/api/tags";
         Request request = new Request.Builder()
-            .url(urlTags)
+            .url(endpoint)
             .addHeader("Accept", "application/json")
             .build();
 
@@ -293,6 +281,68 @@ public final class ConstructorSolicitudesProveedor {
             }
             return modelos;
         }
+    }
+
+    public static List<String> listarModelosOpenAI(String urlBase, String apiKey, OkHttpClient clienteHttp) throws IOException {
+        String base = ConfiguracionAPI.extraerUrlBase(urlBase);
+        if (base == null || base.trim().isEmpty()) {
+            throw new IOException("URL base vacia o invalida");
+        }
+
+        String endpoint = base + "/models";
+        Request.Builder builder = new Request.Builder()
+            .url(endpoint)
+            .addHeader("Accept", "application/json");
+
+        if (apiKey != null && !apiKey.trim().isEmpty()) {
+            builder.addHeader("Authorization", "Bearer " + apiKey.trim());
+        }
+
+        try (Response response = clienteHttp.newCall(builder.build()).execute()) {
+            if (!response.isSuccessful()) {
+                String err = response.body() != null ? response.body().string() : "sin cuerpo";
+                throw new IOException("HTTP " + response.code() + ": " + err);
+            }
+            String body = response.body() != null ? response.body().string() : "{}";
+            List<String> modelos = parsearModelosOpenAI(body);
+            if (modelos.isEmpty()) {
+                throw new IOException("No se encontraron modelos validos en la respuesta");
+            }
+            return modelos;
+        }
+    }
+
+    private static List<String> parsearModelosOpenAI(String body) {
+        JsonElement element;
+        try {
+            element = JsonParser.parseString(body);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+        if (!element.isJsonObject()) {
+            return Collections.emptyList();
+        }
+
+        JsonElement dataElement = element.getAsJsonObject().get("data");
+        if (dataElement == null || !dataElement.isJsonArray()) {
+            return Collections.emptyList();
+        }
+        JsonArray data = dataElement.getAsJsonArray();
+
+        List<String> result = new ArrayList<>();
+        for (JsonElement item : data) {
+            if (!item.isJsonObject()) {
+                continue;
+            }
+            JsonObject modelObj = item.getAsJsonObject();
+            String id = obtenerTexto(modelObj, "id");
+            if (!id.isEmpty() && !result.contains(id)) {
+                result.add(id);
+            }
+        }
+        // Ordenar alfabéticamente para mejor experiencia de usuario
+        Collections.sort(result);
+        return result;
     }
 
     private static List<String> parsearModelosGemini(String body) {

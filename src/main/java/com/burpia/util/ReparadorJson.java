@@ -141,19 +141,23 @@ public class ReparadorJson {
     }
 
     private static String repararComillasEscapadas(String texto) {
-        texto = texto.replace("\\\"", "\"");
+        if (texto == null) return null;
 
-        Pattern patron = Pattern.compile(": \"([^\"]*)\"");
-        Matcher matcher = patron.matcher(texto);
+        String resultado = texto.replace("\\\\\"", "\\\"");
+
+        Pattern patron = Pattern.compile(": \"(.*?)\"(?=\\s*[,\\}])", Pattern.DOTALL);
+        Matcher matcher = patron.matcher(resultado);
         StringBuffer sb = new StringBuffer();
 
         while (matcher.find()) {
-            String valor = matcher.group(1)
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-            matcher.appendReplacement(sb, ": \"" + valor + "\"");
+            String valor = matcher.group(1);
+            if (valor.contains("\"") && !valor.contains("\\\"")) {
+                valor = valor.replace("\"", "\\\"");
+            }
+            valor = valor.replace("\n", "\\n")
+                         .replace("\r", "\\r")
+                         .replace("\t", "\\t");
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(": \"" + valor + "\""));
         }
         matcher.appendTail(sb);
 

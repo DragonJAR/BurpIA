@@ -911,6 +911,20 @@ public class DialogoConfiguracion extends JDialog {
                 ) + e.getMessage(), e);
             }
         }
+        if ("OpenAI".equals(proveedor) || "Z.ai".equals(proveedor) || "minimax".equals(proveedor) || ProveedorAI.PROVEEDOR_CUSTOM.equals(proveedor)) {
+            try {
+                return ConstructorSolicitudesProveedor.listarModelosOpenAI(
+                    txtUrl.getText().trim(),
+                    new String(txtClave.getPassword()).trim(),
+                    cliente
+                );
+            } catch (Exception e) {
+                throw new RuntimeException(I18nUI.tr(
+                    "No se pudieron obtener modelos de la API: ",
+                    "Could not retrieve models from API: "
+                ) + e.getMessage(), e);
+            }
+        }
         List<String> modelos = ProveedorAI.obtenerModelosDisponibles(proveedor);
         if (modelos == null || modelos.isEmpty()) {
             throw new RuntimeException(I18nUI.tr(

@@ -57,28 +57,66 @@ public class ExtensionBurpIA implements BurpExtension {
         });
 
         this.stdout = new PrintWriter(new OutputStream() {
+            private final StringBuilder buffer = new StringBuilder();
             @Override
             public void write(int b) {
-                api.logging().logToOutput(String.valueOf((char) b));
+                if (b == '\n') {
+                    flushBuffer();
+                } else {
+                    buffer.append((char) b);
+                }
             }
             @Override
             public void write(byte[] b, int off, int len) {
-                api.logging().logToOutput(new String(b, off, len, StandardCharsets.UTF_8));
+                String s = new String(b, off, len, StandardCharsets.UTF_8);
+                if (s.contains("\n")) {
+                    buffer.append(s);
+                    flushBuffer();
+                } else {
+                    buffer.append(s);
+                }
+            }
+            private void flushBuffer() {
+                if (buffer.length() > 0) {
+                    api.logging().logToOutput(buffer.toString());
+                    buffer.setLength(0);
+                }
             }
             @Override
-            public void flush() {}
+            public void flush() {
+                flushBuffer();
+            }
         }, true);
         this.stderr = new PrintWriter(new OutputStream() {
+            private final StringBuilder buffer = new StringBuilder();
             @Override
             public void write(int b) {
-                api.logging().logToError(String.valueOf((char) b));
+                if (b == '\n') {
+                    flushBuffer();
+                } else {
+                    buffer.append((char) b);
+                }
             }
             @Override
             public void write(byte[] b, int off, int len) {
-                api.logging().logToError(new String(b, off, len, StandardCharsets.UTF_8));
+                String s = new String(b, off, len, StandardCharsets.UTF_8);
+                if (s.contains("\n")) {
+                    buffer.append(s);
+                    flushBuffer();
+                } else {
+                    buffer.append(s);
+                }
+            }
+            private void flushBuffer() {
+                if (buffer.length() > 0) {
+                    api.logging().logToError(buffer.toString());
+                    buffer.setLength(0);
+                }
             }
             @Override
-            public void flush() {}
+            public void flush() {
+                flushBuffer();
+            }
         }, true);
 
         gestorConfig = new GestorConfiguracion(stdout, stderr);

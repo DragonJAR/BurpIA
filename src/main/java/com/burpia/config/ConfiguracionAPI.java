@@ -177,13 +177,23 @@ public class ConfiguracionAPI {
             "/chat/completions",
             "/completions",
             "/messages",
-            "/api/chat"
+            "/api/chat",
+            "/models"
         };
-        for (String sufijo : sufijos) {
-            if (base.endsWith(sufijo)) {
-                return base.substring(0, base.length() - sufijo.length());
+        boolean cambio;
+        do {
+            cambio = false;
+            for (String sufijo : sufijos) {
+                if (base.endsWith(sufijo)) {
+                    base = base.substring(0, base.length() - sufijo.length());
+                    while (base.endsWith("/")) {
+                        base = base.substring(0, base.length() - 1);
+                    }
+                    cambio = true;
+                    break;
+                }
             }
-        }
+        } while (cambio);
 
         int idxGemini = base.indexOf("/models/");
         if (idxGemini > 0) {
