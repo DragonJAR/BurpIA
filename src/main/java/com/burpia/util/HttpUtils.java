@@ -207,21 +207,20 @@ public final class HttpUtils {
             return false;
         }
 
-        String ruta = url;
-        try {
-            URI uri = URI.create(url);
-            if (uri.getPath() != null && !uri.getPath().isEmpty()) {
-                ruta = uri.getPath();
-            }
-        } catch (IllegalArgumentException ignored) {
-        }
+        int startIdx = 0;
+        int queryIdx = url.indexOf('?');
+        int hashIdx = url.indexOf('#');
+        int endIdx = url.length();
+        
+        if (queryIdx != -1) endIdx = queryIdx;
+        if (hashIdx != -1 && hashIdx < endIdx) endIdx = hashIdx;
 
-        int ultimoPunto = ruta.lastIndexOf('.');
-        if (ultimoPunto == -1) {
+        int dotIdx = url.lastIndexOf('.', endIdx - 1);
+        if (dotIdx == -1 || dotIdx < url.lastIndexOf('/', endIdx - 1)) {
             return false;
         }
 
-        String extension = ruta.substring(ultimoPunto).toLowerCase(Locale.ROOT);
+        String extension = url.substring(dotIdx, endIdx).toLowerCase(Locale.ROOT);
         return extensionesEstaticas.contains(extension);
     }
 }

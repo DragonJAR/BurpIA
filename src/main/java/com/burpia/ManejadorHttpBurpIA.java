@@ -448,112 +448,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             stdout,
             stderr,
             limitador,
-            new AnalizadorAI.Callback() {
-                @Override
-                public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
-                    final String id = tareaIdRef.get();
-                    finalizarEjecucionActiva(id);
-                    contextosReintento.remove(id);
-                    boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
-                    if (cancelada) {
-                        registrar("Resultado descartado porque la tarea fue cancelada: " + url);
-                        return;
-                    }
-
-                    if (estadisticas != null) {
-                        estadisticas.incrementarAnalizados();
-                    }
-
-                    if (gestorTareas != null && tareaId != null) {
-                        gestorTareas.actualizarTarea(
-                            tareaId,
-                            Tarea.ESTADO_COMPLETADO,
-                            "Completado: " + (resultado != null ? resultado.obtenerNumeroHallazgos() : 0) + " hallazgos"
-                        );
-                    }
-
-                    if (resultado != null && resultado.obtenerHallazgos() != null) {
-                        List<Hallazgo> hallazgosValidos = new ArrayList<>();
-                        for (Hallazgo hallazgo : resultado.obtenerHallazgos()) {
-                            if (hallazgo == null) {
-                                continue;
-                            }
-
-                            Hallazgo hallazgoConEvidencia = adjuntarEvidenciaSiDisponible(hallazgo, evidenciaHttp);
-                            hallazgosValidos.add(hallazgoConEvidencia);
-
-                            if (estadisticas != null) {
-                                String severidad = hallazgoConEvidencia.obtenerSeveridad();
-                                if (severidad != null) {
-                                    estadisticas.incrementarHallazgoSeveridad(severidad);
-                                }
-                            }
-
-                            guardarHallazgoEnIssuesSiAplica(hallazgoConEvidencia, evidenciaHttp);
-                        }
-
-                        if (modeloTablaHallazgos != null && !hallazgosValidos.isEmpty()) {
-                            modeloTablaHallazgos.agregarHallazgos(hallazgosValidos);
-                        }
-                    }
-
-                    String severidadMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
-                    int numHallazgos = resultado != null ? resultado.obtenerNumeroHallazgos() : 0;
-                    registrar("Analisis completado: " + url +
-                        " (severidad maxima: " + severidadMax +
-                        ", hallazgos: " + numHallazgos + ")");
-
-                    SwingUtilities.invokeLater(() -> {
-                        if (pestaniaPrincipal != null) {
-                            pestaniaPrincipal.actualizarEstadisticas();
-                        }
-                    });
-                }
-
-                @Override
-                public void alErrorAnalisis(String error) {
-                    final String id = tareaIdRef.get();
-                    finalizarEjecucionActiva(id);
-                    boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
-
-                    if (cancelada) {
-                        registrar("Analisis detenido por cancelacion de usuario: " + url);
-                        return;
-                    }
-
-                    if (estadisticas != null) {
-                        estadisticas.incrementarErrores();
-                    }
-
-                    if (gestorTareas != null && id != null) {
-                        gestorTareas.actualizarTarea(
-                            id,
-                            Tarea.ESTADO_ERROR,
-                            "Error: " + (error != null ? error : "Error desconocido")
-                        );
-                    }
-
-                    String errorMsg = error != null ? error : "Error desconocido";
-                    registrarError("Analisis fallido para " + url + ": " + errorMsg);
-
-                    SwingUtilities.invokeLater(() -> {
-                        if (pestaniaPrincipal != null) {
-                            pestaniaPrincipal.registrar("Error de analisis: " + errorMsg);
-                            pestaniaPrincipal.actualizarEstadisticas();
-                        }
-                    });
-                }
-
-                @Override
-                public void alCanceladoAnalisis() {
-                    final String id = tareaIdRef.get();
-                    finalizarEjecucionActiva(id);
-                    if (gestorTareas != null && id != null) {
-                        gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
-                    }
-                    registrar("Analisis cancelado por usuario: " + url);
-                }
-            },
+            new ManejadorResultadoAI(tareaIdRef, url, evidenciaHttp),
             () -> {
                 final String id = tareaIdRef.get();
                 if (gestorTareas == null || id == null) {
@@ -889,5 +784,89 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     public boolean estaCapturaActiva() {
         return capturaActiva;
+    }
+
+    private class ManejadorResultadoAI implements AnalizadorAI.Callback {
+        private final AtomicReference<String> tareaIdRef;
+        private final String url;
+        private final HttpRequestResponse evidenciaHttp;
+
+        ManejadorResultadoAI(AtomicReference<String> tareaIdRef, String url, HttpRequestResponse evidenciaHttp) {
+            this.tareaIdRef = tareaIdRef;
+            this.url = url;
+            this.evidenciaHttp = evidenciaHttp;
+        }
+
+        @Override
+        public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
+            final String id = tareaIdRef.get();
+            finalizarEjecucionActiva(id);
+            contextosReintento.remove(id);
+            boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
+            if (cancelada) {
+                registrar("Resultado descartado porque la tarea fue cancelada: " + url);
+                return;
+            }
+
+            if (estadisticas != null) estadisticas.incrementarAnalizados();
+
+            if (gestorTareas != null && id != null) {
+                gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
+                    "Completado: " + (resultado != null ? resultado.obtenerNumeroHallazgos() : 0) + " hallazgos");
+            }
+
+            if (resultado != null && resultado.obtenerHallazgos() != null) {
+                List<Hallazgo> hallazgosValidos = new ArrayList<>();
+                for (Hallazgo hallazgo : resultado.obtenerHallazgos()) {
+                    if (hallazgo == null) continue;
+                    Hallazgo hConEvidencia = adjuntarEvidenciaSiDisponible(hallazgo, evidenciaHttp);
+                    hallazgosValidos.add(hConEvidencia);
+                    if (estadisticas != null) {
+                        String sev = hConEvidencia.obtenerSeveridad();
+                        if (sev != null) estadisticas.incrementarHallazgoSeveridad(sev);
+                    }
+                    guardarHallazgoEnIssuesSiAplica(hConEvidencia, evidenciaHttp);
+                }
+                if (modeloTablaHallazgos != null && !hallazgosValidos.isEmpty()) {
+                    modeloTablaHallazgos.agregarHallazgos(hallazgosValidos);
+                }
+            }
+
+            String sevMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
+            registrar("Analisis completado: " + url + " (severidad maxima: " + sevMax + ")");
+
+            SwingUtilities.invokeLater(() -> {
+                if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
+            });
+        }
+
+        @Override
+        public void alErrorAnalisis(String error) {
+            final String id = tareaIdRef.get();
+            finalizarEjecucionActiva(id);
+            boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
+            if (cancelada) {
+                registrar("Analisis detenido por cancelacion: " + url);
+                return;
+            }
+            if (estadisticas != null) estadisticas.incrementarErrores();
+            if (gestorTareas != null && id != null) {
+                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error: " + (error != null ? error : "Error desconocido"));
+            }
+            registrarError("Analisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
+            SwingUtilities.invokeLater(() -> {
+                if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
+            });
+        }
+
+        @Override
+        public void alCanceladoAnalisis() {
+            final String id = tareaIdRef.get();
+            finalizarEjecucionActiva(id);
+            if (gestorTareas != null && id != null) {
+                gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
+            }
+            registrar("Analisis cancelado: " + url);
+        }
     }
 }
