@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 
 
@@ -57,26 +55,6 @@ public class AnalizadorAI implements Runnable {
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
     private static final Map<Integer, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = new ConcurrentHashMap<>();
-    private static final Pattern PATRON_CAMPO_TITULO_NO_ESTRICTO = Pattern.compile(
-        "\"titulo\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        Pattern.DOTALL
-    );
-    private static final Pattern PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO = Pattern.compile(
-        "\"descripcion\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        Pattern.DOTALL
-    );
-    private static final Pattern PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO = Pattern.compile(
-        "\"severidad\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        Pattern.DOTALL
-    );
-    private static final Pattern PATRON_CAMPO_CONFIANZA_NO_ESTRICTO = Pattern.compile(
-        "\"confianza\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        Pattern.DOTALL
-    );
-    private static final Pattern PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO = Pattern.compile(
-        "\"evidencia\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        Pattern.DOTALL
-    );
 
     public interface Callback {
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
@@ -522,22 +500,6 @@ public class AnalizadorAI implements Runnable {
             try {
                 String contenidoLimpio = contenido.trim();
 
-                if (contenidoLimpio.contains("```json")) {
-                    contenidoLimpio = contenidoLimpio.replaceAll("```json\\s*", "");
-                    contenidoLimpio = contenidoLimpio.replaceAll("```\\s*$", "");
-                    rastrear("Eliminados bloques de código markdown JSON");
-                } else if (contenidoLimpio.contains("```")) {
-                    contenidoLimpio = contenidoLimpio.replaceAll("```\\w*\\s*", "");
-                    contenidoLimpio = contenidoLimpio.replaceAll("```\\s*$", "");
-                    rastrear("Eliminados bloques de código markdown genéricos");
-                }
-
-                contenidoLimpio = contenidoLimpio.trim();
-
-                if (contenidoLimpio.length() > 0 && !contenidoLimpio.equals(contenido)) {
-                    rastrearTecnico("Contenido limpio para parsing (preview):\n" + resumirParaLog(contenidoLimpio));
-                }
-
                 JsonObject jsonHallazgos = gson.fromJson(contenidoLimpio, JsonObject.class);
 
                 if (jsonHallazgos != null && jsonHallazgos.has("hallazgos")) {
@@ -645,34 +607,19 @@ public class AnalizadorAI implements Runnable {
             if (bloqueHallazgo.isEmpty()) {
                 continue;
             }
-            String titulo = normalizarCampoNoEstricto(extraerCampoNoEstricto(
-                PATRON_CAMPO_TITULO_NO_ESTRICTO,
-                bloqueHallazgo
-            ));
+            String titulo = ParserRespuestasAI.extraerCampoNoEstricto("titulo", bloqueHallazgo);
             if (titulo.isEmpty()) {
                 titulo = "Sin título";
             }
 
-            String descripcion = normalizarCampoNoEstricto(extraerCampoNoEstricto(
-                PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO,
-                bloqueHallazgo
-            ));
+            String descripcion = ParserRespuestasAI.extraerCampoNoEstricto("descripcion", bloqueHallazgo);
             if (descripcion.isEmpty()) {
                 continue;
             }
 
-            String severidad = Hallazgo.normalizarSeveridad(normalizarCampoNoEstricto(extraerCampoNoEstricto(
-                PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO,
-                bloqueHallazgo
-            )));
-            String confianza = Hallazgo.normalizarConfianza(normalizarCampoNoEstricto(extraerCampoNoEstricto(
-                PATRON_CAMPO_CONFIANZA_NO_ESTRICTO,
-                bloqueHallazgo
-            )));
-            String evidencia = normalizarCampoNoEstricto(extraerCampoNoEstricto(
-                PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO,
-                bloqueHallazgo
-            ));
+            String severidad = Hallazgo.normalizarSeveridad(ParserRespuestasAI.extraerCampoNoEstricto("severidad", bloqueHallazgo));
+            String confianza = Hallazgo.normalizarConfianza(ParserRespuestasAI.extraerCampoNoEstricto("confianza", bloqueHallazgo));
+            String evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidencia", bloqueHallazgo);
 
             String descripcionFinal = evidencia.isEmpty()
                 ? descripcion
@@ -748,29 +695,6 @@ public class AnalizadorAI implements Runnable {
         return bloque;
     }
 
-    private String extraerCampoNoEstricto(Pattern patron, String contenido) {
-        if (patron == null || contenido == null || contenido.isEmpty()) {
-            return "";
-        }
-        Matcher matcher = patron.matcher(contenido);
-        if (!matcher.find() || matcher.groupCount() < 1) {
-            return "";
-        }
-        String valor = matcher.group(1);
-        return valor != null ? valor : "";
-    }
-
-    private String normalizarCampoNoEstricto(String valor) {
-        if (valor == null) {
-            return "";
-        }
-        return valor
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
-            .replace("\\\"", "\"")
-            .trim();
-    }
 
     private String etiquetaEvidencia() {
         return "en".equalsIgnoreCase(config.obtenerIdiomaUi()) ? "Evidence" : "Evidencia";

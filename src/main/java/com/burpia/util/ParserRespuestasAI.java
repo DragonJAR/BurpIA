@@ -14,6 +14,56 @@ public class ParserRespuestasAI {
         java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
     private static final Logger LOGGER = Logger.getLogger(ParserRespuestasAI.class.getName());
 
+    private static final java.util.regex.Pattern PATRON_CAMPO_TITULO_NO_ESTRICTO = java.util.regex.Pattern.compile(
+        "\"titulo\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL
+    );
+    private static final java.util.regex.Pattern PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO = java.util.regex.Pattern.compile(
+        "\"descripcion\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL
+    );
+    private static final java.util.regex.Pattern PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO = java.util.regex.Pattern.compile(
+        "\"severidad\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL
+    );
+    private static final java.util.regex.Pattern PATRON_CAMPO_CONFIANZA_NO_ESTRICTO = java.util.regex.Pattern.compile(
+        "\"confianza\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL
+    );
+    private static final java.util.regex.Pattern PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO = java.util.regex.Pattern.compile(
+        "\"evidencia\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL
+    );
+
+    public static String extraerCampoNoEstricto(String campo, String contenido) {
+        java.util.regex.Pattern patron;
+        switch (campo) {
+            case "titulo": patron = PATRON_CAMPO_TITULO_NO_ESTRICTO; break;
+            case "descripcion": patron = PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO; break;
+            case "severidad": patron = PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO; break;
+            case "confianza": patron = PATRON_CAMPO_CONFIANZA_NO_ESTRICTO; break;
+            case "evidencia": patron = PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO; break;
+            default: return "";
+        }
+        java.util.regex.Matcher matcher = patron.matcher(contenido);
+        if (matcher.find()) {
+            return normalizarCampoNoEstricto(matcher.group(1));
+        }
+        return "";
+    }
+
+    public static String normalizarCampoNoEstricto(String valor) {
+        if (valor == null) {
+            return "";
+        }
+        return valor
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+            .replace("\\\"", "\"")
+            .trim();
+    }
+
     public static String extraerContenido(String respuestaJson, String proveedor) {
         if (respuestaJson == null || respuestaJson.trim().isEmpty()) {
             return "";
