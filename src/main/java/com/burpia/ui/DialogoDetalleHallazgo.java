@@ -5,9 +5,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
 
-
-
-
 public class DialogoDetalleHallazgo extends JDialog {
     private final Hallazgo hallazgoOriginal;
     private final Consumer<Hallazgo> alGuardar;
@@ -53,13 +50,13 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblUrl = new JLabel(I18nUI.DetalleHallazgo.LABEL_URL());
-        lblUrl.setToolTipText(TooltipsUI.DetalleHallazgo.URL());
+        lblUrl.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.URL());
         panelContenido.add(lblUrl, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
         txtUrl = new JTextField();
         txtUrl.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
-        txtUrl.setToolTipText(TooltipsUI.DetalleHallazgo.URL());
+        txtUrl.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.URL());
         panelContenido.add(txtUrl, gbc);
 
         fila++;
@@ -77,33 +74,33 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblSeveridad = new JLabel(I18nUI.DetalleHallazgo.LABEL_SEVERIDAD());
-        lblSeveridad.setToolTipText(TooltipsUI.DetalleHallazgo.SEVERIDAD());
+        lblSeveridad.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.SEVERIDAD());
         panelContenido.add(lblSeveridad, gbc);
 
         JPanel panelClasificacion = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         comboSeveridad = new JComboBox<>(new String[]{
-            Hallazgo.SEVERIDAD_CRITICAL,
-            Hallazgo.SEVERIDAD_HIGH,
-            Hallazgo.SEVERIDAD_MEDIUM,
-            Hallazgo.SEVERIDAD_LOW,
-            Hallazgo.SEVERIDAD_INFO
+            I18nUI.Hallazgos.SEVERIDAD_CRITICAL(),
+            I18nUI.Hallazgos.SEVERIDAD_HIGH(),
+            I18nUI.Hallazgos.SEVERIDAD_MEDIUM(),
+            I18nUI.Hallazgos.SEVERIDAD_LOW(),
+            I18nUI.Hallazgos.SEVERIDAD_INFO()
         });
         comboSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
-        comboSeveridad.setToolTipText(TooltipsUI.DetalleHallazgo.SEVERIDAD());
+        comboSeveridad.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.SEVERIDAD());
         panelClasificacion.add(comboSeveridad);
 
         JLabel lblEspacio = new JLabel(I18nUI.DetalleHallazgo.LABEL_CONFIANZA());
         lblEspacio.setFont(EstilosUI.FUENTE_ESTANDAR);
-        lblEspacio.setToolTipText(TooltipsUI.DetalleHallazgo.CONFIANZA());
+        lblEspacio.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.CONFIANZA());
         panelClasificacion.add(lblEspacio);
 
         comboConfianza = new JComboBox<>(new String[]{
-            Hallazgo.CONFIANZA_ALTA,
-            Hallazgo.CONFIANZA_MEDIA,
-            Hallazgo.CONFIANZA_BAJA
+            I18nUI.Hallazgos.CONFIANZA_ALTA(),
+            I18nUI.Hallazgos.CONFIANZA_MEDIA(),
+            I18nUI.Hallazgos.CONFIANZA_BAJA()
         });
         comboConfianza.setFont(EstilosUI.FUENTE_ESTANDAR);
-        comboConfianza.setToolTipText(TooltipsUI.DetalleHallazgo.CONFIANZA());
+        comboConfianza.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.CONFIANZA());
         panelClasificacion.add(comboConfianza);
 
         gbc.gridx = 1; gbc.weightx = 1;
@@ -113,7 +110,7 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblDescripcion = new JLabel(I18nUI.DetalleHallazgo.LABEL_DESCRIPCION());
-        lblDescripcion.setToolTipText(TooltipsUI.DetalleHallazgo.DESCRIPCION());
+        lblDescripcion.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.DESCRIPCION());
         panelContenido.add(lblDescripcion, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1; gbc.weighty = 1; gbc.fill = GridBagConstraints.BOTH;
@@ -121,7 +118,7 @@ public class DialogoDetalleHallazgo extends JDialog {
         txtDescripcion.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         txtDescripcion.setLineWrap(true);
         txtDescripcion.setWrapStyleWord(true);
-        txtDescripcion.setToolTipText(TooltipsUI.DetalleHallazgo.DESCRIPCION());
+        txtDescripcion.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.DESCRIPCION());
 
         JScrollPane scrollDescripcion = new JScrollPane(txtDescripcion);
         scrollDescripcion.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -136,12 +133,12 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         JButton btnGuardar = new JButton(I18nUI.DetalleHallazgo.BOTON_GUARDAR());
         btnGuardar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
-        btnGuardar.setToolTipText(TooltipsUI.DetalleHallazgo.GUARDAR());
+        btnGuardar.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.GUARDAR());
         btnGuardar.addActionListener(e -> guardarYSalir());
 
         JButton btnCancelar = new JButton(I18nUI.DetalleHallazgo.BOTON_CANCELAR());
         btnCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        btnCancelar.setToolTipText(TooltipsUI.DetalleHallazgo.CANCELAR());
+        btnCancelar.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.CANCELAR());
         btnCancelar.addActionListener(e -> dispose());
 
         panelBotones.add(btnGuardar);
@@ -156,8 +153,8 @@ public class DialogoDetalleHallazgo extends JDialog {
             txtUrl.setText(hallazgoOriginal.obtenerUrl());
             txtTitulo.setText(hallazgoOriginal.obtenerTitulo());
             txtDescripcion.setText(hallazgoOriginal.obtenerHallazgo());
-            comboSeveridad.setSelectedItem(hallazgoOriginal.obtenerSeveridad());
-            comboConfianza.setSelectedItem(hallazgoOriginal.obtenerConfianza());
+            comboSeveridad.setSelectedItem(I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(hallazgoOriginal.obtenerSeveridad()));
+            comboConfianza.setSelectedItem(I18nUI.Hallazgos.TRADUCIR_CONFIANZA(hallazgoOriginal.obtenerConfianza()));
         }
     }
 

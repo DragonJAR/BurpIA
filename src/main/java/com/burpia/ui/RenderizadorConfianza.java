@@ -5,9 +5,6 @@ import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-
-
-
 public class RenderizadorConfianza extends DefaultTableCellRenderer {
     private static final long serialVersionUID = 1L;
     private String confianzaStr = "";
@@ -32,6 +29,14 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         return this;
     }
 
+    private Color obtenerColorConfianzaTraducida(String confTraducida) {
+        if (confTraducida == null) return Color.GRAY;
+        if (confTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_ALTA())) return EstilosUI.COLOR_LOW;    
+        if (confTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_MEDIA())) return EstilosUI.COLOR_MEDIUM; 
+        if (confTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_BAJA())) return EstilosUI.COLOR_HIGH;   
+        return Color.GRAY;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -54,11 +59,11 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         FontMetrics fm = g2.getFontMetrics();
 
         int filledSegments = 0;
-        if (confianzaStr.equals(Hallazgo.CONFIANZA_ALTA)) filledSegments = 3;
-        else if (confianzaStr.equals(Hallazgo.CONFIANZA_MEDIA)) filledSegments = 2;
-        else if (confianzaStr.equals(Hallazgo.CONFIANZA_BAJA)) filledSegments = 1;
+        if (confianzaStr.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_ALTA())) filledSegments = 3;
+        else if (confianzaStr.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_MEDIA())) filledSegments = 2;
+        else if (confianzaStr.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_BAJA())) filledSegments = 1;
 
-        Color colorBase = Hallazgo.obtenerColorConfianza(confianzaStr);
+        Color colorBase = obtenerColorConfianzaTraducida(confianzaStr);
         if (isIgnorado) {
             colorBase = isDarkTheme ? new Color(100, 100, 100) : new Color(180, 180, 180);
         }

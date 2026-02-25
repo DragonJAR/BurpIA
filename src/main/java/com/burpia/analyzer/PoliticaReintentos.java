@@ -8,8 +8,6 @@ import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Set;
 
-
-
 public final class PoliticaReintentos {
     private static final Set<Integer> CODIGOS_REINTENTABLES = Set.of(408, 409, 425, 429, 500, 502, 503, 504);
     private static final Set<Integer> CODIGOS_NO_REINTENTABLES = Set.of(400, 401, 403, 404, 405, 410, 422);

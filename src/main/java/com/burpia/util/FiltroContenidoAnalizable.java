@@ -2,8 +2,6 @@ package com.burpia.util;
 import java.util.Locale;
 import java.util.Set;
 
-
-
 public final class FiltroContenidoAnalizable {
     private static final Set<String> CONTENIDOS_NO_ANALIZABLES = Set.of(
         "application/octet-stream",

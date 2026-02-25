@@ -5,6 +5,7 @@ import burp.api.montoya.http.handler.HttpRequestToBeSent;
 import burp.api.montoya.http.handler.HttpResponseReceived;
 import burp.api.montoya.http.handler.RequestToBeSentAction;
 import burp.api.montoya.http.handler.ResponseReceivedAction;
+import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.analyzer.AnalizadorAI;
@@ -43,11 +44,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
 
-
-
-
 public class ManejadorHttpBurpIA implements HttpHandler {
-    private static final String ORIGEN_LOG = "ManejadorBurpIA";
+    private static final String ORIGEN_LOG = "BurpIA";
     private final MontoyaApi api;
     private final ConfiguracionAPI config;
     private final PestaniaPrincipal pestaniaPrincipal;
@@ -60,7 +58,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final boolean esBurpProfessional;
     private volatile boolean capturaActiva;
     private volatile boolean avisoIssuesNoDisponiblesEmitido;
-
 
     private final Estadisticas estadisticas;
     private final GestorTareas gestorTareas;
@@ -115,28 +112,27 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             60L,
             java.util.concurrent.TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(capacidadCola),
-            runnable -> {
-            Thread thread = new Thread(runnable);
-            thread.setDaemon(true);
-            thread.setName("BurpIA-" + thread.getId());
-            return thread;
+            new java.util.concurrent.ThreadFactory() {
+                private final java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger(1);
+                @Override
+                public Thread newThread(Runnable runnable) {
+                    Thread thread = new Thread(runnable);
+                    thread.setDaemon(true);
+                    thread.setName("BurpIA-Thread-" + counter.getAndIncrement());
+                    return thread;
+                }
             },
             new ThreadPoolExecutor.AbortPolicy()
         );
 
         this.logLock = new Object();
 
-        registrar(I18nUI.trf(
-            "ManejadorHttpBurpIA inicializado (maximoConcurrente=%d, retraso=%ds, detallado=%s)",
-            "ManejadorHttpBurpIA initialized (maxConcurrent=%d, delay=%ds, verbose=%s)",
+        registrar(I18nUI.Consola.LOG_MANEJADOR_INICIALIZADO(
             configSegura.obtenerMaximoConcurrente(),
             configSegura.obtenerRetrasoSegundos(),
             configSegura.esDetallado()
         ));
-        registrar(I18nUI.tr(
-            "NOTA: Solo se analizaran solicitudes DENTRO del SCOPE de Burp Suite",
-            "NOTE: Only requests INSIDE Burp Suite scope will be analyzed"
-        ));
+        registrar("NOTA: Solo se analizaran solicitudes DENTRO del SCOPE de Burp Suite");
     }
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
@@ -150,18 +146,27 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             registrarError("No se pudo actualizar configuracion: objeto de configuracion nulo");
             return;
         }
+
+        if (nuevaConfig != this.config) {
+            this.config.aplicarDesde(nuevaConfig);
+        }
+
         int nuevoMaximoConcurrente = nuevaConfig.obtenerMaximoConcurrente() > 0
             ? nuevaConfig.obtenerMaximoConcurrente()
-            : 10;
+            : 1;
 
         this.limitador = new LimitadorTasa(nuevoMaximoConcurrente);
         actualizarPoolEjecucion(nuevoMaximoConcurrente);
 
-        registrar(I18nUI.trf(
-            "Configuracion actualizada: nuevo maximoConcurrente=%d, nuevo retraso=%ds",
-            "Configuration updated: new maxConcurrent=%d, new delay=%ds",
+        String proveedor = nuevaConfig.obtenerProveedorAI();
+        String modelo = nuevaConfig.obtenerModelo();
+        int timeout = nuevaConfig.obtenerTiempoEsperaParaModelo(proveedor, modelo);
+
+        registrar(I18nUI.Consola.LOG_CONFIGURACION_ACTUALIZADA(
             nuevoMaximoConcurrente,
-            nuevaConfig.obtenerRetrasoSegundos()
+            nuevaConfig.obtenerRetrasoSegundos(),
+            modelo,
+            timeout
         ));
     }
 
@@ -222,6 +227,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         if (!estaEnScope(respuestaRecibida.initiatingRequest())) {
             rastrear("FUERA DE SCOPE - Omitiendo: " + url);
+            return ResponseReceivedAction.continueWith(respuestaRecibida);
+        }
+
+        if (config.soloProxy() && !respuestaRecibida.toolSource().isFromTool(ToolType.PROXY)) {
+            rastrear("SOLO PROXY ACTIVADO - Omitiendo peticion de: " + respuestaRecibida.toolSource().toolType().name() + " para " + url);
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -662,13 +672,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         if (url == null || url.isEmpty()) {
             return false;
         }
- 
+
         boolean esEstatico = HttpUtils.esRecursoEstatico(url);
- 
+
         if (esEstatico && config.esDetallado()) {
             rastrear("Recurso coincidio con filtro estatico: " + url);
         }
- 
+
         return esEstatico;
     }
 
@@ -691,19 +701,18 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         return "";
     }
 
-
     private void registrar(String mensaje) {
-        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[ManejadorBurpIA] ");
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[BurpIA] ");
     }
 
     private void rastrear(String mensaje) {
         if (config.esDetallado()) {
-            registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[ManejadorBurpIA] [RASTREO] ");
+            registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
         }
     }
 
     private void registrarError(String mensaje) {
-        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.ERROR, true, "[ManejadorBurpIA] [ERROR] ");
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.ERROR, true, "[BurpIA] [ERROR] ");
     }
 
     private void registrarInterno(String mensaje, GestorConsolaGUI.TipoLog tipo, boolean error, String prefijoSalida) {

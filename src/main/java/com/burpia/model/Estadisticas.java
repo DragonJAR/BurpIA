@@ -1,8 +1,6 @@
 package com.burpia.model;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
-
 public class Estadisticas {
     private final AtomicInteger totalSolicitudes;
     private final AtomicInteger analizados;

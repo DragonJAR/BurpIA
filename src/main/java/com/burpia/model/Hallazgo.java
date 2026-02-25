@@ -1,13 +1,11 @@
 package com.burpia.model;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstilosUI;
 import java.awt.Color;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
-
-
 
 public class Hallazgo {
     public static final String SEVERIDAD_CRITICAL = "Critical";
@@ -132,8 +130,8 @@ public class Hallazgo {
             nuevaUrl,
             nuevoTitulo,
             nuevaDescripcion,
-            nuevaSeveridad,
-            nuevaConfianza,
+            normalizarSeveridad(nuevaSeveridad),
+            normalizarConfianza(nuevaConfianza),
             solicitudHttp,
             evidenciaHttp
         );
@@ -144,8 +142,8 @@ public class Hallazgo {
             horaDescubrimiento,
             url,
             titulo,
-            severidad,
-            confianza
+            I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(severidad),
+            I18nUI.Hallazgos.TRADUCIR_CONFIANZA(confianza)
         };
     }
 
@@ -190,9 +188,9 @@ public class Hallazgo {
     public static Color obtenerColorConfianza(String confianza) {
         if (confianza == null) return Color.GRAY;
         switch (confianza) {
-            case CONFIANZA_ALTA:  return EstilosUI.COLOR_LOW;    // Green
-            case CONFIANZA_MEDIA: return EstilosUI.COLOR_MEDIUM; // Orange
-            case CONFIANZA_BAJA:  return EstilosUI.COLOR_HIGH;   // Red
+            case CONFIANZA_ALTA:  return EstilosUI.COLOR_LOW;    
+            case CONFIANZA_MEDIA: return EstilosUI.COLOR_MEDIUM; 
+            case CONFIANZA_BAJA:  return EstilosUI.COLOR_HIGH;   
             default:               return Color.GRAY;
         }
     }

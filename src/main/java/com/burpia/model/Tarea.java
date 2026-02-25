@@ -3,8 +3,6 @@ import com.burpia.ui.EstilosUI;
 import java.awt.Color;
 import javax.swing.*;
 
-
-
 public class Tarea {
     public static final String ESTADO_EN_COLA = "En Cola";
     public static final String ESTADO_ANALIZANDO = "Analizando";

@@ -10,10 +10,6 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * Utility class for HTTP processing, data extraction, and hashing.
- * Follows DRY principles by consolidating logic used across the project.
- */
 public final class HttpUtils {
 
     public static final Set<String> EXTENSIONES_ESTATICAS;
@@ -37,12 +33,9 @@ public final class HttpUtils {
     }
 
     private HttpUtils() {
-        // Private constructor to prevent instantiation
+
     }
 
-    /**
-     * Generates a SHA-256 hash of the provided bytes.
-     */
     public static String generarHash(byte[] datos) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -55,9 +48,6 @@ public final class HttpUtils {
         }
     }
 
-    /**
-     * Generates a SHA-256 hash by concatenating multiple string parts.
-     */
     public static String generarHashPartes(String... partes) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -66,7 +56,7 @@ public final class HttpUtils {
                     if (parte != null && !parte.isEmpty()) {
                         md.update(parte.getBytes(StandardCharsets.UTF_8));
                     }
-                    md.update((byte) 0); // Null byte as separator
+                    md.update((byte) 0); 
                 }
             }
             return convertirDigestHex(md.digest());
@@ -75,9 +65,6 @@ public final class HttpUtils {
         }
     }
 
-    /**
-     * Converts a byte array to a hexadecimal string.
-     */
     public static String convertirDigestHex(byte[] hash) {
         if (hash == null) {
             return "";
@@ -93,9 +80,6 @@ public final class HttpUtils {
         return cadenaHexadecimal.toString();
     }
 
-    /**
-     * Extracts headers from an HttpRequest in a readable format.
-     */
     public static String extraerEncabezados(HttpRequest solicitud) {
         if (solicitud == null) {
             return "[SOLICITUD NULL]";
@@ -126,9 +110,6 @@ public final class HttpUtils {
         return encabezados.toString();
     }
 
-    /**
-     * Extracts headers from an HttpResponse in a readable format.
-     */
     public static String extraerEncabezados(HttpResponse respuesta) {
         if (respuesta == null) {
             return "[RESPUESTA NULL]";
@@ -162,9 +143,6 @@ public final class HttpUtils {
         return encabezados.toString();
     }
 
-    /**
-     * Extracts the body from an HttpRequest as a String.
-     */
     public static String extraerCuerpo(HttpRequest solicitud) {
         if (solicitud == null) {
             return "";
@@ -177,9 +155,6 @@ public final class HttpUtils {
         }
     }
 
-    /**
-     * Extracts the body from an HttpResponse as a String.
-     */
     public static String extraerCuerpo(HttpResponse respuesta) {
         if (respuesta == null) {
             return "";
@@ -192,16 +167,10 @@ public final class HttpUtils {
         }
     }
 
-    /**
-     * Checks if a URL points to a static resource based on default extensions.
-     */
     public static boolean esRecursoEstatico(String url) {
         return esRecursoEstatico(url, EXTENSIONES_ESTATICAS);
     }
 
-    /**
-     * Checks if a URL points to a static resource based on its file extension.
-     */
     public static boolean esRecursoEstatico(String url, Set<String> extensionesEstaticas) {
         if (url == null || url.isEmpty() || extensionesEstaticas == null) {
             return false;
@@ -211,7 +180,7 @@ public final class HttpUtils {
         int queryIdx = url.indexOf('?');
         int hashIdx = url.indexOf('#');
         int endIdx = url.length();
-        
+
         if (queryIdx != -1) endIdx = queryIdx;
         if (hashIdx != -1 && hashIdx < endIdx) endIdx = hashIdx;
 

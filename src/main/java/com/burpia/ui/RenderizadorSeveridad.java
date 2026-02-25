@@ -5,9 +5,6 @@ import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 
-
-
-
 public class RenderizadorSeveridad extends DefaultTableCellRenderer {
     private static final long serialVersionUID = 1L;
     private String severidadStr = "";
@@ -32,6 +29,16 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         return this;
     }
 
+    private Color obtenerColorSeveridadTraducida(String sevTraducida) {
+        if (sevTraducida == null) return Color.GRAY;
+        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) return EstilosUI.COLOR_CRITICAL;
+        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_HIGH())) return EstilosUI.COLOR_HIGH;
+        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_MEDIUM())) return EstilosUI.COLOR_MEDIUM;
+        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_LOW())) return EstilosUI.COLOR_LOW;
+        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_INFO())) return EstilosUI.COLOR_INFO;
+        return Color.GRAY;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -45,11 +52,11 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         boolean isDarkTheme = EstilosUI.esTemaOscuro(tableBg);
 
         StringBuilder texto = new StringBuilder(severidadStr);
-        if (severidadStr.equals(Hallazgo.SEVERIDAD_CRITICAL)) texto.insert(0, "⚠ ");
-        else if (severidadStr.equals(Hallazgo.SEVERIDAD_HIGH)) texto.insert(0, "▲ ");
-        else if (severidadStr.equals(Hallazgo.SEVERIDAD_MEDIUM)) texto.insert(0, "◆ ");
-        else if (severidadStr.equals(Hallazgo.SEVERIDAD_LOW)) texto.insert(0, "▽ ");
-        else if (severidadStr.equals(Hallazgo.SEVERIDAD_INFO)) texto.insert(0, "ℹ ");
+        if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) texto.insert(0, "⚠ ");
+        else if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_HIGH())) texto.insert(0, "▲ ");
+        else if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_MEDIUM())) texto.insert(0, "◆ ");
+        else if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_LOW())) texto.insert(0, "▽ ");
+        else if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_INFO())) texto.insert(0, "ℹ ");
 
         String displayText = texto.toString();
 
@@ -57,7 +64,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         g2.setFont(font);
         FontMetrics fm = g2.getFontMetrics();
 
-        Color colorFondoPildora = Hallazgo.obtenerColorSeveridad(severidadStr);
+        Color colorFondoPildora = obtenerColorSeveridadTraducida(severidadStr);
         Color colorTexto = EstilosUI.obtenerColorTextoContraste(colorFondoPildora);
 
         if (isIgnorado) {

@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-
-
-
 public class ResultadoAnalisisMultiple {
     private final String url;
     private final String marcaTiempo;

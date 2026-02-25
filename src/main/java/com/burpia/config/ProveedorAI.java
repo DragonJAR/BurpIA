@@ -1,8 +1,6 @@
 package com.burpia.config;
 import java.util.*;
 
-
-
 public class ProveedorAI {
     public static final String PROVEEDOR_CUSTOM = "-- Custom --";
     public static final String URL_CUSTOM_EN = "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1";
@@ -118,6 +116,28 @@ public class ProveedorAI {
                 "minimax-m2.1-codex",
                 "abab6.5s-chat",
                 "abab6-chat"
+            ),
+            true,
+            4096
+        ));
+
+        PROVEEDORES.put("Moonshot (Kimi)", new ConfiguracionProveedor(
+            "https://api.moonshot.ai/v1",
+            "kimi-k2.5",
+            Arrays.asList(
+                "kimi-k2.5",
+                "kimi-latest",
+                "kimi-k2-thinking",
+                "kimi-k2-thinking-turbo",
+                "kimi-k2-0905",
+                "kimi-k2-turbo",
+                "moonshot-v1-128k",
+                "moonshot-v1-128k-vision",
+                "moonshot-v1-32k",
+                "moonshot-v1-32k-vision",
+                "moonshot-v1-8k",
+                "moonshot-v1-8k-vision",
+                "moonshot-v1-auto"
             ),
             true,
             4096

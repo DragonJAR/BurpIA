@@ -1,8 +1,6 @@
 package com.burpia.util;
 import java.util.concurrent.atomic.AtomicLong;
 
-
-
 public class ControlBackpressureGlobal {
     private final AtomicLong cooldownHastaMs = new AtomicLong(0L);
 

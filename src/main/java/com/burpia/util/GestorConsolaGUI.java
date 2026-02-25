@@ -11,9 +11,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
-
-
 public class GestorConsolaGUI {
     public enum TipoLog {
         INFO,
@@ -168,9 +165,7 @@ public class GestorConsolaGUI {
     }
 
     public String generarResumen() {
-        return I18nUI.trf(
-            "Total: %d | Info: %d | Verbose: %d | Errores: %d",
-            "Total: %d | Info: %d | Verbose: %d | Errors: %d",
+        return I18nUI.Consola.RESUMEN_LOGS(
             obtenerTotalLogs(),
             contadorInfo.get(),
             contadorVerbose.get(),
@@ -319,7 +314,7 @@ public class GestorConsolaGUI {
             return " [ERROR]";
         }
         if (tipo == TipoLog.VERBOSE) {
-            return I18nUI.tr(" [RASTREO]", " [TRACE]");
+            return com.burpia.i18n.I18nUI.Consola.TAG_RASTREO();
         }
         return "";
     }

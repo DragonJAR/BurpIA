@@ -4,6 +4,7 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
+import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import javax.swing.*;
 import java.awt.Component;
@@ -12,12 +13,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-
-
-
 public class FabricaMenuContextual implements ContextMenuItemsProvider {
-    private final MontoyaApi api;
+    private final burp.api.montoya.MontoyaApi api;
     private final ConsumerSolicitud manejadorAnalisis;
+    private final com.burpia.config.ConfiguracionAPI config;
+    private final java.util.function.Consumer<HttpRequestResponse> manejadorFactoryDroid;
     private final AtomicReference<RegistroClic> ultimoClic;
     private static final long VENTANA_DEBOUNCE_MS = 500L;
 
@@ -25,9 +25,11 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal);
     }
 
-    public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis) {
+    public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis, com.burpia.config.ConfiguracionAPI config, java.util.function.Consumer<HttpRequestResponse> manejadorFactoryDroid) {
         this.api = api;
         this.manejadorAnalisis = manejadorAnalisis;
+        this.config = config;
+        this.manejadorFactoryDroid = manejadorFactoryDroid;
         this.ultimoClic = new AtomicReference<>();
     }
 
@@ -43,12 +45,20 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         final HttpRequest solicitudCapturada = solicitudRespuestaSeleccionada.request();
 
         JMenuItem itemAnalizar = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD());
-        itemAnalizar.setToolTipText(TooltipsUI.Contexto.ANALIZAR_SOLICITUD());
+        itemAnalizar.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD());
         itemAnalizar.addActionListener(e -> {
             manejarClicConDebounce(solicitudCapturada, solicitudRespuestaSeleccionada);
         });
 
         itemsMenu.add(itemAnalizar);
+
+        if (config.agenteFactoryDroidHabilitado()) {
+            JMenuItem itemFactoryDroid = new JMenuItem(I18nUI.Contexto.MENU_ENVIAR_FACTORY_DROID());
+            itemFactoryDroid.addActionListener(e -> {
+                manejadorFactoryDroid.accept(solicitudRespuestaSeleccionada);
+            });
+            itemsMenu.add(itemFactoryDroid);
+        }
 
         return itemsMenu;
     }
@@ -60,10 +70,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
 
         RegistroClic previo = ultimoClic.get();
         if (previo != null && hash.equals(previo.hashSolicitud) && (ahora - previo.timestampMs) < VENTANA_DEBOUNCE_MS) {
-            api.logging().logToOutput(I18nUI.tr(
-                "[BurpIA] Debounce: ignorando clic duplicado",
-                "[BurpIA] Debounce: duplicate click ignored"
-            ));
+            api.logging().logToOutput(I18nUI.Contexto.LOG_DEBOUNCE_IGNORADO());
             return;
         }
 
@@ -71,10 +78,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
 
         manejadorAnalisis.analizarSolicitud(solicitud, true, solicitudRespuestaOriginal);
 
-        api.logging().logToOutput(I18nUI.tr(
-            "[BurpIA] Analizando solicitud desde menu contextual (forzado)",
-            "[BurpIA] Analyzing request from context menu (forced)"
-        ));
+        api.logging().logToOutput(I18nUI.Contexto.LOG_ANALISIS_FORZADO());
 
         SwingUtilities.invokeLater(() -> {
             if (GraphicsEnvironment.isHeadless()) {

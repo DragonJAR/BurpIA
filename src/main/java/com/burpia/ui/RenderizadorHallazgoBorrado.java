@@ -6,8 +6,6 @@ import java.awt.font.TextAttribute;
 import java.util.HashMap;
 import java.util.Map;
 
-
-
 public class RenderizadorHallazgoBorrado implements TableCellRenderer {
     private final TableCellRenderer rendererOriginal;
     private final JTable tabla;
