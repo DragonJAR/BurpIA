@@ -7,9 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
-
-
-
 public class ModeloTablaTareas extends DefaultTableModel {
     private static final int TOTAL_COLUMNAS = 4;
     private final List<Tarea> datos;

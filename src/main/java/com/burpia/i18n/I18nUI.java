@@ -1,6 +1,5 @@
 package com.burpia.i18n;
 
-
 public final class I18nUI {
     private static volatile IdiomaUI idiomaActual = IdiomaUI.porDefecto();
 
@@ -42,6 +41,19 @@ public final class I18nUI {
         public static String CONSOLA() {
             return tr("📝 CONSOLA", "📝 CONSOLE");
         }
+
+        public static String AGENTE_FACTORY_DROID() {
+            return tr("🤖 FACTORY DROID", "🤖 FACTORY DROID");
+        }
+    }
+
+    public static final class General {
+        private General() {
+        }
+
+        public static String CONFIGURACION_GUARDADA() {
+            return tr("Configuración guardada", "Configuration saved");
+        }
     }
 
     public static final class Estadisticas {
@@ -49,7 +61,7 @@ public final class I18nUI {
         }
 
         public static String TITULO_HALLAZGOS() {
-            return tr("🎯 POSIBLES HALLAZGOS Y CRITICIDADES", "🎯 FINDINGS AND SEVERITY OVERVIEW");
+            return tr("🎯 POSIBLES HALLAZGOS Y SEVERIDADES", "🎯 FINDINGS AND SEVERITY OVERVIEW");
         }
 
         public static String TITULO_OPERATIVO() {
@@ -66,7 +78,7 @@ public final class I18nUI {
         }
 
         public static String LIMITE_HALLAZGOS(int limite) {
-            return trf("🧮 Limite Hallazgos: %d", "🧮 Findings Limit: %d", limite);
+            return trf("🧮 Límite Hallazgos: %d", "🧮 Findings Limit: %d", limite);
         }
 
         public static String RESUMEN_OPERATIVO(int solicitudes, int analizados, int omitidos, int errores) {
@@ -78,6 +90,14 @@ public final class I18nUI {
 
     public static final class Tareas {
         private Tareas() {
+        }
+
+        public static String ESTADO_TAREA_ATASCADA() {
+            return tr("Tarea atascada - timeout", "Stuck task - timeout");
+        }
+
+        public static String LOG_TAREA_ATASCADA_DETECTADA() {
+            return tr("Tarea atascada detectada: ", "Stuck task detected: ");
         }
 
         public static String TRADUCIR_ESTADO(String estadoOriginal) {
@@ -139,11 +159,11 @@ public final class I18nUI {
         }
 
         public static String TITULO_INFORMACION() {
-            return tr("Informacion", "Information");
+            return tr("Información", "Information");
         }
 
         public static String TITULO_CONFIRMAR_CANCELACION() {
-            return tr("Confirmar cancelacion", "Confirm cancellation");
+            return tr("Confirmar cancelación", "Confirm cancellation");
         }
 
         public static String TITULO_CONFIRMAR_LIMPIEZA() {
@@ -257,8 +277,40 @@ public final class I18nUI {
         private Hallazgos() {
         }
 
+        public static String SEVERIDAD_CRITICAL() { return tr("Crítica", "Critical"); }
+        public static String SEVERIDAD_HIGH() { return tr("Alta", "High"); }
+        public static String SEVERIDAD_MEDIUM() { return tr("Media", "Medium"); }
+        public static String SEVERIDAD_LOW() { return tr("Baja", "Low"); }
+        public static String SEVERIDAD_INFO() { return tr("Informativa", "Info"); }
+
+        public static String TRADUCIR_SEVERIDAD(String severidad) {
+            if (severidad == null) return "";
+            switch (severidad) {
+                case com.burpia.model.Hallazgo.SEVERIDAD_CRITICAL: return SEVERIDAD_CRITICAL();
+                case com.burpia.model.Hallazgo.SEVERIDAD_HIGH: return SEVERIDAD_HIGH();
+                case com.burpia.model.Hallazgo.SEVERIDAD_MEDIUM: return SEVERIDAD_MEDIUM();
+                case com.burpia.model.Hallazgo.SEVERIDAD_LOW: return SEVERIDAD_LOW();
+                case com.burpia.model.Hallazgo.SEVERIDAD_INFO: return SEVERIDAD_INFO();
+                default: return severidad;
+            }
+        }
+
+        public static String CONFIANZA_ALTA() { return tr("Alta", "High"); }
+        public static String CONFIANZA_MEDIA() { return tr("Media", "Medium"); }
+        public static String CONFIANZA_BAJA() { return tr("Baja", "Low"); }
+
+        public static String TRADUCIR_CONFIANZA(String confianza) {
+            if (confianza == null) return "";
+            switch (confianza) {
+                case com.burpia.model.Hallazgo.CONFIANZA_ALTA: return CONFIANZA_ALTA();
+                case com.burpia.model.Hallazgo.CONFIANZA_MEDIA: return CONFIANZA_MEDIA();
+                case com.burpia.model.Hallazgo.CONFIANZA_BAJA: return CONFIANZA_BAJA();
+                default: return confianza;
+            }
+        }
+
         public static String OPCION_TODAS_CRITICIDADES() {
-            return tr("Todas las Criticidades", "All Severities");
+            return tr("Todas las Severidades", "All Severities");
         }
 
         public static String TITULO_FILTROS() {
@@ -294,12 +346,12 @@ public final class I18nUI {
         }
 
         public static String CHECK_GUARDAR_ISSUES() {
-            return tr("Guardar automaticamente en Issues", "Automatically save to Issues");
+            return tr("Guardar automáticamente en Issues", "Automatically save to Issues");
         }
 
         public static String CHECK_GUARDAR_ISSUES_SOLO_PRO() {
             return tr(
-                "Guardar automaticamente en Issues (solo Burp Professional)",
+                "Guardar automáticamente en Issues (solo Burp Professional)",
                 "Automatically save to Issues (Burp Professional only)"
             );
         }
@@ -309,7 +361,7 @@ public final class I18nUI {
         }
 
         public static String TITULO_INFORMACION() {
-            return tr("Informacion", "Information");
+            return tr("Información", "Information");
         }
 
         public static String MSG_CONFIRMAR_LIMPIEZA(int total) {
@@ -331,7 +383,7 @@ public final class I18nUI {
         }
 
         public static String CSV_HEADER() {
-            return tr("Hora,URL,Hallazgo,Descripcion,Severidad,Confianza",
+            return tr("Hora,URL,Hallazgo,Descripción,Severidad,Confianza",
                 "Time,URL,Finding,Description,Severity,Confidence");
         }
 
@@ -348,7 +400,7 @@ public final class I18nUI {
         }
 
         public static String TITULO_EXPORTACION_EXITOSA() {
-            return tr("Exportacion exitosa", "Export successful");
+            return tr("Exportación exitosa", "Export successful");
         }
 
         public static String MSG_ERROR_EXPORTAR(String error) {
@@ -356,7 +408,7 @@ public final class I18nUI {
         }
 
         public static String TITULO_ERROR_EXPORTACION() {
-            return tr("Error de exportacion", "Export error");
+            return tr("Error de exportación", "Export error");
         }
 
         public static String MENU_ENVIAR_REPEATER() {
@@ -462,7 +514,7 @@ public final class I18nUI {
 
         public static String MSG_ISSUES_SOLO_PRO() {
             return tr(
-                "Esta accion solo esta disponible en Burp Suite Professional.",
+                "Esta acción solo está disponible en Burp Suite Professional.",
                 "This action is only available in Burp Suite Professional."
             );
         }
@@ -492,14 +544,14 @@ public final class I18nUI {
 
         public static String MSG_ACCION_SOLO_IGNORADOS(int total) {
             return trf(
-                "No hay hallazgos operables: los %d seleccionados estan marcados como ignorados.",
+                "No hay hallazgos operables: los %d seleccionados están marcados como ignorados.",
                 "No actionable findings: the %d selected are marked as ignored.",
                 total
             );
         }
 
         public static String MSG_HALLAZGOS_IGNORADOS(int total) {
-            return trf("Hallazgos ignorados: %d%n%nNo se incluiran en exportaciones CSV/JSON.",
+            return trf("Hallazgos ignorados: %d%n%nNo se incluirán en exportaciones CSV/JSON.",
                 "Ignored findings: %d%n%nThey will not be included in CSV/JSON exports.",
                 total);
         }
@@ -515,14 +567,101 @@ public final class I18nUI {
         public static String TITULO_HALLAZGOS_BORRADOS() {
             return tr("Hallazgos borrados", "Deleted findings");
         }
+
+        public static String DETALLE_ISSUE() {
+            return tr(
+                "Revisa la solicitud para confirmar la vulnerabilidad. Este hallazgo se guarda automáticamente para que no se pierda al cerrar Burp, pero requiere validación manual. Haz clic derecho en la pestaña de hallazgos para enviar la petición al Repeater o al Intruder. Nunca confíes ciegamente en los resultados de una IA.",
+                "Review the request to confirm the vulnerability. This finding is saved automatically so it is not lost when Burp closes, but it requires manual validation. Right-click on the findings tab to send the request to Repeater or Intruder. Never blindly trust AI results."
+            );
+        }
+
+        public static String REMEDIACION_ISSUE() {
+            return tr(
+                "Revisa los encabezados y el cuerpo de la solicitud HTTP para confirmar la vulnerabilidad. Este hallazgo se guarda automáticamente para que no se pierda al cerrar Burp, pero requiere validación manual. Haz clic derecho en la pestaña de hallazgos para enviar la petición al Repeater o al Intruder, y nunca confíes ciegamente en los resultados de una IA.",
+                "Review HTTP request headers and body to confirm the vulnerability. This finding is saved automatically so it is not lost when Burp closes, but it requires manual validation. Right-click on the findings tab to send the request to Repeater or Intruder, and never blindly trust AI results."
+            );
+        }
+
+        public static String MENU_ENVIAR_FACTORY_DROID_ROCKET() {
+            return tr("🚀 Enviar a Factory Droid", "🚀 Send to Factory Droid");
+        }
+
+        public static String TOOLTIP_ENVIAR_FACTORY_DROID() {
+            return tr("Enviar contexto del hallazgo al agente interactivo", "Send finding context to interactive agent");
+        }
+
+        public static String SUFIJO_ENVIADO_INTRUDER() {
+            return tr("(enviado a Intruder)", "(sent to Intruder)");
+        }
+
+        public static String SUFIJO_ENVIADO_SCANNER() {
+            return tr("(enviado a Scanner Pro)", "(sent to Scanner Pro)");
+        }
+
+        public static String ERROR_SCANNER_SOLO_PRO() {
+            return tr("Scanner solo disponible en Burp Professional", "Scanner only available in Burp Professional");
+        }
+
+        public static String URL_DESCONOCIDA() {
+            return tr("URL desconocida", "Unknown URL");
+        }
+
+        public static String SUFIJO_ERROR_INLINE() {
+            return tr(" (error: ", " (error: ");
+        }
+
+        public static String LOG_ERROR_ACCION_SOLICITUD() {
+            return tr("Error al ejecutar acción sobre la solicitud: ", "Error executing action on request: ");
+        }
+
+        public static String LOG_ERROR_ENVIAR_SCANNER() {
+            return tr("[BurpIA] Error al enviar a Scanner Pro: ", "[BurpIA] Error sending to Scanner Pro: ");
+        }
+
+        public static String ERROR_PANEL_CERRANDO() {
+            return tr("No se pudo ejecutar la acción: el panel se esta cerrando.", "Action could not be executed: the panel is shutting down.");
+        }
+
+        public static String TITULO_OPERACION_LOTE() {
+            return tr("Selección de Operación en Lote", "Batch Operation Selection");
+        }
+
+        public static String LOG_PETICION_ENVIADA_SCANNER() {
+            return tr("[BurpIA] Petición enviada a Scanner Pro: ", "[BurpIA] Request sent to Scanner Pro: ");
+        }
     }
 
     public static final class Consola {
         private Consola() {
         }
 
+        public static String TITULO_ERROR_PTY() { return tr("Error de PTY", "PTY Error"); }
+        public static String MSG_ERROR_NATIVO_PTY(String error) { 
+            return trf("Error nativo iniciando Consola PTY: %s\nRevisa /tmp/burpia_pty_error.log", 
+                       "Native error starting PTY Console: %s\nCheck /tmp/burpia_pty_error.log", error); 
+        }
+        public static String HEADER_LOG_ERROR_PTY() { return tr("\n--- ERROR PTY ---\n", "\n--- PTY ERROR ---\n"); }
+
         public static String TITULO_CONTROLES() {
             return tr("⚙️ CONTROLES DE CONSOLA", "⚙️ CONSOLE CONTROLS");
+        }
+
+        public static String LOG_MANEJADOR_INICIALIZADO(int concurrente, int retraso, boolean detallado) {
+            return trf("ManejadorHttpBurpIA inicializado (maximoConcurrente=%d, retraso=%ds, detallado=%s)",
+                       "ManejadorHttpBurpIA initialized (maxConcurrent=%d, delay=%ds, verbose=%s)",
+                       concurrente, retraso, detallado);
+        }
+
+        public static String LOG_CONFIGURACION_ACTUALIZADA(int concurrente, int retraso, String modelo, int timeout) {
+            return trf("Configuración actualizada: maximoConcurrente=%d, retraso=%ds, timeout(%s)=%ds",
+                       "Configuration updated: maxConcurrent=%d, delay=%ds, timeout(%s)=%ds",
+                       concurrente, retraso, modelo, timeout);
+        }
+
+        public static String RESUMEN_LOGS(int total, int info, int verbose, int err) {
+            return trf("Total: %d | Info: %d | Verbose: %d | Errores: %d",
+                       "Total: %d | Info: %d | Verbose: %d | Errors: %d",
+                       total, info, verbose, err);
         }
 
         public static String TITULO_LOGS() {
@@ -544,11 +683,11 @@ public final class I18nUI {
         }
 
         public static String MSG_CONSOLA_VACIA() {
-            return tr("La consola ya esta vacia.", "The console is already empty.");
+            return tr("La consola ya está vacía.", "The console is already empty.");
         }
 
         public static String TITULO_INFORMACION() {
-            return tr("Informacion", "Information");
+            return tr("Información", "Information");
         }
 
         public static String MSG_CONFIRMAR_LIMPIEZA(int total) {
@@ -564,6 +703,65 @@ public final class I18nUI {
         public static String LOG_INICIALIZADA() {
             return tr("Consola GUI inicializada", "GUI console initialized");
         }
+
+        public static String BOTON_REINICIAR() {
+            return tr("Reiniciar", "Restart");
+        }
+
+        public static String TOOLTIP_REINICIAR() {
+            return tr("Reiniciar la consola subyacente", "Restart underlying console");
+        }
+
+        public static String BOTON_CTRL_C() {
+            return tr("Ctrl+C", "Ctrl+C");
+        }
+
+        public static String TOOLTIP_CTRL_C() {
+            return tr("Enviar señal de interrupción (SIGINT)", "Send interrupt signal (SIGINT)");
+        }
+        
+        public static String ETIQUETA_DELAY() {
+            return tr("Delay inicial (ms):", "Initial delay (ms):");
+        }
+
+        public static String TOOLTIP_DELAY() {
+            return tr("Tiempo de espera en milisegundos antes de inyectar el prompt inicial (mín 1000ms)", 
+                      "Wait time in milliseconds before injecting the initial prompt (min 1000ms)");
+        }
+
+        public static String TAG_RASTREO() {
+            return tr(" [RASTREO]", " [TRACE]");
+        }
+    }
+
+
+    public static final class Conexion {
+        private Conexion() {}
+        
+        public static String ERRORES_CONFIGURACION() { return tr("Errores de configuración:\n", "Configuration errors:\n"); }
+        public static String SIN_RESPUESTA() { return tr("No se recibió respuesta del servidor", "No response was received from server"); }
+        public static String ERROR_CONEXION() { return tr("Error de conexión: ", "Connection error: "); }
+        public static String ERROR_PRUEBA_CONEXION(String errorMsg) {
+            return trf("Error durante la prueba de conexión:%n%n%s", "Error during connection test:%n%n%s", errorMsg);
+        }
+        public static String EXITO_CONEXION() { return tr("✅ Conexión exitosa a ", "✅ Successful connection to "); }
+        public static String INFO_CONFIGURACION() { return tr("📋 Configuración:\n", "📋 Configuration:\n"); }
+        public static String INFO_MODELO() { return tr("   Modelo: ", "   Model: "); }
+        public static String INFO_URL_BASE() { return tr("   URL base: ", "   Base URL: "); }
+        public static String INFO_ENDPOINT() { return tr("   Endpoint probado: ", "   Tested endpoint: "); }
+        public static String MSG_ENVIADO() { return tr("💬 Mensaje enviado: \"Responde exactamente con OK\"\n\n", "💬 Sent message: \"Reply exactly with OK\"\n\n"); }
+        public static String RESPUESTA_MODELO() { return tr("✅ Respuesta del modelo:\n", "✅ Model response:\n"); }
+        public static String RESPUESTA_CORRECTA() { return tr("\n\n✅ ¡El modelo respondió correctamente!", "\n\n✅ Model responded correctly!"); }
+        public static String RESPUESTA_ACEPTADA() { return tr("\n(Respuesta aceptada: contiene \"OK\" o \"Hola\")", "\n(Accepted response: contains \"OK\" or \"Hello\")"); }
+        public static String PROVEEDOR_RESPONDIO() { return tr("✅ El proveedor respondió y el contenido fue extraído correctamente.\n", "✅ Provider responded and content was extracted successfully.\n"); }
+        public static String CONEXION_VALIDA_SIN_OK() { return tr("ℹ️ La respuesta no incluyó literalmente \"OK\", pero la conexión es valida.\n\n", "ℹ️ Response did not include literal \"OK\", but connection is valid.\n\n"); }
+        public static String MODELO_RESPONDE() { return tr("Respuesta del modelo:\n", "Model response:\n"); }
+        public static String RESPUESTA_SIN_OK() { return tr("⚠️ La respuesta NO contiene \"OK\" ni \"Hola\"\n\n", "⚠️ Response does NOT contain \"OK\" or \"Hello\"\n\n"); }
+        public static String RESPUESTA_RECIBIDA() { return tr("❌ Respuesta recibida:\n", "❌ Received response:\n"); }
+        public static String RESPUESTA_FORMATO_INCORRECTO() { return tr("\n\n⚠️ El modelo respondió pero no cumple el formato esperado.", "\n\n⚠️ Model responded but did not match the expected format."); }
+        public static String ERROR_EXTRAER_CONTENIDO() { return tr("⚠️ No se pudo extraer el contenido de la respuesta\n", "⚠️ Could not extract response content\n"); }
+        public static String EXITO_FORMATO_INCORRECTO() { return tr("   La conexión fue exitosa pero el formato de respuesta no es el esperado.\n", "   Connection succeeded but response format is not expected.\n"); }
+        public static String RESPUESTA_CRUDA() { return tr("   Respuesta cruda (primeros 200 caracteres):\n", "   Raw response (first 200 characters):\n"); }
     }
 
     public static final class DetalleHallazgo {
@@ -595,7 +793,7 @@ public final class I18nUI {
         }
 
         public static String LABEL_DESCRIPCION() {
-            return tr("Descripcion:", "Description:");
+            return tr("Descripción:", "Description:");
         }
 
         public static String BOTON_GUARDAR() {
@@ -607,12 +805,12 @@ public final class I18nUI {
         }
 
         public static String MSG_VALIDACION() {
-            return tr("La URL y la descripcion no pueden estar vacias.",
+            return tr("La URL y la descripción no pueden estar vacías.",
                 "URL and description cannot be empty.");
         }
 
         public static String TITULO_ERROR_VALIDACION() {
-            return tr("Error de validacion", "Validation error");
+            return tr("Error de validación", "Validation error");
         }
     }
 
@@ -636,6 +834,10 @@ public final class I18nUI {
             return tr("ℹ️ Acerca de", "ℹ️ About");
         }
 
+        public static String TAB_AGENTES() {
+            return tr("🤖 Agentes", "🤖 Agents");
+        }
+
         public static String LABEL_TIMEOUT_MODELO() {
             return tr("Timeout de Modelo (s):", "Model Timeout (s):");
         }
@@ -645,12 +847,156 @@ public final class I18nUI {
         }
 
         public static String BOTON_PROBAR_CONEXION() {
-            return tr("🔍 Probar Conexion", "🔍 Test Connection");
+            return tr("🔍 Probar Conexión", "🔍 Test Connection");
         }
 
         public static String BOTON_PROBANDO() {
             return tr("🔍 Probando...", "🔍 Testing...");
         }
+
+        public static String LABEL_IGNORAR_SSL() {
+            return tr("Ignorar errores de certificado SSL (No recomendado)", "Ignore SSL certificate errors (Not recommended)");
+        }
+
+        public static String TOOLTIP_IGNORAR_SSL() {
+            return tr("Habilita esto si obtienes errores de PKIX o certificados al conectar con la API", "Enable this if you get PKIX or certificate errors when connecting to the API");
+        }
+
+        public static String LABEL_SOLO_PROXY() {
+            return tr("Capturar solo peticiones del Proxy (Navegador)", "Capture only Proxy requests (Browser)");
+        }
+
+        public static String TOOLTIP_SOLO_PROXY() {
+            return tr("Ignora peticiones del Intruder, Scanner, Repeater u otras herramientas de Burp", "Ignore requests from Intruder, Scanner, Repeater, or other Burp tools");
+        }
+
+        public static String LABEL_SEGURIDAD_SSL() {
+            return tr("Seguridad SSL:", "SSL Security:");
+        }
+
+        public static String LABEL_FILTRO_HERRAMIENTAS() {
+            return tr("Filtro de Herramientas:", "Tool Filtering:");
+        }
+
+        public static String TOOLTIP_RESTAURAR_PROMPT() {
+            return tr("Restaura la plantilla por defecto recomendada para el Agente", "Restores the default template recommended for the Agent");
+        }
+
+        public static String MSG_CORRIGE_CAMPOS() {
+            return tr("Corrige los siguientes campos:\n", "Please fix the following fields:\n");
+        }
+
+        public static String ERROR_API_SIN_MODELOS(String proveedorSeleccionado) {
+            return tr("La API no devolvió modelos para " + proveedorSeleccionado, "The API returned no models for " + proveedorSeleccionado);
+        }
+
+        public static String ERROR_OBTENER_GEMINI() {
+            return tr("No se pudieron obtener modelos Gemini: ", "Could not retrieve Gemini models: ");
+        }
+
+        public static String ERROR_OBTENER_OLLAMA() {
+            return tr("No se pudieron obtener modelos Ollama: ", "Could not retrieve Ollama models: ");
+        }
+
+        public static String ERROR_OBTENER_API() {
+            return tr("No se pudieron obtener modelos de la API: ", "Could not retrieve models from API: ");
+        }
+
+        public static String ERROR_PROVEEDOR_SIN_LISTA() {
+            return tr("Este proveedor no expone una lista automatica de modelos. Escribe el modelo manualmente en el campo Modelo.", "This provider does not expose an automatic model list. Enter the model manually in the Model field.");
+        }
+
+        public static String ERROR_PROVEEDOR_REQUERIDO() {
+            return tr("Proveedor de AI es requerido", "AI provider is required");
+        }
+
+        public static String ERROR_MODELO_REQUERIDO() {
+            return tr("Modelo es requerido", "Model is required");
+        }
+
+        public static String ERROR_PROMPT_REQUERIDO() {
+            return tr("Prompt configurable es requerido", "Configurable prompt is required");
+        }
+
+        public static String ERROR_CONCURRENCIA() {
+            return tr("Concurrencia debe ser entre 1 y 10", "Concurrency must be between 1 and 10");
+        }
+
+        public static String ERROR_TEMA_INVALIDO() {
+            return tr("Tema debe ser 'Light' o 'Dark'", "Theme must be 'Light' or 'Dark'");
+        }
+
+        public static String SIN_DETALLE_ERROR() {
+            return tr("Sin detalle de error", "No error details available");
+        }
+
+        public static String ALERTA_PROVEEDOR_INVALIDO() {
+            return tr("ALERTA: Proveedor de AI no configurado o no valido", "ALERT: AI provider is not configured or is invalid");
+        }
+
+        public static String ALERTA_URL_VACIA() {
+            return tr("ALERTA: URL de API no configurada", "ALERT: API URL is not configured");
+        }
+        
+        public static String ERROR_PROVEEDOR_NO_RECONOCIDO(String proveedor) {
+            return trf("Proveedor de AI no reconocido: %s", "Unknown AI provider: %s", proveedor);
+        }
+
+        public static String ERROR_RETRASO_RANGO(int min, int max) {
+            return trf("Retraso debe estar entre %d y %d segundos", "Delay must be between %d and %d seconds", min, max);
+        }
+
+        public static String ERROR_MAXIMO_CONCURRENTE_RANGO(int min, int max) {
+            return trf("Máximo concurrente debe estar entre %d y %d", "Max concurrent must be between %d and %d", min, max);
+        }
+
+        public static String ERROR_MAXIMO_HALLAZGOS_TABLA_RANGO(int min, int max) {
+            return trf("Máximo de hallazgos en tabla debe estar entre %d y %d", "Max findings in table must be between %d and %d", min, max);
+        }
+
+        public static String ALERTA_MODELO_NO_CONFIGURADO(String proveedor) {
+            return trf("ALERTA: Modelo no configurado para %s", "ALERT: Model is not configured for %s", proveedor);
+        }
+
+        public static String ALERTA_CLAVE_REQUERIDA(String proveedor) {
+            return trf("ALERTA: Clave de API requerida para %s", "ALERT: API key is required for %s", proveedor);
+        }
+
+        public static String PROMPT_POR_DEFECTO() {
+            return tr(
+                "Analiza la siguiente petición y respuesta HTTP:\n\nSOLICITUD:\n{REQUEST}\n\nRESPUESTA:\n{RESPONSE}",
+                "Analyze the following HTTP request and response:\n\nREQUEST:\n{REQUEST}\n\nRESPONSE:\n{RESPONSE}"
+            );
+        }
+
+        public static String ALERTA_CLAVE_VACIA() {
+            return tr("ALERTA: Clave API no configurada", "ALERT: API key is not configured");
+        }
+        
+        public static String ERROR_TIMEOUT_RANGO() {
+            return tr("Tiempo de espera debe estar entre 10 y 300 segundos", "Timeout must be between 10 and 300 seconds");
+        }
+
+        public static String MSG_CONFIGURACION_NULA() {
+            return tr("Configuración nula", "Null configuration");
+        }
+
+        public static String MSG_DIRECTORIO_NO_EXISTE() {
+            return tr("Directorio no existe: ", "Directory does not exist: ");
+        }
+
+        public static String MSG_DIRECTORIO_NO_ESCRIBIBLE() {
+            return tr("Directorio no escribible: ", "Directory is not writable: ");
+        }
+
+        public static String MSG_ERROR_IO() {
+            return tr("Error de E/S: ", "I/O error: ");
+        }
+
+        public static String MSG_ERROR_INESPERADO() {
+            return tr("Error inesperado: ", "Unexpected error: ");
+        }
+
 
         public static String TITULO_AJUSTES_USUARIO() {
             return tr("⚙️ AJUSTES DE USUARIO", "⚙️ USER SETTINGS");
@@ -665,7 +1011,7 @@ public final class I18nUI {
         }
 
         public static String LABEL_MAXIMO_CONCURRENTE() {
-            return tr("Maximo Concurrente:", "Max Concurrent:");
+            return tr("Máximo Concurrente:", "Max Concurrent:");
         }
 
         public static String LABEL_MAX_HALLAZGOS_TABLA() {
@@ -677,7 +1023,7 @@ public final class I18nUI {
         }
 
         public static String CHECK_DETALLADO() {
-            return tr("Activar registro detallado (recomendado para depuracion)",
+            return tr("Activar registro detallado (recomendado para depuración)",
                 "Enable verbose logging (recommended for troubleshooting)");
         }
 
@@ -715,7 +1061,7 @@ public final class I18nUI {
         }
 
         public static String LABEL_MAX_TOKENS() {
-            return tr("Maximo de Tokens:", "Max Tokens:");
+            return tr("Máximo de Tokens:", "Max Tokens:");
         }
 
         public static String TITULO_INSTRUCCIONES() {
@@ -724,8 +1070,8 @@ public final class I18nUI {
 
         public static String TEXTO_INSTRUCCIONES() {
             return tr(
-                "• El token {REQUEST} se reemplaza automaticamente con la solicitud HTTP analizada.\n" +
-                    "• El token {RESPONSE} se reemplaza automaticamente con la respuesta HTTP capturada.\n" +
+                "• El token {REQUEST} se reemplaza automáticamente con la solicitud HTTP analizada.\n" +
+                    "• El token {RESPONSE} se reemplaza automáticamente con la respuesta HTTP capturada.\n" +
                     "• El token {OUTPUT_LANGUAGE} se reemplaza con el idioma configurado por el usuario.\n" +
                     "• Incluye {REQUEST}, {RESPONSE} y {OUTPUT_LANGUAGE} donde quieras insertar la evidencia.\n" +
                     "• El prompt debe pedir respuesta JSON estricta con este formato:",
@@ -765,7 +1111,7 @@ public final class I18nUI {
         }
 
         public static String SUBTITULO_APP() {
-            return tr("Analisis de Seguridad con Inteligencia Artificial",
+            return tr("Análisis de Seguridad con Inteligencia Artificial",
                 "Security Analysis with Artificial Intelligence");
         }
 
@@ -776,15 +1122,15 @@ public final class I18nUI {
         public static String DESCRIPCION_APP() {
             return tr(
                 "BurpIA es una extension profesional para Burp Suite que aprovecha multiples " +
-                    "modelos de Inteligencia Artificial para analizar trafico HTTP e identificar " +
+                    "modelos de Inteligencia Artificial para analizar tráfico HTTP e identificar " +
                     "vulnerabilidades de seguridad de forma automatizada.\n\n" +
-                    "Caracteristicas principales:\n" +
+                    "Características principales:\n" +
                     "• Compatibilidad con OpenAI, Claude, Gemini, Z.ai, Minimax y Ollama\n" +
                     "• De-duplicacion inteligente de peticiones para optimizar la cuota de API\n" +
-                    "• Gestion asincrona mediante colas de tareas paralelizables\n" +
-                    "• Integracion con site map (Issues), Repeater, Intruder y Scanner Pro\n" +
-                    "• Prompt totalmente configurable para analisis a medida\n" +
-                    "• Exportacion nativa de reportes de hallazgos a CSV y JSON",
+                    "• Gestion asíncrona mediante colas de tareas paralelizables\n" +
+                    "• Integración con site map (Issues), Repeater, Intruder y Scanner Pro\n" +
+                    "• Prompt totalmente configurable para análisis a medida\n" +
+                    "• Exportación nativa de reportes de hallazgos a CSV y JSON",
                 "BurpIA is a professional Burp Suite extension that uses multiple " +
                     "Artificial Intelligence models to analyze HTTP traffic and identify " +
                     "security vulnerabilities automatically.\n\n" +
@@ -796,6 +1142,32 @@ public final class I18nUI {
                     "• Fully configurable prompt for custom analysis\n" +
                     "• Native findings export to CSV and JSON"
             );
+        }
+
+        public static final class Agentes {
+            private Agentes() {
+            }
+
+            public static String TITULO_FACTORY_DROID() {
+                return tr("🤖 CONFIGURACION FACTORY DROID", "🤖 FACTORY DROID SETTINGS");
+            }
+
+            public static String CHECK_HABILITAR_AGENTE() {
+                return tr("Habilitar Agente Factory Droid", "Enable Factory Droid Agent");
+            }
+
+            public static String LABEL_RUTA_BINARIO() {
+                return tr("Ruta del Binario:", "Binary Path:");
+            }
+
+            public static String TITULO_PROMPT_AGENTE() {
+                return tr("✍️ PROMPT DEL AGENTE", "✍️ AGENT PROMPT");
+            }
+
+            public static String MSG_CONFIGURACION_REQUERIDA() {
+                return tr("Configura la ruta del binario en los ajustes de agentes.",
+                    "Configure the binary path in the agents settings.");
+            }
         }
 
         public static String TITULO_DESARROLLADO_POR() {
@@ -829,27 +1201,27 @@ public final class I18nUI {
         }
 
         public static String MSG_CONFIRMAR_RESTAURAR_PROMPT() {
-            return tr("¿Estas seguro de que deseas restaurar el prompt por defecto? Se perderan tus cambios personalizados.",
+            return tr("¿Estas seguro de que deseas restaurar el prompt por defecto? Se perderán tus cambios personalizados.",
                 "Are you sure you want to restore the default prompt? Your custom changes will be lost.");
         }
 
         public static String TITULO_CONFIRMAR_RESTAURACION() {
-            return tr("Confirmar Restauracion", "Confirm Restore");
+            return tr("Confirmar Restauración", "Confirm Restore");
         }
 
         public static String MSG_ERROR_PROMPT_SIN_REQUEST() {
-            return tr("El prompt debe contener el token {REQUEST} para indicar donde se insertara la solicitud HTTP.\n" +
+            return tr("El prompt debe contener el token {REQUEST} para indicar donde se insertará la solicitud HTTP.\n" +
                     "El token {RESPONSE} es opcional pero recomendado para analizar la respuesta del servidor.",
                 "The prompt must include the {REQUEST} token to indicate where the HTTP request will be inserted.\n" +
                     "The {RESPONSE} token is optional but recommended to analyze the server response.");
         }
 
         public static String TITULO_ERROR_VALIDACION() {
-            return tr("Error de Validacion", "Validation Error");
+            return tr("Error de Validación", "Validation Error");
         }
 
         public static String MSG_ERROR_GUARDAR_CONFIG(String detalle, String ruta) {
-            return trf("No se pudo guardar la configuracion:\n%s\n\nRuta: %s",
+            return trf("No se pudo guardar la configuración:\n%s\n\nRuta: %s",
                 "Configuration could not be saved:\n%s\n\nPath: %s",
                 detalle, ruta);
         }
@@ -859,7 +1231,7 @@ public final class I18nUI {
         }
 
         public static String MSG_ERROR_FORMATO_NUMERO() {
-            return tr("Formato de numero invalido en ajustes de usuario",
+            return tr("Formato de número invalido en ajustes de usuario",
                 "Invalid number format in user settings");
         }
 
@@ -885,16 +1257,16 @@ public final class I18nUI {
         }
 
         public static String TITULO_VALIDACION() {
-            return tr("Validacion", "Validation");
+            return tr("Validación", "Validation");
         }
 
         public static String MSG_URL_VACIA() {
-            return tr("La URL de API no puede estar vacia.\nPor favor ingresa una URL valida.",
+            return tr("La URL de API no puede estar vacía.\nPor favor ingresa una URL valida.",
                 "The API URL cannot be empty.\nPlease provide a valid URL.");
         }
 
         public static String MSG_API_KEY_VACIA(String proveedor) {
-            return trf("La clave de API no puede estar vacia para %s.\nPor favor ingresa tu clave de API.",
+            return trf("La clave de API no puede estar vacía para %s.\nPor favor ingresa tu clave de API.",
                 "API key cannot be empty for %s.\nPlease provide your API key.",
                 proveedor);
         }
@@ -905,11 +1277,11 @@ public final class I18nUI {
         }
 
         public static String TITULO_CONEXION_EXITOSA() {
-            return tr("✅ Conexion Exitosa", "✅ Connection Successful");
+            return tr("✅ Conexión Exitosa", "✅ Connection Successful");
         }
 
         public static String TITULO_ERROR_CONEXION() {
-            return tr("❌ Error de Conexion", "❌ Connection Error");
+            return tr("❌ Error de Conexión", "❌ Connection Error");
         }
 
         public static String MSG_ERROR_PRUEBA_INESPERADO(String detalle) {
@@ -927,15 +1299,27 @@ public final class I18nUI {
             return tr("Analizar Solicitud con BurpIA", "Analyze Request with BurpIA");
         }
 
+        public static String MENU_ENVIAR_FACTORY_DROID() {
+            return tr("🤖 Enviar a Factory Droid", "🤖 Send to Factory Droid");
+        }
+
+        public static String LOG_DEBOUNCE_IGNORADO() {
+            return tr("[BurpIA] Debounce: ignorando clic duplicado", "[BurpIA] Debounce: duplicate click ignored");
+        }
+
+        public static String LOG_ANALISIS_FORZADO() {
+            return tr("[BurpIA] Analizando solicitud desde menu contextual (forzado)", "[BurpIA] Analyzing request from context menu (forced)");
+        }
+
         public static String MSG_ANALISIS_INICIADO() {
-            return tr("Solicitud enviada para analisis forzado.\n" +
+            return tr("Solicitud enviada para análisis forzado.\n" +
                     "Esto puede tomar unos segundos dependiendo de la respuesta de la AI.",
                 "Request sent for forced analysis.\n" +
                     "This may take a few seconds depending on AI response time.");
         }
 
         public static String TITULO_ANALISIS_INICIADO() {
-            return tr("BurpIA - Analisis Iniciado", "BurpIA - Analysis Started");
+            return tr("BurpIA - Análisis Iniciado", "BurpIA - Analysis Started");
         }
     }
 
@@ -948,7 +1332,7 @@ public final class I18nUI {
                 tr("Tipo", "Type"),
                 tr("URL", "URL"),
                 tr("Estado", "Status"),
-                tr("Duracion", "Duration")
+                tr("Duración", "Duration")
             };
         }
 
@@ -961,5 +1345,418 @@ public final class I18nUI {
                 tr("Confianza", "Confidence")
             };
         }
+    }
+
+    public static final class Tooltips {
+        private Tooltips() {}
+
+        public static final class Pestanias {
+        private Pestanias() {
+        }
+
+        public static String TAREAS() {
+            return I18nUI.tr("Monitoriza la cola de análisis y controla su ejecución.",
+                "Monitor the analysis queue and control execution.");
+        }
+
+        public static String HALLAZGOS() {
+            return I18nUI.tr("Revisa, filtra y exporta hallazgos detectados por BurpIA.",
+                "Review, filter, and export BurpIA findings.");
+        }
+
+        public static String CONSOLA() {
+            return I18nUI.tr("Consulta logs operativos y de diagnóstico del complemento.",
+                "Review extension operational and diagnostic logs.");
+        }
+    }
+
+    public static final class Estadisticas {
+        private Estadisticas() {
+        }
+
+        public static String RESUMEN_TOTAL() {
+            return I18nUI.tr("Total acumulado de hallazgos registrados.",
+                "Total number of recorded findings.");
+        }
+
+        public static String RESUMEN_SEVERIDAD() {
+            return I18nUI.tr("Distribución de hallazgos por nivel de severidad.",
+                "Distribution of findings by severity.");
+        }
+
+        public static String LIMITE_HALLAZGOS() {
+            return I18nUI.tr("Límite máximo de hallazgos conservados en tabla/memoria.",
+                "Maximum findings kept in table/memory.");
+        }
+
+        public static String RESUMEN_OPERATIVO() {
+            return I18nUI.tr("Solicitudes recibidas, analizadas, omitidas y errores.",
+                "Requests received, analyzed, skipped and errored.");
+        }
+
+        public static String CONFIGURACION() {
+            return I18nUI.tr("Abre configuración de proveedor, prompt y limites.",
+                "Open provider, prompt and limits settings.");
+        }
+
+        public static String CAPTURA_PAUSAR() {
+            return I18nUI.tr("Pausa el análisis pasivo de nuevas respuestas HTTP.",
+                "Pause passive analysis of new HTTP responses.");
+        }
+
+        public static String CAPTURA_REANUDAR() {
+            return I18nUI.tr("Reanuda el análisis pasivo de respuestas HTTP.",
+                "Resume passive analysis of HTTP responses.");
+        }
+    }
+
+    public static final class Tareas {
+        private Tareas() {
+        }
+
+        public static String PAUSAR_REANUDAR() {
+            return I18nUI.tr("Pausa o reanuda todas las tareas activas.",
+                "Pause or resume all active tasks.");
+        }
+
+        public static String CANCELAR() {
+            return I18nUI.tr("Cancela tareas activas y evita nuevos reintentos automaticos.",
+                "Cancel active tasks and prevent automatic retries.");
+        }
+
+        public static String LIMPIAR() {
+            return I18nUI.tr("Elimina tareas finalizadas (completadas, error o canceladas).",
+                "Remove finished tasks (completed, failed, or canceled).");
+        }
+
+        public static String ESTADISTICAS() {
+            return I18nUI.tr("Resumen en tiempo real del estado de la cola de tareas.",
+                "Real-time queue status summary.");
+        }
+
+        public static String TABLA() {
+            return I18nUI.tr("Cola de análisis con estado, URL y duración por tarea.",
+                "Analysis queue with status, URL and duration per task.");
+        }
+
+        public static String PAUSAR_TODO() {
+            return I18nUI.tr("Pausa todas las tareas en cola o análisis.",
+                "Pause all queued or running tasks.");
+        }
+
+        public static String REANUDAR_TODO() {
+            return I18nUI.tr("Reanuda todas las tareas actualmente pausadas.",
+                "Resume all currently paused tasks.");
+        }
+
+        public static String MENU_VER_DETALLES_ERROR() {
+            return I18nUI.tr("Muestra URL, estado y duración de la tarea con error.",
+                "Show URL, status and duration of the failed task.");
+        }
+
+        public static String MENU_REINTENTAR_UNA() {
+            return I18nUI.tr("Reencola la tarea para un nuevo intento.",
+                "Requeue task for another attempt.");
+        }
+
+        public static String MENU_PAUSAR_UNA() {
+            return I18nUI.tr("Pausa la tarea para detener su procesamiento.",
+                "Pause task processing.");
+        }
+
+        public static String MENU_REANUDAR_UNA() {
+            return I18nUI.tr("Reanuda la tarea pausada y la devuelve a cola.",
+                "Resume paused task and move it back to queue.");
+        }
+
+        public static String MENU_CANCELAR_UNA() {
+            return I18nUI.tr("Cancela la tarea activa seleccionada.",
+                "Cancel selected active task.");
+        }
+
+        public static String MENU_ELIMINAR_UNA() {
+            return I18nUI.tr("Elimina la tarea finalizada de la tabla.",
+                "Remove finished task from table.");
+        }
+
+        public static String MENU_REINTENTAR_MULTIPLES() {
+            return I18nUI.tr("Reencola tareas con estado error o cancelado.",
+                "Requeue failed or canceled tasks.");
+        }
+
+        public static String MENU_PAUSAR_MULTIPLES() {
+            return I18nUI.tr("Pausa tareas en cola o analizando.",
+                "Pause queued or running tasks.");
+        }
+
+        public static String MENU_REANUDAR_MULTIPLES() {
+            return I18nUI.tr("Reanuda tareas pausadas y las devuelve a cola.",
+                "Resume paused tasks and move them back to queue.");
+        }
+
+        public static String MENU_CANCELAR_MULTIPLES() {
+            return I18nUI.tr("Cancela tareas activas seleccionadas.",
+                "Cancel selected active tasks.");
+        }
+
+        public static String MENU_ELIMINAR_MULTIPLES() {
+            return I18nUI.tr("Elimina tareas finalizadas seleccionadas.",
+                "Remove selected finished tasks.");
+        }
+    }
+
+    public static final class Hallazgos {
+        private Hallazgos() {
+        }
+
+        public static String BUSQUEDA() {
+            return I18nUI.tr("Filtra hallazgos por texto en URL o descripción.",
+                "Filter findings by URL or description text.");
+        }
+
+        public static String FILTRO_SEVERIDAD() {
+            return I18nUI.tr("Muestra solo hallazgos de la severidad seleccionada.",
+                "Show only findings with selected severity.");
+        }
+
+        public static String LIMPIAR_FILTROS() {
+            return I18nUI.tr("Restablece búsqueda y filtro de severidad.",
+                "Reset search and severity filter.");
+        }
+
+        public static String EXPORTAR_CSV() {
+            return I18nUI.tr("Exporta hallazgos no ignorados en formato CSV.",
+                "Export non-ignored findings as CSV.");
+        }
+
+        public static String EXPORTAR_JSON() {
+            return I18nUI.tr("Exporta hallazgos no ignorados en formato JSON.",
+                "Export non-ignored findings as JSON.");
+        }
+
+        public static String LIMPIAR_TODO() {
+            return I18nUI.tr("Elimina todos los hallazgos visibles en la tabla.",
+                "Remove all visible findings from table.");
+        }
+
+        public static String GUARDAR_ISSUES() {
+            return I18nUI.tr("Guarda automáticamente hallazgos en Issues/Site Map de Burp.",
+                "Automatically save findings into Burp Issues/Site Map.");
+        }
+
+        public static String GUARDAR_ISSUES_SOLO_PRO() {
+            return I18nUI.tr(
+                "Disponible solo en Burp Professional. En Community esta opción no guarda Issues.",
+                "Available only in Burp Professional. In Community this option does not save Issues."
+            );
+        }
+
+        public static String TABLA() {
+            return I18nUI.tr("Listado de hallazgos; doble clic para editar y clic derecho para acciones.",
+                "Findings list; double click to edit and right click for actions.");
+        }
+
+        public static String MENU_REPEATER() {
+            return I18nUI.tr("Envia la request original a Repeater para validación manual.",
+                "Send original request to Repeater for manual validation.");
+        }
+
+        public static String MENU_INTRUDER() {
+            return I18nUI.tr("Envia la request original a Intruder para pruebas activas.",
+                "Send original request to Intruder for active testing.");
+        }
+
+        public static String MENU_SCANNER() {
+            return I18nUI.tr("Envia la request original al Scanner Pro de Burp.",
+                "Send original request to Burp Scanner Pro.");
+        }
+
+        public static String MENU_ISSUES() {
+            return I18nUI.tr("Guarda manualmente hallazgos seleccionados en Issues/Site Map de Burp.",
+                "Manually save selected findings into Burp Issues/Site Map.");
+        }
+
+        public static String MENU_ISSUES_SOLO_PRO() {
+            return I18nUI.tr(
+                "Disponible solo en Burp Professional.",
+                "Available only in Burp Professional."
+            );
+        }
+
+        public static String MENU_IGNORAR() {
+            return I18nUI.tr("Marca hallazgos para excluirlos de exportaciones.",
+                "Mark findings to exclude them from exports.");
+        }
+
+        public static String MENU_BORRAR() {
+            return I18nUI.tr("Elimina hallazgos seleccionados de la tabla.",
+                "Delete selected findings from table.");
+        }
+    }
+
+    public static final class Consola {
+        private Consola() {
+        }
+
+        public static String AUTOSCROLL() {
+            return I18nUI.tr("Desplaza la consola al final cuando llegan nuevos logs.",
+                "Scroll console to bottom when new logs arrive.");
+        }
+
+        public static String LIMPIAR() {
+            return I18nUI.tr("Borra todo el historial de logs de la consola.",
+                "Clear full console log history.");
+        }
+
+        public static String RESUMEN() {
+            return I18nUI.tr("Conteo acumulado de logs informativos, detallados y de error.",
+                "Running totals of info, verbose and error logs.");
+        }
+
+        public static String AREA_LOGS() {
+            return I18nUI.tr("Salida de ejecución y diagnóstico de BurpIA.",
+                "BurpIA execution and diagnostic output.");
+        }
+    }
+
+    public static final class Configuracion {
+        private Configuracion() {
+        }
+
+        public static String GUARDAR() {
+            return I18nUI.tr("Valida y guarda la configuración activa de BurpIA.",
+                "Validate and save current BurpIA configuration.");
+        }
+
+        public static String PROBAR_CONEXION() {
+            return I18nUI.tr("Ejecuta una prueba de conexión con el proveedor seleccionado.",
+                "Run connectivity test against selected provider.");
+        }
+
+        public static String RETRASO() {
+            return I18nUI.tr("Segundos de espera antes de cada llamada al proveedor.",
+                "Seconds to wait before each provider call.");
+        }
+
+        public static String MAXIMO_CONCURRENTE() {
+            return I18nUI.tr("Número máximo de análisis simultaneos.",
+                "Maximum simultaneous analyses.");
+        }
+
+        public static String MAXIMO_HALLAZGOS() {
+            return I18nUI.tr("Límite de hallazgos retenidos en memoria y tabla.",
+                "Findings limit kept in memory and table.");
+        }
+
+        public static String DETALLADO() {
+            return I18nUI.tr("Activa logs de rastreo detallado para diagnóstico.",
+                "Enable verbose diagnostic tracing logs.");
+        }
+
+        public static String PROVEEDOR() {
+            return I18nUI.tr("Proveedor LLM usado para analizar tráfico HTTP.",
+                "LLM provider used to analyze HTTP traffic.");
+        }
+
+        public static String URL_API() {
+            return I18nUI.tr("URL base del endpoint del proveedor seleccionado.",
+                "Base endpoint URL for selected provider.");
+        }
+
+        public static String CLAVE_API() {
+            return I18nUI.tr("Token/clave de autenticación del proveedor.",
+                "Provider authentication token/key.");
+        }
+
+        public static String MODELO() {
+            return I18nUI.tr("Modelo específico utilizado para el análisis.",
+                "Specific model used for analysis.");
+        }
+
+        public static String CARGAR_MODELOS() {
+            return I18nUI.tr("Consulta y actualiza la lista de modelos disponibles.",
+                "Fetch and refresh available model list.");
+        }
+
+        public static String MAX_TOKENS() {
+            return I18nUI.tr("Máximo de tokens solicitados en respuestas del modelo.",
+                "Maximum tokens requested from model responses.");
+        }
+
+        public static String INFO_TOKENS() {
+            return I18nUI.tr("Referencia rápida de ventanas de contexto por proveedor.",
+                "Quick reference for provider context windows.");
+        }
+
+        public static String TIMEOUT_MODELO() {
+            return I18nUI.tr("Tiempo máximo de espera de respuesta para el proveedor+modelo seleccionados.",
+                "Maximum response wait time for the selected provider+model.");
+        }
+
+        public static String PROMPT_EDITOR() {
+            return I18nUI.tr("Define las instrucciones que recibe el modelo.",
+                "Define instructions sent to the model.");
+        }
+
+        public static String RESTAURAR_PROMPT() {
+            return I18nUI.tr("Reemplaza el prompt actual por el prompt por defecto.",
+                "Replace current prompt with default prompt.");
+        }
+
+        public static String CONTADOR_PROMPT() {
+            return I18nUI.tr("Longitud actual del prompt y validación de tokens.",
+                "Current prompt length and token validation.");
+        }
+
+        public static String SITIO_AUTOR() {
+            return I18nUI.tr("Abre el sitio web oficial del autor del proyecto.",
+                "Open the project author's official website.");
+        }
+    }
+
+    public static final class DetalleHallazgo {
+        private DetalleHallazgo() {
+        }
+
+        public static String URL() {
+            return I18nUI.tr("URL asociada al hallazgo.",
+                "URL associated with the finding.");
+        }
+
+        public static String SEVERIDAD() {
+            return I18nUI.tr("Nivel de impacto estimado del hallazgo.",
+                "Estimated impact level of the finding.");
+        }
+
+        public static String CONFIANZA() {
+            return I18nUI.tr("Nivel de certeza de la detección.",
+                "Detection confidence level.");
+        }
+
+        public static String DESCRIPCION() {
+            return I18nUI.tr("Descripción tecnica del hallazgo para análisis manual.",
+                "Technical finding description for manual analysis.");
+        }
+
+        public static String GUARDAR() {
+            return I18nUI.tr("Guarda cambios y actualiza el hallazgo en la tabla.",
+                "Save changes and update finding in table.");
+        }
+
+        public static String CANCELAR() {
+            return I18nUI.tr("Cierra el dialogo sin aplicar cambios.",
+                "Close dialog without applying changes.");
+        }
+    }
+
+    public static final class Contexto {
+        private Contexto() {
+        }
+
+        public static String ANALIZAR_SOLICITUD() {
+            return I18nUI.tr("Lanza análisis inmediato de la request seleccionada.",
+                "Launch immediate analysis for selected request.");
+        }
+    }
     }
 }

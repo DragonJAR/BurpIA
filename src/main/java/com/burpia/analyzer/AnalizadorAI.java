@@ -27,10 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
-
-
-
-
 public class AnalizadorAI implements Runnable {
     private static final String ORIGEN_LOG = "AnalizadorAI";
     private final SolicitudAnalisis solicitud;
@@ -54,7 +50,16 @@ public class AnalizadorAI implements Runnable {
     private static final int MAX_INTENTOS_RETRY = 5;
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
-    private static final Map<Integer, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = new ConcurrentHashMap<>();
+    private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = new ConcurrentHashMap<>();
+    private static final String TITULO_POR_DEFECTO = "Sin título";
+    private static final String DESCRIPCION_POR_DEFECTO = "Sin descripción";
+    private static final String[] CAMPOS_TITULO = {"titulo", "title", "name", "nombre"};
+    private static final String[] CAMPOS_DESCRIPCION = {"descripcion", "description", "hallazgo", "finding", "detalle", "details"};
+    private static final String[] CAMPOS_SEVERIDAD = {"severidad", "severity", "risk", "impacto"};
+    private static final String[] CAMPOS_CONFIANZA = {"confianza", "confidence", "certainty", "certeza"};
+    private static final String[] CAMPOS_EVIDENCIA = {"evidencia", "evidence", "proof", "indicator"};
+    private static final String[] CAMPOS_HALLAZGOS = {"hallazgos", "findings", "issues", "vulnerabilidades"};
+    private static final String[] CAMPOS_TEXTO = {"text", "texto", "content", "mensaje", "message", "value", "descripcion", "description"};
 
     public interface Callback {
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
@@ -86,13 +91,15 @@ public class AnalizadorAI implements Runnable {
             this.config.obtenerProveedorAI(),
             this.config.obtenerModelo()
         );
-        this.clienteHttp = obtenerClienteHttp(timeoutEfectivo);
+        this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
+        this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.gson = new Gson();
         this.constructorPrompt = new ConstructorPrompts(this.config);
-        this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
-        this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
+        this.clienteHttp = obtenerClienteHttp(timeoutEfectivo, this.config.ignorarErroresSSL());
         this.controlBackpressure = controlBackpressure;
         this.logLock = new Object();
+
+        rastrear("[" + Thread.currentThread().getName() + "] Timeout configurado para el cliente HTTP: " + timeoutEfectivo + "s");
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
@@ -416,15 +423,48 @@ public class AnalizadorAI implements Runnable {
         }
     }
 
-    private static OkHttpClient obtenerClienteHttp(int tiempoEsperaSegundos) {
+    private static OkHttpClient obtenerClienteHttp(int tiempoEsperaSegundos, boolean ignorarSSL) {
         int timeoutNormalizado = normalizarTiempoEsperaSegundos(tiempoEsperaSegundos);
-        return CLIENTES_HTTP_POR_TIMEOUT.computeIfAbsent(timeoutNormalizado,
-            timeout -> new OkHttpClient.Builder()
-                .connectTimeout(60, TimeUnit.SECONDS)
-                .readTimeout(timeout, TimeUnit.SECONDS)
-                .writeTimeout(60, TimeUnit.SECONDS)
-                .build()
-        );
+        String clave = timeoutNormalizado + (ignorarSSL ? "_insecure" : "_secure");
+
+        return CLIENTES_HTTP_POR_TIMEOUT.computeIfAbsent(clave, k -> {
+            OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .connectTimeout(timeoutNormalizado, TimeUnit.SECONDS)
+                .readTimeout(timeoutNormalizado, TimeUnit.SECONDS)
+                .writeTimeout(timeoutNormalizado, TimeUnit.SECONDS);
+
+            if (ignorarSSL) {
+                configurarSslInseguro(builder);
+            }
+
+            return builder.build();
+        });
+    }
+
+    private static void configurarSslInseguro(OkHttpClient.Builder builder) {
+        try {
+            final javax.net.ssl.TrustManager[] trustAllCerts = new javax.net.ssl.TrustManager[]{
+                new javax.net.ssl.X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) {}
+                    @Override
+                    public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) {}
+                    @Override
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return new java.security.cert.X509Certificate[]{};
+                    }
+                }
+            };
+
+            final javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("SSL");
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+            final javax.net.ssl.SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+
+            builder.sslSocketFactory(sslSocketFactory, (javax.net.ssl.X509TrustManager) trustAllCerts[0]);
+            builder.hostnameVerifier((hostname, session) -> true);
+        } catch (Exception e) {
+
+        }
     }
 
     private static int normalizarTiempoEsperaSegundos(int valor) {
@@ -498,37 +538,24 @@ public class AnalizadorAI implements Runnable {
             rastrearTecnico("Contenido (preview):\n" + resumirParaLog(contenido));
 
             try {
-                String contenidoLimpio = contenido.trim();
+                String contenidoLimpio = limpiarBloquesMarkdownJson(contenido);
+                JsonElement raiz = gson.fromJson(contenidoLimpio, JsonElement.class);
+                List<JsonObject> objetosHallazgos = extraerObjetosHallazgos(raiz);
 
-                JsonObject jsonHallazgos = gson.fromJson(contenidoLimpio, JsonObject.class);
-
-                if (jsonHallazgos != null && jsonHallazgos.has("hallazgos")) {
-                    JsonArray arrayHallazgos = jsonHallazgos.getAsJsonArray("hallazgos");
-
-                    rastrear("Se encontraron " + arrayHallazgos.size() + " hallazgos en JSON");
-
-                    for (JsonElement elemento : arrayHallazgos) {
-                        if (elemento == null || !elemento.isJsonObject()) {
-                            rastrear("Elemento de hallazgo invalido, se omite");
-                            continue;
-                        }
-                        JsonObject obj = elemento.getAsJsonObject();
-                        String titulo = obtenerCampoTexto(obj, "titulo", "Sin título");
-                        String descripcion = obtenerCampoTexto(obj, "descripcion", "Sin descripción");
-                        String severidad = Hallazgo.normalizarSeveridad(
-                            obtenerCampoTexto(obj, "severidad", Hallazgo.SEVERIDAD_INFO)
+                if (!objetosHallazgos.isEmpty()) {
+                    rastrear("Se encontraron " + objetosHallazgos.size() + " hallazgos en JSON");
+                    for (JsonObject obj : objetosHallazgos) {
+                        agregarHallazgoNormalizado(
+                            hallazgos,
+                            extraerCampoFlexible(obj, CAMPOS_TITULO),
+                            extraerCampoFlexible(obj, CAMPOS_DESCRIPCION),
+                            extraerCampoFlexible(obj, CAMPOS_SEVERIDAD),
+                            extraerCampoFlexible(obj, CAMPOS_CONFIANZA),
+                            extraerCampoFlexible(obj, CAMPOS_EVIDENCIA)
                         );
-                        String confianza = Hallazgo.normalizarConfianza(
-                            obtenerCampoTexto(obj, "confianza", Hallazgo.CONFIANZA_BAJA)
-                        );
-
-                        Hallazgo hallazgo = new Hallazgo(solicitud.obtenerUrl(), titulo, descripcion, severidad, confianza, solicitud.obtenerSolicitudHttp());
-                        hallazgos.add(hallazgo);
-
-                        rastrear("Hallazgo agregado: " + titulo + " (" + severidad + ", " + confianza + ")");
                     }
                 } else {
-                    rastrear("JSON no contiene campo 'hallazgos', intentando parsing de texto plano");
+                    rastrear("JSON sin objetos de hallazgo, intentando parsing de texto plano");
                     hallazgos.addAll(parsearTextoPlano(contenido));
                 }
             } catch (Exception e) {
@@ -601,38 +628,32 @@ public class AnalizadorAI implements Runnable {
             return hallazgos;
         }
 
-        String[] objetos = bloqueHallazgos.split("\\}\\s*,\\s*\\{");
-        for (String objeto : objetos) {
+        for (String objeto : extraerObjetosNoEstrictos(bloqueHallazgos)) {
             String bloqueHallazgo = normalizarObjetoNoEstricto(objeto);
             if (bloqueHallazgo.isEmpty()) {
                 continue;
             }
             String titulo = ParserRespuestasAI.extraerCampoNoEstricto("titulo", bloqueHallazgo);
             if (titulo.isEmpty()) {
-                titulo = "Sin título";
+                titulo = ParserRespuestasAI.extraerCampoNoEstricto("title", bloqueHallazgo);
             }
-
             String descripcion = ParserRespuestasAI.extraerCampoNoEstricto("descripcion", bloqueHallazgo);
             if (descripcion.isEmpty()) {
-                continue;
+                descripcion = ParserRespuestasAI.extraerCampoNoEstricto("description", bloqueHallazgo);
             }
-
-            String severidad = Hallazgo.normalizarSeveridad(ParserRespuestasAI.extraerCampoNoEstricto("severidad", bloqueHallazgo));
-            String confianza = Hallazgo.normalizarConfianza(ParserRespuestasAI.extraerCampoNoEstricto("confianza", bloqueHallazgo));
+            String severidad = ParserRespuestasAI.extraerCampoNoEstricto("severidad", bloqueHallazgo);
+            if (severidad.isEmpty()) {
+                severidad = ParserRespuestasAI.extraerCampoNoEstricto("severity", bloqueHallazgo);
+            }
+            String confianza = ParserRespuestasAI.extraerCampoNoEstricto("confianza", bloqueHallazgo);
+            if (confianza.isEmpty()) {
+                confianza = ParserRespuestasAI.extraerCampoNoEstricto("confidence", bloqueHallazgo);
+            }
             String evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidencia", bloqueHallazgo);
-
-            String descripcionFinal = evidencia.isEmpty()
-                ? descripcion
-                : descripcion + "\n" + etiquetaEvidencia() + ": " + evidencia;
-
-            hallazgos.add(new Hallazgo(
-                solicitud.obtenerUrl(),
-                titulo,
-                descripcionFinal,
-                severidad,
-                confianza,
-                solicitud.obtenerSolicitudHttp()
-            ));
+            if (evidencia.isEmpty()) {
+                evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidence", bloqueHallazgo);
+            }
+            agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
         }
         return hallazgos;
     }
@@ -695,9 +716,243 @@ public class AnalizadorAI implements Runnable {
         return bloque;
     }
 
+    private List<String> extraerObjetosNoEstrictos(String bloqueHallazgos) {
+        List<String> objetos = new ArrayList<>();
+        if (bloqueHallazgos == null || bloqueHallazgos.trim().isEmpty()) {
+            return objetos;
+        }
+        int inicioObjeto = -1;
+        int profundidad = 0;
+        boolean enComillas = false;
+        boolean escapado = false;
+        for (int i = 0; i < bloqueHallazgos.length(); i++) {
+            char c = bloqueHallazgos.charAt(i);
+            if (escapado) {
+                escapado = false;
+                continue;
+            }
+            if (c == '\\') {
+                escapado = true;
+                continue;
+            }
+            if (c == '"') {
+                enComillas = !enComillas;
+                continue;
+            }
+            if (enComillas) {
+                continue;
+            }
+            if (c == '{') {
+                if (profundidad == 0) {
+                    inicioObjeto = i;
+                }
+                profundidad++;
+            } else if (c == '}') {
+                profundidad--;
+                if (profundidad == 0 && inicioObjeto >= 0) {
+                    objetos.add(bloqueHallazgos.substring(inicioObjeto, i + 1));
+                    inicioObjeto = -1;
+                }
+            }
+        }
+        if (objetos.isEmpty()) {
+            String[] partes = bloqueHallazgos.split("\\}\\s*,\\s*\\{");
+            for (String parte : partes) {
+                if (parte != null && !parte.trim().isEmpty()) {
+                    objetos.add(parte);
+                }
+            }
+        }
+        return objetos;
+    }
 
     private String etiquetaEvidencia() {
         return "en".equalsIgnoreCase(config.obtenerIdiomaUi()) ? "Evidence" : "Evidencia";
+    }
+
+    private String limpiarBloquesMarkdownJson(String contenido) {
+        String limpio = contenido != null ? contenido.trim() : "";
+        if (limpio.startsWith("```")) {
+            limpio = limpio.replaceFirst("^```(?:json)?\\s*", "");
+            limpio = limpio.replaceFirst("\\s*```\\s*$", "");
+        }
+        return limpio.trim();
+    }
+
+    private List<JsonObject> extraerObjetosHallazgos(JsonElement raiz) {
+        List<JsonObject> objetos = new ArrayList<>();
+        if (raiz == null || raiz.isJsonNull()) {
+            return objetos;
+        }
+        if (raiz.isJsonArray()) {
+            anexarObjetosDesdeArreglo(raiz.getAsJsonArray(), objetos);
+            return objetos;
+        }
+        if (!raiz.isJsonObject()) {
+            return objetos;
+        }
+        JsonObject objetoRaiz = raiz.getAsJsonObject();
+        JsonElement campoHallazgos = extraerPrimerCampoExistente(objetoRaiz, CAMPOS_HALLAZGOS);
+        if (campoHallazgos != null) {
+            if (campoHallazgos.isJsonArray()) {
+                anexarObjetosDesdeArreglo(campoHallazgos.getAsJsonArray(), objetos);
+            } else if (campoHallazgos.isJsonObject()) {
+                objetos.add(campoHallazgos.getAsJsonObject());
+            }
+            return objetos;
+        }
+        if (pareceObjetoHallazgo(objetoRaiz)) {
+            objetos.add(objetoRaiz);
+        }
+        return objetos;
+    }
+
+    private void anexarObjetosDesdeArreglo(JsonArray arreglo, List<JsonObject> destino) {
+        if (arreglo == null || destino == null) {
+            return;
+        }
+        for (JsonElement elemento : arreglo) {
+            if (elemento != null && elemento.isJsonObject()) {
+                destino.add(elemento.getAsJsonObject());
+            }
+        }
+    }
+
+    private JsonElement extraerPrimerCampoExistente(JsonObject objeto, String[] campos) {
+        if (objeto == null || campos == null) {
+            return null;
+        }
+        for (String campo : campos) {
+            if (campo == null || campo.trim().isEmpty()) {
+                continue;
+            }
+            JsonElement valor = objeto.get(campo);
+            if (valor != null && !valor.isJsonNull()) {
+                return valor;
+            }
+        }
+        return null;
+    }
+
+    private boolean pareceObjetoHallazgo(JsonObject objeto) {
+        if (objeto == null) {
+            return false;
+        }
+        return !extraerCampoFlexible(objeto, CAMPOS_DESCRIPCION).isEmpty()
+            || !extraerCampoFlexible(objeto, CAMPOS_EVIDENCIA).isEmpty();
+    }
+
+    private String extraerCampoFlexible(JsonObject objeto, String[] campos) {
+        if (objeto == null || campos == null) {
+            return "";
+        }
+        for (String campo : campos) {
+            if (campo == null || campo.trim().isEmpty()) {
+                continue;
+            }
+            String valor = extraerCampoComoTexto(objeto.get(campo), 0);
+            if (!valor.isEmpty()) {
+                return valor;
+            }
+        }
+        return "";
+    }
+
+    private String extraerCampoComoTexto(JsonElement elemento, int profundidad) {
+        if (elemento == null || elemento.isJsonNull() || profundidad > 5) {
+            return "";
+        }
+        if (elemento.isJsonPrimitive()) {
+            try {
+                String valor = elemento.getAsString();
+                return valor != null ? valor.trim() : "";
+            } catch (Exception e) {
+                return "";
+            }
+        }
+        if (elemento.isJsonArray()) {
+            StringBuilder acumulado = new StringBuilder();
+            for (JsonElement item : elemento.getAsJsonArray()) {
+                anexarTexto(acumulado, extraerCampoComoTexto(item, profundidad + 1));
+            }
+            return acumulado.toString().trim();
+        }
+        if (elemento.isJsonObject()) {
+            JsonObject objeto = elemento.getAsJsonObject();
+            for (String campoTexto : CAMPOS_TEXTO) {
+                String texto = extraerCampoComoTexto(objeto.get(campoTexto), profundidad + 1);
+                if (!texto.isEmpty()) {
+                    return texto;
+                }
+            }
+            for (Map.Entry<String, JsonElement> entry : objeto.entrySet()) {
+                String texto = extraerCampoComoTexto(entry.getValue(), profundidad + 1);
+                if (!texto.isEmpty()) {
+                    return texto;
+                }
+            }
+            return gson.toJson(objeto);
+        }
+        return "";
+    }
+
+    private void anexarTexto(StringBuilder destino, String texto) {
+        if (destino == null || texto == null || texto.trim().isEmpty()) {
+            return;
+        }
+        if (destino.length() > 0) {
+            destino.append(' ');
+        }
+        destino.append(texto.trim());
+    }
+
+    private void agregarHallazgoNormalizado(List<Hallazgo> destino,
+                                            String tituloRaw,
+                                            String descripcionRaw,
+                                            String severidadRaw,
+                                            String confianzaRaw,
+                                            String evidenciaRaw) {
+        if (destino == null) {
+            return;
+        }
+        String titulo = normalizarTextoSimple(tituloRaw, TITULO_POR_DEFECTO);
+        String descripcion = normalizarTextoSimple(descripcionRaw, "");
+        String evidencia = normalizarTextoSimple(evidenciaRaw, "");
+        if (descripcion.isEmpty()) {
+            descripcion = evidencia;
+        } else if (!evidencia.isEmpty() && !descripcion.contains(evidencia)) {
+            descripcion = descripcion + "\n" + etiquetaEvidencia() + ": " + evidencia;
+        }
+        if (descripcion.isEmpty()) {
+            descripcion = DESCRIPCION_POR_DEFECTO;
+        }
+        String severidad = Hallazgo.normalizarSeveridad(normalizarTextoSimple(severidadRaw, Hallazgo.SEVERIDAD_INFO));
+        String confianza = Hallazgo.normalizarConfianza(normalizarTextoSimple(confianzaRaw, Hallazgo.CONFIANZA_BAJA));
+        destino.add(new Hallazgo(
+            solicitud.obtenerUrl(),
+            titulo,
+            descripcion,
+            severidad,
+            confianza,
+            solicitud.obtenerSolicitudHttp()
+        ));
+        rastrear("Hallazgo agregado: " + titulo + " (" + severidad + ", " + confianza + ")");
+    }
+
+    private String normalizarTextoSimple(String valor, String porDefecto) {
+        if (valor == null) {
+            return porDefecto;
+        }
+        String normalizado = valor
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+            .replace("\\\"", "\"")
+            .trim();
+        if (normalizado.isEmpty()) {
+            return porDefecto;
+        }
+        return normalizado;
     }
 
     private List<Hallazgo> parsearTextoPlano(String contenido) {
@@ -714,9 +969,10 @@ public class AnalizadorAI implements Runnable {
 
             for (String linea : lineas) {
                 linea = linea.trim();
+                String lineaLower = linea.toLowerCase();
 
-                if (linea.toLowerCase().contains("título:") ||
-                    linea.toLowerCase().contains("title:")) {
+                if (lineaLower.contains("título:") ||
+                    lineaLower.contains("title:")) {
 
                     if (descripcion.length() > 0) {
                         String t = descripcion.substring(0, Math.min(30, descripcion.length())) + "...";
@@ -725,13 +981,13 @@ public class AnalizadorAI implements Runnable {
                     }
 
                     descripcion.append(linea.replaceAll("(?i)(título:|title:)", "").trim()).append(" - ");
-                } else if (linea.toLowerCase().contains("severidad:") ||
-                    linea.toLowerCase().contains("severity:")) {
+                } else if (lineaLower.contains("severidad:") ||
+                    lineaLower.contains("severity:")) {
                     String sev = linea.replaceAll("(?i)(severidad:|severity:)", "").trim();
                     severidad = Hallazgo.normalizarSeveridad(sev);
-                } else if (linea.toLowerCase().contains("vulnerabilidad") ||
-                           linea.toLowerCase().contains("descripcion:") ||
-                           linea.toLowerCase().contains("description:")) {
+                } else if (lineaLower.contains("vulnerabilidad") ||
+                           lineaLower.contains("descripcion:") ||
+                           lineaLower.contains("description:")) {
                     if (descripcion.length() > 0 && !descripcion.toString().contains(" - ")) {
                         String t = descripcion.substring(0, Math.min(30, descripcion.length())) + "...";
                         hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), t, descripcion.toString().trim(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
@@ -758,7 +1014,6 @@ public class AnalizadorAI implements Runnable {
 
             if (hallazgos.isEmpty() && contenido.length() > 0) {
                 String sev = extraerSeveridad(contenido);
-                String t = contenido.substring(0, Math.min(30, contenido.length())) + "...";
                 hallazgos.add(new Hallazgo(
                     solicitud.obtenerUrl(),
                     "Hallazgo Plano",
@@ -783,22 +1038,6 @@ public class AnalizadorAI implements Runnable {
         }
         rastrear("Severidad extraida: " + severidad + " del contenido");
         return severidad;
-    }
-
-    private String obtenerCampoTexto(JsonObject obj, String campo, String porDefecto) {
-        if (obj == null || campo == null || campo.trim().isEmpty()) {
-            return porDefecto;
-        }
-        try {
-            JsonElement valor = obj.get(campo);
-            if (valor == null || valor.isJsonNull()) {
-                return porDefecto;
-            }
-            String texto = valor.getAsString();
-            return texto != null && !texto.trim().isEmpty() ? texto : porDefecto;
-        } catch (Exception ignored) {
-            return porDefecto;
-        }
     }
 
     private void registrar(String mensaje) {

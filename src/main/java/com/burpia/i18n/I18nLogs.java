@@ -3,8 +3,6 @@ import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
-
 public final class I18nLogs {
     private static final String[][] REEMPLAZOS_INGLES = new String[][]{
         {"Inicialización", "Initialization"},
@@ -199,6 +197,13 @@ public final class I18nLogs {
         {"Configuracion", "Configuration"},
         {"configuracion", "configuration"}
     };
+
+    public static final class Agente {
+        public static String ERROR_DESHABILITADO() {
+            return tr("Agente Factory Droid deshabilitado en ajustes.");
+        }
+    }
+
     private static final String[][] REEMPLAZOS_ES_A_EN = crearReemplazosOrdenados(0);
     private static final String[][] REEMPLAZOS_EN_A_ES = crearReemplazosOrdenados(1);
 

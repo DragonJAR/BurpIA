@@ -1,5 +1,6 @@
 package com.burpia.ui;
 import burp.api.montoya.MontoyaApi;
+import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
@@ -10,15 +11,14 @@ import java.awt.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-
-
-
 public class PestaniaPrincipal extends JPanel {
     private final PanelEstadisticas panelEstadisticas;
     private final PanelTareas panelTareas;
     private final PanelHallazgos panelHallazgos;
     private final PanelConsola panelConsola;
+    private final PanelFactoryDroid panelFactoryDroid;
     private final JTabbedPane tabbedPane;
+    private final ConfiguracionAPI config;
 
     public PestaniaPrincipal(MontoyaApi api,
                             Estadisticas estadisticas,
@@ -26,21 +26,30 @@ public class PestaniaPrincipal extends JPanel {
                             GestorConsolaGUI gestorConsola,
                             ModeloTablaTareas modeloTareas,
                             ModeloTablaHallazgos modeloHallazgos,
-                            boolean esBurpProfessional) {
+                            boolean esBurpProfessional,
+                            ConfiguracionAPI config) {
         setLayout(new BorderLayout(10, 2));
+        this.config = config;
 
         panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas);
 
         panelTareas = new PanelTareas(gestorTareas, modeloTareas);
         panelHallazgos = new PanelHallazgos(api, modeloHallazgos, esBurpProfessional);
-        panelConsola = new PanelConsola(gestorConsola);
+        panelHallazgos.establecerConfiguracion(config);
+        this.panelConsola = new PanelConsola(gestorConsola);
+        this.panelFactoryDroid = new PanelFactoryDroid(config);
+        this.panelFactoryDroid.establecerManejadorFocoPestania(this::seleccionarPestaniaFactoryDroid);
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         tabbedPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         tabbedPane.setFont(EstilosUI.FUENTE_NEGRITA);
-        tabbedPane.addTab("", panelTareas);
-        tabbedPane.addTab("", panelHallazgos);
-        tabbedPane.addTab("", panelConsola);
+        tabbedPane.addTab(I18nUI.Pestanias.TAREAS(), panelTareas);
+        tabbedPane.addTab(I18nUI.Pestanias.HALLAZGOS(), panelHallazgos);
+
+        if (config.agenteFactoryDroidHabilitado()) {
+            tabbedPane.addTab(I18nUI.Pestanias.AGENTE_FACTORY_DROID(), panelFactoryDroid);
+        }
+        tabbedPane.addTab(I18nUI.Pestanias.CONSOLA(), panelConsola);
         aplicarIdioma();
 
         add(panelEstadisticas, BorderLayout.NORTH);
@@ -61,6 +70,37 @@ public class PestaniaPrincipal extends JPanel {
 
     public JPanel obtenerPanel() {
         return this;
+    }
+
+    public PanelConsola obtenerPanelConsola() {
+        return panelConsola;
+    }
+
+    public PanelFactoryDroid obtenerPanelFactoryDroid() {
+        return panelFactoryDroid;
+    }
+
+    public void actualizarVisibilidadAgentes() {
+        boolean habilitado = config.agenteFactoryDroidHabilitado();
+        int index = tabbedPane.indexOfComponent(panelFactoryDroid);
+
+        if (habilitado && index == -1) {
+            int indexConsola = tabbedPane.indexOfComponent(panelConsola);
+            if (indexConsola != -1) {
+                tabbedPane.insertTab(I18nUI.Pestanias.AGENTE_FACTORY_DROID(), null, panelFactoryDroid, null, indexConsola);
+            } else {
+                tabbedPane.addTab(I18nUI.Pestanias.AGENTE_FACTORY_DROID(), panelFactoryDroid);
+            }
+        } else if (!habilitado && index != -1) {
+            tabbedPane.removeTabAt(index);
+        }
+    }
+
+    public void seleccionarPestaniaFactoryDroid() {
+        int index = tabbedPane.indexOfComponent(panelFactoryDroid);
+        if (index != -1) {
+            tabbedPane.setSelectedIndex(index);
+        }
     }
 
     public PanelHallazgos obtenerPanelHallazgos() {
@@ -99,17 +139,25 @@ public class PestaniaPrincipal extends JPanel {
         panelTareas.establecerManejadorReintento(manejador);
     }
 
+    public void establecerManejadorEnviarADroid(Consumer<Hallazgo> manejador) {
+        panelHallazgos.establecerManejadorEnviarADroid(manejador);
+    }
+
     public void aplicarIdioma() {
-        tabbedPane.setTitleAt(0, I18nUI.Pestanias.TAREAS());
-        tabbedPane.setTitleAt(1, I18nUI.Pestanias.HALLAZGOS());
-        tabbedPane.setTitleAt(2, I18nUI.Pestanias.CONSOLA());
-        tabbedPane.setToolTipTextAt(0, TooltipsUI.Pestanias.TAREAS());
-        tabbedPane.setToolTipTextAt(1, TooltipsUI.Pestanias.HALLAZGOS());
-        tabbedPane.setToolTipTextAt(2, TooltipsUI.Pestanias.CONSOLA());
         panelEstadisticas.aplicarIdioma();
         panelTareas.aplicarIdioma();
         panelHallazgos.aplicarIdioma();
         panelConsola.aplicarIdioma();
+        panelFactoryDroid.aplicarIdioma();
+
+        int totalTabs = tabbedPane.getTabCount();
+        for (int i = 0; i < totalTabs; i++) {
+            Component c = tabbedPane.getComponentAt(i);
+            if (c == panelTareas) tabbedPane.setTitleAt(i, I18nUI.Pestanias.TAREAS());
+            else if (c == panelHallazgos) tabbedPane.setTitleAt(i, I18nUI.Pestanias.HALLAZGOS());
+            else if (c == panelConsola) tabbedPane.setTitleAt(i, I18nUI.Pestanias.CONSOLA());
+            else if (c == panelFactoryDroid) tabbedPane.setTitleAt(i, I18nUI.Pestanias.AGENTE_FACTORY_DROID());
+        }
     }
 
     public void destruir() {

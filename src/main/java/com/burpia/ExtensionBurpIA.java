@@ -2,15 +2,20 @@ package com.burpia;
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
+import burp.api.montoya.http.handler.HttpHandler;
 import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.ui.UserInterface;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.i18n.I18nLogs;
+import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
+import com.burpia.ui.PanelFactoryDroid;
 import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.ui.DialogoConfiguracion;
 import com.burpia.ui.FabricaMenuContextual;
@@ -22,9 +27,6 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
-
-
-
 
 public class ExtensionBurpIA implements BurpExtension {
     private MontoyaApi api;
@@ -130,10 +132,7 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar("==================================================");
         registrar("Burp Suite: " + (esProfessional ? "Professional" : "Community Edition"));
 
-        String versionBurp = obtenerVersionBurp(api);
-        if (versionBurp != null) {
-            registrar("Version Burp Suite: " + versionBurp);
-        }
+        actualizarVersionBurp();
         registrar("==================================================");
 
         registrar("Configuracion cargada:");
@@ -146,6 +145,7 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar("  - Maximo Concurrente: " + config.obtenerMaximoConcurrente());
         registrar("  - Maximo Hallazgos en Tabla: " + config.obtenerMaximoHallazgosTabla());
         registrar("  - Modo Detallado: " + (config.esDetallado() ? "ACTIVADO" : "desactivado"));
+        registrar("  - Agente Factory Droid: " + (config.agenteFactoryDroidHabilitado() ? "HABILITADO" : "desactivado"));
         registrar("==================================================");
 
         limitador = new LimitadorTasa(config.obtenerMaximoConcurrente());
@@ -186,15 +186,92 @@ public class ExtensionBurpIA implements BurpExtension {
         api.http().registerHttpHandler(manejadorHttp);
         registrar("Manejador HTTP registrado exitosamente");
 
-        fabricaMenuContextual = new FabricaMenuContextual(api, (solicitud, forzarAnalisis, solicitudRespuestaOriginal) -> {
-            if (forzarAnalisis && manejadorHttp != null) {
-                manejadorHttp.analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal);
-            }
-        });
-        api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
+        registrarMenuContextual();
         registrar("Menu contextual de BurpIA registrado exitosamente");
 
         registrar("Inicialización de BurpIA completada exitosamente");
+    }
+
+    private void analizarSolicitudManual(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal) {
+        if (forzarAnalisis && manejadorHttp != null) {
+            manejadorHttp.analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal);
+        }
+    }
+
+    private void registrarMenuContextual() {
+        if (fabricaMenuContextual == null) {
+            fabricaMenuContextual = new FabricaMenuContextual(api, this::analizarSolicitudManual, config, this::enviarAFactoryDroid);
+            api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
+        }
+    }
+
+    private void enviarAFactoryDroid(HttpRequestResponse solicitudRespuesta) {
+        if (!config.agenteFactoryDroidHabilitado()) {
+            api.logging().logToOutput(I18nLogs.Agente.ERROR_DESHABILITADO());
+            return;
+        }
+
+        String prompt = config.obtenerAgenteFactoryDroidPrompt();
+        String request = solicitudRespuesta.request().toString();
+        String response = (solicitudRespuesta.response() != null) ? solicitudRespuesta.response().toString() : "";
+
+        String inputFinal = prompt.replace("{REQUEST}", request).replace("{RESPONSE}", response);
+
+        pestaniaPrincipal.seleccionarPestaniaFactoryDroid();
+        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
+
+        String binario = config.obtenerAgenteFactoryDroidBinario();
+        if (binario == null || binario.trim().isEmpty()) {
+            binario = "droid";
+        }
+
+        // Iniciar el binario primero (si no está iniciado)
+        panelDroid.escribirComando(binario);
+
+        // Usar la inyección inteligente del panel para el hallazgo
+        panelDroid.inyectarComandoViaPortapapeles(inputFinal);
+    }
+
+    private void enviarHallazgoAFactoryDroid(Hallazgo hallazgo) {
+        if (!config.agenteFactoryDroidHabilitado()) {
+            api.logging().logToOutput(I18nLogs.Agente.ERROR_DESHABILITADO());
+            return;
+        }
+
+        String prompt = config.obtenerAgenteFactoryDroidPrompt();
+
+        HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
+        String request = evidencia != null && evidencia.request() != null ? evidencia.request().toString() : "";
+        String response = evidencia != null && evidencia.response() != null ? evidencia.response().toString() : "";
+        String titulo = hallazgo.obtenerTitulo() != null ? hallazgo.obtenerTitulo() : "";
+        String resumen = hallazgo.obtenerHallazgo() != null ? hallazgo.obtenerHallazgo() : "";
+        String urlContext = hallazgo.obtenerUrl() != null ? hallazgo.obtenerUrl() : "";
+        String lang = config.obtenerIdiomaUi();
+
+        StringBuilder inputBuilder = new StringBuilder();
+        if (!prompt.contains("{TITLE}")) {
+            inputBuilder.append("Title: ").append(titulo).append("\n");
+        }
+        if (!prompt.contains("{SUMMARY}") && !prompt.contains("{DESCRIPTION}")) {
+            inputBuilder.append("Summary: ").append(resumen).append("\n");
+        }
+        if (!prompt.contains("{URL}")) {
+            inputBuilder.append("URL: ").append(urlContext).append("\n\n");
+        }
+
+        String inputFinal = inputBuilder.toString() + prompt
+            .replace("{TITLE}", titulo)
+            .replace("{SUMMARY}", resumen)
+            .replace("{DESCRIPTION}", resumen)
+            .replace("{URL}", urlContext)
+            .replace("{REQUEST}", request)
+            .replace("{RESPONSE}", response)
+            .replace("{OUTPUT_LANGUAGE}", lang);
+
+        pestaniaPrincipal.seleccionarPestaniaFactoryDroid();
+        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
+
+        panelDroid.escribirComando(inputFinal);
     }
 
     private void abrirConfiguracion() {
@@ -233,13 +310,15 @@ public class ExtensionBurpIA implements BurpExtension {
                             gestorConsola.registrarInfo("Configuracion guardada exitosamente");
                         }
                         if (api != null) {
-                            api.logging().logToOutput(I18nUI.tr("Configuracion guardada", "Configuration saved"));
+                            api.logging().logToOutput(I18nUI.General.CONFIGURACION_GUARDADA());
                         }
 
                         registrar("Configuracion actualizada: detallado=" + configActual.esDetallado() +
                                 ", maximoConcurrente=" + configActual.obtenerMaximoConcurrente() +
                                 ", retraso=" + configActual.obtenerRetrasoSegundos() + "s" +
-                                ", maximoHallazgos=" + configActual.obtenerMaximoHallazgosTabla());
+                        ", maximoHallazgos=" + configActual.obtenerMaximoHallazgosTabla());
+
+                        pestaniaPrincipal.actualizarVisibilidadAgentes();
                     }
             );
             dialogo.setVisible(true);
@@ -248,16 +327,10 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void crearYRegistrarPestaniaPrincipal() {
         Runnable crearUi = () -> {
-            pestaniaPrincipal = new PestaniaPrincipal(
-                api,
-                estadisticas,
-                gestorTareas,
-                gestorConsola,
-                modeloTablaTareas,
-                modeloTablaHallazgos,
-                esProfessional
-            );
+            pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas, modeloTablaHallazgos, esProfessional, config);
             pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
+            pestaniaPrincipal.establecerManejadorEnviarADroid(this::enviarHallazgoAFactoryDroid);
+
             api.userInterface().registerSuiteTab("BurpIA", pestaniaPrincipal.obtenerPanel());
             registrar("Pestania de UI registrada exitosamente");
         };
@@ -424,14 +497,8 @@ public class ExtensionBurpIA implements BurpExtension {
             ? new HttpRequestResponse[] { evidenciaFinal }
             : new HttpRequestResponse[0];
 
-        String detalleIssue = I18nUI.tr(
-            "Revisa la solicitud para confirmar la vulnerabilidad. Este hallazgo se guarda automáticamente para que no se pierda al cerrar Burp, pero requiere validación manual. Haz clic derecho en la pestaña de hallazgos para enviar la petición al Repeater o al Intruder. Nunca confíes ciegamente en los resultados de una IA.",
-            "Review the request to confirm the vulnerability. This finding is saved automatically so it is not lost when Burp closes, but it requires manual validation. Right-click on the findings tab to send the request to Repeater or Intruder. Never blindly trust AI results."
-        );
-        String remediation = I18nUI.tr(
-            "Revisa los encabezados y el cuerpo de la solicitud HTTP para confirmar la vulnerabilidad. Este hallazgo se guarda automáticamente para que no se pierda al cerrar Burp, pero requiere validación manual. Haz clic derecho en la pestaña de hallazgos para enviar la petición al Repeater o al Intruder, y nunca confíes ciegamente en los resultados de una IA.",
-            "Review HTTP request headers and body to confirm the vulnerability. This finding is saved automatically so it is not lost when Burp closes, but it requires manual validation. Right-click on the findings tab to send the request to Repeater or Intruder, and never blindly trust AI results."
-        );
+        String detalleIssue = I18nUI.Hallazgos.DETALLE_ISSUE();
+        String remediation = I18nUI.Hallazgos.REMEDIACION_ISSUE();
 
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
             hallazgo.obtenerTitulo(),
@@ -517,6 +584,13 @@ public class ExtensionBurpIA implements BurpExtension {
             return api.ai() != null && api.ai().isEnabled();
         } catch (Exception ignored) {
             return false;
+        }
+    }
+
+    private void actualizarVersionBurp() {
+        String version = obtenerVersionBurp(api);
+        if (version != null) {
+            registrar("Version Burp Suite: " + version);
         }
     }
 

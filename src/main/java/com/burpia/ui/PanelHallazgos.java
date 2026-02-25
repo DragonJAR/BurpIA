@@ -35,9 +35,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 
-
-
-
 public class PanelHallazgos extends JPanel {
     private final ModeloTablaHallazgos modelo;
     private final JTable tabla;
@@ -67,6 +64,9 @@ public class PanelHallazgos extends JPanel {
     private JMenuItem menuItemIssues;
     private JMenuItem menuItemIgnorar;
     private JMenuItem menuItemBorrar;
+    private JMenuItem menuItemDroid;
+    private com.burpia.config.ConfiguracionAPI config;
+    private Consumer<Hallazgo> manejadorEnviarADroid;
     private final ExecutorService ejecutorAcciones;
 
     public PanelHallazgos(MontoyaApi api) {
@@ -114,38 +114,43 @@ public class PanelHallazgos extends JPanel {
 
         etiquetaBusqueda = new JLabel(I18nUI.Hallazgos.ETIQUETA_BUSCAR());
         etiquetaBusqueda.setFont(EstilosUI.FUENTE_ESTANDAR);
-        etiquetaBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
+        etiquetaBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
         panelTodosControles.add(etiquetaBusqueda);
         campoBusqueda = new JTextField(15);
         campoBusqueda.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
-        campoBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
+        campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
         panelTodosControles.add(campoBusqueda);
 
         comboSeveridad = new JComboBox<>(new String[]{
-            I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES(), "Critical", "High", "Medium", "Low", "Info"
+            I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES(),
+            I18nUI.Hallazgos.SEVERIDAD_CRITICAL(),
+            I18nUI.Hallazgos.SEVERIDAD_HIGH(),
+            I18nUI.Hallazgos.SEVERIDAD_MEDIUM(),
+            I18nUI.Hallazgos.SEVERIDAD_LOW(),
+            I18nUI.Hallazgos.SEVERIDAD_INFO()
         });
         comboSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
-        comboSeveridad.setToolTipText(TooltipsUI.Hallazgos.FILTRO_SEVERIDAD());
+        comboSeveridad.setToolTipText(I18nUI.Tooltips.Hallazgos.FILTRO_SEVERIDAD());
         panelTodosControles.add(comboSeveridad);
 
         botonLimpiarFiltro = new JButton(I18nUI.Hallazgos.BOTON_LIMPIAR());
         botonLimpiarFiltro.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonLimpiarFiltro.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_FILTROS());
+        botonLimpiarFiltro.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
         panelTodosControles.add(botonLimpiarFiltro);
 
         botonExportarCSV = new JButton(I18nUI.Hallazgos.BOTON_EXPORTAR_CSV());
         botonExportarCSV.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonExportarCSV.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_CSV());
+        botonExportarCSV.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
         panelTodosControles.add(botonExportarCSV);
 
         botonExportarJSON = new JButton(I18nUI.Hallazgos.BOTON_EXPORTAR_JSON());
         botonExportarJSON.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonExportarJSON.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_JSON());
+        botonExportarJSON.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
         panelTodosControles.add(botonExportarJSON);
 
         botonLimpiarTodo = new JButton(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
         botonLimpiarTodo.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonLimpiarTodo.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_TODO());
+        botonLimpiarTodo.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
         panelTodosControles.add(botonLimpiarTodo);
 
         panelFiltros.add(panelTodosControles);
@@ -196,7 +201,7 @@ public class PanelHallazgos extends JPanel {
         tabla.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         tabla.setRowHeight(EstilosUI.ALTURA_FILA_TABLA);
         tabla.setFont(EstilosUI.FUENTE_TABLA);
-        tabla.setToolTipText(TooltipsUI.Hallazgos.TABLA());
+        tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
         sorter = new TableRowSorter<>(modelo);
         configurarSorters();
         configurarColumnasTabla();
@@ -440,14 +445,14 @@ public class PanelHallazgos extends JPanel {
 
         menuItemRepeater = crearMenuItemContextual(
             I18nUI.Hallazgos.MENU_ENVIAR_REPEATER(),
-            TooltipsUI.Hallazgos.MENU_REPEATER(),
+            I18nUI.Tooltips.Hallazgos.MENU_REPEATER(),
             e -> enviarARepeater(tabla.getSelectedRows())
         );
         menuContextual.add(menuItemRepeater);
 
         menuItemIntruder = crearMenuItemContextual(
             I18nUI.Hallazgos.MENU_ENVIAR_INTRUDER(),
-            TooltipsUI.Hallazgos.MENU_INTRUDER(),
+            I18nUI.Tooltips.Hallazgos.MENU_INTRUDER(),
             e -> enviarAIntruder(tabla.getSelectedRows())
         );
         menuContextual.add(menuItemIntruder);
@@ -455,13 +460,20 @@ public class PanelHallazgos extends JPanel {
         if (esBurpProfessional) {
             menuItemScanner = crearMenuItemContextual(
                 I18nUI.Hallazgos.MENU_ENVIAR_SCANNER(),
-                TooltipsUI.Hallazgos.MENU_SCANNER(),
+                I18nUI.Tooltips.Hallazgos.MENU_SCANNER(),
                 e -> enviarAScanner(tabla.getSelectedRows())
             );
             menuContextual.add(menuItemScanner);
         } else {
             menuItemScanner = null;
         }
+
+        menuItemDroid = crearMenuItemContextual(
+            I18nUI.Hallazgos.MENU_ENVIAR_FACTORY_DROID_ROCKET(),
+            I18nUI.Hallazgos.TOOLTIP_ENVIAR_FACTORY_DROID(),
+            e -> enviarADroid(tabla.getSelectedRows())
+        );
+        menuContextual.add(menuItemDroid);
 
         menuItemIssues = crearMenuItemContextual(
             obtenerEtiquetaMenuIssues(),
@@ -475,7 +487,7 @@ public class PanelHallazgos extends JPanel {
 
         menuItemIgnorar = crearMenuItemContextual(
             I18nUI.Hallazgos.MENU_IGNORAR(),
-            TooltipsUI.Hallazgos.MENU_IGNORAR(),
+            I18nUI.Tooltips.Hallazgos.MENU_IGNORAR(),
             e -> {
                 int[] filas = tabla.getSelectedRows();
                 if (filas.length > 0) {
@@ -496,7 +508,7 @@ public class PanelHallazgos extends JPanel {
 
         menuItemBorrar = crearMenuItemContextual(
             I18nUI.Hallazgos.MENU_BORRAR(),
-            TooltipsUI.Hallazgos.MENU_BORRAR(),
+            I18nUI.Tooltips.Hallazgos.MENU_BORRAR(),
             e -> {
                 int[] filas = tabla.getSelectedRows();
                 if (filas.length > 0) {
@@ -582,6 +594,10 @@ public class PanelHallazgos extends JPanel {
             menuItemIssues.setVisible(!integracionIssuesDisponible || !guardadoAutomaticoIssuesActivo);
             menuItemIssues.setEnabled(integracionIssuesDisponible);
         }
+        if (menuItemDroid != null) {
+            boolean droidHabilitado = config != null && config.agenteFactoryDroidHabilitado();
+            menuItemDroid.setVisible(droidHabilitado && manejadorEnviarADroid != null);
+        }
     }
 
     private void actualizarEstadoControlesIssuesPorEdicion() {
@@ -602,8 +618,8 @@ public class PanelHallazgos extends JPanel {
 
     private String obtenerTooltipGuardadoIssues() {
         return integracionIssuesDisponible
-            ? TooltipsUI.Hallazgos.GUARDAR_ISSUES()
-            : TooltipsUI.Hallazgos.GUARDAR_ISSUES_SOLO_PRO();
+            ? I18nUI.Tooltips.Hallazgos.GUARDAR_ISSUES()
+            : I18nUI.Tooltips.Hallazgos.GUARDAR_ISSUES_SOLO_PRO();
     }
 
     private String obtenerEtiquetaMenuIssues() {
@@ -614,8 +630,19 @@ public class PanelHallazgos extends JPanel {
 
     private String obtenerTooltipMenuIssues() {
         return integracionIssuesDisponible
-            ? TooltipsUI.Hallazgos.MENU_ISSUES()
-            : TooltipsUI.Hallazgos.MENU_ISSUES_SOLO_PRO();
+            ? I18nUI.Tooltips.Hallazgos.MENU_ISSUES()
+            : I18nUI.Tooltips.Hallazgos.MENU_ISSUES_SOLO_PRO();
+    }
+
+    private void enviarADroid(int[] filas) {
+        if (manejadorEnviarADroid == null) return;
+        int[] filasModelo = convertirFilasVistaAModelo(filas);
+        for (int filaModelo : filasModelo) {
+            Hallazgo h = modelo.obtenerHallazgo(filaModelo);
+            if (h != null) {
+                manejadorEnviarADroid.accept(h);
+            }
+        }
     }
 
     private void enviarARepeater(int[] filas) {
@@ -644,7 +671,7 @@ public class PanelHallazgos extends JPanel {
             false,
             (solicitud, hallazgo) -> {
                 api.intruder().sendToIntruder(solicitud);
-                return "✅ " + solicitud.url() + " " + I18nUI.tr("(enviado a Intruder)", "(sent to Intruder)");
+                return "✅ " + solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_INTRUDER();
             }
         );
     }
@@ -663,10 +690,7 @@ public class PanelHallazgos extends JPanel {
                 @Override
                 public String ejecutar(HttpRequest solicitud, Hallazgo hallazgo) {
                     if (!esBurpProfessional) {
-                        throw new IllegalStateException(I18nUI.tr(
-                            "Scanner solo disponible en Burp Professional",
-                            "Scanner only available in Burp Professional"
-                        ));
+                        throw new IllegalStateException(I18nUI.Hallazgos.ERROR_SCANNER_SOLO_PRO());
                     }
                     if (auditoriaActiva == null) {
                         AuditConfiguration configScanner = AuditConfiguration.auditConfiguration(
@@ -675,11 +699,8 @@ public class PanelHallazgos extends JPanel {
                         auditoriaActiva = api.scanner().startAudit(configScanner);
                     }
                     auditoriaActiva.addRequest(solicitud);
-                    api.logging().logToOutput(I18nUI.tr(
-                        "[BurpIA] Peticion enviada a Scanner Pro: ",
-                        "[BurpIA] Request sent to Scanner Pro: "
-                    ) + solicitud.url());
-                    return "✅ " + solicitud.url() + " " + I18nUI.tr("(enviado a Scanner Pro)", "(sent to Scanner Pro)");
+                    api.logging().logToOutput(I18nUI.Hallazgos.LOG_PETICION_ENVIADA_SCANNER() + solicitud.url());
+                    return "✅ " + solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_SCANNER();
                 }
             }
         );
@@ -717,7 +738,7 @@ public class PanelHallazgos extends JPanel {
 
                 String url = hallazgo.obtenerUrl() != null && !hallazgo.obtenerUrl().isBlank()
                     ? hallazgo.obtenerUrl()
-                    : I18nUI.tr("URL desconocida", "Unknown URL");
+                    : I18nUI.Hallazgos.URL_DESCONOCIDA();
                 return "✅ " + url + " " + I18nUI.Hallazgos.SUFIJO_ISSUE_GUARDADO();
             }
         );
@@ -767,14 +788,11 @@ public class PanelHallazgos extends JPanel {
                     String mensaje = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
                     String url = solicitud != null ? solicitud.url() : entrada.urlReferencia;
                     detalle.append("❌ ").append(url)
-                        .append(I18nUI.tr(" (error: ", " (error: "))
+                        .append(I18nUI.Hallazgos.SUFIJO_ERROR_INLINE())
                         .append(mensaje)
                         .append(")\n");
                     if (registrarErroresScanner && api != null) {
-                        api.logging().logToError(I18nUI.tr(
-                            "[BurpIA] Error al enviar a Scanner Pro: ",
-                            "[BurpIA] Error sending to Scanner Pro: "
-                        ) + mensaje);
+                        api.logging().logToError(I18nUI.Hallazgos.LOG_ERROR_ENVIAR_SCANNER() + mensaje);
                     }
                 }
             }
@@ -810,10 +828,7 @@ public class PanelHallazgos extends JPanel {
         } catch (RejectedExecutionException ex) {
             SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
                 PanelHallazgos.this,
-                I18nUI.tr(
-                    "No se pudo ejecutar la accion: el panel se esta cerrando.",
-                    "Action could not be executed: the panel is shutting down."
-                ),
+                I18nUI.Hallazgos.ERROR_PANEL_CERRANDO(),
                 titulo,
                 JOptionPane.WARNING_MESSAGE
             ));
@@ -908,7 +923,7 @@ public class PanelHallazgos extends JPanel {
             HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
             String urlReferencia = hallazgo != null
                 ? hallazgo.obtenerUrl()
-                : I18nUI.tr("URL desconocida", "Unknown URL");
+                : I18nUI.Hallazgos.URL_DESCONOCIDA();
             entradas.add(new EntradaAccion(solicitud, hallazgo, urlReferencia));
         }
         return new ResultadoCapturaAccion(entradas, filasModelo.length, ignorados);
@@ -947,38 +962,42 @@ public class PanelHallazgos extends JPanel {
         chkGuardarEnIssues.setText(obtenerEtiquetaGuardadoIssues());
         actualizarPrimeraOpcionSeveridad();
 
-        etiquetaBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
-        campoBusqueda.setToolTipText(TooltipsUI.Hallazgos.BUSQUEDA());
-        comboSeveridad.setToolTipText(TooltipsUI.Hallazgos.FILTRO_SEVERIDAD());
-        botonLimpiarFiltro.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_FILTROS());
-        botonExportarCSV.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_CSV());
-        botonExportarJSON.setToolTipText(TooltipsUI.Hallazgos.EXPORTAR_JSON());
-        botonLimpiarTodo.setToolTipText(TooltipsUI.Hallazgos.LIMPIAR_TODO());
+        etiquetaBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
+        campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
+        comboSeveridad.setToolTipText(I18nUI.Tooltips.Hallazgos.FILTRO_SEVERIDAD());
+        botonLimpiarFiltro.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
+        botonExportarCSV.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
+        botonExportarJSON.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
+        botonLimpiarTodo.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
         chkGuardarEnIssues.setToolTipText(obtenerTooltipGuardadoIssues());
-        tabla.setToolTipText(TooltipsUI.Hallazgos.TABLA());
+        tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
         if (menuItemRepeater != null) {
             menuItemRepeater.setText(I18nUI.Hallazgos.MENU_ENVIAR_REPEATER());
-            menuItemRepeater.setToolTipText(TooltipsUI.Hallazgos.MENU_REPEATER());
+            menuItemRepeater.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_REPEATER());
         }
         if (menuItemIntruder != null) {
             menuItemIntruder.setText(I18nUI.Hallazgos.MENU_ENVIAR_INTRUDER());
-            menuItemIntruder.setToolTipText(TooltipsUI.Hallazgos.MENU_INTRUDER());
+            menuItemIntruder.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_INTRUDER());
         }
         if (menuItemScanner != null) {
             menuItemScanner.setText(I18nUI.Hallazgos.MENU_ENVIAR_SCANNER());
-            menuItemScanner.setToolTipText(TooltipsUI.Hallazgos.MENU_SCANNER());
+            menuItemScanner.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_SCANNER());
         }
         if (menuItemIssues != null) {
             menuItemIssues.setText(obtenerEtiquetaMenuIssues());
             menuItemIssues.setToolTipText(obtenerTooltipMenuIssues());
         }
+        if (menuItemDroid != null) {
+            menuItemDroid.setText(I18nUI.Hallazgos.MENU_ENVIAR_FACTORY_DROID_ROCKET());
+            menuItemDroid.setToolTipText(I18nUI.Hallazgos.TOOLTIP_ENVIAR_FACTORY_DROID());
+        }
         if (menuItemIgnorar != null) {
             menuItemIgnorar.setText(I18nUI.Hallazgos.MENU_IGNORAR());
-            menuItemIgnorar.setToolTipText(TooltipsUI.Hallazgos.MENU_IGNORAR());
+            menuItemIgnorar.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_IGNORAR());
         }
         if (menuItemBorrar != null) {
             menuItemBorrar.setText(I18nUI.Hallazgos.MENU_BORRAR());
-            menuItemBorrar.setToolTipText(TooltipsUI.Hallazgos.MENU_BORRAR());
+            menuItemBorrar.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_BORRAR());
         }
         actualizarVisibilidadMenuIssues();
 
@@ -1068,6 +1087,14 @@ public class PanelHallazgos extends JPanel {
 
     public void establecerManejadorCambioGuardadoIssues(Consumer<Boolean> manejadorCambioGuardadoIssues) {
         this.manejadorCambioGuardadoIssues = manejadorCambioGuardadoIssues;
+    }
+
+    public void establecerConfiguracion(com.burpia.config.ConfiguracionAPI config) {
+        this.config = config;
+    }
+
+    public void establecerManejadorEnviarADroid(Consumer<Hallazgo> manejador) {
+        this.manejadorEnviarADroid = manejador;
     }
 
     public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {

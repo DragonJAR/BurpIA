@@ -21,9 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-
-
-
 public final class ConstructorSolicitudesProveedor {
 
     private static final long CACHE_MODELOS_GEMINI_MS = 5 * 60 * 1000L;
@@ -340,7 +337,7 @@ public final class ConstructorSolicitudesProveedor {
                 result.add(id);
             }
         }
-        // Ordenar alfabéticamente para mejor experiencia de usuario
+
         Collections.sort(result);
         return result;
     }

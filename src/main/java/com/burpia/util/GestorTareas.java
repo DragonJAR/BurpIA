@@ -10,9 +10,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
-
-
-
 public class GestorTareas {
     private final Map<String, Tarea> tareas;
     private final ReentrantLock candado;
@@ -186,7 +183,7 @@ public class GestorTareas {
             for (Tarea tarea : tareasAtascadas) {
                 tarea.establecerEstado(Tarea.ESTADO_ERROR);
                 tarea.establecerMensajeInfo(
-                    com.burpia.i18n.I18nUI.tr("Tarea atascada - timeout", "Stuck task - timeout")
+                    com.burpia.i18n.I18nUI.Tareas.ESTADO_TAREA_ATASCADA()
                 );
                 String id = tarea.obtenerId();
                 if (id != null && !id.isEmpty()) {
@@ -199,10 +196,7 @@ public class GestorTareas {
 
         for (Tarea tarea : tareasAtascadas) {
             actualizarFilaTabla(tarea);
-            registrar(com.burpia.i18n.I18nUI.tr(
-                "Tarea atascada detectada: ",
-                "Stuck task detected: "
-            ) + tarea.obtenerId());
+            registrar(com.burpia.i18n.I18nUI.Tareas.LOG_TAREA_ATASCADA_DETECTADA() + tarea.obtenerId());
         }
         notificarCancelaciones(idsAInterrumpir);
     }

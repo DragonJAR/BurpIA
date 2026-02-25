@@ -1,8 +1,6 @@
 package com.burpia.util;
 import java.util.concurrent.Semaphore;
 
-
-
 public class LimitadorTasa {
     private final Semaphore semaforo;
 

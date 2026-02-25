@@ -1,8 +1,6 @@
 package com.burpia.ui;
 import java.awt.Font;
 
-
-
 public class EstilosUI {
     private EstilosUI() {}
 
@@ -28,14 +26,12 @@ public class EstilosUI {
 
     public static final java.awt.Color COLOR_TEXTO_DESHABILITADO = new java.awt.Color(150, 150, 150);
 
-    // Severity Colors
     public static final java.awt.Color COLOR_CRITICAL = new java.awt.Color(156, 39, 176);
     public static final java.awt.Color COLOR_HIGH     = new java.awt.Color(220, 53, 69);
     public static final java.awt.Color COLOR_MEDIUM   = new java.awt.Color(253, 126, 20);
     public static final java.awt.Color COLOR_LOW      = new java.awt.Color(40, 167, 69);
     public static final java.awt.Color COLOR_INFO     = new java.awt.Color(13, 110, 253);
 
-    // Task State Colors
     public static final java.awt.Color COLOR_TASK_EN_COLA    = java.awt.Color.GRAY;
     public static final java.awt.Color COLOR_TASK_ANALIZANDO = new java.awt.Color(0, 120, 215);
     public static final java.awt.Color COLOR_TASK_COMPLETADO = new java.awt.Color(0, 153, 0);

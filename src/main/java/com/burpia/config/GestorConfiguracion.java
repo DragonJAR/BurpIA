@@ -14,9 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-
-
-
 public class GestorConfiguracion {
     private static final String NOMBRE_ARCHIVO = ".burpia.json";
     private final Path rutaConfig;
@@ -98,7 +95,7 @@ public class GestorConfiguracion {
             if (config == null) {
                 logError("[Configuracion] No se pudo guardar: configuracion nula");
                 if (mensajeError != null) {
-                    mensajeError.append(I18nUI.tr("Configuracion nula", "Null configuration"));
+                    mensajeError.append(I18nUI.Configuracion.MSG_CONFIGURACION_NULA());
                 }
                 return false;
             }
@@ -108,7 +105,7 @@ public class GestorConfiguracion {
             if (directorioPadre != null && !Files.exists(directorioPadre)) {
                 logError("[Configuracion] Directorio padre no existe: " + directorioPadre);
                 if (mensajeError != null) {
-                    mensajeError.append(I18nUI.tr("Directorio no existe: ", "Directory does not exist: "))
+                    mensajeError.append(I18nUI.Configuracion.MSG_DIRECTORIO_NO_EXISTE())
                         .append(directorioPadre);
                 }
                 return false;
@@ -117,7 +114,7 @@ public class GestorConfiguracion {
             if (directorioPadre != null && !Files.isWritable(directorioPadre)) {
                 logError("[Configuracion] Directorio no es escribible: " + directorioPadre);
                 if (mensajeError != null) {
-                    mensajeError.append(I18nUI.tr("Directorio no escribible: ", "Directory is not writable: "))
+                    mensajeError.append(I18nUI.Configuracion.MSG_DIRECTORIO_NO_ESCRIBIBLE())
                         .append(directorioPadre);
                 }
                 return false;
@@ -144,13 +141,13 @@ public class GestorConfiguracion {
         } catch (IOException e) {
             logError("[Configuracion] Error de E/S al guardar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             if (mensajeError != null) {
-                mensajeError.append(I18nUI.tr("Error de E/S: ", "I/O error: ")).append(e.getMessage());
+                mensajeError.append(I18nUI.Configuracion.MSG_ERROR_IO()).append(e.getMessage());
             }
             return false;
         } catch (Exception e) {
             logError("[Configuracion] Error inesperado al guardar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
             if (mensajeError != null) {
-                mensajeError.append(I18nUI.tr("Error inesperado: ", "Unexpected error: ")).append(e.getMessage());
+                mensajeError.append(I18nUI.Configuracion.MSG_ERROR_INESPERADO()).append(e.getMessage());
             }
             return false;
         } finally {
@@ -241,6 +238,27 @@ public class GestorConfiguracion {
             config.establecerPromptConfigurable(ConfiguracionAPI.obtenerPromptPorDefecto());
         }
 
+        if (archivo.ignorarErroresSSL != null) {
+            config.establecerIgnorarErroresSSL(archivo.ignorarErroresSSL);
+        }
+
+        if (archivo.soloProxy != null) {
+            config.establecerSoloProxy(archivo.soloProxy);
+        }
+
+        if (archivo.agenteFactoryDroidHabilitado != null) {
+            config.establecerAgenteFactoryDroidHabilitado(archivo.agenteFactoryDroidHabilitado);
+        }
+        if (archivo.agenteFactoryDroidBinario != null) {
+            config.establecerAgenteFactoryDroidBinario(archivo.agenteFactoryDroidBinario);
+        }
+        if (archivo.agenteFactoryDroidPrompt != null) {
+            config.establecerAgenteFactoryDroidPrompt(archivo.agenteFactoryDroidPrompt);
+        }
+        if (archivo.agenteFactoryDroidDelay != null) {
+            config.establecerAgenteFactoryDroidDelay(archivo.agenteFactoryDroidDelay);
+        }
+
         config.establecerDetallado(Boolean.TRUE.equals(archivo.detallado));
 
         config.establecerApiKeysPorProveedor(sanitizarMapaString(archivo.apiKeysPorProveedor));
@@ -267,6 +285,12 @@ public class GestorConfiguracion {
         archivo.autoScrollConsolaHabilitado = config.autoScrollConsolaHabilitado();
         archivo.promptConfigurable = config.obtenerPromptConfigurable();
         archivo.promptModificado = config.esPromptModificado();
+        archivo.ignorarErroresSSL = config.ignorarErroresSSL();
+        archivo.soloProxy = config.soloProxy();
+        archivo.agenteFactoryDroidHabilitado = config.agenteFactoryDroidHabilitado();
+        archivo.agenteFactoryDroidBinario = config.obtenerAgenteFactoryDroidBinario();
+        archivo.agenteFactoryDroidPrompt = config.obtenerAgenteFactoryDroidPrompt();
+        archivo.agenteFactoryDroidDelay = config.obtenerAgenteFactoryDroidDelay();
         archivo.apiKeysPorProveedor = new HashMap<>(config.obtenerApiKeysPorProveedor());
         archivo.urlsBasePorProveedor = new HashMap<>(config.obtenerUrlsBasePorProveedor());
         archivo.modelosPorProveedor = new HashMap<>(config.obtenerModelosPorProveedor());
@@ -332,6 +356,12 @@ public class GestorConfiguracion {
         private Boolean autoScrollConsolaHabilitado;
         private String promptConfigurable;
         private Boolean promptModificado;
+        private Boolean ignorarErroresSSL;
+        private Boolean soloProxy;
+        private Boolean agenteFactoryDroidHabilitado;
+        private String agenteFactoryDroidBinario;
+        private String agenteFactoryDroidPrompt;
+        private Integer agenteFactoryDroidDelay;
         private Map<String, String> apiKeysPorProveedor;
         private Map<String, String> urlsBasePorProveedor;
         private Map<String, String> modelosPorProveedor;

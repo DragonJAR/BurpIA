@@ -8,9 +8,6 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.function.Consumer;
 
-
-
-
 public class PanelConsola extends JPanel {
     private final JTextPane consola;
     private final JCheckBox checkboxAutoScroll;
@@ -46,17 +43,17 @@ public class PanelConsola extends JPanel {
 
         checkboxAutoScroll = new JCheckBox(I18nUI.Consola.CHECK_AUTO_SCROLL(), true);
         checkboxAutoScroll.setFont(EstilosUI.FUENTE_ESTANDAR);
-        checkboxAutoScroll.setToolTipText(TooltipsUI.Consola.AUTOSCROLL());
+        checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
         panelBotones.add(checkboxAutoScroll);
 
         botonLimpiar = new JButton(I18nUI.Consola.BOTON_LIMPIAR());
         botonLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonLimpiar.setToolTipText(TooltipsUI.Consola.LIMPIAR());
+        botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
         panelBotones.add(botonLimpiar);
 
         etiquetaResumen = new JLabel(I18nUI.Consola.RESUMEN(0, 0, 0, 0));
         etiquetaResumen.setFont(EstilosUI.FUENTE_MONO);
-        etiquetaResumen.setToolTipText(TooltipsUI.Consola.RESUMEN());
+        etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
         panelBotones.add(etiquetaResumen);
 
         panelControles.add(panelBotones);
@@ -76,7 +73,7 @@ public class PanelConsola extends JPanel {
         consola = new JTextPane();
         consola.setEditable(false);
         consola.setFont(EstilosUI.FUENTE_TABLA);
-        consola.setToolTipText(TooltipsUI.Consola.AREA_LOGS());
+        consola.setToolTipText(I18nUI.Tooltips.Consola.AREA_LOGS());
         JScrollPane panelDesplazable = new JScrollPane(consola);
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
@@ -140,10 +137,10 @@ public class PanelConsola extends JPanel {
         botonLimpiar.setText(I18nUI.Consola.BOTON_LIMPIAR());
         actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
         actualizarTituloPanel(panelConsolaWrapper, I18nUI.Consola.TITULO_LOGS());
-        checkboxAutoScroll.setToolTipText(TooltipsUI.Consola.AUTOSCROLL());
-        botonLimpiar.setToolTipText(TooltipsUI.Consola.LIMPIAR());
-        etiquetaResumen.setToolTipText(TooltipsUI.Consola.RESUMEN());
-        consola.setToolTipText(TooltipsUI.Consola.AREA_LOGS());
+        checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
+        botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
+        etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
+        consola.setToolTipText(I18nUI.Tooltips.Consola.AREA_LOGS());
         actualizarResumen();
         revalidate();
         repaint();

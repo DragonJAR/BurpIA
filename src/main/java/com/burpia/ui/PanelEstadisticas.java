@@ -11,9 +11,6 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.function.IntSupplier;
 
-
-
-
 public class PanelEstadisticas extends JPanel {
     private final JLabel etiquetaResumenPrincipal;
     private final JLabel etiquetaResumenSeveridad;
@@ -135,7 +132,7 @@ public class PanelEstadisticas extends JPanel {
 
         etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
         etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204));
-        etiquetaResumenPrincipal.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_TOTAL());
+        etiquetaResumenPrincipal.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_TOTAL());
         panelLineaHallazgos.add(etiquetaResumenPrincipal);
 
         JLabel separador = new JLabel(" | ");
@@ -145,7 +142,7 @@ public class PanelEstadisticas extends JPanel {
 
         etiquetaResumenSeveridad.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumenSeveridad.setForeground(new Color(70, 70, 70));
-        etiquetaResumenSeveridad.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_SEVERIDAD());
+        etiquetaResumenSeveridad.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_SEVERIDAD());
         panelLineaHallazgos.add(etiquetaResumenSeveridad);
 
         JLabel separador2 = new JLabel(" | ");
@@ -155,7 +152,7 @@ public class PanelEstadisticas extends JPanel {
 
         etiquetaLimiteHallazgos.setFont(EstilosUI.FUENTE_MONO);
         etiquetaLimiteHallazgos.setForeground(new Color(80, 80, 80));
-        etiquetaLimiteHallazgos.setToolTipText(TooltipsUI.Estadisticas.LIMITE_HALLAZGOS());
+        etiquetaLimiteHallazgos.setToolTipText(I18nUI.Tooltips.Estadisticas.LIMITE_HALLAZGOS());
         panelLineaHallazgos.add(etiquetaLimiteHallazgos);
 
         panel.add(panelLineaHallazgos, BorderLayout.CENTER);
@@ -167,7 +164,7 @@ public class PanelEstadisticas extends JPanel {
 
         etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumenOperativo.setForeground(new Color(90, 90, 90));
-        etiquetaResumenOperativo.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_OPERATIVO());
+        etiquetaResumenOperativo.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_OPERATIVO());
 
         panelLineaOperativo = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
         panelLineaOperativo.setOpaque(false);
@@ -207,7 +204,7 @@ public class PanelEstadisticas extends JPanel {
 
         botonConfiguracion.setText("⚙️");
         botonConfiguracion.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
-        botonConfiguracion.setToolTipText(TooltipsUI.Estadisticas.CONFIGURACION());
+        botonConfiguracion.setToolTipText(I18nUI.Tooltips.Estadisticas.CONFIGURACION());
         botonConfiguracion.setFocusable(false);
         botonConfiguracion.setMargin(new Insets(0, 0, 0, 0));
         botonConfiguracion.putClientProperty("JButton.buttonType", "square");
@@ -320,21 +317,21 @@ public class PanelEstadisticas extends JPanel {
     private void actualizarEstadoCapturaUI() {
         if (capturaActiva) {
             botonCaptura.setText("⏸️");
-            botonCaptura.setToolTipText(TooltipsUI.Estadisticas.CAPTURA_PAUSAR());
+            botonCaptura.setToolTipText(I18nUI.Tooltips.Estadisticas.CAPTURA_PAUSAR());
         } else {
             botonCaptura.setText("▶️");
-            botonCaptura.setToolTipText(TooltipsUI.Estadisticas.CAPTURA_REANUDAR());
+            botonCaptura.setToolTipText(I18nUI.Tooltips.Estadisticas.CAPTURA_REANUDAR());
         }
     }
 
     public void aplicarIdioma() {
         actualizarTituloSeccion(panelHallazgos, I18nUI.Estadisticas.TITULO_HALLAZGOS());
         actualizarTituloSeccion(panelOperativo, I18nUI.Estadisticas.TITULO_OPERATIVO());
-        etiquetaResumenPrincipal.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_TOTAL());
-        etiquetaResumenSeveridad.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_SEVERIDAD());
-        etiquetaLimiteHallazgos.setToolTipText(TooltipsUI.Estadisticas.LIMITE_HALLAZGOS());
-        etiquetaResumenOperativo.setToolTipText(TooltipsUI.Estadisticas.RESUMEN_OPERATIVO());
-        botonConfiguracion.setToolTipText(TooltipsUI.Estadisticas.CONFIGURACION());
+        etiquetaResumenPrincipal.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_TOTAL());
+        etiquetaResumenSeveridad.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_SEVERIDAD());
+        etiquetaLimiteHallazgos.setToolTipText(I18nUI.Tooltips.Estadisticas.LIMITE_HALLAZGOS());
+        etiquetaResumenOperativo.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_OPERATIVO());
+        botonConfiguracion.setToolTipText(I18nUI.Tooltips.Estadisticas.CONFIGURACION());
         actualizarEstadoCapturaUI();
         revalidate();
         repaint();

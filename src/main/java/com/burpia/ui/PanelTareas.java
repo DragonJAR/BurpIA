@@ -15,9 +15,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-
-
-
 public class PanelTareas extends JPanel {
     private final ModeloTablaTareas modelo;
     private final JTable tabla;
@@ -81,22 +78,22 @@ public class PanelTareas extends JPanel {
 
         botonPausarReanudar = new JButton(I18nUI.Tareas.BOTON_PAUSAR_TODO());
         botonPausarReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonPausarReanudar.setToolTipText(TooltipsUI.Tareas.PAUSAR_REANUDAR());
+        botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.PAUSAR_REANUDAR());
         panelTodosControles.add(botonPausarReanudar);
 
         botonCancelar = new JButton(I18nUI.Tareas.BOTON_CANCELAR_TODO());
         botonCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonCancelar.setToolTipText(TooltipsUI.Tareas.CANCELAR());
+        botonCancelar.setToolTipText(I18nUI.Tooltips.Tareas.CANCELAR());
         panelTodosControles.add(botonCancelar);
 
         botonLimpiarCompletadas = new JButton(I18nUI.Tareas.BOTON_LIMPIAR());
         botonLimpiarCompletadas.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonLimpiarCompletadas.setToolTipText(TooltipsUI.Tareas.LIMPIAR());
+        botonLimpiarCompletadas.setToolTipText(I18nUI.Tooltips.Tareas.LIMPIAR());
         panelTodosControles.add(botonLimpiarCompletadas);
 
         etiquetaEstadisticas = new JLabel(I18nUI.Tareas.ESTADISTICAS(0, 0, 0));
         etiquetaEstadisticas.setFont(EstilosUI.FUENTE_MONO);
-        etiquetaEstadisticas.setToolTipText(TooltipsUI.Tareas.ESTADISTICAS());
+        etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
         panelTodosControles.add(etiquetaEstadisticas);
 
         panelControles.add(panelTodosControles);
@@ -117,7 +114,7 @@ public class PanelTareas extends JPanel {
         tabla.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         tabla.setRowHeight(EstilosUI.ALTURA_FILA_TABLA);
         tabla.setFont(EstilosUI.FUENTE_TABLA);
-        tabla.setToolTipText(TooltipsUI.Tareas.TABLA());
+        tabla.setToolTipText(I18nUI.Tooltips.Tareas.TABLA());
         configurarColumnasTabla();
 
         JScrollPane panelDesplazable = new JScrollPane(tabla);
@@ -264,7 +261,7 @@ public class PanelTareas extends JPanel {
         if (Tarea.ESTADO_ERROR.equals(estado)) {
             JMenuItem menuItemVerDetalles = new JMenuItem(I18nUI.Tareas.MENU_VER_DETALLES_ERROR());
             menuItemVerDetalles.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemVerDetalles.setToolTipText(TooltipsUI.Tareas.MENU_VER_DETALLES_ERROR());
+            menuItemVerDetalles.setToolTipText(I18nUI.Tooltips.Tareas.MENU_VER_DETALLES_ERROR());
             menuItemVerDetalles.addActionListener(e -> {
                 String mensaje = I18nUI.Tareas.MSG_DETALLES_ERROR(seleccion.url, seleccion.duracion, estado);
                 JOptionPane.showMessageDialog(
@@ -280,7 +277,7 @@ public class PanelTareas extends JPanel {
         if (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado)) {
             JMenuItem menuItemReintentar = new JMenuItem(I18nUI.Tareas.MENU_REINTENTAR());
             menuItemReintentar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemReintentar.setToolTipText(TooltipsUI.Tareas.MENU_REINTENTAR_UNA());
+            menuItemReintentar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_REINTENTAR_UNA());
             menuItemReintentar.addActionListener(e -> {
                 if (tareaId != null) {
                     reencolarTarea(tareaId);
@@ -293,7 +290,7 @@ public class PanelTareas extends JPanel {
         if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado)) {
             JMenuItem menuItemPausar = new JMenuItem(I18nUI.Tareas.MENU_PAUSAR());
             menuItemPausar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemPausar.setToolTipText(TooltipsUI.Tareas.MENU_PAUSAR_UNA());
+            menuItemPausar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_PAUSAR_UNA());
             menuItemPausar.addActionListener(e -> {
                 if (tareaId != null) {
                     gestorTareas.pausarTarea(tareaId);
@@ -306,7 +303,7 @@ public class PanelTareas extends JPanel {
         if (Tarea.ESTADO_PAUSADO.equals(estado)) {
             JMenuItem menuItemReanudar = new JMenuItem(I18nUI.Tareas.MENU_REANUDAR());
             menuItemReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemReanudar.setToolTipText(TooltipsUI.Tareas.MENU_REANUDAR_UNA());
+            menuItemReanudar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_REANUDAR_UNA());
             menuItemReanudar.addActionListener(e -> {
                 if (tareaId != null) {
                     gestorTareas.reanudarTarea(tareaId);
@@ -321,7 +318,7 @@ public class PanelTareas extends JPanel {
 
             JMenuItem menuItemCancelar = new JMenuItem(I18nUI.Tareas.MENU_CANCELAR());
             menuItemCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemCancelar.setToolTipText(TooltipsUI.Tareas.MENU_CANCELAR_UNA());
+            menuItemCancelar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_CANCELAR_UNA());
             menuItemCancelar.addActionListener(e -> {
                 int confirmacion = JOptionPane.showConfirmDialog(
                     PanelTareas.this,
@@ -343,7 +340,7 @@ public class PanelTareas extends JPanel {
 
             JMenuItem menuItemLimpiar = new JMenuItem(I18nUI.Tareas.MENU_ELIMINAR_LISTA());
             menuItemLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemLimpiar.setToolTipText(TooltipsUI.Tareas.MENU_ELIMINAR_UNA());
+            menuItemLimpiar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_ELIMINAR_UNA());
             menuItemLimpiar.addActionListener(e -> {
                 if (tareaId != null) {
                     gestorTareas.limpiarTarea(tareaId);
@@ -377,7 +374,7 @@ public class PanelTareas extends JPanel {
         if (erroresCanceladas > 0) {
             JMenuItem menuItemReintentar = new JMenuItem(I18nUI.Tareas.MENU_REINTENTAR_MULTIPLES(erroresCanceladas));
             menuItemReintentar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemReintentar.setToolTipText(TooltipsUI.Tareas.MENU_REINTENTAR_MULTIPLES());
+            menuItemReintentar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_REINTENTAR_MULTIPLES());
             menuItemReintentar.addActionListener(e -> reintentarTareas(seleccion));
             menu.add(menuItemReintentar);
         }
@@ -385,7 +382,7 @@ public class PanelTareas extends JPanel {
         if (activas > 0) {
             JMenuItem menuItemPausar = new JMenuItem(I18nUI.Tareas.MENU_PAUSAR_MULTIPLES(activas));
             menuItemPausar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemPausar.setToolTipText(TooltipsUI.Tareas.MENU_PAUSAR_MULTIPLES());
+            menuItemPausar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_PAUSAR_MULTIPLES());
             menuItemPausar.addActionListener(e -> pausarTareas(seleccion));
             menu.add(menuItemPausar);
         }
@@ -393,7 +390,7 @@ public class PanelTareas extends JPanel {
         if (pausadas > 0) {
             JMenuItem menuItemReanudar = new JMenuItem(I18nUI.Tareas.MENU_REANUDAR_MULTIPLES(pausadas));
             menuItemReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemReanudar.setToolTipText(TooltipsUI.Tareas.MENU_REANUDAR_MULTIPLES());
+            menuItemReanudar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_REANUDAR_MULTIPLES());
             menuItemReanudar.addActionListener(e -> reanudarTareas(seleccion));
             menu.add(menuItemReanudar);
         }
@@ -403,7 +400,7 @@ public class PanelTareas extends JPanel {
 
             JMenuItem menuItemCancelar = new JMenuItem(I18nUI.Tareas.MENU_CANCELAR_MULTIPLES(activas + pausadas));
             menuItemCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemCancelar.setToolTipText(TooltipsUI.Tareas.MENU_CANCELAR_MULTIPLES());
+            menuItemCancelar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_CANCELAR_MULTIPLES());
             menuItemCancelar.addActionListener(e -> cancelarTareas(seleccion));
             menu.add(menuItemCancelar);
         }
@@ -414,7 +411,7 @@ public class PanelTareas extends JPanel {
 
             JMenuItem menuItemLimpiar = new JMenuItem(I18nUI.Tareas.MENU_ELIMINAR_MULTIPLES(totalFinalizadas));
             menuItemLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            menuItemLimpiar.setToolTipText(TooltipsUI.Tareas.MENU_ELIMINAR_MULTIPLES());
+            menuItemLimpiar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_ELIMINAR_MULTIPLES());
             menuItemLimpiar.addActionListener(e -> eliminarTareasSeleccionadas(seleccion));
             menu.add(menuItemLimpiar);
         }
@@ -592,10 +589,10 @@ public class PanelTareas extends JPanel {
 
             if (estadisticas.pausadas > 0) {
                 botonPausarReanudar.setText(I18nUI.Tareas.BOTON_REANUDAR_TODO());
-                botonPausarReanudar.setToolTipText(TooltipsUI.Tareas.REANUDAR_TODO());
+                botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.REANUDAR_TODO());
             } else {
                 botonPausarReanudar.setText(I18nUI.Tareas.BOTON_PAUSAR_TODO());
-                botonPausarReanudar.setToolTipText(TooltipsUI.Tareas.PAUSAR_TODO());
+                botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.PAUSAR_TODO());
             }
         });
     }
@@ -603,11 +600,11 @@ public class PanelTareas extends JPanel {
     public void aplicarIdioma() {
         botonCancelar.setText(I18nUI.Tareas.BOTON_CANCELAR_TODO());
         botonLimpiarCompletadas.setText(I18nUI.Tareas.BOTON_LIMPIAR());
-        botonPausarReanudar.setToolTipText(TooltipsUI.Tareas.PAUSAR_REANUDAR());
-        botonCancelar.setToolTipText(TooltipsUI.Tareas.CANCELAR());
-        botonLimpiarCompletadas.setToolTipText(TooltipsUI.Tareas.LIMPIAR());
-        etiquetaEstadisticas.setToolTipText(TooltipsUI.Tareas.ESTADISTICAS());
-        tabla.setToolTipText(TooltipsUI.Tareas.TABLA());
+        botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.PAUSAR_REANUDAR());
+        botonCancelar.setToolTipText(I18nUI.Tooltips.Tareas.CANCELAR());
+        botonLimpiarCompletadas.setToolTipText(I18nUI.Tooltips.Tareas.LIMPIAR());
+        etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
+        tabla.setToolTipText(I18nUI.Tooltips.Tareas.TABLA());
         actualizarTituloPanel(panelControles, I18nUI.Tareas.TITULO_CONTROLES());
         actualizarTituloPanel(panelTablaWrapper, I18nUI.Tareas.TITULO_LISTA());
         modelo.refrescarColumnasIdioma();

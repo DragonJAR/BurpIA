@@ -7,8 +7,6 @@ import com.google.gson.JsonArray;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
-
 public class ParserRespuestasAI {
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
         java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");

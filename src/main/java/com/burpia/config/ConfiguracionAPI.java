@@ -1,11 +1,9 @@
 package com.burpia.config;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
+import com.burpia.util.OSUtils;
 import java.util.HashMap;
 import java.util.Map;
-
-
-
 
 public class ConfiguracionAPI {
     public static final int MAXIMO_HALLAZGOS_TABLA_DEFECTO = 1000;
@@ -28,6 +26,13 @@ public class ConfiguracionAPI {
     private boolean autoGuardadoIssuesHabilitado;
     private boolean autoScrollConsolaHabilitado;
     private String promptConfigurable;
+    private boolean ignorarErroresSSL;
+    private boolean soloProxy;
+
+    private boolean agenteFactoryDroidHabilitado;
+    private String agenteFactoryDroidBinario;
+    private String agenteFactoryDroidPrompt;
+    private int agenteFactoryDroidDelay;
 
     private Map<String, String> apiKeysPorProveedor;
     private Map<String, String> urlsBasePorProveedor;
@@ -49,6 +54,12 @@ public class ConfiguracionAPI {
         this.autoGuardadoIssuesHabilitado = true;
         this.autoScrollConsolaHabilitado = true;
         this.promptModificado = false;
+        this.ignorarErroresSSL = false;
+        this.soloProxy = true;
+        this.agenteFactoryDroidHabilitado = false;
+        this.agenteFactoryDroidBinario = obtenerAgenteFactoryDroidBinarioPorDefecto();
+        this.agenteFactoryDroidPrompt = obtenerAgenteFactoryDroidPromptPorDefecto();
+        this.agenteFactoryDroidDelay = 3500;
 
         this.promptConfigurable = obtenerPromptPorDefecto();
 
@@ -141,6 +152,77 @@ public class ConfiguracionAPI {
     public boolean esPromptModificado() { return promptModificado; }
     public void establecerPromptModificado(boolean modificado) { this.promptModificado = modificado; }
 
+    public boolean ignorarErroresSSL() { return ignorarErroresSSL; }
+    public void establecerIgnorarErroresSSL(boolean ignorarErroresSSL) { this.ignorarErroresSSL = ignorarErroresSSL; }
+
+    public boolean soloProxy() { return soloProxy; }
+    public void establecerSoloProxy(boolean soloProxy) { this.soloProxy = soloProxy; }
+
+    public boolean agenteFactoryDroidHabilitado() { return agenteFactoryDroidHabilitado; }
+    public void establecerAgenteFactoryDroidHabilitado(boolean habilitado) { this.agenteFactoryDroidHabilitado = habilitado; }
+
+    public String obtenerAgenteFactoryDroidBinario() { return agenteFactoryDroidBinario; }
+    public void establecerAgenteFactoryDroidBinario(String binario) { this.agenteFactoryDroidBinario = binario; }
+
+    public String obtenerAgenteFactoryDroidPrompt() { return agenteFactoryDroidPrompt; }
+    public void establecerAgenteFactoryDroidPrompt(String prompt) { this.agenteFactoryDroidPrompt = prompt; }
+
+    public int obtenerAgenteFactoryDroidDelay() { return agenteFactoryDroidDelay; }
+    public void establecerAgenteFactoryDroidDelay(int delay) { this.agenteFactoryDroidDelay = normalizarDelayFactoryDroid(delay); }
+
+    public static String obtenerAgenteFactoryDroidBinarioPorDefecto() {
+        if (OSUtils.esWindows()) {
+            return "%USERPROFILE%\\bin\\droid.exe";
+        }
+        return "~/.local/bin/droid";
+    }
+
+    public static String obtenerPromptAgentePorDefecto() {
+        return I18nUI.Configuracion.PROMPT_POR_DEFECTO();
+    }
+
+    public static String obtenerAgenteFactoryDroidPromptPorDefecto() {
+        return "# ROLE\n" +
+               "You are an Elite Offensive Security Researcher & Red Teamer. Your expertise lies in exploit development and manual vulnerability verification. You operate with a \"Prove it or it doesn't exist\" mindset.\n\n" +
+               "# OBJECTIVE\n" +
+               "Perform an active validation of a suspected vulnerability based on an initial HTTP capture. You must provide reproducible empirical evidence using the provided MCP tools.\n\n" +
+               "# TOOLSET (MCP BURP SUITE PRIORITY)\n" +
+               "- **Burp HTTP Requests**: Use this for initial probing, fuzzing, baseline checks and payload testing.\n" +
+               "- **Burp Create a Repeater Tab**: Use this ONLY when the vulnerability is confirmed to send the FINAL PoC.\n" +
+               "- **Burp Proxy History**: Use if you need additional context of the session.\n\n" +
+               "# TASK WORKFLOW\n" +
+               "1. **Hypothesis Formation**: Analyze the `<http_request>` and `<issue_description>`. Identify the exact injection point (parameter, header, path) and the expected behavior if vulnerable.\n" +
+               "2. **Initial Baseline**: Send a benign request to observe normal behavior.\n" +
+               "3. **Active Probing**: Send at least 2-3 variations of payloads (e.g., a trigger payload and an evasion payload). Analyze status codes, response times, and body content for anomalies.\n" +
+               "4. **Detection & WAF Bypass Protocol (MANDATORY if blocked)**: \n" +
+               "   - If the application returns 403, 406, or 501, analyze headers (e.g., `Server`, `X-CDN`, `X-WAF-Event`) to fingerprint the firewall.\n" +
+               "   - *Encoding*: Try URL, Double URL, Hex, Unicode, and Base64.\n" +
+               "   - *Payload Splitting*: Use SQL comments `/**/`, null bytes `%00`, or newline injections.\n" +
+               "   - *Header Spoofing*: Inject headers like `X-Forwarded-For: 127.0.0.1` or `X-Originating-IP` to bypass IP-based filters.\n" +
+               "   - *Protocol Smuggling*: Test variations in `Content-Type`.\n" +
+               "   - *Junk Data*: Prepend or append large amounts of non-functional data to overflow buffer/regex checks.\n" +
+               "5. **Final Validation**:\n" +
+               "   - If confirmed: Execute the MCP tool to send the winning payload to Repeater. Label it: `[VALIDATED] {CLASS} - {ENDPOINT}`.\n" +
+               "   - If discarded: Provide a technical justification of why the behavior is a False Positive.\n\n" +
+               "# OUTPUT REQUIREMENTS\n" +
+               "For each test performed, document:\n" +
+               "- **Test Case**: What are you testing? (Baseline, Payload X, WAF Bypass Y)\n" +
+               "- **Payload**: The exact string used.\n" +
+               "- **Observation**: What changed in the response compared to the original?\n" +
+               "- **Conclusion**: Confirmed / Not Vulnerable / Needs Further Investigation.\n\n" +
+               "If a WAF was encountered, you MUST include a **\"Bypass Log\"** detailing the Blocked Payload, Bypass Technique, and Successful Payload.\n\n" +
+               "---\n" +
+               "<issue_context>\n" +
+               "Title: {TITLE}\n" +
+               "Description: {DESCRIPTION}\n" +
+               "Request:\n{REQUEST}\n" +
+               "Response:\n{RESPONSE}\n" +
+               "</issue_context>\n\n" +
+               "<output_language>\n" +
+               "{OUTPUT_LANGUAGE}\n" +
+               "</output_language>";
+    }
+
     public static String construirUrlApiProveedor(String proveedor, String urlBase, String modelo) {
         String baseNormalizada = normalizarUrlBase(urlBase);
         String proveedorNormalizado = proveedor != null ? proveedor : "";
@@ -155,6 +237,7 @@ public class ConfiguracionAPI {
                 return baseNormalizada + "/api/chat";
             case "OpenAI":
                 return baseNormalizada + "/responses";
+            case "Moonshot (Kimi)":
             case "Z.ai":
             case "minimax":
             default:
@@ -314,10 +397,18 @@ public class ConfiguracionAPI {
 
     public int obtenerTiempoEsperaParaModelo(String proveedor, String modelo) {
         Integer timeoutConfigurado = obtenerTiempoEsperaConfiguradoParaModelo(proveedor, modelo);
+        int timeoutBase;
         if (timeoutConfigurado != null) {
-            return normalizarTiempoEspera(timeoutConfigurado);
+            timeoutBase = normalizarTiempoEspera(timeoutConfigurado);
+        } else {
+            timeoutBase = obtenerTiempoEsperaAI();
         }
-        return obtenerTiempoEsperaAI();
+
+        if ("Moonshot (Kimi)".equals(proveedor) && timeoutBase < 120) {
+            return 120;
+        }
+
+        return timeoutBase;
     }
 
     public void establecerTiempoEsperaParaModelo(String proveedor, String modelo, int timeoutSegundos) {
@@ -333,11 +424,11 @@ public class ConfiguracionAPI {
         Map<String, String> errores = new HashMap<>();
 
         if (proveedorAI == null || proveedorAI.trim().isEmpty()) {
-            errores.put("proveedorAI", I18nUI.tr("Proveedor de AI es requerido", "AI provider is required"));
+            errores.put("proveedorAI", I18nUI.Configuracion.ERROR_PROVEEDOR_REQUERIDO());
         } else if (!ProveedorAI.existeProveedor(proveedorAI)) {
             errores.put(
                 "proveedorAI",
-                I18nUI.trf("Proveedor de AI no reconocido: %s", "Unknown AI provider: %s", proveedorAI)
+                I18nUI.Configuracion.ERROR_PROVEEDOR_NO_RECONOCIDO(proveedorAI)
             );
         }
 
@@ -347,65 +438,49 @@ public class ConfiguracionAPI {
             if (key == null || key.trim().isEmpty()) {
                 errores.put(
                     "claveApi",
-                    I18nUI.trf("Clave de API requerida para %s", "API key is required for %s", proveedorAI)
+                    I18nUI.Configuracion.ALERTA_CLAVE_REQUERIDA(proveedorAI)
                 );
             }
         }
 
         if (obtenerModelo().trim().isEmpty()) {
-            errores.put("modelo", I18nUI.tr("Modelo es requerido", "Model is required"));
+            errores.put("modelo", I18nUI.Configuracion.ERROR_MODELO_REQUERIDO());
         }
 
         if (retrasoSegundos < MINIMO_RETRASO_SEGUNDOS || retrasoSegundos > MAXIMO_RETRASO_SEGUNDOS) {
             errores.put(
                 "retrasoSegundos",
-                I18nUI.trf(
-                    "Retraso debe estar entre %d y %d segundos",
-                    "Delay must be between %d and %d seconds",
-                    MINIMO_RETRASO_SEGUNDOS,
-                    MAXIMO_RETRASO_SEGUNDOS
-                )
+                I18nUI.Configuracion.ERROR_RETRASO_RANGO(MINIMO_RETRASO_SEGUNDOS, MAXIMO_RETRASO_SEGUNDOS)
             );
         }
 
         if (maximoConcurrente < MINIMO_MAXIMO_CONCURRENTE || maximoConcurrente > MAXIMO_MAXIMO_CONCURRENTE) {
             errores.put(
                 "maximoConcurrente",
-                I18nUI.trf(
-                    "Maximo concurrente debe estar entre %d y %d",
-                    "Max concurrent must be between %d and %d",
-                    MINIMO_MAXIMO_CONCURRENTE,
-                    MAXIMO_MAXIMO_CONCURRENTE
-                )
+                I18nUI.Configuracion.ERROR_MAXIMO_CONCURRENTE_RANGO(MINIMO_MAXIMO_CONCURRENTE, MAXIMO_MAXIMO_CONCURRENTE)
             );
         }
 
         if (maximoHallazgosTabla < MINIMO_HALLAZGOS_TABLA || maximoHallazgosTabla > MAXIMO_HALLAZGOS_TABLA) {
             errores.put("maximoHallazgosTabla",
-                I18nUI.trf(
-                    "Maximo de hallazgos en tabla debe estar entre %d y %d",
-                    "Max findings in table must be between %d and %d",
-                    MINIMO_HALLAZGOS_TABLA,
-                    MAXIMO_HALLAZGOS_TABLA
-                ));
+                I18nUI.Configuracion.ERROR_MAXIMO_HALLAZGOS_TABLA_RANGO(MINIMO_HALLAZGOS_TABLA, MAXIMO_HALLAZGOS_TABLA));
         }
 
         if (tiempoEsperaAI < 10 || tiempoEsperaAI > 300) {
             errores.put(
                 "tiempoEsperaAI",
-                I18nUI.tr("Tiempo de espera debe estar entre 10 y 300 segundos",
-                    "Timeout must be between 10 and 300 seconds")
+                I18nUI.Configuracion.ERROR_TIMEOUT_RANGO()
             );
         }
 
         if (!"Light".equals(tema) && !"Dark".equals(tema)) {
-            errores.put("tema", I18nUI.tr("Tema debe ser 'Light' o 'Dark'", "Theme must be 'Light' or 'Dark'"));
+            errores.put("tema", I18nUI.Configuracion.ERROR_TEMA_INVALIDO());
         }
 
         if (promptConfigurable == null || promptConfigurable.trim().isEmpty()) {
             errores.put(
                 "promptConfigurable",
-                I18nUI.tr("Prompt configurable es requerido", "Configurable prompt is required")
+                I18nUI.Configuracion.ERROR_PROMPT_REQUERIDO()
             );
         }
 
@@ -558,36 +633,22 @@ public class ConfiguracionAPI {
 
         String proveedor = obtenerProveedorAI();
         if (proveedor == null || proveedor.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
-            return I18nUI.tr(
-                "ALERTA: Proveedor de AI no configurado o no valido",
-                "ALERT: AI provider is not configured or is invalid"
-            );
+            return I18nUI.Configuracion.ALERTA_PROVEEDOR_INVALIDO();
         }
 
         String urlApi = obtenerUrlApi();
         if (urlApi == null || urlApi.trim().isEmpty()) {
-            return I18nUI.tr(
-                "ALERTA: URL de API no configurada",
-                "ALERT: API URL is not configured"
-            );
+            return I18nUI.Configuracion.ALERTA_URL_VACIA();
         }
 
         String modelo = obtenerModelo();
         if (modelo == null || modelo.trim().isEmpty()) {
-            return I18nUI.trf(
-                "ALERTA: Modelo no configurado para %s",
-                "ALERT: Model is not configured for %s",
-                proveedor
-            );
+            return I18nUI.Configuracion.ALERTA_MODELO_NO_CONFIGURADO(proveedor);
         }
 
         ProveedorAI.ConfiguracionProveedor proveedorConfig = ProveedorAI.obtenerProveedor(proveedor);
         if (proveedorConfig != null && proveedorConfig.requiereClaveApi() && !tieneApiKey()) {
-            return I18nUI.trf(
-                "ALERTA: Clave de API requerida para %s",
-                "ALERT: API key is required for %s",
-                proveedor
-            );
+            return I18nUI.Configuracion.ALERTA_CLAVE_REQUERIDA(proveedor);
         }
 
         return "";
@@ -737,6 +798,12 @@ public class ConfiguracionAPI {
         return "Light";
     }
 
+    private static int normalizarDelayFactoryDroid(int valor) {
+        if (valor < 1000) return 1000;
+        if (valor > 30000) return 30000;
+        return valor;
+    }
+
     private int obtenerMaxTokensPorDefectoProveedor(String proveedor) {
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
         return config != null ? config.obtenerMaxTokensPorDefecto() : 4096;
@@ -758,6 +825,7 @@ public class ConfiguracionAPI {
         snapshot.autoScrollConsolaHabilitado = this.autoScrollConsolaHabilitado;
         snapshot.promptConfigurable = this.promptConfigurable;
         snapshot.promptModificado = this.promptModificado;
+        snapshot.ignorarErroresSSL = this.ignorarErroresSSL;
 
         snapshot.apiKeysPorProveedor = new HashMap<>(this.apiKeysPorProveedor);
         snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
@@ -786,6 +854,11 @@ public class ConfiguracionAPI {
         this.autoScrollConsolaHabilitado = origen.autoScrollConsolaHabilitado;
         this.promptConfigurable = origen.promptConfigurable;
         this.promptModificado = origen.promptModificado;
+        this.ignorarErroresSSL = origen.ignorarErroresSSL;
+        this.soloProxy = origen.soloProxy;
+        this.agenteFactoryDroidHabilitado = origen.agenteFactoryDroidHabilitado;
+        this.agenteFactoryDroidBinario = origen.agenteFactoryDroidBinario;
+        this.agenteFactoryDroidPrompt = origen.agenteFactoryDroidPrompt;
 
         this.apiKeysPorProveedor = new HashMap<>(origen.apiKeysPorProveedor);
         this.urlsBasePorProveedor = new HashMap<>(origen.urlsBasePorProveedor);
