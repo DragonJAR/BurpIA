@@ -97,7 +97,7 @@ set FACTORY_API_KEY=fk-...
 
 1. Abre `~/.factory/mcp.json`.
 2. Agrega (o ajusta) la entrada `burp` dentro de `mcpServers`.
-3. Usa este bloque:
+3. Usa este bloque (ejemplo para macOS):
 
 ```json
 {
@@ -118,19 +118,24 @@ set FACTORY_API_KEY=fk-...
 ```
 
 4. Si guardaste el jar en otra ruta (usando **Extract server proxy jar**), cambia la ruta en `args`.
-5. Reinicia Droid y valida:
+5. Si no usas macOS, cambia `command` por tu ruta de `java` en ese sistema.
+6. Reinicia Droid y valida:
 
 ```text
 /mcp list
 ```
 
-### Opcion B: pedirle a Droid que lo configure por ti, en Mac OS seria así
+### Opcion B: pedirle a Droid que lo configure por ti
 
-Puedes pegarle a Droid el JSON anterior y decirle literalmente:
+Puedes pegarle el JSON a Droid y pedirle que lo instale. Ejemplo:
 
 ```text
-instale este mcp
+instale este mcp y agregalo a ~/.factory/mcp.json:
+```
 
+Despues pega el bloque JSON:
+
+```json
 {
   "mcpServers": {
     "burp": {
@@ -153,6 +158,8 @@ Luego valida con:
 ```text
 /mcp list
 ```
+
+---
 
 ## 5.1 Control de ejecucion del MCP (recomendado)
 
@@ -194,7 +201,7 @@ Tambien inyecta prompt inicial cuando:
 - Reinicias consola del agente.
 - Cambias de agente.
 
-Si cuando se incerta el prompt pre-flight, los mcps no han cargado, puedes inyecta manualmente (sin delay) usando `Inyectar Payload`.
+Si cuando se inserta el prompt pre-flight los MCP aun no han cargado, puedes reintentar manualmente (sin delay) con `Inyectar Payload`.
 
 ---
 
