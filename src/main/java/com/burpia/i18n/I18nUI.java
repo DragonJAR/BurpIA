@@ -594,8 +594,8 @@ public final class I18nUI {
             );
         }
 
-        public static String MENU_ENVIAR_FACTORY_DROID_ROCKET() {
-            return tr("🚀 Enviar a Factory Droid", "🚀 Send to Factory Droid");
+        public static String MENU_ENVIAR_AGENTE_ROCKET() {
+            return tr("🚀 Enviar al Agente", "🚀 Send to Agent");
         }
 
         public static String MENU_ENVIAR_AGENTE_ROCKET(String agente) {
@@ -1163,12 +1163,12 @@ public final class I18nUI {
             private Agentes() {
             }
 
-            public static String TITULO_FACTORY_DROID() {
-                return tr("🤖 CONFIGURACION FACTORY DROID", "🤖 FACTORY DROID SETTINGS");
+            public static String TITULO_AGENTE() {
+                return tr("🤖 CONFIGURACION AGENTE", "🤖 AGENT SETTINGS");
             }
 
             public static String CHECK_HABILITAR_AGENTE() {
-                return tr("Habilitar Agente Factory Droid", "Enable Factory Droid Agent");
+                return tr("Habilitar Agente", "Enable Agent");
             }
 
             public static String CHECK_HABILITAR_AGENTE(String nombreAgente) {
@@ -1340,8 +1340,8 @@ public final class I18nUI {
             return tr("⚡️ Analizar Solicitud con BurpIA", "⚡️ Analyze Request with BurpIA");
         }
 
-        public static String MENU_ENVIAR_FACTORY_DROID() {
-            return tr("🤖 Enviar a Factory Droid", "🤖 Send to Factory Droid");
+        public static String MENU_ENVIAR_AGENTE() {
+            return tr("🤖 Enviar al Agente", "🤖 Send to Agent");
         }
 
         public static String MENU_ENVIAR_AGENTE(String agente) {
@@ -1648,7 +1648,7 @@ public final class I18nUI {
                 "Create a manual finding with custom URL, severity and description.");
         }
 
-        public static String ENVIAR_FACTORY_DROID() {
+        public static String ENVIAR_AGENTE() {
             return I18nUI.tr("Enviar contexto del hallazgo al agente interactivo.",
                 "Send finding context to interactive agent.");
         }
@@ -1800,18 +1800,18 @@ public final class I18nUI {
         }
 
         public static String HABILITAR_AGENTE() {
-            return I18nUI.tr("Activa o desactiva el agente Factory Droid para pentesting asistido por IA.",
-                "Enable or disable the Factory Droid agent for AI-assisted pentesting.");
+            return I18nUI.tr("Activa o desactiva el agente para pentesting asistido por IA.",
+                "Enable or disable the agent for AI-assisted pentesting.");
         }
 
         public static String BINARIO_AGENTE() {
-            return I18nUI.tr("Ruta al ejecutable del agente Factory Droid (droid).",
-                "Path to the Factory Droid agent binary (droid).");
+            return I18nUI.tr("Ruta al ejecutable del agente (ej. droid).",
+                "Path to the agent binary (e.g. droid).");
         }
 
         public static String PROMPT_AGENTE() {
-            return I18nUI.tr("Prompt de sistema enviado al agente Factory Droid al iniciar.",
-                "System prompt sent to the Factory Droid agent on startup.");
+            return I18nUI.tr("Prompt de sistema enviado al agente al iniciar.",
+                "System prompt sent to the agent on startup.");
         }
 
         public static String IDIOMA() {
@@ -1820,18 +1820,18 @@ public final class I18nUI {
         }
     }
 
-    public static final class FactoryDroid {
-        private FactoryDroid() {
+    public static final class Agente {
+        private Agente() {
         }
 
         public static String REINICIAR() {
-            return I18nUI.tr("Reiniciar la consola subyacente del agente.",
-                "Restart the agent's underlying console.");
+            return I18nUI.tr("Reinicia el proceso de terminal del agente.",
+                "Restart the agent terminal process.");
         }
 
         public static String CTRL_C() {
-            return I18nUI.tr("Enviar señal de interrupción (SIGINT) al proceso activo.",
-                "Send interrupt signal (SIGINT) to the active process.");
+            return I18nUI.tr("Envía señal de interrupción (Ctrl+C) al proceso activo.",
+                "Send interrupt signal (Ctrl+C) to active process.");
         }
 
         public static String DELAY() {
@@ -1842,8 +1842,8 @@ public final class I18nUI {
         }
 
         public static String INYECTAR_PAYLOAD() {
-            return I18nUI.tr("Inyectar el prompt inicial de descubrimiento MCP al terminal.",
-                "Inject the MCP discovery initial prompt to the terminal.");
+            return I18nUI.tr("Inyecta manualmente el prompt inicial en la terminal.",
+                "Manually inject original prompt into terminal.");
         }
 
         public static String CAMBIAR_AGENTE_RAPIDO() {

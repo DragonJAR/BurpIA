@@ -39,7 +39,7 @@ public class PestaniaPrincipal extends JPanel {
         panelHallazgos = new PanelHallazgos(api, modeloHallazgos, esBurpProfessional);
         panelHallazgos.establecerConfiguracion(config);
         this.panelConsola = new PanelConsola(gestorConsola);
-        this.panelAgente = new PanelAgente(config);
+        this.panelAgente = new PanelAgente(config, config.agenteHabilitado());
         this.panelAgente.establecerManejadorFocoPestania(this::seleccionarPestaniaAgente);
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
@@ -96,18 +96,22 @@ public class PestaniaPrincipal extends JPanel {
             } else {
                 tabbedPane.addTab(I18nUI.Pestanias.AGENTE(), panelAgente);
             }
+            panelAgente.asegurarConsolaIniciada();
             panelAgente.reinyectarPromptInicial();
         } else if (!habilitado && index != -1) {
             tabbedPane.removeTabAt(index);
+            panelAgente.destruir();
         } else if (habilitado && index != -1) {
             tabbedPane.setTitleAt(index, I18nUI.Pestanias.AGENTE());
             tabbedPane.setToolTipTextAt(index, I18nUI.Tooltips.Pestanias.AGENTE());
             
             tabbedPane.revalidate();
             tabbedPane.repaint();
+
+            panelAgente.asegurarConsolaIniciada();
             
             String idActual = config.obtenerTipoAgente();
-            if (!idActual.equals(panelAgente.obtenerUltimoAgenteIniciado())) {
+            if (!java.util.Objects.equals(idActual, panelAgente.obtenerUltimoAgenteIniciado())) {
                 panelAgente.reiniciar();
             }
         }
@@ -209,5 +213,6 @@ public class PestaniaPrincipal extends JPanel {
         panelConsola.destruir();
         panelTareas.destruir();
         panelHallazgos.destruir();
+        panelAgente.destruir();
     }
 }

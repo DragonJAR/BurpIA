@@ -200,12 +200,12 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void registrarMenuContextual() {
         if (fabricaMenuContextual == null) {
-            fabricaMenuContextual = new FabricaMenuContextual(api, this::analizarSolicitudManual, config, this::enviarAFactoryDroid);
+            fabricaMenuContextual = new FabricaMenuContextual(api, this::analizarSolicitudManual, config, this::enviarAAgente);
             api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
         }
     }
 
-    private void enviarAFactoryDroid(HttpRequestResponse solicitudRespuesta) {
+    private void enviarAAgente(HttpRequestResponse solicitudRespuesta) {
         if (config == null) {
             registrarError("No se puede usar el Agente: configuracion no inicializada");
             return;
@@ -222,26 +222,17 @@ public class ExtensionBurpIA implements BurpExtension {
         String prompt = config.obtenerAgentePrompt();
         String request = solicitudRespuesta.request() != null ? solicitudRespuesta.request().toString() : "";
         String response = (solicitudRespuesta.response() != null) ? solicitudRespuesta.response().toString() : "";
-
-        String inputFinal = prompt.replace("{REQUEST}", request).replace("{RESPONSE}", response);
+        String inputFinal = aplicarTokensPromptAgente(prompt, request, response, config.obtenerIdiomaUi());
 
         PanelAgente panelAgente = obtenerPanelAgenteDisponible();
         if (panelAgente == null) {
             return;
         }
         pestaniaPrincipal.seleccionarPestaniaAgente();
-
-        String binario = config.obtenerRutaBinarioAgente(config.obtenerTipoAgente());
-        if (binario == null || binario.trim().isEmpty()) {
-            binario = "droid";
-        }
-
-        panelAgente.escribirComando(binario);
-
         panelAgente.inyectarComando(inputFinal, 0);
     }
 
-    private void enviarHallazgoAFactoryDroid(Hallazgo hallazgo) {
+    private void enviarHallazgoAAgente(Hallazgo hallazgo) {
         if (config == null) {
             registrarError("No se puede usar el Agente: configuracion no inicializada");
             return;
@@ -251,7 +242,7 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
         if (hallazgo == null) {
-            registrarError("No se puede enviar a Factory Droid: hallazgo nulo");
+            registrarError("No se puede enviar al Agente: hallazgo nulo");
             return;
         }
 
@@ -276,14 +267,7 @@ public class ExtensionBurpIA implements BurpExtension {
             inputBuilder.append("URL: ").append(urlContext).append("\n\n");
         }
 
-        String inputFinal = inputBuilder.toString() + prompt
-            .replace("{TITLE}", titulo)
-            .replace("{SUMMARY}", resumen)
-            .replace("{DESCRIPTION}", resumen)
-            .replace("{URL}", urlContext)
-            .replace("{REQUEST}", request)
-            .replace("{RESPONSE}", response)
-            .replace("{OUTPUT_LANGUAGE}", lang);
+        String inputFinal = inputBuilder.toString() + aplicarTokensPromptAgente(prompt, request, response, lang, titulo, resumen, urlContext);
 
         PanelAgente panelAgente = obtenerPanelAgenteDisponible();
         if (panelAgente == null) {
@@ -292,6 +276,27 @@ public class ExtensionBurpIA implements BurpExtension {
         pestaniaPrincipal.seleccionarPestaniaAgente();
 
         panelAgente.inyectarComando(inputFinal, 0);
+    }
+
+    private String aplicarTokensPromptAgente(String prompt, String request, String response, String idioma) {
+        return aplicarTokensPromptAgente(prompt, request, response, idioma, null, null, null);
+    }
+
+    private String aplicarTokensPromptAgente(String prompt, String request, String response, String idioma, 
+                                            String titulo, String resumen, String url) {
+        String resultado = prompt != null ? prompt : "";
+        resultado = resultado.replace("{REQUEST}", request != null ? request : "");
+        resultado = resultado.replace("{RESPONSE}", response != null ? response : "");
+        resultado = resultado.replace("{OUTPUT_LANGUAGE}", (idioma != null && !idioma.trim().isEmpty()) ? idioma : "es");
+        
+        if (titulo != null) resultado = resultado.replace("{TITLE}", titulo);
+        if (resumen != null) {
+            resultado = resultado.replace("{SUMMARY}", resumen);
+            resultado = resultado.replace("{DESCRIPTION}", resumen);
+        }
+        if (url != null) resultado = resultado.replace("{URL}", url);
+
+        return resultado;
     }
 
     private PanelAgente obtenerPanelAgenteDisponible() {
@@ -362,7 +367,7 @@ public class ExtensionBurpIA implements BurpExtension {
         Runnable crearUi = () -> {
             pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas, modeloTablaHallazgos, esProfessional, config);
             pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
-            pestaniaPrincipal.establecerManejadorEnviarAAgente(this::enviarHallazgoAFactoryDroid);
+            pestaniaPrincipal.establecerManejadorEnviarAAgente(this::enviarHallazgoAAgente);
             pestaniaPrincipal.establecerManejadorCambioAgente(() -> {
                 guardarConfiguracionSilenciosa("cambio-agente-rapido");
                 if (manejadorHttp != null) {
