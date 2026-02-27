@@ -1,4 +1,5 @@
 package com.burpia.analyzer;
+import com.burpia.i18n.I18nUI;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
@@ -85,7 +86,7 @@ public final class PoliticaReintentos {
 
     public static String obtenerMensajeErrorAmigable(Throwable e) {
         if (e == null) {
-            return "Error desconocido";
+            return I18nUI.tr("Error desconocido", "Unknown error");
         }
 
         Throwable actual = e;
@@ -95,7 +96,8 @@ public final class PoliticaReintentos {
         }
 
         if (actual instanceof SocketTimeoutException) {
-            return "Tiempo de espera agotado, intenta aumentarlo en los ajustes";
+            return I18nUI.tr("Tiempo de espera agotado, intenta aumentarlo en los ajustes",
+                "Timeout reached, try increasing it in the settings");
         }
 
         String msg = actual.getMessage();
@@ -104,7 +106,8 @@ public final class PoliticaReintentos {
         }
 
         if (msg.contains("timeout") || msg.contains("timed out")) {
-            return "Tiempo de espera agotado, intenta aumentarlo en los ajustes";
+            return I18nUI.tr("Tiempo de espera agotado, intenta aumentarlo en los ajustes",
+                "Timeout reached, try increasing it in the settings");
         }
 
         return msg;

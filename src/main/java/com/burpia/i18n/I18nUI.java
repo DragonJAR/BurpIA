@@ -45,6 +45,10 @@ public final class I18nUI {
         public static String AGENTE_FACTORY_DROID() {
             return tr("🤖 FACTORY DROID", "🤖 FACTORY DROID");
         }
+
+        public static String AGENTE_DINAMICO(String nombreAgente) {
+            return trf("🤖 %s", "🤖 %s", nombreAgente != null ? nombreAgente : General.AGENTE_GENERICO());
+        }
     }
 
     public static final class General {
@@ -53,6 +57,14 @@ public final class I18nUI {
 
         public static String CONFIGURACION_GUARDADA() {
             return tr("Configuración guardada", "Configuration saved");
+        }
+
+        public static String AGENTE_GENERICO() {
+            return tr("Agente", "Agent");
+        }
+
+        public static String HALLAZGO_GENERICO() {
+            return tr("Hallazgo", "Finding");
         }
     }
 
@@ -590,6 +602,10 @@ public final class I18nUI {
             return tr("🚀 Enviar a Factory Droid", "🚀 Send to Factory Droid");
         }
 
+        public static String MENU_ENVIAR_AGENTE_ROCKET(String agente) {
+            return trf("🚀 Enviar a %s", "🚀 Send to %s", agente);
+        }
+
 
 
         public static String SUFIJO_ENVIADO_INTRUDER() {
@@ -722,6 +738,22 @@ public final class I18nUI {
             return tr("Inyectar Payload", "Inject Payload");
         }
 
+        public static String BOTON_CAMBIAR_AGENTE(String nombreAgente) {
+            return trf("Activar %s", "Enable %s", nombreAgente);
+        }
+
+        public static String BOTON_CAMBIAR_AGENTE_GENERICO() {
+            return tr("Cambiar Agente", "Switch Agent");
+        }
+
+        public static String TITULO_PANEL_AGENTE(String nombreAgente) {
+            return trf("Consola %s", "%s Console", nombreAgente);
+        }
+
+        public static String TITULO_PANEL_AGENTE_GENERICO() {
+            return tr("Consola del Agente", "Agent Console");
+        }
+
         public static String TAG_RASTREO() {
             return tr(" [RASTREO]", " [TRACE]");
         }
@@ -829,6 +861,10 @@ public final class I18nUI {
 
         public static String TAB_AGENTES() {
             return tr("🤖 Agentes", "🤖 Agents");
+        }
+
+        public static String LABEL_SELECCIONAR_AGENTE() {
+            return tr("Seleccionar Agente:", "Select Agent:");
         }
 
         public static String LABEL_TIMEOUT_MODELO() {
@@ -1043,6 +1079,10 @@ public final class I18nUI {
             return tr("🔄 Actualizando...", "🔄 Refreshing...");
         }
 
+        public static String OPCION_MODELO_CUSTOM() {
+            return tr("-- Personalizado --", "-- Custom --");
+        }
+
         public static String LABEL_MAX_TOKENS() {
             return tr("Máximo de Tokens:", "Max Tokens:");
         }
@@ -1139,6 +1179,10 @@ public final class I18nUI {
                 return tr("Habilitar Agente Factory Droid", "Enable Factory Droid Agent");
             }
 
+            public static String CHECK_HABILITAR_AGENTE(String nombreAgente) {
+                return trf("Habilitar Agente: %s", "Enable Agent: %s", nombreAgente);
+            }
+
             public static String LABEL_RUTA_BINARIO() {
                 return tr("Ruta del Binario:", "Binary Path:");
             }
@@ -1152,6 +1196,26 @@ public final class I18nUI {
             public static String MSG_CONFIGURACION_REQUERIDA() {
                 return tr("Configura la ruta del binario en los ajustes de agentes.",
                     "Configure the binary path in the agents settings.");
+            }
+
+            public static String TITULO_VALIDACION_AGENTE() {
+                return tr("Validación de Agente", "Agent Validation");
+            }
+
+            public static String MSG_BINARIO_NO_EXISTE(String nombreAgente, String rutaBinario) {
+                return trf("El binario de %s no existe en la ruta actual: %s",
+                    "The %s binary does not exist at the current path: %s",
+                    nombreAgente, rutaBinario);
+            }
+
+            public static String MSG_BINARIO_NO_EXISTE_SIMPLE(String rutaBinario) {
+                return trf("El binario del agente no existe en la ruta: %s",
+                    "The agent binary does not exist at path: %s",
+                    rutaBinario);
+            }
+
+            public static String ENLACE_INSTALAR_AGENTE(String nombreAgente) {
+                return trf("¿Cómo instalar %s?", "How to install %s?", nombreAgente);
             }
         }
 
@@ -1182,7 +1246,7 @@ public final class I18nUI {
         }
 
         public static String TITULO_ERROR() {
-            return "Error";
+            return tr("Error", "Error");
         }
 
         public static String MSG_CONFIRMAR_RESTAURAR_PROMPT() {
@@ -1286,6 +1350,10 @@ public final class I18nUI {
 
         public static String MENU_ENVIAR_FACTORY_DROID() {
             return tr("🤖 Enviar a Factory Droid", "🤖 Send to Factory Droid");
+        }
+
+        public static String MENU_ENVIAR_AGENTE(String agente) {
+            return trf("🤖 Enviar a %s", "🤖 Send to %s", agente);
         }
 
         public static String LOG_DEBOUNCE_IGNORADO() {
@@ -1592,6 +1660,10 @@ public final class I18nUI {
             return I18nUI.tr("Enviar contexto del hallazgo al agente interactivo.",
                 "Send finding context to interactive agent.");
         }
+
+        public static String ENVIAR_AGENTE(String agente) {
+            return I18nUI.trf("Enviar contexto del hallazgo a %s.", "Send finding context to %s.", agente);
+        }
     }
 
     public static final class Consola {
@@ -1728,6 +1800,13 @@ public final class I18nUI {
                 "Restores the default template recommended for the Agent.");
         }
 
+        public static String DELAY_PROMPT_AGENTE() {
+            return I18nUI.tr(
+                "Espera (ms) para inyectar el prompt inicial del agente. Varía según la máquina.",
+                "Wait (ms) to inject the agent initial prompt. Varies by machine."
+            );
+        }
+
         public static String HABILITAR_AGENTE() {
             return I18nUI.tr("Activa o desactiva el agente Factory Droid para pentesting asistido por IA.",
                 "Enable or disable the Factory Droid agent for AI-assisted pentesting.");
@@ -1773,6 +1852,11 @@ public final class I18nUI {
         public static String INYECTAR_PAYLOAD() {
             return I18nUI.tr("Inyectar el prompt inicial de descubrimiento MCP al terminal.",
                 "Inject the MCP discovery initial prompt to the terminal.");
+        }
+
+        public static String CAMBIAR_AGENTE_RAPIDO() {
+            return I18nUI.tr("Cambia rápidamente entre agentes disponibles.",
+                "Quickly switch between available agents.");
         }
     }
 

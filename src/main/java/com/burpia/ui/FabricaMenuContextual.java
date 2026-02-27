@@ -4,6 +4,7 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
+import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import javax.swing.*;
@@ -17,7 +18,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final burp.api.montoya.MontoyaApi api;
     private final ConsumerSolicitud manejadorAnalisis;
     private final com.burpia.config.ConfiguracionAPI config;
-    private final java.util.function.Consumer<HttpRequestResponse> manejadorFactoryDroid;
+    private final java.util.function.Consumer<HttpRequestResponse> manejadorAgente;
     private final AtomicReference<RegistroClic> ultimoClic;
     private static final long VENTANA_DEBOUNCE_MS = 500L;
 
@@ -25,11 +26,11 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal);
     }
 
-    public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis, com.burpia.config.ConfiguracionAPI config, java.util.function.Consumer<HttpRequestResponse> manejadorFactoryDroid) {
+    public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis, com.burpia.config.ConfiguracionAPI config, java.util.function.Consumer<HttpRequestResponse> manejadorAgente) {
         this.api = api;
         this.manejadorAnalisis = manejadorAnalisis;
         this.config = config;
-        this.manejadorFactoryDroid = manejadorFactoryDroid;
+        this.manejadorAgente = manejadorAgente;
         this.ultimoClic = new AtomicReference<>();
     }
 
@@ -52,12 +53,16 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
 
         itemsMenu.add(itemAnalizar);
 
-        if (config.agenteFactoryDroidHabilitado()) {
-            JMenuItem itemFactoryDroid = new JMenuItem(I18nUI.Contexto.MENU_ENVIAR_FACTORY_DROID());
-            itemFactoryDroid.addActionListener(e -> {
-                manejadorFactoryDroid.accept(solicitudRespuestaSeleccionada);
+        if (config.agenteHabilitado()) {
+            String nombreAgente = AgenteTipo.obtenerNombreVisible(
+                config.obtenerTipoAgente(),
+                I18nUI.General.AGENTE_GENERICO()
+            );
+            JMenuItem itemAgente = new JMenuItem(I18nUI.Contexto.MENU_ENVIAR_AGENTE(nombreAgente));
+            itemAgente.addActionListener(e -> {
+                manejadorAgente.accept(solicitudRespuestaSeleccionada);
             });
-            itemsMenu.add(itemFactoryDroid);
+            itemsMenu.add(itemAgente);
         }
 
         return itemsMenu;

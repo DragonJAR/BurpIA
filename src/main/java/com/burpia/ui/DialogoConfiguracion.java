@@ -1,4 +1,5 @@
 package com.burpia.ui;
+import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.config.ProveedorAI;
@@ -35,9 +36,10 @@ public class DialogoConfiguracion extends JDialog {
     private JButton btnRestaurarPrompt;
     private JLabel lblContadorPrompt;
 
-    private JCheckBox chkAgenteFactoryDroidHabilitado;
-    private JTextField txtAgenteFactoryDroidBinario;
-    private JTextArea txtAgenteFactoryDroidPrompt;
+    private JComboBox<String> comboAgente;
+    private JCheckBox chkAgenteHabilitado;
+    private JTextField txtAgenteBinario;
+    private JTextArea txtAgentePrompt;
     private JButton btnRestaurarPromptAgente;
     private JLabel lblContadorPromptAgente;
 
@@ -49,7 +51,6 @@ public class DialogoConfiguracion extends JDialog {
     private JTextField txtMaxTokens;
     private JTextField txtTimeoutModelo;
 
-    private static final String MODELO_CUSTOM = "-- Custom --";
     private static final int TIMEOUT_CONEXION_MODELOS_SEG = 8;
     private static final int TIMEOUT_LECTURA_MODELOS_SEG = 12;
 
@@ -410,56 +411,75 @@ public class DialogoConfiguracion extends JDialog {
         contenedor.setLayout(new BoxLayout(contenedor, BoxLayout.Y_AXIS));
         contenedor.setOpaque(false);
 
-        JPanel panelFactoryDroid = new JPanel(new GridBagLayout());
-        panelFactoryDroid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelFactoryDroid.setBorder(UIUtils.crearBordeTitulado(
-            I18nUI.Configuracion.Agentes.TITULO_FACTORY_DROID(), 12, 16));
+        JPanel panelAgenteGeneral = new JPanel(new GridBagLayout());
+        panelAgenteGeneral.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelAgenteGeneral.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.TAB_AGENTES(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6, 6, 6, 6);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        chkAgenteFactoryDroidHabilitado = new JCheckBox(I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE());
-        chkAgenteFactoryDroidHabilitado.setFont(EstilosUI.FUENTE_ESTANDAR);
-        txtAgenteFactoryDroidBinario = new JTextField(30);
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 1; gbc.weightx = 0;
+        panelAgenteGeneral.add(new JLabel(I18nUI.Configuracion.LABEL_SELECCIONAR_AGENTE()), gbc);
 
-        txtAgenteFactoryDroidPrompt = new JTextArea(6, 40);
-        txtAgenteFactoryDroidPrompt.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        txtAgenteFactoryDroidPrompt.setLineWrap(true);
-        txtAgenteFactoryDroidPrompt.setWrapStyleWord(true);
-        JScrollPane scrollPromptAgente = new JScrollPane(txtAgenteFactoryDroidPrompt);
-        txtAgenteFactoryDroidPrompt.setToolTipText(I18nUI.Tooltips.Configuracion.PROMPT_AGENTE());
+        comboAgente = new JComboBox<>(new String[]{
+            AgenteTipo.FACTORY_DROID.name(),
+            AgenteTipo.CLAUDE_CODE.name()
+        });
+        comboAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
+        comboAgente.addActionListener(e -> alCambiarAgente());
+        
+        gbc.gridx = 1; gbc.weightx = 1.0;
+        panelAgenteGeneral.add(comboAgente, gbc);
 
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
-        panelFactoryDroid.add(chkAgenteFactoryDroidHabilitado, gbc);
-        chkAgenteFactoryDroidHabilitado.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_AGENTE());
+        chkAgenteHabilitado = new JCheckBox(I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE());
+        chkAgenteHabilitado.setFont(EstilosUI.FUENTE_ESTANDAR);
+        
+        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 2;
+        panelAgenteGeneral.add(chkAgenteHabilitado, gbc);
+        chkAgenteHabilitado.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_AGENTE());
+
+        txtAgenteBinario = new JTextField(30);
+        txtAgenteBinario.setToolTipText(I18nUI.Tooltips.Configuracion.BINARIO_AGENTE());
+        txtAgenteBinario.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
+        });
 
         gbc.gridwidth = 1;
-        gbc.gridy = 1;
-        panelFactoryDroid.add(new JLabel(I18nUI.Configuracion.Agentes.LABEL_RUTA_BINARIO()), gbc);
+        gbc.gridy = 2; gbc.gridx = 0; gbc.weightx = 0;
+        panelAgenteGeneral.add(new JLabel(I18nUI.Configuracion.Agentes.LABEL_RUTA_BINARIO()), gbc);
         gbc.gridx = 1; gbc.weightx = 1.0;
-        panelFactoryDroid.add(txtAgenteFactoryDroidBinario, gbc);
-        txtAgenteFactoryDroidBinario.setToolTipText(I18nUI.Tooltips.Configuracion.BINARIO_AGENTE());
+        panelAgenteGeneral.add(txtAgenteBinario, gbc);
+        
+        txtAgentePrompt = new JTextArea(6, 40);
+        txtAgentePrompt.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        txtAgentePrompt.setLineWrap(true);
+        txtAgentePrompt.setWrapStyleWord(true);
+        JScrollPane scrollPromptAgente = new JScrollPane(txtAgentePrompt);
+        txtAgentePrompt.setToolTipText(I18nUI.Tooltips.Configuracion.PROMPT_AGENTE());
 
-        gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        panelFactoryDroid.add(new JLabel(I18nUI.Configuracion.Agentes.TITULO_PROMPT_AGENTE()), gbc);
+        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2; gbc.weightx = 1.0;
+        panelAgenteGeneral.add(new JLabel(I18nUI.Configuracion.Agentes.TITULO_PROMPT_AGENTE()), gbc);
 
-        gbc.gridy = 3; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
-        panelFactoryDroid.add(scrollPromptAgente, gbc);
+        gbc.gridy = 4; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
+        panelAgenteGeneral.add(scrollPromptAgente, gbc);
 
         btnRestaurarPromptAgente = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
         btnRestaurarPromptAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnRestaurarPromptAgente.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_AGENTE());
-        btnRestaurarPromptAgente.addActionListener(e -> txtAgenteFactoryDroidPrompt.setText(ConfiguracionAPI.obtenerAgenteFactoryDroidPromptPorDefecto()));
+        btnRestaurarPromptAgente.addActionListener(e -> txtAgentePrompt.setText(ConfiguracionAPI.obtenerAgentePromptPorDefecto()));
 
         JPanel panelSurAgente = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         panelSurAgente.add(btnRestaurarPromptAgente);
 
-        gbc.gridy = 4; gbc.weighty = 0.0; gbc.fill = GridBagConstraints.HORIZONTAL;
-        panelFactoryDroid.add(panelSurAgente, gbc);
+        gbc.gridy = 5; gbc.weighty = 0.0; gbc.fill = GridBagConstraints.HORIZONTAL;
+        panelAgenteGeneral.add(panelSurAgente, gbc);
 
-        contenedor.add(panelFactoryDroid);
+        contenedor.add(panelAgenteGeneral);
         panel.add(new JScrollPane(contenedor), BorderLayout.CENTER);
 
         return panel;
@@ -528,16 +548,9 @@ public class DialogoConfiguracion extends JDialog {
         btnSitioWeb.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
         btnSitioWeb.setToolTipText(I18nUI.Tooltips.Configuracion.SITIO_AUTOR());
         btnSitioWeb.addActionListener(e -> {
-            try {
-                if (java.awt.Desktop.isDesktopSupported()) {
-                    java.awt.Desktop.getDesktop().browse(
-                        new java.net.URI("https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica")
-                    );
-                } else {
-                    UIUtils.mostrarInfo(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ENLACE(), I18nUI.Configuracion.MSG_URL());
-                }
-            } catch (Exception ex) {
-                UIUtils.mostrarError(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ERROR(), I18nUI.Configuracion.MSG_ERROR_ABRIR_NAVEGADOR(ex.getMessage()));
+            String url = "https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica";
+            if (!UIUtils.abrirUrlEnNavegador(url)) {
+                UIUtils.mostrarInfo(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ENLACE(), I18nUI.Configuracion.MSG_URL());
             }
         });
 
@@ -617,9 +630,25 @@ public class DialogoConfiguracion extends JDialog {
         chkIgnorarSSL.setSelected(config.ignorarErroresSSL());
         chkSoloProxy.setSelected(config.soloProxy());
 
-        chkAgenteFactoryDroidHabilitado.setSelected(config.agenteFactoryDroidHabilitado());
-        txtAgenteFactoryDroidBinario.setText(config.obtenerAgenteFactoryDroidBinario());
-        txtAgenteFactoryDroidPrompt.setText(config.obtenerAgenteFactoryDroidPrompt());
+        String tipoAgente = config.obtenerTipoAgente();
+        if (tipoAgente != null && !tipoAgente.isEmpty()) {
+            boolean existeOpcion = false;
+            for (int i = 0; i < comboAgente.getItemCount(); i++) {
+                if (comboAgente.getItemAt(i).equals(tipoAgente)) {
+                    existeOpcion = true;
+                    break;
+                }
+            }
+            if (!existeOpcion) {
+                comboAgente.addItem(tipoAgente);
+            }
+            comboAgente.setSelectedItem(tipoAgente);
+        }
+
+        chkAgenteHabilitado.setSelected(config.agenteHabilitado());
+        txtAgentePrompt.setText(config.obtenerAgentePrompt());
+        
+        alCambiarAgente();
 
         if (config.esPromptModificado()) {
             txtPrompt.setText(config.obtenerPromptConfigurable());
@@ -661,9 +690,33 @@ public class DialogoConfiguracion extends JDialog {
         configTemporal.establecerIgnorarErroresSSL(chkIgnorarSSL.isSelected());
         configTemporal.establecerSoloProxy(chkSoloProxy.isSelected());
 
-        configTemporal.establecerAgenteFactoryDroidHabilitado(chkAgenteFactoryDroidHabilitado.isSelected());
-        configTemporal.establecerAgenteFactoryDroidBinario(txtAgenteFactoryDroidBinario.getText().trim());
-        configTemporal.establecerAgenteFactoryDroidPrompt(txtAgenteFactoryDroidPrompt.getText());
+        String agenteSeleccionado = (String) comboAgente.getSelectedItem();
+        if (agenteSeleccionado == null) agenteSeleccionado = AgenteTipo.FACTORY_DROID.name();
+
+        if (chkAgenteHabilitado.isSelected()) {
+            String binarioActual = txtAgenteBinario.getText().trim();
+            if (!com.burpia.util.OSUtils.existeBinario(binarioActual)) {
+                AgenteTipo enumSeleccionado = AgenteTipo.desdeCodigo(agenteSeleccionado, AgenteTipo.FACTORY_DROID);
+                String codigoIdioma = idiomaSeleccionado != null
+                    ? idiomaSeleccionado.codigo()
+                    : configTemporal.obtenerIdiomaUi();
+                String labelLink = enumSeleccionado.getUrlDocPorIdioma(codigoIdioma);
+                UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
+                    this,
+                    I18nUI.Configuracion.Agentes.TITULO_VALIDACION_AGENTE(),
+                    I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE_SIMPLE(binarioActual),
+                    I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(enumSeleccionado.getNombreVisible()),
+                    labelLink
+                );
+                return;
+            }
+        }
+
+        configTemporal.establecerAgenteHabilitado(chkAgenteHabilitado.isSelected());
+        configTemporal.establecerTipoAgente(agenteSeleccionado);
+        configTemporal.establecerAgentePrompt(txtAgentePrompt.getText());
+        
+        configTemporal.establecerRutaBinarioAgente(agenteSeleccionado, txtAgenteBinario.getText().trim());
 
         String promptActual = txtPrompt.getText();
         String promptPorDefecto = ConfiguracionAPI.obtenerPromptPorDefecto();
@@ -741,6 +794,45 @@ public class DialogoConfiguracion extends JDialog {
         }
     }
 
+    private boolean actualizandoRutaFlag = false;
+
+    private void alCambiarAgente() {
+        String agenteSeleccionado = (String) comboAgente.getSelectedItem();
+        if (agenteSeleccionado == null) return;
+        
+        actualizandoRutaFlag = true;
+        try {
+            AgenteTipo enumAgente = AgenteTipo.desdeCodigo(agenteSeleccionado, null);
+            if (enumAgente != null) {
+                chkAgenteHabilitado.setText(
+                    I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE(enumAgente.getNombreVisible())
+                );
+
+                String rutaGuardada = config.obtenerRutaBinarioAgente(agenteSeleccionado);
+                if (rutaGuardada != null && !rutaGuardada.trim().isEmpty()) {
+                    txtAgenteBinario.setText(rutaGuardada);
+                } else {
+                    txtAgenteBinario.setText(enumAgente.getRutaPorDefecto());
+                }
+            } else {
+                chkAgenteHabilitado.setText(
+                    I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE(agenteSeleccionado)
+                );
+                txtAgenteBinario.setText("");
+            }
+        } finally {
+            actualizandoRutaFlag = false;
+        }
+    }
+
+    private void actualizarRutaEnMemoria() {
+        if (actualizandoRutaFlag) return;
+        String agenteSeleccionado = (String) comboAgente.getSelectedItem();
+        if (agenteSeleccionado != null) {
+             config.establecerRutaBinarioAgente(agenteSeleccionado, txtAgenteBinario.getText().trim());
+        }
+    }
+
     private void alCambiarProveedor() {
         String proveedorSeleccionado = (String) comboProveedor.getSelectedItem();
         if (proveedorSeleccionado == null) return;
@@ -788,7 +880,7 @@ public class DialogoConfiguracion extends JDialog {
         if (modeloActual == null) {
             return "";
         }
-        if (!MODELO_CUSTOM.equals(modeloActual)) {
+        if (!esOpcionModeloCustom(modeloActual)) {
             return normalizarModeloSeleccionado(modeloActual);
         }
         Object editorValue = comboModelo.getEditor().getItem();
@@ -832,7 +924,7 @@ public class DialogoConfiguracion extends JDialog {
 
     private void cargarModelosEnCombo(List<String> modelos, String preferido) {
         comboModelo.removeAllItems();
-        comboModelo.addItem(MODELO_CUSTOM);
+        comboModelo.addItem(obtenerEtiquetaModeloCustom());
 
         List<String> modelosNormalizados = normalizarModelos(modelos);
         for (String modelo : modelosNormalizados) {
@@ -851,9 +943,19 @@ public class DialogoConfiguracion extends JDialog {
             }
         }
 
-        comboModelo.setSelectedItem(MODELO_CUSTOM);
+        comboModelo.setSelectedItem(obtenerEtiquetaModeloCustom());
         comboModelo.getEditor().setItem(preferidoNormalizado);
         actualizarTimeoutModeloSeleccionado();
+    }
+
+    private String obtenerEtiquetaModeloCustom() {
+        return I18nUI.Configuracion.OPCION_MODELO_CUSTOM();
+    }
+
+    private boolean esOpcionModeloCustom(String valor) {
+        return I18nUI.Configuracion.OPCION_MODELO_CUSTOM().equals(valor)
+            || "-- Custom --".equals(valor)
+            || "-- Personalizado --".equals(valor);
     }
 
     private void actualizarTimeoutModeloSeleccionado() {

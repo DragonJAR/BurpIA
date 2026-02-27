@@ -246,17 +246,37 @@ public class GestorConfiguracion {
             config.establecerSoloProxy(archivo.soloProxy);
         }
 
-        if (archivo.agenteFactoryDroidHabilitado != null) {
-            config.establecerAgenteFactoryDroidHabilitado(archivo.agenteFactoryDroidHabilitado);
+        // Migracion y Carga de Configuracion de Agentes
+        if (archivo.agenteHabilitado != null) {
+            config.establecerAgenteHabilitado(archivo.agenteHabilitado);
+        } else if (archivo.agenteFactoryDroidHabilitado != null) {
+            // Legacy fallback
+            config.establecerAgenteHabilitado(archivo.agenteFactoryDroidHabilitado);
         }
-        if (archivo.agenteFactoryDroidBinario != null) {
-            config.establecerAgenteFactoryDroidBinario(archivo.agenteFactoryDroidBinario);
+
+        if (archivo.tipoAgente != null) {
+            config.establecerTipoAgente(archivo.tipoAgente);
         }
-        if (archivo.agenteFactoryDroidPrompt != null) {
-            config.establecerAgenteFactoryDroidPrompt(archivo.agenteFactoryDroidPrompt);
+
+        if (archivo.rutasBinarioPorAgente != null) {
+            config.establecerTodasLasRutasBinario(archivo.rutasBinarioPorAgente);
+        } else if (archivo.agenteFactoryDroidBinario != null) {
+            // Legacy fallback
+            config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), archivo.agenteFactoryDroidBinario);
         }
-        if (archivo.agenteFactoryDroidDelay != null) {
-            config.establecerAgenteFactoryDroidDelay(archivo.agenteFactoryDroidDelay);
+        
+        if (archivo.agentePrompt != null) {
+            config.establecerAgentePrompt(archivo.agentePrompt);
+        } else if (archivo.agenteFactoryDroidPrompt != null) {
+             // Legacy fallback
+            config.establecerAgentePrompt(archivo.agenteFactoryDroidPrompt);
+        }
+
+        if (archivo.agenteDelay != null) {
+            config.establecerAgenteDelay(archivo.agenteDelay);
+        } else if (archivo.agenteFactoryDroidDelay != null) {
+             // Legacy fallback
+            config.establecerAgenteDelay(archivo.agenteFactoryDroidDelay);
         }
 
         config.establecerDetallado(Boolean.TRUE.equals(archivo.detallado));
@@ -287,10 +307,11 @@ public class GestorConfiguracion {
         archivo.promptModificado = config.esPromptModificado();
         archivo.ignorarErroresSSL = config.ignorarErroresSSL();
         archivo.soloProxy = config.soloProxy();
-        archivo.agenteFactoryDroidHabilitado = config.agenteFactoryDroidHabilitado();
-        archivo.agenteFactoryDroidBinario = config.obtenerAgenteFactoryDroidBinario();
-        archivo.agenteFactoryDroidPrompt = config.obtenerAgenteFactoryDroidPrompt();
-        archivo.agenteFactoryDroidDelay = config.obtenerAgenteFactoryDroidDelay();
+        archivo.agenteHabilitado = config.agenteHabilitado();
+        archivo.tipoAgente = config.obtenerTipoAgente();
+        archivo.agentePrompt = config.obtenerAgentePrompt();
+        archivo.agenteDelay = config.obtenerAgenteDelay();
+        archivo.rutasBinarioPorAgente = new HashMap<>(config.obtenerTodasLasRutasBinario());
         archivo.apiKeysPorProveedor = new HashMap<>(config.obtenerApiKeysPorProveedor());
         archivo.urlsBasePorProveedor = new HashMap<>(config.obtenerUrlsBasePorProveedor());
         archivo.modelosPorProveedor = new HashMap<>(config.obtenerModelosPorProveedor());
@@ -362,6 +383,12 @@ public class GestorConfiguracion {
         private String agenteFactoryDroidBinario;
         private String agenteFactoryDroidPrompt;
         private Integer agenteFactoryDroidDelay;
+        
+        private Boolean agenteHabilitado;
+        private String tipoAgente;
+        private String agentePrompt;
+        private Integer agenteDelay;
+        private Map<String, String> rutasBinarioPorAgente;
         private Map<String, String> apiKeysPorProveedor;
         private Map<String, String> urlsBasePorProveedor;
         private Map<String, String> modelosPorProveedor;

@@ -3,6 +3,7 @@ package com.burpia.util;
 import javax.swing.*;
 import java.awt.*;
 import com.burpia.i18n.I18nLogs;
+import java.io.File;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -66,5 +67,33 @@ public final class OSUtils {
         } catch (Exception e) {
             LOGGER.log(Level.FINE, I18nLogs.tr("Error cerrando ventanas de ajustes"), e);
         }
+    }
+
+    public static String expandirRuta(String rutaObj) {
+        if (rutaObj == null) return null;
+        String expansion = rutaObj;
+        
+        if (esWindows() && expansion.contains("%USERPROFILE%")) {
+            String userProfile = System.getenv("USERPROFILE");
+            if (userProfile != null) {
+                expansion = expansion.replace("%USERPROFILE%", userProfile);
+            }
+        }
+
+        if (expansion.startsWith("~")) {
+            String userHome = System.getProperty("user.home");
+            if (userHome != null) {
+                expansion = userHome + expansion.substring(1);
+            }
+        }
+        
+        return expansion;
+    }
+
+    public static boolean existeBinario(String ruta) {
+        if (ruta == null || ruta.trim().isEmpty()) return false;
+        String rutaExpandida = expandirRuta(ruta);
+        File binario = new File(rutaExpandida);
+        return binario.exists() && binario.isFile();
     }
 }

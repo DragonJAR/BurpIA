@@ -231,13 +231,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        registrar("DENTRO DE SCOPE - Procesando: " + metodo + " " + url);
+        rastrear("DENTRO DE SCOPE - Procesando: " + metodo + " " + url);
 
         if (esRecursoEstatico(url)) {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosBajaConfianza();
             }
-            registrar("Omitiendo recurso estatico: " + url);
+            rastrear("Omitiendo recurso estatico: " + url);
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -249,7 +249,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             String contentTypeLog = (contentTypeRespuesta == null || contentTypeRespuesta.trim().isEmpty())
                 ? "desconocido"
                 : contentTypeRespuesta.trim();
-            registrar("Omitiendo contenido no analizable: " + url + " (Content-Type: " + contentTypeLog + ")");
+            rastrear("Omitiendo contenido no analizable: " + url + " (Content-Type: " + contentTypeLog + ")");
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -260,11 +260,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosDuplicado();
             }
-            registrar("Solicitud duplicada omitida: " + url);
+            rastrear("Solicitud duplicada omitida: " + url);
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        registrar("Nueva solicitud registrada: " + url + " (hash: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...)");
+        rastrear("Nueva solicitud registrada: " + url + " (hash: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...)");
 
         int numEncabezados = 0;
         if (respuestaRecibida.initiatingRequest().headers() != null) {
