@@ -5,7 +5,6 @@ public class Estadisticas {
     private final AtomicInteger totalSolicitudes;
     private final AtomicInteger analizados;
     private final AtomicInteger omitidosDuplicado;
-    private final AtomicInteger omitidosRateLimit;
     private final AtomicInteger omitidosBajaConfianza;
     private final AtomicInteger hallazgosCreados;
     private final AtomicInteger errores;
@@ -21,7 +20,6 @@ public class Estadisticas {
         this.totalSolicitudes = new AtomicInteger(0);
         this.analizados = new AtomicInteger(0);
         this.omitidosDuplicado = new AtomicInteger(0);
-        this.omitidosRateLimit = new AtomicInteger(0);
         this.omitidosBajaConfianza = new AtomicInteger(0);
         this.hallazgosCreados = new AtomicInteger(0);
         this.errores = new AtomicInteger(0);
@@ -74,7 +72,6 @@ public class Estadisticas {
 
     public int obtenerTotalOmitidos() {
         return omitidosDuplicado.get() +
-               omitidosRateLimit.get() +
                omitidosBajaConfianza.get();
     }
 

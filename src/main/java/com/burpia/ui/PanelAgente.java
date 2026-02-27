@@ -32,7 +32,6 @@ public class PanelAgente extends JPanel {
     private static final Logger LOGGER = Logger.getLogger(PanelAgente.class.getName());
 
     private static final int DELAY_INICIO_BINARIO_MS = 800;
-    private static final int MAX_REINTENTOS_INYECCION = 3;
     private static final int CHUNK_ESCRITURA_PTY = 128;
     private static final int DELAY_ENTRE_CHUNKS_PTY_MS = 10;
 
@@ -57,15 +56,21 @@ public class PanelAgente extends JPanel {
     private final AtomicReference<Runnable> manejadorCambioConfiguracion;
     private final AtomicBoolean inicializacionPendiente;
     private final AtomicBoolean promptInicialEnviado;
+    private final AtomicBoolean consolaArrancando;
     private final AtomicLong contadorInyeccion;
     private volatile String promptPendiente = null;
     private volatile int delayPendienteMs = 0;
     private volatile String ultimoAgenteIniciado = null;
 
     public PanelAgente(ConfiguracionAPI config) {
+        this(config, true);
+    }
+
+    public PanelAgente(ConfiguracionAPI config, boolean iniciarConsola) {
         this.config = config;
         this.promptInicialEnviado = new AtomicBoolean(false);
         this.inicializacionPendiente = new AtomicBoolean(false);
+        this.consolaArrancando = new AtomicBoolean(false);
         this.contadorInyeccion = new AtomicLong(0);
         this.manejadorFocoPestania = new AtomicReference<>();
         this.manejadorCambioConfiguracion = new AtomicReference<>();
@@ -78,7 +83,9 @@ public class PanelAgente extends JPanel {
         ));
 
         inicializarComponentesUI();
-        iniciarConsola();
+        if (iniciarConsola) {
+            iniciarConsola();
+        }
     }
 
     public void establecerManejadorFocoPestania(Runnable manejador) {
@@ -143,6 +150,22 @@ public class PanelAgente extends JPanel {
         }
     }
 
+    private boolean escribirDirectoAlPTY(byte[] bytes) {
+        if (bytes == null || bytes.length == 0 || process == null || !process.isAlive()) {
+            return false;
+        }
+        try {
+            java.io.OutputStream os = process.getOutputStream();
+            if (os == null) return false;
+            os.write(bytes);
+            os.flush();
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE, "Error escritura raw PTY", e);
+            return false;
+        }
+    }
+
     private boolean escribirTextoDirectoPTY(String texto) {
         if (texto == null || texto.isEmpty()) {
             return false;
@@ -181,6 +204,7 @@ public class PanelAgente extends JPanel {
             return;
         }
 
+        asegurarConsolaIniciada();
         if (!estaPanelListoParaInyeccion()) {
             promptPendiente = texto;
             this.delayPendienteMs = delayMs;
@@ -188,7 +212,7 @@ public class PanelAgente extends JPanel {
             return;
         }
 
-        ejecutarInyeccionConOpciones(texto, 0, delayMs);
+        ejecutarInyeccionConOpciones(texto, delayMs);
     }
 
     public void forzarInyeccionPromptInicial() {
@@ -209,10 +233,22 @@ public class PanelAgente extends JPanel {
         iniciarConsola();
     }
 
+    public void asegurarConsolaIniciada() {
+        PtyProcess procesoActual = process;
+        if (procesoActual != null && procesoActual.isAlive()) {
+            return;
+        }
+        if (consolaArrancando.get()) {
+            return;
+        }
+        iniciarConsola();
+    }
+
     public void destruir() {
-        if (process != null && process.isAlive()) {
-            process.destroyForcibly();
-            process = null;
+        PtyProcess procesoActual = process;
+        process = null;
+        if (procesoActual != null && procesoActual.isAlive()) {
+            procesoActual.destroyForcibly();
         }
         if (ttyConnector != null) {
             try {
@@ -226,6 +262,8 @@ public class PanelAgente extends JPanel {
         promptPendiente = null;
         delayPendienteMs = 0;
         inicializacionPendiente.set(false);
+        terminalWidget = null;
+        consolaArrancando.set(false);
     }
 
     public void aplicarIdioma() {
@@ -234,7 +272,7 @@ public class PanelAgente extends JPanel {
 
         if (btnCambiarAgente != null) {
             btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
-            btnCambiarAgente.setToolTipText(I18nUI.Tooltips.FactoryDroid.CAMBIAR_AGENTE_RAPIDO());
+            btnCambiarAgente.setToolTipText(I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO());
         }
         if (lblDelay != null) {
             lblDelay.setText(I18nUI.Consola.ETIQUETA_DELAY());
@@ -260,17 +298,17 @@ public class PanelAgente extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, EstilosUI.ESPACIADO_COMPONENTES, 4));
         panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
 
-        JButton btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(), 
-            I18nUI.Tooltips.FactoryDroid.REINICIAR(), e -> reiniciar());
+        JButton btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(),
+            I18nUI.Tooltips.Agente.REINICIAR(), e -> reiniciar());
 
-        JButton btnCtrlC = crearBoton("⚡ " + I18nUI.Consola.BOTON_CTRL_C(), 
-            I18nUI.Tooltips.FactoryDroid.CTRL_C(), e -> escribirComandoCrudo("\u0003"));
+        JButton btnCtrlC = crearBoton("⚡ " + I18nUI.Consola.BOTON_CTRL_C(),
+            I18nUI.Tooltips.Agente.CTRL_C(), e -> escribirComandoCrudo("\u0003"));
 
-        JButton btnInyectarPayload = crearBoton("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD(), 
-            I18nUI.Tooltips.FactoryDroid.INYECTAR_PAYLOAD(), e -> inyectarPayloadInicialManual());
+        JButton btnInyectarPayload = crearBoton("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD(),
+            I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD(), e -> inyectarPayloadInicialManual());
 
         btnCambiarAgente = crearBoton("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO(),
-            I18nUI.Tooltips.FactoryDroid.CAMBIAR_AGENTE_RAPIDO(), e -> cambiarAgenteRapido());
+            I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO(), e -> cambiarAgenteRapido());
 
         panel.add(btnReiniciar);
         panel.add(btnCtrlC);
@@ -306,9 +344,6 @@ public class PanelAgente extends JPanel {
     private void cambiarAgenteRapido() {
         try {
             AgenteTipo actual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
-            if (actual == null) {
-                actual = AgenteTipo.FACTORY_DROID;
-            }
             AgenteTipo destino = (actual == AgenteTipo.FACTORY_DROID)
                 ? AgenteTipo.CLAUDE_CODE
                 : AgenteTipo.FACTORY_DROID;
@@ -368,7 +403,11 @@ public class PanelAgente extends JPanel {
     }
 
     private void iniciarConsola() {
+        if (!consolaArrancando.compareAndSet(false, true)) {
+            return;
+        }
         destruir();
+        consolaArrancando.set(true);
 
         terminalWidget = crearTerminalWidget();
         
@@ -471,9 +510,11 @@ public class PanelAgente extends JPanel {
                     }
                     programarInyeccionInicial();
                 }
+                consolaArrancando.set(false);
             });
 
         } catch (Throwable t) {
+            consolaArrancando.set(false);
             manejarErrorPty(t);
         }
     }
@@ -600,11 +641,7 @@ public class PanelAgente extends JPanel {
         }
     }
 
-    private void ejecutarInyeccionConOpciones(String texto, int intentoActual, int delayPendienteMsUsuario) {
-        if (intentoActual >= MAX_REINTENTOS_INYECCION) {
-            LOGGER.warning(I18nLogs.tr("Maximo de reintentos de inyeccion alcanzado"));
-            return;
-        }
+    private void ejecutarInyeccionConOpciones(String texto, int delayPendienteMsUsuario) {
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(config.obtenerTipoAgente());
         inyectarComandoConRetraso(texto, delayPendienteMsUsuario, opciones, "API_OR_UI");
     }
@@ -640,7 +677,7 @@ public class PanelAgente extends JPanel {
 
         String payloadConBrackets = ansiStart + texto + ansiEnd;
         long injectionId = contadorInyeccion.incrementAndGet();
-        SubmitSequenceBuilder.SubmitSequence secuencia = SubmitSequenceBuilder.construir(
+        SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
             opciones.tipoAgente(),
             opciones.estrategiaSubmitOverride()
         );
@@ -666,7 +703,7 @@ public class PanelAgente extends JPanel {
 
     private void enviarSecuenciaSubmit(
         AgentRuntimeOptions.EnterOptions opciones,
-        SubmitSequenceBuilder.SubmitSequence secuencia,
+        SubmitSequenceFactory.SubmitSequence secuencia,
         long injectionId,
         String origen
     ) {
@@ -682,32 +719,59 @@ public class PanelAgente extends JPanel {
             ));
         }
 
+        boolean envioExitoso = true;
         for (int i = 0; i < secuencia.repeticiones(); i++) {
             logDebugTransporte(
                 opciones.enterDebugActivo(),
                 "SUBMIT_WRITE#" + injectionId + "[" + (i + 1) + "/" + secuencia.repeticiones() + "]",
                 secuencia.payload()
             );
-            if (!escribirComandoCrudoSeguro(secuencia.payload())) {
-                return;
+            // Si es un Enter simple en Mac, priorizamos el byte crudo (13)
+            if (OSUtils.esMac() && "\r".equals(secuencia.payload()) && i == 0) {
+                if (!escribirDirectoAlPTY(new byte[]{13})) {
+                    if (!escribirComandoCrudoSeguro(secuencia.payload())) {
+                        envioExitoso = false;
+                        break;
+                    }
+                }
+            } else {
+                if (!escribirComandoCrudoSeguro(secuencia.payload())) {
+                    envioExitoso = false;
+                    break;
+                }
             }
+
             if (i + 1 < secuencia.repeticiones()) {
                 dormirSilencioso(secuencia.delayEntreEnviosMs());
             }
         }
 
-        // Si hay un fallback (Smart Fallback), lo ejecutamos tras un pequeño respiro
-        if (secuencia.getFallback() != null) {
+        if (!envioExitoso && secuencia.getFallback() != null) {
+            LOGGER.warning(I18nLogs.trTecnico(
+                "[ENTER-FALLBACK] id=" + injectionId +
+                    " origin=" + origen +
+                    " motivo=fallo_escritura payload='" + escaparControl(secuencia.payload()) + "'"
+            ));
             dormirSilencioso(secuencia.delayEntreEnviosMs() > 0 ? secuencia.delayEntreEnviosMs() : 100);
             enviarSecuenciaSubmit(opciones, secuencia.getFallback(), injectionId, origen + "->FALLBACK");
-        } else {
-            LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
-            LOGGER.info(I18nLogs.trTecnico(
+            return;
+        }
+
+        if (!envioExitoso) {
+            LOGGER.warning(I18nLogs.trTecnico(
                 "[ENTER-RESULT] id=" + injectionId +
                     " origin=" + origen +
-                    " outcome=unknown reason=transport-level-dispatch-only"
+                    " outcome=failed reason=submit-write-failed-no-fallback"
             ));
+            return;
         }
+
+        LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
+        LOGGER.info(I18nLogs.trTecnico(
+            "[ENTER-RESULT] id=" + injectionId +
+                " origin=" + origen +
+                " outcome=unknown reason=transport-level-dispatch-only"
+        ));
     }
 
     private void dormirSilencioso(long ms) {
@@ -765,7 +829,7 @@ public class PanelAgente extends JPanel {
     }
 
     private String describirPlataformaActual() {
-        return SubmitSequenceBuilder.Plataforma.desdeSistemaActual()
+        return SubmitSequenceFactory.Plataforma.desdeSistemaActual()
             .name()
             .toLowerCase(java.util.Locale.ROOT);
     }

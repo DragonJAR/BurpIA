@@ -12,8 +12,10 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class DialogoConfiguracion extends JDialog {
@@ -49,6 +51,7 @@ public class DialogoConfiguracion extends JDialog {
     private JButton btnProbarConexion;
     private JTextField txtMaxTokens;
     private JTextField txtTimeoutModelo;
+    private final Map<String, String> rutasBinarioAgenteTemporal = new HashMap<>();
 
     private static final int TIMEOUT_CONEXION_MODELOS_SEG = 8;
     private static final int TIMEOUT_LECTURA_MODELOS_SEG = 12;
@@ -619,6 +622,8 @@ public class DialogoConfiguracion extends JDialog {
 
     private void cargarConfiguracionActual() {
         comboIdioma.setSelectedItem(IdiomaUI.desdeCodigo(config.obtenerIdiomaUi()));
+        rutasBinarioAgenteTemporal.clear();
+        rutasBinarioAgenteTemporal.putAll(new HashMap<>(config.obtenerTodasLasRutasBinario()));
 
         String proveedorActual = config.obtenerProveedorAI();
         if (proveedorActual != null && ProveedorAI.existeProveedor(proveedorActual)) {
@@ -717,8 +722,7 @@ public class DialogoConfiguracion extends JDialog {
         configTemporal.establecerAgenteHabilitado(chkAgenteHabilitado.isSelected());
         configTemporal.establecerTipoAgente(agenteSeleccionado);
         configTemporal.establecerAgentePrompt(txtAgentePrompt.getText());
-        
-        configTemporal.establecerRutaBinarioAgente(agenteSeleccionado, txtAgenteBinario.getText().trim());
+        aplicarRutasBinarioAgente(configTemporal);
 
         String promptActual = txtPrompt.getText();
         String promptPorDefecto = ConfiguracionAPI.obtenerPromptPorDefecto();
@@ -796,6 +800,33 @@ public class DialogoConfiguracion extends JDialog {
         }
     }
 
+    private void aplicarRutasBinarioAgente(ConfiguracionAPI destino) {
+        if (destino == null) {
+            return;
+        }
+        String agenteSeleccionado = (String) comboAgente.getSelectedItem();
+        if (agenteSeleccionado != null) {
+            rutasBinarioAgenteTemporal.put(agenteSeleccionado, txtAgenteBinario.getText().trim());
+        }
+        for (Map.Entry<String, String> entrada : rutasBinarioAgenteTemporal.entrySet()) {
+            if (entrada.getKey() != null) {
+                destino.establecerRutaBinarioAgente(entrada.getKey(), entrada.getValue());
+            }
+        }
+    }
+
+    private String resolverRutaBinarioAgente(String agenteSeleccionado) {
+        if (agenteSeleccionado == null) {
+            return "";
+        }
+        String rutaTemporal = rutasBinarioAgenteTemporal.get(agenteSeleccionado);
+        if (rutaTemporal != null && !rutaTemporal.trim().isEmpty()) {
+            return rutaTemporal;
+        }
+        String rutaGuardada = config.obtenerRutaBinarioAgente(agenteSeleccionado);
+        return rutaGuardada != null ? rutaGuardada : "";
+    }
+
     private boolean actualizandoRutaFlag = false;
 
     private void alCambiarAgente() {
@@ -810,9 +841,9 @@ public class DialogoConfiguracion extends JDialog {
                     I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE(enumAgente.getNombreVisible())
                 );
 
-                String rutaGuardada = config.obtenerRutaBinarioAgente(agenteSeleccionado);
-                if (rutaGuardada != null && !rutaGuardada.trim().isEmpty()) {
-                    txtAgenteBinario.setText(rutaGuardada);
+                String rutaSeleccionada = resolverRutaBinarioAgente(agenteSeleccionado);
+                if (rutaSeleccionada != null && !rutaSeleccionada.trim().isEmpty()) {
+                    txtAgenteBinario.setText(rutaSeleccionada);
                 } else {
                     txtAgenteBinario.setText(enumAgente.getRutaPorDefecto());
                 }
@@ -831,7 +862,7 @@ public class DialogoConfiguracion extends JDialog {
         if (actualizandoRutaFlag) return;
         String agenteSeleccionado = (String) comboAgente.getSelectedItem();
         if (agenteSeleccionado != null) {
-             config.establecerRutaBinarioAgente(agenteSeleccionado, txtAgenteBinario.getText().trim());
+            rutasBinarioAgenteTemporal.put(agenteSeleccionado, txtAgenteBinario.getText().trim());
         }
     }
 

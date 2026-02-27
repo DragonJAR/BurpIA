@@ -66,12 +66,8 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                     }
                     datos.add(hallazgo);
                     
-                    java.util.Vector<Object> rowData = new java.util.Vector<>();
-                    Object[] fila = hallazgo.aFilaTabla();
-                    for (Object col : fila) {
-                        rowData.add(col);
-                    }
-                    dataVector.add(rowData);
+                    Object[] rowData = hallazgo.aFilaTabla();
+                    addRow(rowData);
                     huboCambios = true;
                 }
                 

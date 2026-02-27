@@ -3,9 +3,13 @@ package com.burpia.ui;
 import com.burpia.config.AgenteTipo;
 import com.burpia.util.OSUtils;
 
-final class SubmitSequenceBuilder {
+/**
+ * Fabrica de secuencias de envio (Enters) para la terminal.
+ * Sigue patrones DRY y optimizacion por plataforma.
+ */
+final class SubmitSequenceFactory {
 
-    private SubmitSequenceBuilder() {
+    private SubmitSequenceFactory() {
     }
 
     static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride) {
@@ -13,70 +17,58 @@ final class SubmitSequenceBuilder {
     }
 
     static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride, boolean esWindows) {
-        return construir(
-            tipoAgente,
-            estrategiaOverride,
-            esWindows ? Plataforma.WINDOWS : Plataforma.LINUX
-        );
+        return construir(tipoAgente, estrategiaOverride, esWindows ? Plataforma.WINDOWS : Plataforma.LINUX);
     }
 
     static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride, Plataforma plataforma) {
-        EstrategiaSubmit estrategia = EstrategiaSubmit.desdeValor(
-            estrategiaOverride,
-            EstrategiaSubmit.AUTO
-        );
-        AgenteTipo agenteSeguro = tipoAgente != null ? tipoAgente : AgenteTipo.FACTORY_DROID;
-        Plataforma plataformaSegura = plataforma != null ? plataforma : Plataforma.LINUX;
+        EstrategiaSubmit estrategia = EstrategiaSubmit.desdeValor(estrategiaOverride, EstrategiaSubmit.AUTO);
+        AgenteTipo agente = tipoAgente != null ? tipoAgente : AgenteTipo.FACTORY_DROID;
+        Plataforma p = plataforma != null ? plataforma : Plataforma.LINUX;
 
         if (estrategia == EstrategiaSubmit.AUTO) {
-            return construirAuto(agenteSeguro, plataformaSegura);
+            return construirAuto(agente, p);
         }
-        return construirFija(estrategia, plataformaSegura);
+        return construirFija(estrategia, p);
     }
 
     private static SubmitSequence construirAuto(AgenteTipo tipoAgente, Plataforma plataforma) {
         if (tipoAgente == AgenteTipo.CLAUDE_CODE) {
-            return construirClaudeAuto(plataforma);
+            return construirFija(plataforma == Plataforma.WINDOWS ? EstrategiaSubmit.CRLF : EstrategiaSubmit.CR, plataforma);
         }
+        // Para la mayoria de los agentes, usamos la escalera de fallback para maxima confiabilidad
         return construirFija(EstrategiaSubmit.SMART_FALLBACK, plataforma);
     }
 
-    private static SubmitSequence construirClaudeAuto(Plataforma plataforma) {
-        switch (plataforma) {
-            case WINDOWS:
-                return construirFija(EstrategiaSubmit.CRLF, plataforma);
-            case MAC:
-            case LINUX:
-            case OTHER:
-            default:
-                return construirFija(EstrategiaSubmit.CR, plataforma);
-        }
-    }
-
     private static SubmitSequence construirFija(EstrategiaSubmit estrategia, Plataforma plataforma) {
+        String sep = (plataforma == Plataforma.WINDOWS) ? "\r\n" : "\r";
+
         switch (estrategia) {
             case CTRL_J:
-                return new SubmitSequence("\n", 1, 0, estrategia);
-            case CTRL_M:
-                return new SubmitSequence("\r", 1, 0, estrategia);
             case LF:
                 return new SubmitSequence("\n", 1, 0, estrategia);
+            
+            case CTRL_M:
             case CR:
                 return new SubmitSequence("\r", 1, 0, estrategia);
+            
             case CRLF:
                 return new SubmitSequence("\r\n", 1, 0, estrategia);
+            
             case TRIPLE_CRLF:
                 return new SubmitSequence("\r\n", 3, 80, estrategia);
+            
             case TRIPLE_ENTER_OS:
-                return new SubmitSequence(plataforma == Plataforma.WINDOWS ? "\r\n" : "\r", 3, 100, estrategia);
+                return new SubmitSequence(sep, 3, 100, estrategia);
+            
             case SMART_FALLBACK:
                 // Estrategia "Escalera": CR -> LF -> CRLF para máxima compatibilidad
                 return new SubmitSequence("\r", 1, 0, estrategia)
                     .conFallback("\n", 1, 100)
                     .conFallback("\r\n", 1, 100);
+            
             case AUTO:
             default:
-                return new SubmitSequence(plataforma == Plataforma.WINDOWS ? "\r\n" : "\r", 1, 0, EstrategiaSubmit.AUTO);
+                return new SubmitSequence(sep, 1, 0, EstrategiaSubmit.AUTO);
         }
     }
 
@@ -125,20 +117,10 @@ final class SubmitSequenceBuilder {
     }
 
     enum EstrategiaSubmit {
-        AUTO,
-        CTRL_J,
-        CTRL_M,
-        LF,
-        CR,
-        CRLF,
-        TRIPLE_ENTER_OS,
-        TRIPLE_CRLF,
-        SMART_FALLBACK;
+        AUTO, CTRL_J, CTRL_M, LF, CR, CRLF, TRIPLE_ENTER_OS, TRIPLE_CRLF, SMART_FALLBACK;
 
         static EstrategiaSubmit desdeValor(String valor, EstrategiaSubmit porDefecto) {
-            if (valor == null || valor.trim().isEmpty()) {
-                return porDefecto;
-            }
+            if (valor == null || valor.trim().isEmpty()) return porDefecto;
             try {
                 return valueOf(valor.trim().toUpperCase(java.util.Locale.ROOT));
             } catch (IllegalArgumentException e) {
@@ -148,21 +130,12 @@ final class SubmitSequenceBuilder {
     }
 
     enum Plataforma {
-        WINDOWS,
-        MAC,
-        LINUX,
-        OTHER;
+        WINDOWS, MAC, LINUX, OTHER;
 
         static Plataforma desdeSistemaActual() {
-            if (OSUtils.esWindows()) {
-                return WINDOWS;
-            }
-            if (OSUtils.esMac()) {
-                return MAC;
-            }
-            if (OSUtils.esLinux()) {
-                return LINUX;
-            }
+            if (OSUtils.esWindows()) return WINDOWS;
+            if (OSUtils.esMac()) return MAC;
+            if (OSUtils.esLinux()) return LINUX;
             return OTHER;
         }
     }
