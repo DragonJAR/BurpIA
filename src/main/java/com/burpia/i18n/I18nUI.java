@@ -651,8 +651,8 @@ public final class I18nUI {
 
         public static String TITULO_ERROR_PTY() { return tr("Error de PTY", "PTY Error"); }
         public static String MSG_ERROR_NATIVO_PTY(String error) { 
-            return trf("Error nativo iniciando Consola PTY: %s\nRevisa /tmp/burpia_pty_error.log", 
-                       "Native error starting PTY Console: %s\nCheck /tmp/burpia_pty_error.log", error); 
+            return trf("Error nativo iniciando Consola PTY: %s\nRevisa los logs de BurpIA para mas detalles", 
+                       "Native error starting PTY Console: %s\nCheck BurpIA logs for more details", error); 
         }
         public static String HEADER_LOG_ERROR_PTY() { return tr("\n--- ERROR PTY ---\n", "\n--- PTY ERROR ---\n"); }
 
