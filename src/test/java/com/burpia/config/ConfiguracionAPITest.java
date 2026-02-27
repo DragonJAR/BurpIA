@@ -148,6 +148,22 @@ class ConfiguracionAPITest {
     }
 
     @Test
+    @DisplayName("Prompt de agente por defecto arranca en modo espera")
+    void testPromptAgentePorDefectoModoEspera() {
+        String promptAgente = ConfiguracionAPI.obtenerAgentePromptPorDefecto();
+
+        assertNotNull(promptAgente);
+        assertTrue(promptAgente.startsWith("BURPAI CRITICAL PRE-FLIGHT CHECK:"));
+        assertTrue(promptAgente.contains("Level 1: Burp Suite MCP tools."));
+        assertTrue(promptAgente.contains("Level 2: Other MCP tools that may be useful."));
+        assertTrue(promptAgente.contains("Level 3: Other useful tools/native capabilities"));
+        assertTrue(promptAgente.contains("reply exactly: READY"));
+        assertTrue(promptAgente.contains("Burp Suite MCP is always highest priority"));
+        assertTrue(promptAgente.contains("{REQUEST}"));
+        assertTrue(promptAgente.contains("{RESPONSE}"));
+    }
+
+    @Test
     @DisplayName("Establecer prompt null usa default")
     void testEstablecerPromptNull() {
         config.establecerPromptConfigurable(null);

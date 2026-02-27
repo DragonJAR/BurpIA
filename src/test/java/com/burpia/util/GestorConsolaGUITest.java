@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.StyleConstants;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -97,5 +99,35 @@ class GestorConsolaGUITest {
         String texto = consola.getText();
         assertTrue(texto.contains("Log previo 1"));
         assertTrue(texto.contains("Log previo 2"));
+    }
+
+    @Test
+    @DisplayName("NOTA/ACCION y NOTE/ACTION se resaltan en negrilla")
+    void testEtiquetasNotaAccionEnNegrilla() throws Exception {
+        I18nUI.establecerIdioma(IdiomaUI.ES);
+        GestorConsolaGUI gestor = new GestorConsolaGUI();
+        JTextPane consola = new JTextPane();
+        SwingUtilities.invokeAndWait(() -> gestor.establecerConsola(consola));
+        SwingUtilities.invokeAndWait(() -> {
+            gestor.registrarInfo("BurpIA", "NOTA: prueba visual. ACCION: revisar scope.");
+            gestor.registrarInfo("BurpIA", "NOTE: visual check. ACTION: validate scope.");
+        });
+        SwingUtilities.invokeAndWait(() -> {
+        });
+
+        String texto = consola.getDocument().getText(0, consola.getDocument().getLength());
+        assertTrue(estaEnNegrilla(consola, texto, "NOTA:"));
+        assertTrue(estaEnNegrilla(consola, texto, "ACCION:"));
+        assertTrue(estaEnNegrilla(consola, texto, "NOTE:"));
+        assertTrue(estaEnNegrilla(consola, texto, "ACTION:"));
+    }
+
+    private boolean estaEnNegrilla(JTextPane consola, String texto, String etiqueta) {
+        int idx = texto.indexOf(etiqueta);
+        if (idx < 0) {
+            return false;
+        }
+        AttributeSet attrs = consola.getStyledDocument().getCharacterElement(idx).getAttributes();
+        return StyleConstants.isBold(attrs);
     }
 }
