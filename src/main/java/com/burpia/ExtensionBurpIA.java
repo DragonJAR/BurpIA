@@ -644,17 +644,8 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
 
-        SwingUtilities.invokeLater(() -> {
-            javax.swing.Timer timer = new javax.swing.Timer(1500, e -> {
-                panelAgente.forzarInyeccionPromptInicial();
-                registrar("Agente inicializado - prompt inicial inyectado");
-                ((javax.swing.Timer) e.getSource()).stop();
-            });
-            timer.setRepeats(false);
-            timer.start();
-        });
-
-        registrar("Agente programado para inicialización");
+        panelAgente.asegurarConsolaIniciada();
+        registrar("Agente inicializado - secuencia automática de arranque activa");
     }
 
     private void guardarConfiguracionSilenciosa(String origen) {

@@ -18,6 +18,7 @@ import java.awt.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,6 +34,8 @@ public class PanelAgente extends JPanel {
     private static final int DELAY_INICIO_BINARIO_MS = 800;
     private static final int CHUNK_ESCRITURA_PTY = 128;
     private static final int DELAY_ENTRE_CHUNKS_PTY_MS = 10;
+    private static final int INTENTOS_ENVIO_ARRANQUE = 6;
+    private static final int DELAY_REINTENTO_ARRANQUE_MS = 200;
 
     private static final ExecutorService INYECTOR_PTY = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "BurpIA-PTY-Injector");
@@ -57,6 +60,8 @@ public class PanelAgente extends JPanel {
     private final AtomicBoolean promptInicialEnviado;
     private final AtomicBoolean consolaArrancando;
     private final AtomicLong contadorInyeccion;
+    private final AtomicLong contadorSesiones;
+    private volatile long sesionActivaId;
     private volatile String promptPendiente = null;
     private volatile int delayPendienteMs = 0;
     private volatile String ultimoAgenteIniciado = null;
@@ -71,6 +76,8 @@ public class PanelAgente extends JPanel {
         this.inicializacionPendiente = new AtomicBoolean(false);
         this.consolaArrancando = new AtomicBoolean(false);
         this.contadorInyeccion = new AtomicLong(0);
+        this.contadorSesiones = new AtomicLong(0);
+        this.sesionActivaId = 0L;
         this.manejadorFocoPestania = new AtomicReference<>();
         this.manejadorCambioConfiguracion = new AtomicReference<>();
         
@@ -111,7 +118,8 @@ public class PanelAgente extends JPanel {
         if (comando == null || comando.isEmpty()) {
             return;
         }
-        INYECTOR_PTY.execute(() -> escribirComandoCrudoSeguro(comando));
+        long sesionObjetivo = sesionActivaId;
+        INYECTOR_PTY.execute(() -> escribirComandoCrudoSeguro(comando, sesionObjetivo));
     }
 
     private boolean escribirComandoCrudoSeguro(String comando) {
@@ -124,6 +132,13 @@ public class PanelAgente extends JPanel {
             registrarLog(Level.FINE, I18nLogs.tr("Error escribiendo comando crudo PTY"), e);
             return false;
         }
+    }
+
+    private boolean escribirComandoCrudoSeguro(String comando, long sesionObjetivo) {
+        if (!esSesionVigente(sesionObjetivo)) {
+            return false;
+        }
+        return escribirComandoCrudoSeguro(comando);
     }
 
     private boolean escribirTextoViaTtyConnector(String texto) {
@@ -166,6 +181,13 @@ public class PanelAgente extends JPanel {
             registrarLog(Level.FINE, "Error escritura raw PTY", e);
             return false;
         }
+    }
+
+    private boolean escribirDirectoAlPTYSeguro(byte[] bytes, long sesionObjetivo) {
+        if (!esSesionVigente(sesionObjetivo)) {
+            return false;
+        }
+        return escribirDirectoAlPTY(bytes);
     }
 
     private boolean escribirTextoDirectoPTY(String texto) {
@@ -235,7 +257,6 @@ public class PanelAgente extends JPanel {
     }
 
     public void reiniciar() {
-        destruir();
         iniciarConsola();
     }
 
@@ -251,23 +272,9 @@ public class PanelAgente extends JPanel {
     }
 
     public void destruir() {
-        PtyProcess procesoActual = process;
-        process = null;
-        if (procesoActual != null && procesoActual.isAlive()) {
-            procesoActual.destroyForcibly();
-        }
-        if (ttyConnector != null) {
-            try {
-                ttyConnector.close();
-            } catch (Exception e) {
-                registrarLog(Level.FINE, I18nLogs.tr("Error cerrando ttyConnector"), e);
-            }
-            ttyConnector = null;
-        }
-        promptInicialEnviado.set(false);
-        promptPendiente = null;
-        delayPendienteMs = 0;
-        inicializacionPendiente.set(false);
+        invalidarSesionActiva();
+        cerrarSesionActiva();
+        cerrarTerminalWidget();
         terminalWidget = null;
         consolaArrancando.set(false);
     }
@@ -408,21 +415,108 @@ public class PanelAgente extends JPanel {
         return btn;
     }
 
-    private void iniciarConsola() {
-        if (!consolaArrancando.compareAndSet(false, true)) {
-            return;
-        }
-        destruir();
-        consolaArrancando.set(true);
+    private long activarNuevaSesion() {
+        long nuevaSesion = contadorSesiones.incrementAndGet();
+        sesionActivaId = nuevaSesion;
+        return nuevaSesion;
+    }
 
+    private void invalidarSesionActiva() {
+        sesionActivaId = contadorSesiones.incrementAndGet();
+    }
+
+    private boolean esSesionVigente(long sesionObjetivo) {
+        return sesionObjetivo > 0 && sesionObjetivo == sesionActivaId;
+    }
+
+    private void recrearTerminalWidget() {
+        cerrarTerminalWidget();
         terminalWidget = crearTerminalWidget();
-        
         panelResultadosWrapper.removeAll();
         panelResultadosWrapper.add(terminalWidget, BorderLayout.CENTER);
         panelResultadosWrapper.revalidate();
         panelResultadosWrapper.repaint();
+    }
 
-        new Thread(this::iniciarProcesoPty, "BurpIA-PTY-Starter").start();
+    private void cerrarTerminalWidget() {
+        if (terminalWidget == null) {
+            return;
+        }
+        try {
+            terminalWidget.stop();
+        } catch (Exception e) {
+            registrarLog(Level.FINE, I18nLogs.tr("Error deteniendo terminalWidget"), e);
+        }
+        try {
+            terminalWidget.close();
+        } catch (Exception e) {
+            registrarLog(Level.FINE, I18nLogs.tr("Error cerrando terminalWidget"), e);
+        }
+    }
+
+    private void cerrarSesionActiva() {
+        TtyConnector connectorActual = ttyConnector;
+        ttyConnector = null;
+        if (connectorActual != null) {
+            try {
+                connectorActual.close();
+            } catch (Exception e) {
+                registrarLog(Level.FINE, I18nLogs.tr("Error cerrando ttyConnector"), e);
+            }
+        }
+
+        PtyProcess procesoActual = process;
+        process = null;
+        terminarProcesoSilencioso(procesoActual);
+
+        promptInicialEnviado.set(false);
+        promptPendiente = null;
+        delayPendienteMs = 0;
+        inicializacionPendiente.set(false);
+    }
+
+    private void terminarProcesoSilencioso(PtyProcess proceso) {
+        if (proceso == null) {
+            return;
+        }
+        try {
+            if (proceso.isAlive()) {
+                proceso.destroy();
+                esperarProceso(proceso, 350L);
+            }
+            if (proceso.isAlive()) {
+                proceso.destroyForcibly();
+                esperarProceso(proceso, 1200L);
+            }
+        } catch (Exception e) {
+            registrarLog(Level.FINE, I18nLogs.tr("Error cerrando proceso PTY"), e);
+        }
+    }
+
+    private void esperarProceso(Process proceso, long timeoutMs) {
+        if (proceso == null || timeoutMs <= 0) {
+            return;
+        }
+        try {
+            proceso.waitFor(timeoutMs, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void iniciarConsola() {
+        if (!consolaArrancando.compareAndSet(false, true)) {
+            return;
+        }
+        invalidarSesionActiva();
+        cerrarSesionActiva();
+        recrearTerminalWidget();
+
+        long sesion = activarNuevaSesion();
+        Thread arrancador = new Thread(() -> iniciarProcesoPty(sesion), "BurpIA-PTY-Starter-" + sesion);
+        arrancador.setDaemon(true);
+        arrancador.start();
     }
 
     public void enfocarTerminal() {
@@ -448,20 +542,30 @@ public class PanelAgente extends JPanel {
         return widget;
     }
 
-    private void iniciarProcesoPty() {
+    private void iniciarProcesoPty(long sesionObjetivo) {
         try {
+            if (!esSesionVigente(sesionObjetivo)) {
+                consolaArrancando.set(false);
+                return;
+            }
             Map<String, String> env = new HashMap<>(System.getenv());
             env.put("TERM", "xterm-256color");
 
             String[] command = construirComandoShell();
 
-            process = new PtyProcessBuilder()
+            PtyProcess nuevoProceso = new PtyProcessBuilder()
                 .setCommand(command)
                 .setEnvironment(env)
                 .start();
 
-            TtyConnector rawConnector = new PtyProcessTtyConnector(process, StandardCharsets.UTF_8);
-            ttyConnector = new TtyConnector() {
+            if (!esSesionVigente(sesionObjetivo)) {
+                terminarProcesoSilencioso(nuevoProceso);
+                consolaArrancando.set(false);
+                return;
+            }
+
+            TtyConnector rawConnector = new PtyProcessTtyConnector(nuevoProceso, StandardCharsets.UTF_8);
+            TtyConnector nuevoConnector = new TtyConnector() {
                 @Override
                 public boolean init(com.jediterm.terminal.Questioner q) { return rawConnector.init(q); }
                 @Override
@@ -491,16 +595,19 @@ public class PanelAgente extends JPanel {
             }
             };
 
+            process = nuevoProceso;
+            ttyConnector = nuevoConnector;
+
             SwingUtilities.invokeLater(() -> {
-                if (terminalWidget != null) {
-                    terminalWidget.setTtyConnector(ttyConnector);
+                if (esSesionVigente(sesionObjetivo) && terminalWidget != null) {
+                    terminalWidget.setTtyConnector(nuevoConnector);
                     terminalWidget.start();
                     ultimoAgenteIniciado = config.obtenerTipoAgente();
                     if (inicializacionPendiente.get()) {
                         inicializacionPendiente.set(false);
                         procesarInicializacionDiferida();
                     }
-                    programarInyeccionInicial();
+                    programarInyeccionInicial(sesionObjetivo);
                 }
                 consolaArrancando.set(false);
             });
@@ -523,9 +630,7 @@ public class PanelAgente extends JPanel {
         return new String[]{shell, "--login"};
     }
 
-    private void programarInyeccionInicial() {
-        if (promptInicialEnviado.get()) return;
-
+    private void programarInyeccionInicial(long sesionObjetivo) {
         AgenteTipo tipoActual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
         String prompt = obtenerPromptPreflightFijo();
         int usuarioDelay = config.obtenerAgenteDelay();
@@ -535,9 +640,22 @@ public class PanelAgente extends JPanel {
         registrarLog(Level.INFO, I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
 
         INYECTOR_PTY.execute(() -> {
+            if (!esSesionVigente(sesionObjetivo)) {
+                return;
+            }
             dormirSilencioso(DELAY_INICIO_BINARIO_MS);
+            if (!esSesionVigente(sesionObjetivo)) {
+                return;
+            }
 
-            if (!escribirComandoCrudoSeguro(OSUtils.prepararComando(comandoArranque))) {
+            if (!escribirComandoConReintento(
+                OSUtils.prepararComando(comandoArranque),
+                sesionObjetivo,
+                INTENTOS_ENVIO_ARRANQUE,
+                DELAY_REINTENTO_ARRANQUE_MS
+            )) {
+                registrarLog(Level.WARNING, I18nLogs.tr(
+                    "No se pudo enviar comando de arranque del agente tras reintentos"));
                 return;
             }
 
@@ -552,9 +670,31 @@ public class PanelAgente extends JPanel {
                 prompt,
                 Math.max(0, usuarioDelay),
                 opciones,
-                "AUTO_INIT"
+                "AUTO_INIT",
+                sesionObjetivo
             );
         });
+    }
+
+    private boolean escribirComandoConReintento(
+        String comando,
+        long sesionObjetivo,
+        int intentosMaximos,
+        int delayEntreIntentosMs
+    ) {
+        int intentos = Math.max(1, intentosMaximos);
+        for (int intento = 1; intento <= intentos; intento++) {
+            if (!esSesionVigente(sesionObjetivo)) {
+                return false;
+            }
+            if (escribirComandoCrudoSeguro(comando, sesionObjetivo)) {
+                return true;
+            }
+            if (intento < intentos) {
+                dormirSilencioso(Math.max(0, delayEntreIntentosMs));
+            }
+        }
+        return false;
     }
 
     private String resolverComandoArranque(AgenteTipo tipoActual) {
@@ -586,44 +726,51 @@ public class PanelAgente extends JPanel {
 
             promptPendiente = null;
             this.delayPendienteMs = 0;
+            long sesionObjetivo = sesionActivaId;
             
             SwingUtilities.invokeLater(() -> 
-                inyectarComandoConRetraso(prompt, delay)
+                inyectarComandoConRetraso(prompt, delay, AgentRuntimeOptions.cargar(config.obtenerTipoAgente()), "API_OR_UI", sesionObjetivo)
             );
         }
     }
 
     private void ejecutarInyeccionConOpciones(String texto, int delayPendienteMsUsuario) {
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(config.obtenerTipoAgente());
-        inyectarComandoConRetraso(texto, delayPendienteMsUsuario, opciones, "API_OR_UI");
-    }
-
-    private void inyectarComandoConRetraso(String texto, int delayMs) {
-        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(config.obtenerTipoAgente());
-        inyectarComandoConRetraso(texto, delayMs, opciones, "API_OR_UI");
+        inyectarComandoConRetraso(texto, delayPendienteMsUsuario, opciones, "API_OR_UI", sesionActivaId);
     }
 
     private void inyectarComandoConRetraso(
         String texto,
         int delayMs,
         AgentRuntimeOptions.EnterOptions opciones,
-        String origen
+        String origen,
+        long sesionObjetivo
     ) {
         SwingUtilities.invokeLater(() -> {
+            if (!esSesionVigente(sesionObjetivo)) {
+                return;
+            }
             OSUtils.cerrarVentanaAjustes();
             if (delayMs > 0) {
                 registrarLog(Level.INFO, I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayMs + " ms) antes de la inyeccion..."));
                 new Timer(delayMs, ev -> {
                     ((Timer) ev.getSource()).stop();
-                    aplicarEscrituraDirecta(texto, opciones, origen);
+                    if (esSesionVigente(sesionObjetivo)) {
+                        aplicarEscrituraDirecta(texto, opciones, origen, sesionObjetivo);
+                    }
                 }).start();
             } else {
-                aplicarEscrituraDirecta(texto, opciones, origen);
+                aplicarEscrituraDirecta(texto, opciones, origen, sesionObjetivo);
             }
         });
     }
 
-    private void aplicarEscrituraDirecta(String texto, AgentRuntimeOptions.EnterOptions opciones, String origen) {
+    private void aplicarEscrituraDirecta(
+        String texto,
+        AgentRuntimeOptions.EnterOptions opciones,
+        String origen,
+        long sesionObjetivo
+    ) {
         String ansiStart = "\u001b[200~";
         String ansiEnd = "\u001b[201~";
 
@@ -632,6 +779,9 @@ public class PanelAgente extends JPanel {
         SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(opciones.tipoAgente());
 
         INYECTOR_PTY.execute(() -> {
+            if (!esSesionVigente(sesionObjetivo)) {
+                return;
+            }
             registrarLog(Level.INFO, I18nLogs.trTecnico(
                 "[ENTER-FLOW] id=" + injectionId +
                     " origin=" + origen +
@@ -639,12 +789,12 @@ public class PanelAgente extends JPanel {
                     " os=" + describirPlataformaActual() +
                     " strategyFinal=" + secuencia.descripcion()
             ));
-            if (!escribirComandoCrudoSeguro(payloadConBrackets)) {
+            if (!escribirComandoCrudoSeguro(payloadConBrackets, sesionObjetivo)) {
                 return;
             }
             registrarLog(Level.INFO, I18nLogs.tr("Payload en bufer usando escritura directa (tty stream con bracketed paste). Esperando confirmacion..."));
             dormirSilencioso(opciones.delaySubmitPostPasteMs());
-            enviarSecuenciaSubmit(opciones, secuencia, injectionId, origen);
+            enviarSecuenciaSubmit(opciones, secuencia, injectionId, origen, sesionObjetivo);
         });
     }
 
@@ -652,21 +802,28 @@ public class PanelAgente extends JPanel {
         AgentRuntimeOptions.EnterOptions opciones,
         SubmitSequenceFactory.SubmitSequence secuencia,
         long injectionId,
-        String origen
+        String origen,
+        long sesionObjetivo
     ) {
         if (secuencia == null) return;
+        if (!esSesionVigente(sesionObjetivo)) {
+            return;
+        }
 
         boolean envioExitoso = true;
         for (int i = 0; i < secuencia.repeticiones(); i++) {
+            if (!esSesionVigente(sesionObjetivo)) {
+                return;
+            }
             if (OSUtils.esMac() && "\r".equals(secuencia.payload()) && i == 0) {
-                if (!escribirDirectoAlPTY(new byte[]{13})) {
-                    if (!escribirComandoCrudoSeguro(secuencia.payload())) {
+                if (!escribirDirectoAlPTYSeguro(new byte[]{13}, sesionObjetivo)) {
+                    if (!escribirComandoCrudoSeguro(secuencia.payload(), sesionObjetivo)) {
                         envioExitoso = false;
                         break;
                     }
                 }
             } else {
-                if (!escribirComandoCrudoSeguro(secuencia.payload())) {
+                if (!escribirComandoCrudoSeguro(secuencia.payload(), sesionObjetivo)) {
                     envioExitoso = false;
                     break;
                 }
@@ -684,7 +841,7 @@ public class PanelAgente extends JPanel {
                     " motivo=fallo_escritura payload='" + escaparControl(secuencia.payload()) + "'"
             ));
             dormirSilencioso(secuencia.delayEntreEnviosMs() > 0 ? secuencia.delayEntreEnviosMs() : 100);
-            enviarSecuenciaSubmit(opciones, secuencia.getFallback(), injectionId, origen + "->FALLBACK");
+            enviarSecuenciaSubmit(opciones, secuencia.getFallback(), injectionId, origen + "->FALLBACK", sesionObjetivo);
             return;
         }
 

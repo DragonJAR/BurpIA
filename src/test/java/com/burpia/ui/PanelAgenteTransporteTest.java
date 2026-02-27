@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -84,6 +85,27 @@ class PanelAgenteTransporteTest {
     }
 
     @Test
+    @DisplayName("Sesiones viejas no pueden escribir en PTY despues de reinicio")
+    void testSesionViejaNoEscribeEnPty() throws Exception {
+        PanelAgente panel = crearPanelSinConsola();
+        try {
+            TtyConnector connector = mock(TtyConnector.class);
+            when(connector.isConnected()).thenReturn(true);
+            inyectarTtyConnector(panel, connector);
+            establecerCampoLong(panel, "sesionActivaId", 200L);
+
+            Method method = PanelAgente.class.getDeclaredMethod("escribirComandoCrudoSeguro", String.class, long.class);
+            method.setAccessible(true);
+            boolean resultado = (boolean) method.invoke(panel, "payload", 199L);
+
+            assertFalse(resultado);
+            verify(connector, never()).write(anyString());
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
     @DisplayName("Prompt inicial del agente usa preflight configurado y no prompt de validacion")
     void testPromptInicialUsaPreflightConfigurado() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -132,6 +154,39 @@ class PanelAgenteTransporteTest {
         }
     }
 
+    @Test
+    @DisplayName("Arranque automatico siempre ejecuta binario aunque prompt inicial ya este marcado")
+    void testArranqueAutomaticoEjecutaBinarioConPromptInicialYaMarcado() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente("FACTORY_DROID");
+        config.establecerAgentePreflightPrompt("PRECHECK");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            TtyConnector connector = mock(TtyConnector.class);
+            when(connector.isConnected()).thenReturn(true);
+            inyectarTtyConnector(panel, connector);
+
+            Field flagPrompt = PanelAgente.class.getDeclaredField("promptInicialEnviado");
+            flagPrompt.setAccessible(true);
+            AtomicBoolean promptInicial = (AtomicBoolean) flagPrompt.get(panel);
+            promptInicial.set(true);
+
+            establecerCampoLong(panel, "sesionActivaId", 77L);
+
+            Method method = PanelAgente.class.getDeclaredMethod("programarInyeccionInicial", long.class);
+            method.setAccessible(true);
+            method.invoke(panel, 77L);
+
+            verify(connector, timeout(2500).atLeastOnce())
+                .write(org.mockito.ArgumentMatchers.<String>argThat(
+                    cmd -> cmd != null && cmd.contains("droid")
+                ));
+        } finally {
+            panel.destruir();
+        }
+    }
+
     private PanelAgente crearPanelSinConsola() throws Exception {
         return crearPanelSinConsola(new ConfiguracionAPI());
     }
@@ -172,5 +227,11 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField(nombre);
         field.setAccessible(true);
         return field.getInt(panel);
+    }
+
+    private void establecerCampoLong(PanelAgente panel, String nombre, long valor) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField(nombre);
+        field.setAccessible(true);
+        field.setLong(panel, valor);
     }
 }
