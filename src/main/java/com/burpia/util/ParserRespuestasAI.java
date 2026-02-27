@@ -1,5 +1,6 @@
 package com.burpia.util;
 import com.burpia.config.ProveedorAI;
+import com.burpia.i18n.I18nLogs;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -148,7 +149,7 @@ public class ParserRespuestasAI {
             return limpiarBloquesPensamiento(contenido != null ? contenido : "");
 
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, "No se pudo parsear la respuesta JSON del proveedor", e);
+            LOGGER.log(Level.FINE, I18nLogs.tr("No se pudo parsear la respuesta JSON del proveedor"), e);
             return limpiarBloquesPensamiento(respuestaJson.trim());
         }
     }
@@ -361,7 +362,7 @@ public class ParserRespuestasAI {
             String valor = elemento.getAsString();
             return valor != null ? valor : "";
         } catch (Exception e) {
-            LOGGER.log(Level.FINEST, "No se pudo extraer texto desde elemento JSON", e);
+            LOGGER.log(Level.FINEST, I18nLogs.tr("No se pudo extraer texto desde elemento JSON"), e);
             return "";
         }
     }

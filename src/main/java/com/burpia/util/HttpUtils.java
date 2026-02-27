@@ -115,6 +115,27 @@ public final class HttpUtils {
         return encabezados.toString();
     }
 
+    public static String generarHashRapido(HttpRequest solicitud, HttpResponse respuesta) {
+        if (solicitud == null || respuesta == null) {
+            return "";
+        }
+        String metodo = solicitud.method() != null ? solicitud.method() : "";
+        String url = solicitud.url() != null ? solicitud.url() : "";
+        int status = respuesta.statusCode();
+        
+        long reqBodyLen = 0;
+        try {
+            if (solicitud.body() != null) reqBodyLen = solicitud.body().length();
+        } catch (Exception ignored) {}
+        
+        long resBodyLen = 0;
+        try {
+            if (respuesta.body() != null) resBodyLen = respuesta.body().length();
+        } catch (Exception ignored) {}
+
+        return generarHashPartes(metodo, url, String.valueOf(status), String.valueOf(reqBodyLen), String.valueOf(resBodyLen));
+    }
+
     public static String extraerEncabezados(HttpResponse respuesta) {
         if (respuesta == null) {
             return "[RESPUESTA NULL]";
@@ -181,7 +202,6 @@ public final class HttpUtils {
             return false;
         }
 
-        int startIdx = 0;
         int queryIdx = url.indexOf('?');
         int hashIdx = url.indexOf('#');
         int endIdx = url.length();

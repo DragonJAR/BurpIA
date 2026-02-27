@@ -249,6 +249,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
 
     public int obtenerVersion() { return versionCambios.get(); }
 
+    @SuppressWarnings("unchecked")
     private void sincronizarTablaDesdeDatosEnEdt() {
         List<Object[]> snapshot = new ArrayList<>();
         lock.lock();
@@ -263,9 +264,14 @@ public class ModeloTablaTareas extends DefaultTableModel {
             lock.unlock();
         }
 
-        setRowCount(0);
+        dataVector.clear();
         for (Object[] fila : snapshot) {
-            addRow(fila);
+            java.util.Vector<Object> rowData = new java.util.Vector<>();
+            for (Object col : fila) {
+                rowData.add(col);
+            }
+            dataVector.add(rowData);
         }
+        fireTableDataChanged();
     }
 }

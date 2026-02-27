@@ -253,22 +253,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        String cadenaSolicitud = metodo + " " + url;
-
-        String encabezados = HttpUtils.extraerEncabezados(respuestaRecibida.initiatingRequest());
-        String cuerpo = HttpUtils.extraerCuerpo(respuestaRecibida.initiatingRequest());
-        String encabezadosRespuesta = HttpUtils.extraerEncabezados(respuestaRecibida);
-        String cuerpoRespuesta = HttpUtils.extraerCuerpo(respuestaRecibida);
-
-        String hashSolicitud = HttpUtils.generarHashPartes(
-            cadenaSolicitud,
-            "\n|status|\n",
-            String.valueOf(codigoEstado),
-            "\n|response_headers|\n",
-            encabezadosRespuesta,
-            "\n|response_body|\n",
-            cuerpoRespuesta
-        );
+        String hashSolicitud = HttpUtils.generarHashRapido(respuestaRecibida.initiatingRequest(), respuestaRecibida);
         rastrear("Hash de solicitud: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...");
 
         if (deduplicador.esDuplicadoYAgregar(hashSolicitud)) {
@@ -287,19 +272,15 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         rastrear("Detalles de solicitud: Metodo=" + metodo + ", URL=" + url +
-                ", Encabezados=" + numEncabezados + ", Longitud cuerpo=" + cuerpo.length() +
-                ", Codigo respuesta=" + codigoEstado + ", Longitud cuerpo respuesta=" + cuerpoRespuesta.length());
+                ", Encabezados=" + numEncabezados + ", Codigo respuesta=" + codigoEstado);
 
         SolicitudAnalisis solicitudAnalisis = new SolicitudAnalisis(
             url,
             metodo,
-            encabezados,
-            cuerpo,
             hashSolicitud,
             respuestaRecibida.initiatingRequest(),
-            codigoEstado,
-            encabezadosRespuesta,
-            cuerpoRespuesta
+            respuestaRecibida,
+            codigoEstado
         );
         programarAnalisis(
             solicitudAnalisis,

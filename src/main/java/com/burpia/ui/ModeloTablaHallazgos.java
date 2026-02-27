@@ -50,6 +50,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         });
     }
 
+    @SuppressWarnings("unchecked")
     public void agregarHallazgos(List<Hallazgo> hallazgos) {
         if (hallazgos == null || hallazgos.isEmpty()) {
             return;
@@ -58,14 +59,26 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         SwingUtilities.invokeLater(() -> {
             lock.lock();
             try {
+                boolean huboCambios = false;
                 for (Hallazgo hallazgo : hallazgos) {
                     if (hallazgo == null) {
                         continue;
                     }
                     datos.add(hallazgo);
-                    addRow(hallazgo.aFilaTabla());
+                    
+                    java.util.Vector<Object> rowData = new java.util.Vector<>();
+                    Object[] fila = hallazgo.aFilaTabla();
+                    for (Object col : fila) {
+                        rowData.add(col);
+                    }
+                    dataVector.add(rowData);
+                    huboCambios = true;
                 }
-                aplicarLimiteFilas();
+                
+                if (huboCambios) {
+                    aplicarLimiteFilas();
+                    fireTableDataChanged();
+                }
             } finally {
                 lock.unlock();
             }
@@ -73,16 +86,17 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     private void aplicarLimiteFilas() {
-        if (getRowCount() > limiteFilas) {
-            int filasAEliminar = getRowCount() - limiteFilas;
-            for (int i = 0; i < filasAEliminar; i++) {
-                removeRow(0);
-                if (!datos.isEmpty()) {
-                    datos.remove(0);
-                }
+        int rowCount = dataVector.size();
+        if (rowCount > limiteFilas) {
+            int filasAEliminar = rowCount - limiteFilas;
+            
+            if (filasAEliminar > 0) {
+                datos.subList(0, filasAEliminar).clear();
+                dataVector.subList(0, filasAEliminar).clear();
+                
                 Set<Integer> nuevosIgnorados = new HashSet<>();
                 for (Integer idx : filasIgnoradas) {
-                    if (idx > 0) nuevosIgnorados.add(idx - 1);
+                    if (idx >= filasAEliminar) nuevosIgnorados.add(idx - filasAEliminar);
                 }
                 filasIgnoradas.clear();
                 filasIgnoradas.addAll(nuevosIgnorados);
@@ -96,7 +110,8 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             try {
                 datos.clear();
                 filasIgnoradas.clear();
-                setRowCount(0);
+                dataVector.clear();
+                fireTableDataChanged();
             } finally {
                 lock.unlock();
             }
