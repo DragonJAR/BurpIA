@@ -15,7 +15,6 @@ import com.pty4j.PtyProcessBuilder;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
@@ -531,7 +530,7 @@ public class PanelAgente extends JPanel {
         String prompt = config.obtenerAgentePrompt();
         int usuarioDelay = config.obtenerAgenteDelay();
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
-        String comandoArranque = resolverComandoArranque(tipoActual, opciones);
+        String comandoArranque = resolverComandoArranque(tipoActual);
 
         registrarLog(Level.INFO, I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
 
@@ -558,48 +557,8 @@ public class PanelAgente extends JPanel {
         });
     }
 
-    private String resolverComandoArranque(AgenteTipo tipoActual, AgentRuntimeOptions.EnterOptions opciones) {
-        String comandoProbe = construirComandoProbe(opciones.probeMode());
-        if (comandoProbe != null) {
-            registrarLog(Level.INFO, I18nLogs.trTecnico(
-                "[ENTER-PROBE] mode=" + opciones.probeMode().name() +
-                    " os=" + describirPlataformaActual() +
-                    " command='" + comandoProbe + "'"
-            ));
-            return comandoProbe;
-        }
+    private String resolverComandoArranque(AgenteTipo tipoActual) {
         return resolverRutaBinario(tipoActual);
-    }
-
-    private String construirComandoProbe(AgentRuntimeOptions.ProbeMode probeMode) {
-        AgentRuntimeOptions.ProbeMode modo = probeMode != null ? probeMode : AgentRuntimeOptions.ProbeMode.OFF;
-        if (modo == AgentRuntimeOptions.ProbeMode.OFF) {
-            return null;
-        }
-
-        String rutaRelativa = modo == AgentRuntimeOptions.ProbeMode.WINDOWS
-            ? "scripts/diagnostics/enter-probe-windows.ps1"
-            : "scripts/diagnostics/enter-probe-posix.sh";
-        File script = new File(rutaRelativa);
-        if (!script.isFile()) {
-            registrarLog(Level.WARNING, I18nLogs.trTecnico(
-                "[ENTER-PROBE] script no encontrado: " + script.getAbsolutePath() + ". Usando agente real."
-            ));
-            return null;
-        }
-
-        String ruta = escaparComillasDobles(script.getAbsolutePath());
-        if (modo == AgentRuntimeOptions.ProbeMode.WINDOWS) {
-            return "powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File \"" + ruta + "\"";
-        }
-        return "bash \"" + ruta + "\"";
-    }
-
-    private String escaparComillasDobles(String texto) {
-        if (texto == null) {
-            return "";
-        }
-        return texto.replace("\"", "\\\"");
     }
 
     private String resolverRutaBinario(AgenteTipo tipo) {
@@ -701,16 +660,6 @@ public class PanelAgente extends JPanel {
         String origen
     ) {
         if (secuencia == null) return;
-
-        if (opciones.probeSubmitActivo()) {
-            registrarLog(Level.INFO, I18nLogs.trTecnico(
-                "[ENTER-PROBE] agent=" + opciones.tipoAgente().name() +
-                " os=" + describirPlataformaActual() +
-                " strategyOverride=" + (opciones.estrategiaSubmitOverride() != null ? opciones.estrategiaSubmitOverride() : "AUTO") +
-                " sequence=" + secuencia.descripcion() +
-                " payloadEsc='" + escaparControl(secuencia.payload()) + "'"
-            ));
-        }
 
         boolean envioExitoso = true;
         for (int i = 0; i < secuencia.repeticiones(); i++) {

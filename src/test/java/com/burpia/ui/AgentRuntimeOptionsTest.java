@@ -11,10 +11,8 @@ class AgentRuntimeOptionsTest {
 
     private static final String[] PROPIEDADES_BASE = {
         "burpia.agent.enterDebug",
-        "burpia.agent.enterProbe",
         "burpia.agent.submit.strategy",
-        "burpia.agent.submit.delayMs",
-        "burpia.agent.probeMode"
+        "burpia.agent.submit.delayMs"
     };
 
     @AfterEach
@@ -33,10 +31,8 @@ class AgentRuntimeOptionsTest {
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(AgenteTipo.CLAUDE_CODE);
         assertEquals(AgenteTipo.CLAUDE_CODE, opciones.tipoAgente());
         assertFalse(opciones.enterDebugActivo());
-        assertFalse(opciones.probeSubmitActivo());
         assertNull(opciones.estrategiaSubmitOverride());
         assertEquals(800, opciones.delaySubmitPostPasteMs());
-        assertEquals(AgentRuntimeOptions.ProbeMode.OFF, opciones.probeMode());
     }
 
     @Test
@@ -56,17 +52,13 @@ class AgentRuntimeOptionsTest {
     @DisplayName("Booleanos globales y por agente se resuelven correctamente")
     void booleanosGlobalesYPorAgente() {
         System.setProperty("burpia.agent.enterDebug", "false");
-        System.setProperty("burpia.agent.enterProbe", "true");
         System.setProperty("burpia.agent.enterDebug.CLAUDE_CODE", "true");
-        System.setProperty("burpia.agent.enterProbe.CLAUDE_CODE", "false");
 
         AgentRuntimeOptions.EnterOptions claude = AgentRuntimeOptions.cargar(AgenteTipo.CLAUDE_CODE);
         AgentRuntimeOptions.EnterOptions factory = AgentRuntimeOptions.cargar(AgenteTipo.FACTORY_DROID);
 
         assertTrue(claude.enterDebugActivo());
-        assertFalse(claude.probeSubmitActivo());
         assertFalse(factory.enterDebugActivo());
-        assertTrue(factory.probeSubmitActivo());
     }
 
     @Test
@@ -83,18 +75,5 @@ class AgentRuntimeOptionsTest {
         System.setProperty("burpia.agent.submit.delayMs.CLAUDE_CODE", "999999");
         AgentRuntimeOptions.EnterOptions maximo = AgentRuntimeOptions.cargar(AgenteTipo.CLAUDE_CODE);
         assertEquals(60000, maximo.delaySubmitPostPasteMs());
-    }
-
-    @Test
-    @DisplayName("Probe mode soporta override global y por agente")
-    void probeModeSoportaOverrides() {
-        System.setProperty("burpia.agent.probeMode", "POSIX");
-        System.setProperty("burpia.agent.probeMode.CLAUDE_CODE", "WINDOWS");
-
-        AgentRuntimeOptions.EnterOptions claude = AgentRuntimeOptions.cargar(AgenteTipo.CLAUDE_CODE);
-        AgentRuntimeOptions.EnterOptions factory = AgentRuntimeOptions.cargar(AgenteTipo.FACTORY_DROID);
-
-        assertEquals(AgentRuntimeOptions.ProbeMode.WINDOWS, claude.probeMode());
-        assertEquals(AgentRuntimeOptions.ProbeMode.POSIX, factory.probeMode());
     }
 }
