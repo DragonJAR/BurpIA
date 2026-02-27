@@ -2,9 +2,6 @@ package com.burpia.ui;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorConsolaGUI;
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.function.Consumer;
 
@@ -19,6 +16,7 @@ public class PanelConsola extends JPanel {
     private final JPanel panelConsolaWrapper;
     private Consumer<Boolean> manejadorCambioAutoScroll;
     private boolean actualizandoAutoScroll = false;
+    private volatile int ultimaVersionConsola = -1;
 
     public PanelConsola(GestorConsolaGUI gestorConsola) {
         this.gestorConsola = gestorConsola;
@@ -28,16 +26,8 @@ public class PanelConsola extends JPanel {
 
         panelControles = new JPanel();
         panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
-        panelControles.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Consola.TITULO_CONTROLES(),
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelControles.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
 
@@ -59,16 +49,8 @@ public class PanelConsola extends JPanel {
         panelControles.add(panelBotones);
 
         panelConsolaWrapper = new JPanel(new BorderLayout());
-        panelConsolaWrapper.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Consola.TITULO_LOGS(),
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelConsolaWrapper.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Consola.TITULO_LOGS(), 12, 16));
 
         consola = new JTextPane();
         consola.setEditable(false);
@@ -89,12 +71,7 @@ public class PanelConsola extends JPanel {
         botonLimpiar.addActionListener(e -> {
             int total = gestorConsola.obtenerTotalLogs();
             if (total == 0) {
-                JOptionPane.showMessageDialog(
-                    this,
-                    I18nUI.Consola.MSG_CONSOLA_VACIA(),
-                    I18nUI.Consola.TITULO_INFORMACION(),
-                    JOptionPane.INFORMATION_MESSAGE
-                );
+                UIUtils.mostrarInfo(this, I18nUI.Consola.TITULO_INFORMACION(), I18nUI.Consola.MSG_CONSOLA_VACIA());
                 return;
             }
 
@@ -122,6 +99,15 @@ public class PanelConsola extends JPanel {
     }
 
     private void actualizarResumen() {
+        actualizarResumen(false);
+    }
+
+    private void actualizarResumen(boolean forzar) {
+        int versionActual = gestorConsola.obtenerVersion();
+        if (!forzar && versionActual == ultimaVersionConsola) {
+            return;
+        }
+        ultimaVersionConsola = versionActual;
         SwingUtilities.invokeLater(() -> {
             etiquetaResumen.setText(I18nUI.Consola.RESUMEN(
                 gestorConsola.obtenerTotalLogs(),
@@ -141,19 +127,13 @@ public class PanelConsola extends JPanel {
         botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
         etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
         consola.setToolTipText(I18nUI.Tooltips.Consola.AREA_LOGS());
-        actualizarResumen();
+        actualizarResumen(true);
         revalidate();
         repaint();
     }
 
     private void actualizarTituloPanel(JPanel panel, String titulo) {
-        Border borde = panel.getBorder();
-        if (borde instanceof CompoundBorder) {
-            Border externo = ((CompoundBorder) borde).getOutsideBorder();
-            if (externo instanceof TitledBorder) {
-                ((TitledBorder) externo).setTitle(titulo);
-            }
-        }
+        UIUtils.actualizarTituloPanel(panel, titulo);
     }
 
     public void destruir() {

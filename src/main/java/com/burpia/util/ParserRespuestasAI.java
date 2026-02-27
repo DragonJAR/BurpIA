@@ -13,29 +13,32 @@ public class ParserRespuestasAI {
     private static final Logger LOGGER = Logger.getLogger(ParserRespuestasAI.class.getName());
 
     private static final java.util.regex.Pattern PATRON_CAMPO_TITULO_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"titulo\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        java.util.regex.Pattern.DOTALL
+        "\"(?:titulo|title|name|nombre)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
     private static final java.util.regex.Pattern PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"descripcion\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        java.util.regex.Pattern.DOTALL
+        "\"(?:descripcion|description|hallazgo|finding|details|detalle)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
     private static final java.util.regex.Pattern PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"severidad\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        java.util.regex.Pattern.DOTALL
+        "\"(?:severidad|severity|risk|impacto)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
     private static final java.util.regex.Pattern PATRON_CAMPO_CONFIANZA_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"confianza\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        java.util.regex.Pattern.DOTALL
+        "\"(?:confianza|confidence|certainty|certeza)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
     private static final java.util.regex.Pattern PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"evidencia\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
-        java.util.regex.Pattern.DOTALL
+        "\"(?:evidencia|evidence|proof|indicator)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
 
     public static String extraerCampoNoEstricto(String campo, String contenido) {
+        if (contenido == null || contenido.isEmpty()) {
+            return "";
+        }
         java.util.regex.Pattern patron;
-        switch (campo) {
+        switch (normalizarClaveCampoNoEstricto(campo)) {
             case "titulo": patron = PATRON_CAMPO_TITULO_NO_ESTRICTO; break;
             case "descripcion": patron = PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO; break;
             case "severidad": patron = PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO; break;
@@ -50,16 +53,46 @@ public class ParserRespuestasAI {
         return "";
     }
 
-    public static String normalizarCampoNoEstricto(String valor) {
-        if (valor == null) {
+    private static String normalizarClaveCampoNoEstricto(String campo) {
+        if (campo == null) {
             return "";
         }
-        return valor
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
-            .replace("\\\"", "\"")
-            .trim();
+        String campoNormalizado = campo.trim().toLowerCase(java.util.Locale.ROOT);
+        switch (campoNormalizado) {
+            case "titulo":
+            case "title":
+            case "name":
+            case "nombre":
+                return "titulo";
+            case "descripcion":
+            case "description":
+            case "hallazgo":
+            case "finding":
+            case "details":
+            case "detalle":
+                return "descripcion";
+            case "severidad":
+            case "severity":
+            case "risk":
+            case "impacto":
+                return "severidad";
+            case "confianza":
+            case "confidence":
+            case "certainty":
+            case "certeza":
+                return "confianza";
+            case "evidencia":
+            case "evidence":
+            case "proof":
+            case "indicator":
+                return "evidencia";
+            default:
+                return "";
+        }
+    }
+
+    public static String normalizarCampoNoEstricto(String valor) {
+        return Normalizador.normalizarTexto(valor);
     }
 
     public static String extraerContenido(String respuestaJson, String proveedor) {

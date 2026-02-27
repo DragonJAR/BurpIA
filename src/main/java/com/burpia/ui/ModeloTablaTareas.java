@@ -5,6 +5,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ModeloTablaTareas extends DefaultTableModel {
@@ -12,6 +13,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
     private final List<Tarea> datos;
     private final int limiteFilas;
     private final ReentrantLock lock;
+    private final AtomicInteger versionCambios = new AtomicInteger(0);
 
     public ModeloTablaTareas() {
         this(500);
@@ -241,8 +243,11 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     private void programarSincronizacionTabla() {
+        versionCambios.incrementAndGet();
         SwingUtilities.invokeLater(this::sincronizarTablaDesdeDatosEnEdt);
     }
+
+    public int obtenerVersion() { return versionCambios.get(); }
 
     private void sincronizarTablaDesdeDatosEnEdt() {
         List<Object[]> snapshot = new ArrayList<>();

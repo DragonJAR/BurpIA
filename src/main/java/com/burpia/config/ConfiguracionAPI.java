@@ -14,6 +14,7 @@ public class ConfiguracionAPI {
     public static final int MINIMO_MAXIMO_CONCURRENTE = 1;
     public static final int MAXIMO_MAXIMO_CONCURRENTE = 10;
 
+
     private int retrasoSegundos;
     private int maximoConcurrente;
     private int maximoHallazgosTabla;
@@ -59,7 +60,7 @@ public class ConfiguracionAPI {
         this.agenteFactoryDroidHabilitado = false;
         this.agenteFactoryDroidBinario = obtenerAgenteFactoryDroidBinarioPorDefecto();
         this.agenteFactoryDroidPrompt = obtenerAgenteFactoryDroidPromptPorDefecto();
-        this.agenteFactoryDroidDelay = 3500;
+        this.agenteFactoryDroidDelay = 4000;
 
         this.promptConfigurable = obtenerPromptPorDefecto();
 
@@ -85,6 +86,15 @@ public class ConfiguracionAPI {
 
     public String obtenerClaveApi() {
         return obtenerApiKeyParaProveedor(obtenerProveedorAI());
+    }
+
+    public String obtenerClaveApiSanitizada() {
+        return obtenerClaveApiSanitizadaParaProveedor(obtenerProveedorAI());
+    }
+
+    public String obtenerClaveApiSanitizadaParaProveedor(String proveedor) {
+        String apiKey = obtenerApiKeyParaProveedor(proveedor);
+        return com.burpia.util.Normalizador.sanitizarApiKey(apiKey);
     }
 
     public void establecerClaveApi(String claveApi) {
@@ -186,31 +196,65 @@ public class ConfiguracionAPI {
                "You are an Elite Offensive Security Researcher & Red Teamer. Your expertise lies in exploit development and manual vulnerability verification. You operate with a \"Prove it or it doesn't exist\" mindset.\n\n" +
                "# OBJECTIVE\n" +
                "Perform an active validation of a suspected vulnerability based on an initial HTTP capture. You must provide reproducible empirical evidence using the provided MCP tools.\n\n" +
-               "# TOOLSET (MCP BURP SUITE PRIORITY)\n" +
-               "- **Burp HTTP Requests**: Use this for initial probing, fuzzing, baseline checks and payload testing.\n" +
-               "- **Burp Create a Repeater Tab**: Use this ONLY when the vulnerability is confirmed to send the FINAL PoC.\n" +
-               "- **Burp Proxy History**: Use if you need additional context of the session.\n\n" +
+               "# MCP BURP SUITE TOOLS - USE EXACT NAMES\n" +
+               "First, list all available MCP tools to discover the exact names. Burp MCP tools typically include:\n" +
+               "- `send_http1_request` - Sends HTTP/1.1 requests (USE THIS ONE!)\n" +
+               "- `send_http_request` - Generic HTTP (may use HTTP/2, AVOID)\n" +
+               "- `create_repeater_tab` - Creates Repeater tab\n" +
+               "- `get_proxy_history` - Gets proxy history\n" +
+               "- `get_scanner_issues` - Gets scanner issues\n\n" +
+               "# CRITICAL: HTTP/1.1 vs HTTP/2\n" +
+               "**THE PROBLEM**: If you send HTTP/2 requests to `create_repeater_tab`, the tab will be created EMPTY.\n\n" +
+               "**THE SOLUTION**: \n" +
+               "1. For ALL HTTP requests during testing, use `send_http1_request` (NOT `send_http_request`)\n" +
+               "2. For creating Repeater tabs, ensure the request data is HTTP/1.1 format\n\n" +
+               "```\n" +
+               "# CORRECT - Always use send_http1_request:\n" +
+               "send_http1_request(\n" +
+               "    request=\"POST /api/login HTTP/1.1\\r\\nHost: example.com\\r\\nContent-Type: application/x-www-form-urlencoded\\r\\nContent-Length: 28\\r\\n\\r\\nusername=admin&password=test\",\n" +
+               "    host=\"example.com\",\n" +
+               "    port=443,\n" +
+               "    use_https=true\n" +
+               ")\n" +
+               "```\n\n" +
+               "# RAW HTTP REQUEST FORMAT\n" +
+               "When constructing raw HTTP requests, follow this EXACT format:\n" +
+               "```\n" +
+               "POST /api/login HTTP/1.1\\r\\n" +
+               "Host: example.com\\r\\n" +
+               "Content-Type: application/x-www-form-urlencoded\\r\\n" +
+               "Content-Length: 28\\r\\n" +
+               "\\r\\n" +
+               "username=admin&password=test\n" +
+               "```\n\n" +
+               "**FORMAT RULES**:\n" +
+               "1. Request line: `METHOD /path HTTP/1.1` (never HTTP/2)\n" +
+               "2. Headers end with blank line (double `\\r\\n`)\n" +
+               "3. Body comes AFTER the blank line\n" +
+               "4. Use `\\r\\n` for line breaks, not just `\\n`\n" +
+               "5. Always include `Host:` header\n" +
+               "6. Calculate `Content-Length:` accurately if body exists\n\n" +
                "# TASK WORKFLOW\n" +
-               "1. **Hypothesis Formation**: Analyze the `<http_request>` and `<issue_description>`. Identify the exact injection point (parameter, header, path) and the expected behavior if vulnerable.\n" +
-               "2. **Initial Baseline**: Send a benign request to observe normal behavior.\n" +
-               "3. **Active Probing**: Send at least 2-3 variations of payloads (e.g., a trigger payload and an evasion payload). Analyze status codes, response times, and body content for anomalies.\n" +
-               "4. **Detection & WAF Bypass Protocol (MANDATORY if blocked)**: \n" +
-               "   - If the application returns 403, 406, or 501, analyze headers (e.g., `Server`, `X-CDN`, `X-WAF-Event`) to fingerprint the firewall.\n" +
-               "   - *Encoding*: Try URL, Double URL, Hex, Unicode, and Base64.\n" +
-               "   - *Payload Splitting*: Use SQL comments `/**/`, null bytes `%00`, or newline injections.\n" +
-               "   - *Header Spoofing*: Inject headers like `X-Forwarded-For: 127.0.0.1` or `X-Originating-IP` to bypass IP-based filters.\n" +
-               "   - *Protocol Smuggling*: Test variations in `Content-Type`.\n" +
-               "   - *Junk Data*: Prepend or append large amounts of non-functional data to overflow buffer/regex checks.\n" +
-               "5. **Final Validation**:\n" +
-               "   - If confirmed: Execute the MCP tool to send the winning payload to Repeater. Label it: `[VALIDATED] {CLASS} - {ENDPOINT}`.\n" +
-               "   - If discarded: Provide a technical justification of why the behavior is a False Positive.\n\n" +
+               "1. **Discovery**: List all MCP tools available to find exact tool names\n" +
+               "2. **Hypothesis Formation**: Analyze the `<http_request>` and `<issue_description>`. Identify the exact injection point.\n" +
+               "3. **Initial Baseline**: Use `send_http1_request` to send a benign request and observe normal behavior.\n" +
+               "4. **Active Probing**: Send 2-3 payload variations using `send_http1_request`. Analyze responses for anomalies.\n" +
+               "5. **Detection & WAF Bypass (if blocked)**: \n" +
+               "   - If app returns 403, 406, or 501, fingerprint the WAF via headers\n" +
+               "   - Try: URL encoding, double encoding, hex, unicode, base64\n" +
+               "   - Try: SQL comments `/**/`, null bytes `%00`, newline injections\n" +
+               "   - Try: `X-Forwarded-For: 127.0.0.1`, `X-Originating-IP` headers\n" +
+               "   - Try: Different `Content-Type` values\n" +
+               "6. **Final Validation**:\n" +
+               "   - If confirmed: Use `create_repeater_tab` with the winning HTTP/1.1 request\n" +
+               "   - Tab naming: `[VALIDATED] {VULN_CLASS} - {ENDPOINT}`\n" +
+               "   - If discarded: Explain why it's a False Positive\n\n" +
                "# OUTPUT REQUIREMENTS\n" +
-               "For each test performed, document:\n" +
-               "- **Test Case**: What are you testing? (Baseline, Payload X, WAF Bypass Y)\n" +
-               "- **Payload**: The exact string used.\n" +
-               "- **Observation**: What changed in the response compared to the original?\n" +
-               "- **Conclusion**: Confirmed / Not Vulnerable / Needs Further Investigation.\n\n" +
-               "If a WAF was encountered, you MUST include a **\"Bypass Log\"** detailing the Blocked Payload, Bypass Technique, and Successful Payload.\n\n" +
+               "For each test, document:\n" +
+               "- **Test Case**: What are you testing?\n" +
+               "- **Payload**: Exact string used\n" +
+               "- **Observation**: Changes compared to baseline\n" +
+               "- **Conclusion**: Confirmed / Not Vulnerable / Needs Investigation\n\n" +
                "---\n" +
                "<issue_context>\n" +
                "Title: {TITLE}\n" +
@@ -826,6 +870,11 @@ public class ConfiguracionAPI {
         snapshot.promptConfigurable = this.promptConfigurable;
         snapshot.promptModificado = this.promptModificado;
         snapshot.ignorarErroresSSL = this.ignorarErroresSSL;
+        snapshot.soloProxy = this.soloProxy;
+        snapshot.agenteFactoryDroidHabilitado = this.agenteFactoryDroidHabilitado;
+        snapshot.agenteFactoryDroidBinario = this.agenteFactoryDroidBinario;
+        snapshot.agenteFactoryDroidPrompt = this.agenteFactoryDroidPrompt;
+        snapshot.agenteFactoryDroidDelay = this.agenteFactoryDroidDelay;
 
         snapshot.apiKeysPorProveedor = new HashMap<>(this.apiKeysPorProveedor);
         snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
@@ -859,6 +908,7 @@ public class ConfiguracionAPI {
         this.agenteFactoryDroidHabilitado = origen.agenteFactoryDroidHabilitado;
         this.agenteFactoryDroidBinario = origen.agenteFactoryDroidBinario;
         this.agenteFactoryDroidPrompt = origen.agenteFactoryDroidPrompt;
+        this.agenteFactoryDroidDelay = origen.agenteFactoryDroidDelay;
 
         this.apiKeysPorProveedor = new HashMap<>(origen.apiKeysPorProveedor);
         this.urlsBasePorProveedor = new HashMap<>(origen.urlsBasePorProveedor);

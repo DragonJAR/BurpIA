@@ -9,9 +9,6 @@ import com.burpia.ExtensionBurpIA;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.TitledBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -57,14 +54,7 @@ public class PanelHallazgos extends JPanel {
     private volatile boolean guardadoAutomaticoIssuesActivo = true;
     private Consumer<Boolean> manejadorCambioGuardadoIssues;
     private boolean actualizandoEstadoAutoIssues = false;
-    private JPopupMenu menuContextual;
-    private JMenuItem menuItemRepeater;
-    private JMenuItem menuItemIntruder;
-    private JMenuItem menuItemScanner;
-    private JMenuItem menuItemIssues;
-    private JMenuItem menuItemIgnorar;
-    private JMenuItem menuItemBorrar;
-    private JMenuItem menuItemDroid;
+
     private com.burpia.config.ConfiguracionAPI config;
     private Consumer<Hallazgo> manejadorEnviarADroid;
     private final ExecutorService ejecutorAcciones;
@@ -99,16 +89,8 @@ public class PanelHallazgos extends JPanel {
 
         panelFiltros = new JPanel();
         panelFiltros.setLayout(new BoxLayout(panelFiltros, BoxLayout.Y_AXIS));
-        panelFiltros.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Hallazgos.TITULO_FILTROS(),
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelFiltros.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Hallazgos.TITULO_FILTROS(), 12, 16));
 
         JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
 
@@ -159,16 +141,8 @@ public class PanelHallazgos extends JPanel {
         panelSuperior.add(panelFiltros, BorderLayout.CENTER);
 
         panelGuardarProyecto = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
-        panelGuardarProyecto.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO(),
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelGuardarProyecto.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO(), 12, 16));
         chkGuardarEnIssues = new JCheckBox(obtenerEtiquetaGuardadoIssues());
         chkGuardarEnIssues.setSelected(true);
         chkGuardarEnIssues.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -186,20 +160,13 @@ public class PanelHallazgos extends JPanel {
         panelSuperior.add(panelGuardarProyecto, BorderLayout.EAST);
 
         panelTablaWrapper = new JPanel(new BorderLayout());
-        panelTablaWrapper.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Hallazgos.TITULO_TABLA(),
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelTablaWrapper.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Hallazgos.TITULO_TABLA(), 12, 16));
 
         tabla.setAutoCreateRowSorter(true);
         tabla.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         tabla.setRowHeight(EstilosUI.ALTURA_FILA_TABLA);
+        tabla.setFillsViewportHeight(true);
         tabla.setFont(EstilosUI.FUENTE_TABLA);
         tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
         sorter = new TableRowSorter<>(modelo);
@@ -227,10 +194,7 @@ public class PanelHallazgos extends JPanel {
         botonLimpiarTodo.addActionListener(e -> {
             int total = modelo.getRowCount();
             if (total == 0) {
-                JOptionPane.showMessageDialog(this,
-                    I18nUI.Hallazgos.MSG_SIN_HALLAZGOS_LIMPIAR(),
-                    I18nUI.Hallazgos.TITULO_INFORMACION(),
-                    JOptionPane.INFORMATION_MESSAGE);
+                UIUtils.mostrarInfo(this, I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_SIN_HALLAZGOS_LIMPIAR());
                 return;
             }
 
@@ -441,93 +405,6 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void crearMenuContextual() {
-        menuContextual = new JPopupMenu();
-
-        menuItemRepeater = crearMenuItemContextual(
-            I18nUI.Hallazgos.MENU_ENVIAR_REPEATER(),
-            I18nUI.Tooltips.Hallazgos.MENU_REPEATER(),
-            e -> enviarARepeater(tabla.getSelectedRows())
-        );
-        menuContextual.add(menuItemRepeater);
-
-        menuItemIntruder = crearMenuItemContextual(
-            I18nUI.Hallazgos.MENU_ENVIAR_INTRUDER(),
-            I18nUI.Tooltips.Hallazgos.MENU_INTRUDER(),
-            e -> enviarAIntruder(tabla.getSelectedRows())
-        );
-        menuContextual.add(menuItemIntruder);
-
-        if (esBurpProfessional) {
-            menuItemScanner = crearMenuItemContextual(
-                I18nUI.Hallazgos.MENU_ENVIAR_SCANNER(),
-                I18nUI.Tooltips.Hallazgos.MENU_SCANNER(),
-                e -> enviarAScanner(tabla.getSelectedRows())
-            );
-            menuContextual.add(menuItemScanner);
-        } else {
-            menuItemScanner = null;
-        }
-
-        menuItemDroid = crearMenuItemContextual(
-            I18nUI.Hallazgos.MENU_ENVIAR_FACTORY_DROID_ROCKET(),
-            I18nUI.Hallazgos.TOOLTIP_ENVIAR_FACTORY_DROID(),
-            e -> enviarADroid(tabla.getSelectedRows())
-        );
-        menuContextual.add(menuItemDroid);
-
-        menuItemIssues = crearMenuItemContextual(
-            obtenerEtiquetaMenuIssues(),
-            obtenerTooltipMenuIssues(),
-            e -> enviarAIssues(tabla.getSelectedRows())
-        );
-        menuItemIssues.setEnabled(integracionIssuesDisponible);
-        menuContextual.add(menuItemIssues);
-
-        menuContextual.addSeparator();
-
-        menuItemIgnorar = crearMenuItemContextual(
-            I18nUI.Hallazgos.MENU_IGNORAR(),
-            I18nUI.Tooltips.Hallazgos.MENU_IGNORAR(),
-            e -> {
-                int[] filas = tabla.getSelectedRows();
-                if (filas.length > 0) {
-                    int confirmacion = JOptionPane.showConfirmDialog(
-                        PanelHallazgos.this,
-                        I18nUI.Hallazgos.MSG_CONFIRMAR_IGNORAR(filas.length),
-                        I18nUI.Hallazgos.TITULO_CONFIRMAR_IGNORAR(),
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.QUESTION_MESSAGE
-                    );
-                    if (confirmacion == JOptionPane.YES_OPTION) {
-                        ignorarHallazgos(filas);
-                    }
-                }
-            }
-        );
-        menuContextual.add(menuItemIgnorar);
-
-        menuItemBorrar = crearMenuItemContextual(
-            I18nUI.Hallazgos.MENU_BORRAR(),
-            I18nUI.Tooltips.Hallazgos.MENU_BORRAR(),
-            e -> {
-                int[] filas = tabla.getSelectedRows();
-                if (filas.length > 0) {
-                    int confirmacion = JOptionPane.showConfirmDialog(
-                        PanelHallazgos.this,
-                        I18nUI.Hallazgos.MSG_CONFIRMAR_BORRAR(filas.length),
-                        I18nUI.Hallazgos.TITULO_CONFIRMAR_BORRAR(),
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE
-                    );
-                    if (confirmacion == JOptionPane.YES_OPTION) {
-                        borrarHallazgosDeTabla(filas);
-                    }
-                }
-            }
-        );
-        menuContextual.add(menuItemBorrar);
-        actualizarVisibilidadMenuIssues();
-
         tabla.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -567,36 +444,106 @@ public class PanelHallazgos extends JPanel {
         }
     }
 
+    private void abrirDialogoCreacion() {
+        Window windowAncestral = SwingUtilities.getWindowAncestor(this);
+        DialogoDetalleHallazgo dialogo = new DialogoDetalleHallazgo(windowAncestral, null, nuevoHallazgo -> {
+            modelo.agregarHallazgo(nuevoHallazgo);
+        });
+        dialogo.setVisible(true);
+    }
+
     private void mostrarMenuContextualSiAplica(MouseEvent e) {
         if (!e.isPopupTrigger()) {
             return;
         }
-        if (menuContextual == null) {
-            return;
-        }
         int fila = tabla.rowAtPoint(e.getPoint());
-        if (fila < 0) {
-            return;
-        }
-        if (!tabla.isRowSelected(fila)) {
+        if (fila >= 0 && !tabla.isRowSelected(fila)) {
             if (!e.isControlDown()) {
                 tabla.setRowSelectionInterval(fila, fila);
             } else {
                 tabla.addRowSelectionInterval(fila, fila);
             }
         }
-        actualizarVisibilidadMenuIssues();
-        menuContextual.show(tabla, e.getX(), e.getY());
+        JPopupMenu menu = construirMenuContextualDinamico();
+        menu.show(tabla, e.getX(), e.getY());
     }
 
-    private void actualizarVisibilidadMenuIssues() {
-        if (menuItemIssues != null) {
-            menuItemIssues.setVisible(!integracionIssuesDisponible || !guardadoAutomaticoIssuesActivo);
-            menuItemIssues.setEnabled(integracionIssuesDisponible);
+    private JPopupMenu construirMenuContextualDinamico() {
+        JPopupMenu menu = new JPopupMenu();
+        menu.add(crearMenuItemContextual(
+            I18nUI.Hallazgos.MENU_AGREGAR_HALLAZGO(),
+            I18nUI.Tooltips.Hallazgos.MENU_AGREGAR_HALLAZGO(),
+            e -> abrirDialogoCreacion()
+        ));
+
+        boolean tieneSeleccion = tabla.getSelectedRowCount() > 0;
+        if (!tieneSeleccion) {
+            return menu;
         }
-        if (menuItemDroid != null) {
-            boolean droidHabilitado = config != null && config.agenteFactoryDroidHabilitado();
-            menuItemDroid.setVisible(droidHabilitado && manejadorEnviarADroid != null);
+
+        menu.addSeparator();
+        menu.add(crearMenuItemContextual(
+            I18nUI.Hallazgos.MENU_ENVIAR_REPEATER(),
+            I18nUI.Tooltips.Hallazgos.MENU_REPEATER(),
+            e -> enviarARepeater(tabla.getSelectedRows())
+        ));
+        menu.add(crearMenuItemContextual(
+            I18nUI.Hallazgos.MENU_ENVIAR_INTRUDER(),
+            I18nUI.Tooltips.Hallazgos.MENU_INTRUDER(),
+            e -> enviarAIntruder(tabla.getSelectedRows())
+        ));
+        if (esBurpProfessional) {
+            menu.add(crearMenuItemContextual(
+                I18nUI.Hallazgos.MENU_ENVIAR_SCANNER(),
+                I18nUI.Tooltips.Hallazgos.MENU_SCANNER(),
+                e -> enviarAScanner(tabla.getSelectedRows())
+            ));
+        }
+        if (config != null && config.agenteFactoryDroidHabilitado() && manejadorEnviarADroid != null) {
+            menu.add(crearMenuItemContextual(
+                I18nUI.Hallazgos.MENU_ENVIAR_FACTORY_DROID_ROCKET(),
+                I18nUI.Tooltips.Hallazgos.ENVIAR_FACTORY_DROID(),
+                e -> enviarADroid(tabla.getSelectedRows())
+            ));
+        }
+        if (integracionIssuesDisponible && !guardadoAutomaticoIssuesActivo) {
+            menu.add(crearMenuItemContextual(
+                obtenerEtiquetaMenuIssues(),
+                obtenerTooltipMenuIssues(),
+                e -> enviarAIssues(tabla.getSelectedRows())
+            ));
+        }
+
+        menu.addSeparator();
+        menu.add(crearMenuItemContextual(
+            I18nUI.Hallazgos.MENU_IGNORAR(),
+            I18nUI.Tooltips.Hallazgos.MENU_IGNORAR(),
+            e -> confirmarYEjecutar(
+                I18nUI.Hallazgos.MSG_CONFIRMAR_IGNORAR(tabla.getSelectedRowCount()),
+                I18nUI.Hallazgos.TITULO_CONFIRMAR_IGNORAR(),
+                JOptionPane.QUESTION_MESSAGE,
+                () -> ignorarHallazgos(tabla.getSelectedRows())
+            )
+        ));
+        menu.add(crearMenuItemContextual(
+            I18nUI.Hallazgos.MENU_BORRAR(),
+            I18nUI.Tooltips.Hallazgos.MENU_BORRAR(),
+            e -> confirmarYEjecutar(
+                I18nUI.Hallazgos.MSG_CONFIRMAR_BORRAR(tabla.getSelectedRowCount()),
+                I18nUI.Hallazgos.TITULO_CONFIRMAR_BORRAR(),
+                JOptionPane.WARNING_MESSAGE,
+                () -> borrarHallazgosDeTabla(tabla.getSelectedRows())
+            )
+        ));
+        return menu;
+    }
+
+    private void confirmarYEjecutar(String mensaje, String titulo, int tipoMensaje, Runnable accion) {
+        int confirmacion = JOptionPane.showConfirmDialog(
+            this, mensaje, titulo, JOptionPane.YES_NO_OPTION, tipoMensaje
+        );
+        if (confirmacion == JOptionPane.YES_OPTION) {
+            accion.run();
         }
     }
 
@@ -607,7 +554,6 @@ public class PanelHallazgos extends JPanel {
         if (!integracionIssuesDisponible) {
             aplicarEstadoGuardadoAutomaticoIssues(false, false);
         }
-        actualizarVisibilidadMenuIssues();
     }
 
     private String obtenerEtiquetaGuardadoIssues() {
@@ -708,12 +654,7 @@ public class PanelHallazgos extends JPanel {
 
     private void enviarAIssues(int[] filas) {
         if (!integracionIssuesDisponible) {
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
-                PanelHallazgos.this,
-                I18nUI.Hallazgos.MSG_ISSUES_SOLO_PRO(),
-                I18nUI.Hallazgos.TITULO_INFORMACION(),
-                JOptionPane.INFORMATION_MESSAGE
-            ));
+            UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ISSUES_SOLO_PRO());
             return;
         }
         ejecutarAccionBurp(
@@ -755,12 +696,7 @@ public class PanelHallazgos extends JPanel {
         List<EntradaAccion> entradas = captura.entradas;
         if (entradas.isEmpty()) {
             if (captura.totalIgnorados > 0) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
-                    PanelHallazgos.this,
-                    I18nUI.Hallazgos.MSG_ACCION_SOLO_IGNORADOS(captura.totalIgnorados),
-                    I18nUI.Hallazgos.TITULO_INFORMACION(),
-                    JOptionPane.INFORMATION_MESSAGE
-                ));
+                UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ACCION_SOLO_IGNORADOS(captura.totalIgnorados));
             }
             return;
         }
@@ -804,19 +740,19 @@ public class PanelHallazgos extends JPanel {
             final String detalleFinal = detalle.toString();
 
             SwingUtilities.invokeLater(() -> {
-                JOptionPane.showMessageDialog(
-                    PanelHallazgos.this,
-                    I18nUI.Hallazgos.MSG_RESULTADO_ACCION(
-                        resumen,
-                        totalExitosos,
-                        totalSeleccionados,
-                        totalSinRequest,
-                        totalIgnorados,
-                        detalleFinal
-                    ),
-                    titulo,
-                    totalExitosos > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE
+                final String mensajeFinal = I18nUI.Hallazgos.MSG_RESULTADO_ACCION(
+                    resumen,
+                    totalExitosos,
+                    totalSeleccionados,
+                    totalSinRequest,
+                    totalIgnorados,
+                    detalleFinal
                 );
+                if (totalExitosos > 0) {
+                    UIUtils.mostrarInfo(PanelHallazgos.this, titulo, mensajeFinal);
+                } else {
+                    UIUtils.mostrarAdvertencia(PanelHallazgos.this, titulo, mensajeFinal);
+                }
             });
         };
 
@@ -826,12 +762,7 @@ public class PanelHallazgos extends JPanel {
                 tarea.run();
             });
         } catch (RejectedExecutionException ex) {
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(
-                PanelHallazgos.this,
-                I18nUI.Hallazgos.ERROR_PANEL_CERRANDO(),
-                titulo,
-                JOptionPane.WARNING_MESSAGE
-            ));
+            UIUtils.mostrarAdvertencia(PanelHallazgos.this, titulo, I18nUI.Hallazgos.ERROR_PANEL_CERRANDO());
         }
     }
 
@@ -847,14 +778,7 @@ public class PanelHallazgos extends JPanel {
         }
 
         final int ignorados = filasModelo.length;
-        SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(
-                PanelHallazgos.this,
-                I18nUI.Hallazgos.MSG_HALLAZGOS_IGNORADOS(ignorados),
-                I18nUI.Hallazgos.TITULO_HALLAZGOS_IGNORADOS(),
-                JOptionPane.INFORMATION_MESSAGE
-            );
-        });
+        UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_HALLAZGOS_IGNORADOS(), I18nUI.Hallazgos.MSG_HALLAZGOS_IGNORADOS(ignorados));
     }
 
     private void borrarHallazgosDeTabla(int[] filas) {
@@ -867,14 +791,7 @@ public class PanelHallazgos extends JPanel {
             }
         }
 
-        SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(
-                PanelHallazgos.this,
-                I18nUI.Hallazgos.MSG_HALLAZGOS_BORRADOS(borrados[0]),
-                I18nUI.Hallazgos.TITULO_HALLAZGOS_BORRADOS(),
-                JOptionPane.INFORMATION_MESSAGE
-            );
-        });
+        UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_HALLAZGOS_BORRADOS(), I18nUI.Hallazgos.MSG_HALLAZGOS_BORRADOS(borrados[0]));
     }
 
     private int[] convertirFilasVistaAModelo(int[] filasVista) {
@@ -921,6 +838,16 @@ public class PanelHallazgos extends JPanel {
             }
             Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
             HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
+            if (solicitud == null && hallazgo != null) {
+                String url = hallazgo.obtenerUrl();
+                if (url != null && !url.isBlank()) {
+                    try {
+                        solicitud = HttpRequest.httpRequestFromUrl(url);
+                    } catch (Exception ignored) {
+                        solicitud = null;
+                    }
+                }
+            }
             String urlReferencia = hallazgo != null
                 ? hallazgo.obtenerUrl()
                 : I18nUI.Hallazgos.URL_DESCONOCIDA();
@@ -960,7 +887,7 @@ public class PanelHallazgos extends JPanel {
         botonExportarJSON.setText(I18nUI.Hallazgos.BOTON_EXPORTAR_JSON());
         botonLimpiarTodo.setText(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
         chkGuardarEnIssues.setText(obtenerEtiquetaGuardadoIssues());
-        actualizarPrimeraOpcionSeveridad();
+        actualizarOpcionesSeveridadIdioma();
 
         etiquetaBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
@@ -971,35 +898,7 @@ public class PanelHallazgos extends JPanel {
         botonLimpiarTodo.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
         chkGuardarEnIssues.setToolTipText(obtenerTooltipGuardadoIssues());
         tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
-        if (menuItemRepeater != null) {
-            menuItemRepeater.setText(I18nUI.Hallazgos.MENU_ENVIAR_REPEATER());
-            menuItemRepeater.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_REPEATER());
-        }
-        if (menuItemIntruder != null) {
-            menuItemIntruder.setText(I18nUI.Hallazgos.MENU_ENVIAR_INTRUDER());
-            menuItemIntruder.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_INTRUDER());
-        }
-        if (menuItemScanner != null) {
-            menuItemScanner.setText(I18nUI.Hallazgos.MENU_ENVIAR_SCANNER());
-            menuItemScanner.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_SCANNER());
-        }
-        if (menuItemIssues != null) {
-            menuItemIssues.setText(obtenerEtiquetaMenuIssues());
-            menuItemIssues.setToolTipText(obtenerTooltipMenuIssues());
-        }
-        if (menuItemDroid != null) {
-            menuItemDroid.setText(I18nUI.Hallazgos.MENU_ENVIAR_FACTORY_DROID_ROCKET());
-            menuItemDroid.setToolTipText(I18nUI.Hallazgos.TOOLTIP_ENVIAR_FACTORY_DROID());
-        }
-        if (menuItemIgnorar != null) {
-            menuItemIgnorar.setText(I18nUI.Hallazgos.MENU_IGNORAR());
-            menuItemIgnorar.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_IGNORAR());
-        }
-        if (menuItemBorrar != null) {
-            menuItemBorrar.setText(I18nUI.Hallazgos.MENU_BORRAR());
-            menuItemBorrar.setToolTipText(I18nUI.Tooltips.Hallazgos.MENU_BORRAR());
-        }
-        actualizarVisibilidadMenuIssues();
+
 
         actualizarTituloPanel(panelFiltros, I18nUI.Hallazgos.TITULO_FILTROS());
         actualizarTituloPanel(panelGuardarProyecto, I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO());
@@ -1017,13 +916,20 @@ public class PanelHallazgos extends JPanel {
         repaint();
     }
 
-    private void actualizarPrimeraOpcionSeveridad() {
-        boolean estabaSeleccionadoPrimero = comboSeveridad.getSelectedIndex() == 0;
-        comboSeveridad.removeItemAt(0);
-        comboSeveridad.insertItemAt(I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES(), 0);
-        if (estabaSeleccionadoPrimero || comboSeveridad.getSelectedIndex() < 0) {
-            comboSeveridad.setSelectedIndex(0);
-        }
+    private void actualizarOpcionesSeveridadIdioma() {
+        int indiceSeleccionado = comboSeveridad.getSelectedIndex();
+        DefaultComboBoxModel<String> nuevoModelo = new DefaultComboBoxModel<>(new String[]{
+            I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES(),
+            I18nUI.Hallazgos.SEVERIDAD_CRITICAL(),
+            I18nUI.Hallazgos.SEVERIDAD_HIGH(),
+            I18nUI.Hallazgos.SEVERIDAD_MEDIUM(),
+            I18nUI.Hallazgos.SEVERIDAD_LOW(),
+            I18nUI.Hallazgos.SEVERIDAD_INFO()
+        });
+        comboSeveridad.setModel(nuevoModelo);
+
+        int indiceSeguro = Math.max(0, Math.min(indiceSeleccionado, nuevoModelo.getSize() - 1));
+        comboSeveridad.setSelectedIndex(indiceSeguro);
     }
 
     private void configurarSorters() {
@@ -1072,13 +978,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void actualizarTituloPanel(JPanel panel, String titulo) {
-        Border borde = panel.getBorder();
-        if (borde instanceof CompoundBorder) {
-            Border bordeExterno = ((CompoundBorder) borde).getOutsideBorder();
-            if (bordeExterno instanceof TitledBorder) {
-                ((TitledBorder) bordeExterno).setTitle(titulo);
-            }
-        }
+        UIUtils.actualizarTituloPanel(panel, titulo);
     }
 
     public ModeloTablaHallazgos obtenerModelo() {
@@ -1116,7 +1016,7 @@ public class PanelHallazgos extends JPanel {
                 actualizandoEstadoAutoIssues = false;
             }
         }
-        actualizarVisibilidadMenuIssues();
+
         if (notificarCambio && manejadorCambioGuardadoIssues != null) {
             manejadorCambioGuardadoIssues.accept(activoNormalizado);
         }

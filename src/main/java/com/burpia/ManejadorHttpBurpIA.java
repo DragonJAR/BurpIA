@@ -28,15 +28,11 @@ import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.DeduplicadorSolicitudes;
 import javax.swing.*;
 import java.io.PrintWriter;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -189,7 +185,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent solicitudAEnviar) {
-        rastrear("Solicitud a enviar: " + solicitudAEnviar.method() + " " + solicitudAEnviar.url());
+        if (capturaActiva && config.esDetallado()) {
+            rastrear("Solicitud a enviar: " + solicitudAEnviar.method() + " " + solicitudAEnviar.url());
+        }
         return RequestToBeSentAction.continueWith(solicitudAEnviar);
     }
 
@@ -219,6 +217,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         int codigoEstado = respuestaRecibida.statusCode();
 
+        if (config.soloProxy() && !respuestaRecibida.toolSource().isFromTool(ToolType.PROXY)) {
+            return ResponseReceivedAction.continueWith(respuestaRecibida);
+        }
+
         if (estadisticas != null) {
             estadisticas.incrementarTotalSolicitudes();
         }
@@ -226,12 +228,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         rastrear("Respuesta recibida: " + metodo + " " + url + " (estado: " + codigoEstado + ")");
 
         if (!estaEnScope(respuestaRecibida.initiatingRequest())) {
-            rastrear("FUERA DE SCOPE - Omitiendo: " + url);
-            return ResponseReceivedAction.continueWith(respuestaRecibida);
-        }
-
-        if (config.soloProxy() && !respuestaRecibida.toolSource().isFromTool(ToolType.PROXY)) {
-            rastrear("SOLO PROXY ACTIVADO - Omitiendo peticion de: " + respuestaRecibida.toolSource().toolType().name() + " para " + url);
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -257,10 +253,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        String cadenaSolicitud = respuestaRecibida.initiatingRequest().toString();
-        if (cadenaSolicitud == null || cadenaSolicitud.isEmpty()) {
-            cadenaSolicitud = metodo + " " + url;
-        }
+        String cadenaSolicitud = metodo + " " + url;
 
         String encabezados = HttpUtils.extraerEncabezados(respuestaRecibida.initiatingRequest());
         String cuerpo = HttpUtils.extraerCuerpo(respuestaRecibida.initiatingRequest());
@@ -636,30 +629,19 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     private boolean estaEnScope(HttpRequest solicitud) {
         if (solicitud == null) {
-            rastrear("Solicitud null, no se puede verificar scope");
             return false;
         }
 
         try {
             String url = solicitud.url();
             if (url == null || url.isEmpty()) {
-                rastrear("URL null o vacia, no se puede verificar scope");
                 return false;
             }
 
             if (api != null && api.scope() != null) {
-                boolean enScope = api.scope().isInScope(url);
-
-                if (!enScope) {
-                    rastrear("URL fuera de scope: " + url);
-                } else {
-                    rastrear("URL dentro de scope: " + url);
-                }
-
-                return enScope;
+                return api.scope().isInScope(url);
             }
 
-            rastrear("API de scope no disponible, omitiendo solicitud por seguridad");
             return false;
 
         } catch (Exception e) {
@@ -717,13 +699,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     private void registrarInterno(String mensaje, GestorConsolaGUI.TipoLog tipo, boolean error, String prefijoSalida) {
         String mensajeSeguro = mensaje != null ? mensaje : "";
+        if (gestorConsola != null) {
+            gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
+            return;
+        }
+        String prefijoLocalizado = I18nLogs.tr(prefijoSalida);
+        String mensajeLocalizado = prefijoLocalizado + I18nLogs.tr(mensajeSeguro);
         synchronized (logLock) {
-            if (gestorConsola != null) {
-                gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
-                return;
-            }
-            String prefijoLocalizado = I18nLogs.tr(prefijoSalida);
-            escribirSalida(error, prefijoLocalizado + I18nLogs.tr(mensajeSeguro));
+            escribirSalida(error, mensajeLocalizado);
         }
     }
 

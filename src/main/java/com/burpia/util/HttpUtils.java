@@ -2,7 +2,6 @@ package com.burpia.util;
 
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collections;
@@ -36,48 +35,54 @@ public final class HttpUtils {
 
     }
 
-    public static String generarHash(byte[] datos) {
+    private static final ThreadLocal<MessageDigest> SHA256_LOCAL = ThreadLocal.withInitial(() -> {
         try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            if (datos != null && datos.length > 0) {
-                md.update(datos);
-            }
-            return convertirDigestHex(md.digest());
+            return MessageDigest.getInstance("SHA-256");
         } catch (Exception e) {
-            throw new RuntimeException("Error al generar hash SHA-256", e);
+            throw new RuntimeException("SHA-256 no disponible", e);
         }
+    });
+
+    private static MessageDigest obtenerSha256() {
+        MessageDigest md = SHA256_LOCAL.get();
+        md.reset();
+        return md;
+    }
+
+    public static String generarHash(byte[] datos) {
+        MessageDigest md = obtenerSha256();
+        if (datos != null && datos.length > 0) {
+            md.update(datos);
+        }
+        return convertirDigestHex(md.digest());
     }
 
     public static String generarHashPartes(String... partes) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            if (partes != null) {
-                for (String parte : partes) {
-                    if (parte != null && !parte.isEmpty()) {
-                        md.update(parte.getBytes(StandardCharsets.UTF_8));
-                    }
-                    md.update((byte) 0); 
+        MessageDigest md = obtenerSha256();
+        if (partes != null) {
+            for (String parte : partes) {
+                if (parte != null && !parte.isEmpty()) {
+                    md.update(parte.getBytes(StandardCharsets.UTF_8));
                 }
+                md.update((byte) 0); 
             }
-            return convertirDigestHex(md.digest());
-        } catch (Exception e) {
-            throw new RuntimeException("Error al generar hash SHA-256", e);
         }
+        return convertirDigestHex(md.digest());
     }
+
+    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
 
     public static String convertirDigestHex(byte[] hash) {
         if (hash == null) {
             return "";
         }
-        StringBuilder cadenaHexadecimal = new StringBuilder();
-        for (byte b : hash) {
-            String hex = Integer.toHexString(0xff & b);
-            if (hex.length() == 1) {
-                cadenaHexadecimal.append('0');
-            }
-            cadenaHexadecimal.append(hex);
+        char[] hexChars = new char[hash.length * 2];
+        for (int j = 0; j < hash.length; j++) {
+            int v = hash[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
         }
-        return cadenaHexadecimal.toString();
+        return new String(hexChars);
     }
 
     public static String extraerEncabezados(HttpRequest solicitud) {
@@ -85,7 +90,7 @@ public final class HttpUtils {
             return "[SOLICITUD NULL]";
         }
 
-        StringBuilder encabezados = new StringBuilder();
+        StringBuilder encabezados = new StringBuilder(512);
         String metodo = solicitud.method();
         String url = solicitud.url();
 
@@ -115,7 +120,7 @@ public final class HttpUtils {
             return "[RESPUESTA NULL]";
         }
 
-        StringBuilder encabezados = new StringBuilder();
+        StringBuilder encabezados = new StringBuilder(512);
         String version = respuesta.httpVersion() != null ? respuesta.httpVersion() : "HTTP/1.1";
         encabezados.append(version)
                    .append(" ")

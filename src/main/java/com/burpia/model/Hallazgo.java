@@ -4,6 +4,7 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstilosUI;
 import java.awt.Color;
+import java.util.Locale;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -148,8 +149,7 @@ public class Hallazgo {
     }
 
     public static int obtenerPrioridadSeveridad(String severidad) {
-        if (severidad == null) return 0;
-        switch (severidad) {
+        switch (normalizarSeveridadParaPrioridad(severidad)) {
             case SEVERIDAD_CRITICAL: return 5;
             case SEVERIDAD_HIGH:     return 4;
             case SEVERIDAD_MEDIUM:   return 3;
@@ -164,8 +164,7 @@ public class Hallazgo {
     }
 
     public static Color obtenerColorSeveridad(String severidad) {
-        if (severidad == null) return Color.GRAY;
-        switch (severidad) {
+        switch (normalizarSeveridadParaPrioridad(severidad)) {
             case SEVERIDAD_CRITICAL: return EstilosUI.COLOR_CRITICAL;
             case SEVERIDAD_HIGH:     return EstilosUI.COLOR_HIGH;
             case SEVERIDAD_MEDIUM:   return EstilosUI.COLOR_MEDIUM;
@@ -176,8 +175,7 @@ public class Hallazgo {
     }
 
     public static int obtenerPrioridadConfianza(String confianza) {
-        if (confianza == null) return 0;
-        switch (confianza) {
+        switch (normalizarConfianzaParaPrioridad(confianza)) {
             case CONFIANZA_ALTA:  return 3;
             case CONFIANZA_MEDIA: return 2;
             case CONFIANZA_BAJA:  return 1;
@@ -186,8 +184,7 @@ public class Hallazgo {
     }
 
     public static Color obtenerColorConfianza(String confianza) {
-        if (confianza == null) return Color.GRAY;
-        switch (confianza) {
+        switch (normalizarConfianzaParaPrioridad(confianza)) {
             case CONFIANZA_ALTA:  return EstilosUI.COLOR_LOW;    
             case CONFIANZA_MEDIA: return EstilosUI.COLOR_MEDIUM; 
             case CONFIANZA_BAJA:  return EstilosUI.COLOR_HIGH;   
@@ -214,7 +211,7 @@ public class Hallazgo {
             return SEVERIDAD_INFO;
         }
 
-        String valor = severidad.trim().toLowerCase();
+        String valor = severidad.trim().toLowerCase(Locale.ROOT);
         if (valor.contains("critical") || valor.contains("critica")) {
             return SEVERIDAD_CRITICAL;
         }
@@ -235,7 +232,7 @@ public class Hallazgo {
             return CONFIANZA_MEDIA;
         }
 
-        String valor = confianza.trim().toLowerCase();
+        String valor = confianza.trim().toLowerCase(Locale.ROOT);
         if (valor.contains("high") || valor.contains("alta") || valor.contains("certain")) {
             return CONFIANZA_ALTA;
         }
@@ -246,5 +243,45 @@ public class Hallazgo {
             return CONFIANZA_MEDIA;
         }
         return CONFIANZA_MEDIA;
+    }
+
+    private static String normalizarSeveridadParaPrioridad(String severidad) {
+        if (severidad == null || severidad.trim().isEmpty()) {
+            return "";
+        }
+        String valor = severidad.trim().toLowerCase(Locale.ROOT);
+        if (valor.contains("critical") || valor.contains("crítica") || valor.contains("critica")) {
+            return SEVERIDAD_CRITICAL;
+        }
+        if (valor.contains("high") || valor.contains("alta") || valor.contains("severa")) {
+            return SEVERIDAD_HIGH;
+        }
+        if (valor.contains("medium") || valor.contains("media") || valor.contains("moderada")) {
+            return SEVERIDAD_MEDIUM;
+        }
+        if (valor.contains("low") || valor.contains("baja")) {
+            return SEVERIDAD_LOW;
+        }
+        if (valor.contains("info") || valor.contains("inform")) {
+            return SEVERIDAD_INFO;
+        }
+        return "";
+    }
+
+    private static String normalizarConfianzaParaPrioridad(String confianza) {
+        if (confianza == null || confianza.trim().isEmpty()) {
+            return "";
+        }
+        String valor = confianza.trim().toLowerCase(Locale.ROOT);
+        if (valor.contains("high") || valor.contains("alta") || valor.contains("certain")) {
+            return CONFIANZA_ALTA;
+        }
+        if (valor.contains("medium") || valor.contains("media") || valor.contains("firm")) {
+            return CONFIANZA_MEDIA;
+        }
+        if (valor.contains("low") || valor.contains("baja") || valor.contains("tentative")) {
+            return CONFIANZA_BAJA;
+        }
+        return "";
     }
 }

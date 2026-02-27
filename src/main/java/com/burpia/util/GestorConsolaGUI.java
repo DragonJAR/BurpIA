@@ -28,6 +28,7 @@ public class GestorConsolaGUI {
     private final ConcurrentLinkedQueue<EntradaLog> colaPendiente;
     private final AtomicBoolean flushProgramado;
     private final AtomicInteger logsPendientes;
+    private final AtomicInteger versionCambios;
     private static final int MAXIMO_CARACTERES = 200_000;
     private static final int MAXIMO_BACKLOG_SIN_CONSOLA = 5000;
 
@@ -47,6 +48,7 @@ public class GestorConsolaGUI {
         this.colaPendiente = new ConcurrentLinkedQueue<>();
         this.flushProgramado = new AtomicBoolean(false);
         this.logsPendientes = new AtomicInteger(0);
+        this.versionCambios = new AtomicInteger(0);
     }
 
     public void establecerConsola(JTextPane consola) {
@@ -265,22 +267,10 @@ public class GestorConsolaGUI {
                 contadorInfo.incrementAndGet();
                 break;
         }
+        versionCambios.incrementAndGet();
     }
 
-    private void decrementarContador(TipoLog tipo) {
-        switch (tipo) {
-            case VERBOSE:
-                contadorVerbose.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
-                break;
-            case ERROR:
-                contadorError.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
-                break;
-            case INFO:
-            default:
-                contadorInfo.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
-                break;
-        }
-    }
+    public int obtenerVersion() { return versionCambios.get(); }
 
     private void agregarPendiente(EntradaLog entrada) {
         colaPendiente.add(entrada);
@@ -298,7 +288,11 @@ public class GestorConsolaGUI {
                 return;
             }
             logsPendientes.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
-            decrementarContador(eliminado.tipo);
+            switch (eliminado.tipo) {
+                case VERBOSE: contadorVerbose.updateAndGet(v -> v > 0 ? v - 1 : 0); break;
+                case ERROR: contadorError.updateAndGet(v -> v > 0 ? v - 1 : 0); break;
+                default: contadorInfo.updateAndGet(v -> v > 0 ? v - 1 : 0); break;
+            }
         }
     }
 

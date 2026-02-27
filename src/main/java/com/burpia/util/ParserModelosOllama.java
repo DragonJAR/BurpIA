@@ -19,7 +19,12 @@ public final class ParserModelosOllama {
             return resultado;
         }
 
-        JsonElement raiz = JsonParser.parseString(json);
+        JsonElement raiz;
+        try {
+            raiz = JsonParser.parseString(json);
+        } catch (Exception ignored) {
+            return resultado;
+        }
         if (!raiz.isJsonObject()) {
             return resultado;
         }
@@ -50,11 +55,15 @@ public final class ParserModelosOllama {
 
     private static String obtenerCampoTexto(JsonObject objeto, String campo) {
         JsonElement valor = objeto.get(campo);
-        if (valor == null || valor.isJsonNull()) {
+        if (valor == null || valor.isJsonNull() || !valor.isJsonPrimitive()) {
             return "";
         }
-        String texto = valor.getAsString();
-        return texto != null ? texto.trim() : "";
+        try {
+            String texto = valor.getAsString();
+            return texto != null ? texto.trim() : "";
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 
     private static boolean esModeloValido(String modelo) {

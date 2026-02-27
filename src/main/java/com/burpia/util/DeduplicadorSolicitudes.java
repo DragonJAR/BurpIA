@@ -98,6 +98,8 @@ public class DeduplicadorSolicitudes {
             Map.Entry<String, Long> entry = it.next();
             if (ahora - entry.getValue() > ttlMillis) {
                 it.remove();
+            } else {
+                break;
             }
         }
         ultimoBarridoMillis = ahora;

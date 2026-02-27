@@ -3,9 +3,6 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
 import com.burpia.util.GestorTareas;
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -27,6 +24,7 @@ public class PanelTareas extends JPanel {
     private JPanel panelControles;
     private JPanel panelTablaWrapper;
     private Function<String, Boolean> manejadorReintento;
+    private volatile int ultimaVersionTareas = -1;
 
     private static final int UMBRAL_RESPONSIVE = 800;
 
@@ -44,16 +42,8 @@ public class PanelTareas extends JPanel {
 
         panelControles = new JPanel();
         panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
-        panelControles.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Tareas.TITULO_CONTROLES(),
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelControles.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Tareas.TITULO_CONTROLES(), 12, 16));
 
         JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5)) {
             private boolean ultimoLayoutHorizontal = true;
@@ -99,16 +89,8 @@ public class PanelTareas extends JPanel {
         panelControles.add(panelTodosControles);
 
         panelTablaWrapper = new JPanel(new BorderLayout());
-        panelTablaWrapper.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Tareas.TITULO_LISTA(),
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelTablaWrapper.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Tareas.TITULO_LISTA(), 12, 16));
 
         tabla.setAutoCreateRowSorter(true);
         tabla.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -128,12 +110,7 @@ public class PanelTareas extends JPanel {
             } else if (estadisticas.activasSinPausadas > 0) {
                 gestorTareas.pausarTodasActivas();
             } else {
-                JOptionPane.showMessageDialog(
-                    this,
-                    I18nUI.Tareas.INFO_SIN_TAREAS_GESTIONAR(),
-                    I18nUI.Tareas.TITULO_INFORMACION(),
-                    JOptionPane.INFORMATION_MESSAGE
-                );
+                UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_GESTIONAR());
             }
             actualizarEstadisticas();
         });
@@ -143,12 +120,7 @@ public class PanelTareas extends JPanel {
             int activas = estadisticas.activas;
 
             if (activas == 0) {
-                JOptionPane.showMessageDialog(
-                    this,
-                    I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR(),
-                    I18nUI.Tareas.TITULO_INFORMACION(),
-                    JOptionPane.INFORMATION_MESSAGE
-                );
+                UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
                 return;
             }
 
@@ -170,12 +142,7 @@ public class PanelTareas extends JPanel {
             int completadas = estadisticas.finalizadas;
 
             if (completadas == 0) {
-                JOptionPane.showMessageDialog(
-                    this,
-                    I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR(),
-                    I18nUI.Tareas.TITULO_INFORMACION(),
-                    JOptionPane.INFORMATION_MESSAGE
-                );
+                UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
                 return;
             }
 
@@ -264,12 +231,7 @@ public class PanelTareas extends JPanel {
             menuItemVerDetalles.setToolTipText(I18nUI.Tooltips.Tareas.MENU_VER_DETALLES_ERROR());
             menuItemVerDetalles.addActionListener(e -> {
                 String mensaje = I18nUI.Tareas.MSG_DETALLES_ERROR(seleccion.url, seleccion.duracion, estado);
-                JOptionPane.showMessageDialog(
-                    PanelTareas.this,
-                    mensaje,
-                    I18nUI.Tareas.TITULO_DETALLES_ERROR(),
-                    JOptionPane.ERROR_MESSAGE
-                );
+                UIUtils.mostrarError(PanelTareas.this, I18nUI.Tareas.TITULO_DETALLES_ERROR(), mensaje);
             });
             menu.add(menuItemVerDetalles);
         }
@@ -567,17 +529,19 @@ public class PanelTareas extends JPanel {
     }
 
     private void mostrarMensaje(String mensaje) {
-        SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(
-                PanelTareas.this,
-                mensaje,
-                I18nUI.Tareas.TITULO_INFORMACION(),
-                JOptionPane.INFORMATION_MESSAGE
-            );
-        });
+        UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), mensaje);
     }
 
     private void actualizarEstadisticas() {
+        actualizarEstadisticas(false);
+    }
+
+    private void actualizarEstadisticas(boolean forzar) {
+        int versionActual = modelo.obtenerVersion();
+        if (!forzar && versionActual == ultimaVersionTareas) {
+            return;
+        }
+        ultimaVersionTareas = versionActual;
         SwingUtilities.invokeLater(() -> {
             EstadisticasTareas estadisticas = calcularEstadisticasTareas();
 
@@ -609,7 +573,7 @@ public class PanelTareas extends JPanel {
         actualizarTituloPanel(panelTablaWrapper, I18nUI.Tareas.TITULO_LISTA());
         modelo.refrescarColumnasIdioma();
         SwingUtilities.invokeLater(this::configurarColumnasTabla);
-        actualizarEstadisticas();
+        actualizarEstadisticas(true);
         revalidate();
         repaint();
     }
@@ -628,17 +592,7 @@ public class PanelTareas extends JPanel {
     }
 
     private void actualizarTituloPanel(JPanel panel, String titulo) {
-        if (panel == null) {
-            return;
-        }
-        Border borde = panel.getBorder();
-        if (!(borde instanceof CompoundBorder)) {
-            return;
-        }
-        Border externo = ((CompoundBorder) borde).getOutsideBorder();
-        if (externo instanceof TitledBorder) {
-            ((TitledBorder) externo).setTitle(titulo);
-        }
+        UIUtils.actualizarTituloPanel(panel, titulo);
     }
 
     public void agregarTarea(Tarea tarea) {

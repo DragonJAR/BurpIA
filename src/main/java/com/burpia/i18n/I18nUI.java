@@ -442,6 +442,10 @@ public final class I18nUI {
             return tr("🗑️ Borrar", "🗑️ Delete");
         }
 
+        public static String MENU_AGREGAR_HALLAZGO() {
+            return tr("➕ Agregar hallazgo", "➕ Add finding");
+        }
+
         public static String MSG_CONFIRMAR_IGNORAR(int total) {
             if (total == 1) {
                 return tr("¿Ignorar este hallazgo?", "Ignore this finding?");
@@ -586,9 +590,7 @@ public final class I18nUI {
             return tr("🚀 Enviar a Factory Droid", "🚀 Send to Factory Droid");
         }
 
-        public static String TOOLTIP_ENVIAR_FACTORY_DROID() {
-            return tr("Enviar contexto del hallazgo al agente interactivo", "Send finding context to interactive agent");
-        }
+
 
         public static String SUFIJO_ENVIADO_INTRUDER() {
             return tr("(enviado a Intruder)", "(sent to Intruder)");
@@ -708,25 +710,16 @@ public final class I18nUI {
             return tr("Reiniciar", "Restart");
         }
 
-        public static String TOOLTIP_REINICIAR() {
-            return tr("Reiniciar la consola subyacente", "Restart underlying console");
-        }
-
         public static String BOTON_CTRL_C() {
             return tr("Ctrl+C", "Ctrl+C");
         }
-
-        public static String TOOLTIP_CTRL_C() {
-            return tr("Enviar señal de interrupción (SIGINT)", "Send interrupt signal (SIGINT)");
-        }
         
         public static String ETIQUETA_DELAY() {
-            return tr("Delay inicial (ms):", "Initial delay (ms):");
+            return tr("⏱️ Espera MCP (ms):", "⏱️ MCP Wait (ms):");
         }
 
-        public static String TOOLTIP_DELAY() {
-            return tr("Tiempo de espera en milisegundos antes de inyectar el prompt inicial (mín 1000ms)", 
-                      "Wait time in milliseconds before injecting the initial prompt (min 1000ms)");
+        public static String BOTON_INYECTAR_PAYLOAD() {
+            return tr("Inyectar Payload", "Inject Payload");
         }
 
         public static String TAG_RASTREO() {
@@ -858,17 +851,7 @@ public final class I18nUI {
             return tr("Ignorar errores de certificado SSL (No recomendado)", "Ignore SSL certificate errors (Not recommended)");
         }
 
-        public static String TOOLTIP_IGNORAR_SSL() {
-            return tr("Habilita esto si obtienes errores de PKIX o certificados al conectar con la API", "Enable this if you get PKIX or certificate errors when connecting to the API");
-        }
 
-        public static String LABEL_SOLO_PROXY() {
-            return tr("Capturar solo peticiones del Proxy (Navegador)", "Capture only Proxy requests (Browser)");
-        }
-
-        public static String TOOLTIP_SOLO_PROXY() {
-            return tr("Ignora peticiones del Intruder, Scanner, Repeater u otras herramientas de Burp", "Ignore requests from Intruder, Scanner, Repeater, or other Burp tools");
-        }
 
         public static String LABEL_SEGURIDAD_SSL() {
             return tr("Seguridad SSL:", "SSL Security:");
@@ -878,8 +861,8 @@ public final class I18nUI {
             return tr("Filtro de Herramientas:", "Tool Filtering:");
         }
 
-        public static String TOOLTIP_RESTAURAR_PROMPT() {
-            return tr("Restaura la plantilla por defecto recomendada para el Agente", "Restores the default template recommended for the Agent");
+        public static String LABEL_SOLO_PROXY() {
+            return tr("Capturar solo peticiones del Proxy (Navegador)", "Capture only Proxy requests (Browser)");
         }
 
         public static String MSG_CORRIGE_CAMPOS() {
@@ -1160,6 +1143,8 @@ public final class I18nUI {
                 return tr("Ruta del Binario:", "Binary Path:");
             }
 
+
+
             public static String TITULO_PROMPT_AGENTE() {
                 return tr("✍️ PROMPT DEL AGENTE", "✍️ AGENT PROMPT");
             }
@@ -1296,7 +1281,7 @@ public final class I18nUI {
         }
 
         public static String ITEM_ANALIZAR_SOLICITUD() {
-            return tr("Analizar Solicitud con BurpIA", "Analyze Request with BurpIA");
+            return tr("⚡️ Analizar Solicitud con BurpIA", "⚡️ Analyze Request with BurpIA");
         }
 
         public static String MENU_ENVIAR_FACTORY_DROID() {
@@ -1367,6 +1352,11 @@ public final class I18nUI {
         public static String CONSOLA() {
             return I18nUI.tr("Consulta logs operativos y de diagnóstico del complemento.",
                 "Review extension operational and diagnostic logs.");
+        }
+
+        public static String AGENTE_FACTORY_DROID() {
+            return I18nUI.tr("Terminal interactiva del agente Factory Droid (pentesting asistido por IA).",
+                "Factory Droid agent interactive terminal (AI-assisted pentesting).");
         }
     }
 
@@ -1592,6 +1582,16 @@ public final class I18nUI {
             return I18nUI.tr("Elimina hallazgos seleccionados de la tabla.",
                 "Delete selected findings from table.");
         }
+
+        public static String MENU_AGREGAR_HALLAZGO() {
+            return I18nUI.tr("Crea un hallazgo manual con URL, severidad y descripción personalizados.",
+                "Create a manual finding with custom URL, severity and description.");
+        }
+
+        public static String ENVIAR_FACTORY_DROID() {
+            return I18nUI.tr("Enviar contexto del hallazgo al agente interactivo.",
+                "Send finding context to interactive agent.");
+        }
     }
 
     public static final class Consola {
@@ -1711,6 +1711,68 @@ public final class I18nUI {
         public static String SITIO_AUTOR() {
             return I18nUI.tr("Abre el sitio web oficial del autor del proyecto.",
                 "Open the project author's official website.");
+        }
+
+        public static String IGNORAR_SSL() {
+            return I18nUI.tr("Habilita esto si obtienes errores de PKIX o certificados al conectar con la API.",
+                "Enable this if you get PKIX or certificate errors when connecting to the API.");
+        }
+
+        public static String SOLO_PROXY() {
+            return I18nUI.tr("Ignora peticiones del Intruder, Scanner, Repeater u otras herramientas de Burp.",
+                "Ignore requests from Intruder, Scanner, Repeater, or other Burp tools.");
+        }
+
+        public static String RESTAURAR_PROMPT_AGENTE() {
+            return I18nUI.tr("Restaura la plantilla por defecto recomendada para el Agente.",
+                "Restores the default template recommended for the Agent.");
+        }
+
+        public static String HABILITAR_AGENTE() {
+            return I18nUI.tr("Activa o desactiva el agente Factory Droid para pentesting asistido por IA.",
+                "Enable or disable the Factory Droid agent for AI-assisted pentesting.");
+        }
+
+        public static String BINARIO_AGENTE() {
+            return I18nUI.tr("Ruta al ejecutable del agente Factory Droid (droid).",
+                "Path to the Factory Droid agent binary (droid).");
+        }
+
+        public static String PROMPT_AGENTE() {
+            return I18nUI.tr("Prompt de sistema enviado al agente Factory Droid al iniciar.",
+                "System prompt sent to the Factory Droid agent on startup.");
+        }
+
+        public static String IDIOMA() {
+            return I18nUI.tr("Cambia el idioma de toda la interfaz de BurpIA.",
+                "Switch the language for the entire BurpIA interface.");
+        }
+    }
+
+    public static final class FactoryDroid {
+        private FactoryDroid() {
+        }
+
+        public static String REINICIAR() {
+            return I18nUI.tr("Reiniciar la consola subyacente del agente.",
+                "Restart the agent's underlying console.");
+        }
+
+        public static String CTRL_C() {
+            return I18nUI.tr("Enviar señal de interrupción (SIGINT) al proceso activo.",
+                "Send interrupt signal (SIGINT) to the active process.");
+        }
+
+        public static String DELAY() {
+            return I18nUI.tr(
+                "Espera (ms) para que los MCPs estén en verde e inyectar el prompt inicial. Varía según la máquina.",
+                "Wait (ms) for MCPs to turn green and inject the initial prompt. Varies by machine."
+            );
+        }
+
+        public static String INYECTAR_PAYLOAD() {
+            return I18nUI.tr("Inyectar el prompt inicial de descubrimiento MCP al terminal.",
+                "Inject the MCP discovery initial prompt to the terminal.");
         }
     }
 

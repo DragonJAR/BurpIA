@@ -84,12 +84,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             if (GraphicsEnvironment.isHeadless()) {
                 return;
             }
-            JOptionPane.showMessageDialog(
-                null,
-                I18nUI.Contexto.MSG_ANALISIS_INICIADO(),
-                I18nUI.Contexto.TITULO_ANALISIS_INICIADO(),
-                JOptionPane.INFORMATION_MESSAGE
-            );
+            UIUtils.mostrarInfo(null, I18nUI.Contexto.TITULO_ANALISIS_INICIADO(), I18nUI.Contexto.MSG_ANALISIS_INICIADO());
         });
     }
 

@@ -6,7 +6,10 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ReparadorJson {
+public final class ReparadorJson {
+
+    private ReparadorJson() {
+    }
 
     public static String repararJson(String jsonPotencial) {
         if (jsonPotencial == null || jsonPotencial.trim().isEmpty()) {
@@ -14,39 +17,28 @@ public class ReparadorJson {
         }
 
         String resultado = jsonPotencial.trim();
+
         if (esJsonValido(resultado)) {
             return resultado;
         }
 
         resultado = eliminarMarkdownCodeBlocks(resultado);
-        if (esJsonValido(resultado)) {
-            return resultado;
-        }
+        if (esJsonValido(resultado)) return resultado;
 
         resultado = extraerPrimerObjetoJson(resultado);
-        if (esJsonValido(resultado)) {
-            return resultado;
-        }
+        if (esJsonValido(resultado)) return resultado;
 
         resultado = repararComillasEscapadas(resultado);
-        if (esJsonValido(resultado)) {
-            return resultado;
-        }
+        if (esJsonValido(resultado)) return resultado;
 
         resultado = eliminarContenidoExtra(resultado);
-        if (esJsonValido(resultado)) {
-            return resultado;
-        }
+        if (esJsonValido(resultado)) return resultado;
 
         resultado = repararComas(resultado);
-        if (esJsonValido(resultado)) {
-            return resultado;
-        }
+        if (esJsonValido(resultado)) return resultado;
 
         resultado = extraerParesClaveValor(resultado);
-        if (esJsonValido(resultado)) {
-            return resultado;
-        }
+        if (esJsonValido(resultado)) return resultado;
 
         return null;
     }
@@ -57,6 +49,7 @@ public class ReparadorJson {
         }
 
         json = json.trim();
+
         if (!json.startsWith("{") && !json.startsWith("[")) {
             return false;
         }
@@ -69,19 +62,28 @@ public class ReparadorJson {
         }
     }
 
+    private static final Pattern MARKDOWN_CODE_BLOCK_JSON_PATTERN = Pattern.compile("(?m)^```json\\s*");
+    private static final Pattern MARKDOWN_CODE_BLOCK_START_PATTERN = Pattern.compile("(?m)^```\\s*");
+    private static final Pattern MARKDOWN_CODE_BLOCK_END_PATTERN = Pattern.compile("(?m)```$");
+
     private static String eliminarMarkdownCodeBlocks(String texto) {
-        texto = texto.replaceAll("(?m)^```json\\s*", "");
-        texto = texto.replaceAll("(?m)^```\\s*", "");
-
-        texto = texto.replaceAll("(?m)```$", "");
-
-        return texto.trim();
+        String res = MARKDOWN_CODE_BLOCK_JSON_PATTERN.matcher(texto).replaceAll("");
+        res = MARKDOWN_CODE_BLOCK_START_PATTERN.matcher(res).replaceAll("");
+        res = MARKDOWN_CODE_BLOCK_END_PATTERN.matcher(res).replaceAll("");
+        return res.trim();
     }
 
     private static String extraerPrimerObjetoJson(String texto) {
-        int inicio = texto.indexOf('{');
-        if (inicio == -1) {
-            inicio = texto.indexOf('[');
+        int inicioObjeto = texto.indexOf('{');
+        int inicioArreglo = texto.indexOf('[');
+
+        int inicio = -1;
+        if (inicioObjeto != -1 && inicioArreglo != -1) {
+            inicio = Math.min(inicioObjeto, inicioArreglo);
+        } else if (inicioObjeto != -1) {
+            inicio = inicioObjeto;
+        } else {
+            inicio = inicioArreglo;
         }
 
         if (inicio == -1) {
@@ -180,12 +182,13 @@ public class ReparadorJson {
         return texto;
     }
 
+    private static final Pattern COMILLA_ESCAPE_PATTERN = Pattern.compile(",\\s*([\\]}])");
+    private static final Pattern DOBLE_COMILLA_PATTERN = Pattern.compile("\"\\s+\"");
+
     private static String repararComas(String texto) {
-        texto = texto.replaceAll(",\\s*([\\]}])", "$1");
-
-        texto = texto.replaceAll("\"\\s+\"", "\", \"");
-
-        return texto;
+        String res = COMILLA_ESCAPE_PATTERN.matcher(texto).replaceAll("$1");
+        res = DOBLE_COMILLA_PATTERN.matcher(res).replaceAll("\", \"");
+        return res;
     }
 
     private static String extraerParesClaveValor(String texto) {
@@ -220,5 +223,4 @@ public class ReparadorJson {
 
         return json.toString();
     }
-
 }

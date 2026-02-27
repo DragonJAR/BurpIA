@@ -50,6 +50,8 @@ public class PestaniaPrincipal extends JPanel {
             tabbedPane.addTab(I18nUI.Pestanias.AGENTE_FACTORY_DROID(), panelFactoryDroid);
         }
         tabbedPane.addTab(I18nUI.Pestanias.CONSOLA(), panelConsola);
+        tabbedPane.setSelectedComponent(panelConsola);
+        aplicarTooltipsPestanias();
         aplicarIdioma();
 
         add(panelEstadisticas, BorderLayout.NORTH);
@@ -91,6 +93,7 @@ public class PestaniaPrincipal extends JPanel {
             } else {
                 tabbedPane.addTab(I18nUI.Pestanias.AGENTE_FACTORY_DROID(), panelFactoryDroid);
             }
+            panelFactoryDroid.reinyectarPromptInicial();
         } else if (!habilitado && index != -1) {
             tabbedPane.removeTabAt(index);
         }
@@ -100,6 +103,17 @@ public class PestaniaPrincipal extends JPanel {
         int index = tabbedPane.indexOfComponent(panelFactoryDroid);
         if (index != -1) {
             tabbedPane.setSelectedIndex(index);
+            
+            new Timer(150, e -> {
+                ((Timer) e.getSource()).stop();
+                SwingUtilities.invokeLater(() -> {
+                    Window window = SwingUtilities.getWindowAncestor(this);
+                    if (window != null) {
+                        window.toFront();
+                    }
+                    panelFactoryDroid.enfocarTerminal();
+                });
+            }).start();
         }
     }
 
@@ -157,6 +171,18 @@ public class PestaniaPrincipal extends JPanel {
             else if (c == panelHallazgos) tabbedPane.setTitleAt(i, I18nUI.Pestanias.HALLAZGOS());
             else if (c == panelConsola) tabbedPane.setTitleAt(i, I18nUI.Pestanias.CONSOLA());
             else if (c == panelFactoryDroid) tabbedPane.setTitleAt(i, I18nUI.Pestanias.AGENTE_FACTORY_DROID());
+        }
+        aplicarTooltipsPestanias();
+    }
+
+    private void aplicarTooltipsPestanias() {
+        int totalTabs = tabbedPane.getTabCount();
+        for (int i = 0; i < totalTabs; i++) {
+            Component c = tabbedPane.getComponentAt(i);
+            if (c == panelTareas) tabbedPane.setToolTipTextAt(i, I18nUI.Tooltips.Pestanias.TAREAS());
+            else if (c == panelHallazgos) tabbedPane.setToolTipTextAt(i, I18nUI.Tooltips.Pestanias.HALLAZGOS());
+            else if (c == panelConsola) tabbedPane.setToolTipTextAt(i, I18nUI.Tooltips.Pestanias.CONSOLA());
+            else if (c == panelFactoryDroid) tabbedPane.setToolTipTextAt(i, I18nUI.Tooltips.Pestanias.AGENTE_FACTORY_DROID());
         }
     }
 

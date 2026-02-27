@@ -126,16 +126,8 @@ public class DialogoConfiguracion extends JDialog {
 
         JPanel panelEjecucion = new JPanel(new GridBagLayout());
         panelEjecucion.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelEjecucion.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Configuracion.TITULO_AJUSTES_USUARIO(),
-                javax.swing.border.TitledBorder.LEFT,
-                javax.swing.border.TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelEjecucion.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.TITULO_AJUSTES_USUARIO(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
@@ -158,12 +150,13 @@ public class DialogoConfiguracion extends JDialog {
         chkDetallado = new JCheckBox(I18nUI.Configuracion.CHECK_DETALLADO());
         chkDetallado.setToolTipText(I18nUI.Tooltips.Configuracion.DETALLADO());
         chkIgnorarSSL = new JCheckBox(I18nUI.Configuracion.LABEL_IGNORAR_SSL());
-        chkIgnorarSSL.setToolTipText(I18nUI.Configuracion.TOOLTIP_IGNORAR_SSL());
+        chkIgnorarSSL.setToolTipText(I18nUI.Tooltips.Configuracion.IGNORAR_SSL());
         chkSoloProxy = new JCheckBox(I18nUI.Configuracion.LABEL_SOLO_PROXY());
-        chkSoloProxy.setToolTipText(I18nUI.Configuracion.TOOLTIP_SOLO_PROXY());
+        chkSoloProxy.setToolTipText(I18nUI.Tooltips.Configuracion.SOLO_PROXY());
 
         comboIdioma = new JComboBox<>(IdiomaUI.values());
         comboIdioma.setFont(EstilosUI.FUENTE_ESTANDAR);
+        comboIdioma.setToolTipText(I18nUI.Tooltips.Configuracion.IDIOMA());
 
         gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0;
         panelEjecucion.add(new JLabel(I18nUI.Configuracion.LABEL_IDIOMA()), gbc);
@@ -209,16 +202,8 @@ public class DialogoConfiguracion extends JDialog {
 
     private JPanel crearPanelProveedor() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Configuracion.TITULO_PROVEEDOR(),
-                javax.swing.border.TitledBorder.LEFT,
-                javax.swing.border.TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panel.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.TITULO_PROVEEDOR(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
@@ -321,16 +306,8 @@ public class DialogoConfiguracion extends JDialog {
         panel.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
         JPanel panelInstrucciones = new JPanel(new BorderLayout(0, 8));
-        panelInstrucciones.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(new Color(120, 140, 255), 1),
-                I18nUI.Configuracion.TITULO_INSTRUCCIONES(),
-                javax.swing.border.TitledBorder.LEFT,
-                javax.swing.border.TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelInstrucciones.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.TITULO_INSTRUCCIONES(), 12, 16));
         panelInstrucciones.setBackground(new Color(244, 248, 255));
 
         JTextArea txtInstrucciones = new JTextArea();
@@ -361,16 +338,8 @@ public class DialogoConfiguracion extends JDialog {
         panel.add(panelInstrucciones, BorderLayout.NORTH);
 
         JPanel panelEditor = new JPanel(new BorderLayout());
-        panelEditor.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Configuracion.TITULO_PROMPT_ANALISIS(),
-                javax.swing.border.TitledBorder.LEFT,
-                javax.swing.border.TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelEditor.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.TITULO_PROMPT_ANALISIS(), 12, 16));
 
         txtPrompt = new JTextArea();
         txtPrompt.setFont(EstilosUI.FUENTE_TABLA);
@@ -443,16 +412,8 @@ public class DialogoConfiguracion extends JDialog {
 
         JPanel panelFactoryDroid = new JPanel(new GridBagLayout());
         panelFactoryDroid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelFactoryDroid.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Configuracion.Agentes.TITULO_FACTORY_DROID(),
-                javax.swing.border.TitledBorder.LEFT,
-                javax.swing.border.TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelFactoryDroid.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.Agentes.TITULO_FACTORY_DROID(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6, 6, 6, 6);
@@ -468,15 +429,18 @@ public class DialogoConfiguracion extends JDialog {
         txtAgenteFactoryDroidPrompt.setLineWrap(true);
         txtAgenteFactoryDroidPrompt.setWrapStyleWord(true);
         JScrollPane scrollPromptAgente = new JScrollPane(txtAgenteFactoryDroidPrompt);
+        txtAgenteFactoryDroidPrompt.setToolTipText(I18nUI.Tooltips.Configuracion.PROMPT_AGENTE());
 
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         panelFactoryDroid.add(chkAgenteFactoryDroidHabilitado, gbc);
+        chkAgenteFactoryDroidHabilitado.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_AGENTE());
 
         gbc.gridwidth = 1;
         gbc.gridy = 1;
         panelFactoryDroid.add(new JLabel(I18nUI.Configuracion.Agentes.LABEL_RUTA_BINARIO()), gbc);
         gbc.gridx = 1; gbc.weightx = 1.0;
         panelFactoryDroid.add(txtAgenteFactoryDroidBinario, gbc);
+        txtAgenteFactoryDroidBinario.setToolTipText(I18nUI.Tooltips.Configuracion.BINARIO_AGENTE());
 
         gbc.gridx = 0; gbc.gridy = 2; gbc.gridwidth = 2; gbc.weightx = 1.0;
         panelFactoryDroid.add(new JLabel(I18nUI.Configuracion.Agentes.TITULO_PROMPT_AGENTE()), gbc);
@@ -486,7 +450,7 @@ public class DialogoConfiguracion extends JDialog {
 
         btnRestaurarPromptAgente = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
         btnRestaurarPromptAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
-        btnRestaurarPromptAgente.setToolTipText(I18nUI.Configuracion.TOOLTIP_RESTAURAR_PROMPT());
+        btnRestaurarPromptAgente.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_AGENTE());
         btnRestaurarPromptAgente.addActionListener(e -> txtAgenteFactoryDroidPrompt.setText(ConfiguracionAPI.obtenerAgenteFactoryDroidPromptPorDefecto()));
 
         JPanel panelSurAgente = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
@@ -526,16 +490,8 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panelDescripcion = new JPanel(new BorderLayout());
         panelDescripcion.setAlignmentX(Component.CENTER_ALIGNMENT);
         panelDescripcion.setMaximumSize(new Dimension(760, Integer.MAX_VALUE));
-        panelDescripcion.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.Configuracion.TITULO_RESUMEN(),
-                javax.swing.border.TitledBorder.LEFT,
-                javax.swing.border.TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelDescripcion.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.TITULO_RESUMEN(), 12, 16));
 
         JTextArea descripcion = new JTextArea();
         descripcion.setEditable(false);
@@ -578,20 +534,10 @@ public class DialogoConfiguracion extends JDialog {
                         new java.net.URI("https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica")
                     );
                 } else {
-                    JOptionPane.showMessageDialog(
-                        DialogoConfiguracion.this,
-                        I18nUI.Configuracion.MSG_URL(),
-                        I18nUI.Configuracion.TITULO_ENLACE(),
-                        JOptionPane.INFORMATION_MESSAGE
-                    );
+                    UIUtils.mostrarInfo(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ENLACE(), I18nUI.Configuracion.MSG_URL());
                 }
             } catch (Exception ex) {
-                JOptionPane.showMessageDialog(
-                    DialogoConfiguracion.this,
-                    I18nUI.Configuracion.MSG_ERROR_ABRIR_NAVEGADOR(ex.getMessage()),
-                    I18nUI.Configuracion.TITULO_ERROR(),
-                    JOptionPane.ERROR_MESSAGE
-                );
+                UIUtils.mostrarError(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ERROR(), I18nUI.Configuracion.MSG_ERROR_ABRIR_NAVEGADOR(ex.getMessage()));
             }
         });
 
@@ -686,19 +632,13 @@ public class DialogoConfiguracion extends JDialog {
 
     private void guardarConfiguracion() {
         if (!txtPrompt.getText().contains("{REQUEST}")) {
-            JOptionPane.showMessageDialog(this,
-                    I18nUI.Configuracion.MSG_ERROR_PROMPT_SIN_REQUEST(),
-                    I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
-                    JOptionPane.ERROR_MESSAGE);
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(), I18nUI.Configuracion.MSG_ERROR_PROMPT_SIN_REQUEST());
             return;
         }
 
         String proveedorSeleccionado = (String) comboProveedor.getSelectedItem();
         if (proveedorSeleccionado == null || proveedorSeleccionado.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                I18nUI.Configuracion.MSG_SELECCIONA_PROVEEDOR(),
-                I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
-                JOptionPane.ERROR_MESSAGE);
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(), I18nUI.Configuracion.MSG_SELECCIONA_PROVEEDOR());
             return;
         }
 
@@ -741,10 +681,7 @@ public class DialogoConfiguracion extends JDialog {
         Integer maximoHallazgos = parsearEntero(txtMaximoHallazgosTabla.getText());
         Integer timeoutModelo = parsearEntero(txtTimeoutModelo.getText());
         if (retraso == null || maximoConcurrente == null || maximoHallazgos == null || timeoutModelo == null) {
-            JOptionPane.showMessageDialog(this,
-                I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO(),
-                I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
-                JOptionPane.ERROR_MESSAGE);
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(), I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO());
             return;
         }
 
@@ -768,10 +705,7 @@ public class DialogoConfiguracion extends JDialog {
 
         java.util.Map<String, String> erroresValidacion = configTemporal.validar();
         if (!erroresValidacion.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                construirMensajeErroresValidacion(erroresValidacion),
-                I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
-                JOptionPane.ERROR_MESSAGE);
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(), construirMensajeErroresValidacion(erroresValidacion));
             return;
         }
 
@@ -779,13 +713,7 @@ public class DialogoConfiguracion extends JDialog {
         boolean guardado = gestorConfig.guardarConfiguracion(configTemporal, errorMsg);
 
         if (!guardado) {
-            JOptionPane.showMessageDialog(this,
-                I18nUI.Configuracion.MSG_ERROR_GUARDAR_CONFIG(
-                    errorMsg.toString(),
-                    gestorConfig.obtenerRutaConfiguracion()
-                ),
-                I18nUI.Configuracion.TITULO_ERROR_GUARDAR(),
-                JOptionPane.ERROR_MESSAGE);
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_GUARDAR(), I18nUI.Configuracion.MSG_ERROR_GUARDAR_CONFIG(errorMsg.toString(), gestorConfig.obtenerRutaConfiguracion()));
             return;
         }
 
@@ -888,16 +816,10 @@ public class DialogoConfiguracion extends JDialog {
                         throw new IllegalStateException(I18nUI.Configuracion.ERROR_API_SIN_MODELOS(proveedorSeleccionado));
                     }
                     cargarModelosEnCombo(modelos, modelos.get(0));
-                    JOptionPane.showMessageDialog(DialogoConfiguracion.this,
-                        I18nUI.Configuracion.MSG_MODELOS_ACTUALIZADOS(modelos.size(), proveedorSeleccionado),
-                        I18nUI.Configuracion.TITULO_MODELOS_ACTUALIZADOS(),
-                        JOptionPane.INFORMATION_MESSAGE);
+                    UIUtils.mostrarInfo(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_MODELOS_ACTUALIZADOS(), I18nUI.Configuracion.MSG_MODELOS_ACTUALIZADOS(modelos.size(), proveedorSeleccionado));
                 } catch (Exception e) {
                     String detalleError = extraerMensajeError(e);
-                    JOptionPane.showMessageDialog(DialogoConfiguracion.this,
-                        I18nUI.Configuracion.MSG_ERROR_PROCESAR_MODELOS(detalleError),
-                        I18nUI.Configuracion.TITULO_ERROR(),
-                        JOptionPane.ERROR_MESSAGE);
+                    UIUtils.mostrarError(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ERROR(), I18nUI.Configuracion.MSG_ERROR_PROCESAR_MODELOS(detalleError));
                 } finally {
                     btnRefrescarModelos.setEnabled(true);
                     btnRefrescarModelos.setText(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
@@ -1040,23 +962,13 @@ public class DialogoConfiguracion extends JDialog {
     private void probarConexion() {
         String proveedorSeleccionado = (String) comboProveedor.getSelectedItem();
         if (proveedorSeleccionado == null) {
-            JOptionPane.showMessageDialog(
-                this,
-                I18nUI.Configuracion.MSG_SELECCIONA_PROVEEDOR(),
-                I18nUI.Configuracion.TITULO_VALIDACION(),
-                JOptionPane.WARNING_MESSAGE
-            );
+            UIUtils.mostrarAdvertencia(this, I18nUI.Configuracion.TITULO_VALIDACION(), I18nUI.Configuracion.MSG_SELECCIONA_PROVEEDOR());
             return;
         }
 
         String urlApi = txtUrl.getText().trim();
         if (urlApi.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                this,
-                I18nUI.Configuracion.MSG_URL_VACIA(),
-                I18nUI.Configuracion.TITULO_VALIDACION(),
-                JOptionPane.WARNING_MESSAGE
-            );
+            UIUtils.mostrarAdvertencia(this, I18nUI.Configuracion.TITULO_VALIDACION(), I18nUI.Configuracion.MSG_URL_VACIA());
             txtUrl.requestFocus();
             return;
         }
@@ -1066,12 +978,7 @@ public class DialogoConfiguracion extends JDialog {
         ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedorSeleccionado);
         if (configProveedor != null && configProveedor.requiereClaveApi()) {
             if (claveApi.isEmpty()) {
-                JOptionPane.showMessageDialog(
-                    this,
-                    I18nUI.Configuracion.MSG_API_KEY_VACIA(proveedorSeleccionado),
-                    I18nUI.Configuracion.TITULO_VALIDACION(),
-                    JOptionPane.WARNING_MESSAGE
-                );
+                UIUtils.mostrarAdvertencia(this, I18nUI.Configuracion.TITULO_VALIDACION(), I18nUI.Configuracion.MSG_API_KEY_VACIA(proveedorSeleccionado));
                 txtClave.requestFocus();
                 return;
             }
@@ -1079,24 +986,14 @@ public class DialogoConfiguracion extends JDialog {
 
         String modeloAUsar = obtenerModeloSeleccionado();
         if (modeloAUsar.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                this,
-                I18nUI.Configuracion.MSG_SELECCIONA_MODELO(),
-                I18nUI.Configuracion.TITULO_VALIDACION(),
-                JOptionPane.WARNING_MESSAGE
-            );
+            UIUtils.mostrarAdvertencia(this, I18nUI.Configuracion.TITULO_VALIDACION(), I18nUI.Configuracion.MSG_SELECCIONA_MODELO());
             comboModelo.requestFocus();
             return;
         }
 
         Integer timeoutModelo = parsearEntero(txtTimeoutModelo.getText());
         if (timeoutModelo == null) {
-            JOptionPane.showMessageDialog(
-                this,
-                I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO(),
-                I18nUI.Configuracion.TITULO_VALIDACION(),
-                JOptionPane.WARNING_MESSAGE
-            );
+            UIUtils.mostrarAdvertencia(this, I18nUI.Configuracion.TITULO_VALIDACION(), I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO());
             txtTimeoutModelo.requestFocus();
             return;
         }
@@ -1138,20 +1035,13 @@ public class DialogoConfiguracion extends JDialog {
             protected void done() {
                 try {
                     ProbadorConexionAI.ResultadoPrueba resultado = get();
-                    int tipoMensaje = resultado.exito ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE;
-                    JOptionPane.showMessageDialog(
-                        DialogoConfiguracion.this,
-                        resultado.mensaje,
-                        resultado.exito ? I18nUI.Configuracion.TITULO_CONEXION_EXITOSA() : I18nUI.Configuracion.TITULO_ERROR_CONEXION(),
-                        tipoMensaje
-                    );
+                    if (resultado.exito) {
+                        UIUtils.mostrarInfo(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_CONEXION_EXITOSA(), resultado.mensaje);
+                    } else {
+                        UIUtils.mostrarError(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ERROR_CONEXION(), resultado.mensaje);
+                    }
                 } catch (Exception e) {
-                    JOptionPane.showMessageDialog(
-                        DialogoConfiguracion.this,
-                        I18nUI.Configuracion.MSG_ERROR_PRUEBA_INESPERADO(e.getMessage()),
-                        I18nUI.Configuracion.TITULO_ERROR(),
-                        JOptionPane.ERROR_MESSAGE
-                    );
+                    UIUtils.mostrarError(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ERROR(), I18nUI.Configuracion.MSG_ERROR_PRUEBA_INESPERADO(e.getMessage()));
                 } finally {
                     btnProbarConexion.setEnabled(true);
                     btnProbarConexion.setText(I18nUI.Configuracion.BOTON_PROBAR_CONEXION());

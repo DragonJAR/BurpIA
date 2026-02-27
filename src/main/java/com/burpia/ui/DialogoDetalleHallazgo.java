@@ -30,16 +30,8 @@ public class DialogoDetalleHallazgo extends JDialog {
         setLocationRelativeTo(getParent());
 
         JPanel panelContenido = new JPanel(new GridBagLayout());
-        panelContenido.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                I18nUI.DetalleHallazgo.TITULO_PANEL(),
-                javax.swing.border.TitledBorder.LEFT,
-                javax.swing.border.TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panelContenido.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.DetalleHallazgo.TITULO_PANEL(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
@@ -149,13 +141,16 @@ public class DialogoDetalleHallazgo extends JDialog {
     }
 
     private void cargarDatos() {
-        if (hallazgoOriginal != null) {
-            txtUrl.setText(hallazgoOriginal.obtenerUrl());
-            txtTitulo.setText(hallazgoOriginal.obtenerTitulo());
-            txtDescripcion.setText(hallazgoOriginal.obtenerHallazgo());
-            comboSeveridad.setSelectedItem(I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(hallazgoOriginal.obtenerSeveridad()));
-            comboConfianza.setSelectedItem(I18nUI.Hallazgos.TRADUCIR_CONFIANZA(hallazgoOriginal.obtenerConfianza()));
+        if (hallazgoOriginal == null) {
+            comboSeveridad.setSelectedItem(I18nUI.Hallazgos.SEVERIDAD_INFO());
+            comboConfianza.setSelectedItem(I18nUI.Hallazgos.CONFIANZA_MEDIA());
+            return;
         }
+        txtUrl.setText(hallazgoOriginal.obtenerUrl());
+        txtTitulo.setText(hallazgoOriginal.obtenerTitulo());
+        txtDescripcion.setText(hallazgoOriginal.obtenerHallazgo());
+        comboSeveridad.setSelectedItem(I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(hallazgoOriginal.obtenerSeveridad()));
+        comboConfianza.setSelectedItem(I18nUI.Hallazgos.TRADUCIR_CONFIANZA(hallazgoOriginal.obtenerConfianza()));
     }
 
     private void guardarYSalir() {
@@ -166,22 +161,22 @@ public class DialogoDetalleHallazgo extends JDialog {
         String nuevaConfianza = (String) comboConfianza.getSelectedItem();
 
         if (nuevaUrl.isEmpty() || nuevaDescripcion.isEmpty() || nuevoTitulo.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                I18nUI.DetalleHallazgo.MSG_VALIDACION(),
-                I18nUI.DetalleHallazgo.TITULO_ERROR_VALIDACION(),
-                JOptionPane.ERROR_MESSAGE);
+            UIUtils.mostrarError(this, I18nUI.DetalleHallazgo.TITULO_ERROR_VALIDACION(), I18nUI.DetalleHallazgo.MSG_VALIDACION());
             return;
         }
 
-        Hallazgo hallazgoEditado = hallazgoOriginal.editar(
-            nuevaUrl,
-            nuevoTitulo,
-            nuevaDescripcion,
-            nuevaSeveridad,
-            nuevaConfianza
-        );
+        Hallazgo resultado;
+        if (hallazgoOriginal != null) {
+            resultado = hallazgoOriginal.editar(nuevaUrl, nuevoTitulo, nuevaDescripcion, nuevaSeveridad, nuevaConfianza);
+        } else {
+            resultado = new Hallazgo(nuevaUrl, nuevoTitulo, nuevaDescripcion,
+                Hallazgo.normalizarSeveridad(nuevaSeveridad),
+                Hallazgo.normalizarConfianza(nuevaConfianza));
+        }
 
-        alGuardar.accept(hallazgoEditado);
+        if (alGuardar != null) {
+            alGuardar.accept(resultado);
+        }
         dispose();
     }
 }
