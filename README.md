@@ -3,9 +3,33 @@
 BurpIA es una extensión para Burp Suite que analiza tráfico HTTP con LLMs para ayudarte a detectar hallazgos potenciales de seguridad en menos tiempo.
 
 **Versión actual:** `1.0.1`
-![BurpIA en Español](src/assets/ES.png)
 
 English version: [README.en.md](README.en.md)
+
+---
+
+## Capturas clave
+
+### 1) Vista general de BurpIA (ES)
+![BurpIA en Español](src/assets/ES.png)
+
+- Muestra el tablero central con conteo de hallazgos por severidad y estado operativo.
+- Ayuda a ubicar rápidamente las pestañas principales: tareas, hallazgos, agente y consola.
+- Deja claro el flujo de trabajo desde detección hasta validación manual.
+
+### 2) Validación manual con agente
+![Consola del agente en BurpIA](src/assets/Agente.png)
+
+- Evidencia el flujo agéntico de pruebas dinámicas sobre tráfico HTTP real.
+- Permite ver baseline, payloads ejecutados, observaciones y hallazgos secundarios en una sola salida.
+- Facilita validar evidencia técnica antes de reportar un hallazgo.
+
+### 3) Hallazgos validados en Repeater
+![Hallazgos validados en Burp Repeater](src/assets/Fallos-Validados.png)
+
+- Demuestra cómo BurpIA deja trazabilidad de validaciones manuales en pestañas de Repeater.
+- Acelera el triage al mantener requests/responses reproducibles para cada caso validado.
+- Mejora la colaboración al dejar evidencia directa lista para revisión del equipo.
 
 ---
 
