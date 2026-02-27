@@ -238,7 +238,7 @@ public class ExtensionBurpIA implements BurpExtension {
         String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
 
         HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
-        String request = serializarSolicitudSiNecesario(prompt, evidencia);
+        String request = serializarSolicitudSiNecesario(prompt, evidencia, hallazgo.obtenerUrl());
         String response = serializarRespuestaSiNecesario(prompt, evidencia);
         String tituloValor = valorSeguro(hallazgo.obtenerTitulo());
         String resumenValor = valorSeguro(hallazgo.obtenerHallazgo());
@@ -296,10 +296,26 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private String serializarSolicitudSiNecesario(String prompt, HttpRequestResponse evidencia) {
+        return serializarSolicitudSiNecesario(prompt, evidencia, null);
+    }
+
+    private String serializarSolicitudSiNecesario(String prompt, HttpRequestResponse evidencia, String urlFallback) {
         if (!contieneToken(prompt, TOKEN_REQUEST) || evidencia == null || evidencia.request() == null) {
-            return "";
+            return serializarSolicitudFallbackDesdeUrl(prompt, urlFallback);
         }
         return evidencia.request().toString();
+    }
+
+    private String serializarSolicitudFallbackDesdeUrl(String prompt, String urlFallback) {
+        if (!contieneToken(prompt, TOKEN_REQUEST) || !tieneContenido(urlFallback)) {
+            return "";
+        }
+        try {
+            HttpRequest solicitudFallback = HttpRequest.httpRequestFromUrl(urlFallback);
+            return solicitudFallback != null ? solicitudFallback.toString() : "";
+        } catch (Exception ignored) {
+            return "";
+        }
     }
 
     private String serializarRespuestaSiNecesario(String prompt, HttpRequestResponse evidencia) {
