@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class PanelTareas extends JPanel {
     private final ModeloTablaTareas modelo;
@@ -380,16 +381,7 @@ public class PanelTareas extends JPanel {
     }
 
     private void reintentarTareas(List<TareaSeleccionada> seleccion) {
-        int contador = 0;
-        for (TareaSeleccionada tarea : seleccion) {
-            String estado = tarea.estado;
-            String tareaId = tarea.tareaId;
-            if (tareaId != null && (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado))) {
-                if (reencolarTarea(tareaId)) {
-                    contador++;
-                }
-            }
-        }
+        int contador = procesarSeleccion(seleccion, this::esEstadoReintentable, this::reencolarTarea);
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_REINTENTOS(contador));
     }
@@ -415,41 +407,25 @@ public class PanelTareas extends JPanel {
     }
 
     private void pausarTareas(List<TareaSeleccionada> seleccion) {
-        int contador = 0;
-        for (TareaSeleccionada tarea : seleccion) {
-            String estado = tarea.estado;
-            String tareaId = tarea.tareaId;
-            if (tareaId != null && (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado))) {
-                gestorTareas.pausarTarea(tareaId);
-                contador++;
-            }
-        }
+        int contador = procesarSeleccion(seleccion, this::esEstadoPausable, tareaId -> {
+            gestorTareas.pausarTarea(tareaId);
+            return true;
+        });
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_PAUSADAS(contador));
     }
 
     private void reanudarTareas(List<TareaSeleccionada> seleccion) {
-        int contador = 0;
-        for (TareaSeleccionada tarea : seleccion) {
-            String estado = tarea.estado;
-            String tareaId = tarea.tareaId;
-            if (tareaId != null && Tarea.ESTADO_PAUSADO.equals(estado)) {
-                gestorTareas.reanudarTarea(tareaId);
-                contador++;
-            }
-        }
+        int contador = procesarSeleccion(seleccion, this::esEstadoReanudable, tareaId -> {
+            gestorTareas.reanudarTarea(tareaId);
+            return true;
+        });
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_REANUDADAS(contador));
     }
 
     private void cancelarTareas(List<TareaSeleccionada> seleccion) {
-        int total = 0;
-        for (TareaSeleccionada tarea : seleccion) {
-            String estado = tarea.estado;
-            if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado) || Tarea.ESTADO_PAUSADO.equals(estado)) {
-                total++;
-            }
-        }
+        int total = contarSeleccion(seleccion, this::esEstadoCancelable);
 
         int confirmacion = JOptionPane.showConfirmDialog(
             this,
@@ -460,42 +436,80 @@ public class PanelTareas extends JPanel {
         );
         if (confirmacion != JOptionPane.YES_OPTION) return;
 
-        int contador = 0;
-        for (TareaSeleccionada tarea : seleccion) {
-            String estado = tarea.estado;
-            String tareaId = tarea.tareaId;
-            if (tareaId != null && (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado) || Tarea.ESTADO_PAUSADO.equals(estado))) {
-                gestorTareas.cancelarTarea(tareaId);
-                contador++;
-            }
-        }
+        int contador = procesarSeleccion(seleccion, this::esEstadoCancelable, tareaId -> {
+            gestorTareas.cancelarTarea(tareaId);
+            return true;
+        });
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_CANCELADAS(contador));
     }
 
     private void eliminarTareasSeleccionadas(List<TareaSeleccionada> seleccion) {
-        List<String> idsAEliminar = new ArrayList<>();
-
-        for (TareaSeleccionada tarea : seleccion) {
-            String estado = tarea.estado;
-            if (Tarea.ESTADO_COMPLETADO.equals(estado) ||
-                Tarea.ESTADO_ERROR.equals(estado) ||
-                Tarea.ESTADO_CANCELADO.equals(estado)) {
-                String tareaId = tarea.tareaId;
-                if (tareaId != null) {
-                    idsAEliminar.add(tareaId);
-                }
-            }
-        }
-
-        int contador = 0;
-        for (String tareaId : idsAEliminar) {
+        int contador = procesarSeleccion(seleccion, this::esEstadoEliminable, tareaId -> {
             gestorTareas.limpiarTarea(tareaId);
-            contador++;
-        }
+            return true;
+        });
 
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_ELIMINADAS(contador));
+    }
+
+    private int contarSeleccion(List<TareaSeleccionada> seleccion, Predicate<String> estadoPermitido) {
+        if (seleccion == null || seleccion.isEmpty() || estadoPermitido == null) {
+            return 0;
+        }
+        int total = 0;
+        for (TareaSeleccionada tarea : seleccion) {
+            if (tarea == null || tarea.tareaId == null) {
+                continue;
+            }
+            if (estadoPermitido.test(tarea.estado)) {
+                total++;
+            }
+        }
+        return total;
+    }
+
+    private int procesarSeleccion(List<TareaSeleccionada> seleccion,
+                                  Predicate<String> estadoPermitido,
+                                  Function<String, Boolean> accionPorId) {
+        if (seleccion == null || seleccion.isEmpty() || estadoPermitido == null || accionPorId == null) {
+            return 0;
+        }
+        int contador = 0;
+        for (TareaSeleccionada tarea : seleccion) {
+            if (tarea == null || tarea.tareaId == null || !estadoPermitido.test(tarea.estado)) {
+                continue;
+            }
+            if (Boolean.TRUE.equals(accionPorId.apply(tarea.tareaId))) {
+                contador++;
+            }
+        }
+        return contador;
+    }
+
+    private boolean esEstadoReintentable(String estado) {
+        return Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado);
+    }
+
+    private boolean esEstadoPausable(String estado) {
+        return Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado);
+    }
+
+    private boolean esEstadoReanudable(String estado) {
+        return Tarea.ESTADO_PAUSADO.equals(estado);
+    }
+
+    private boolean esEstadoCancelable(String estado) {
+        return Tarea.ESTADO_EN_COLA.equals(estado)
+            || Tarea.ESTADO_ANALIZANDO.equals(estado)
+            || Tarea.ESTADO_PAUSADO.equals(estado);
+    }
+
+    private boolean esEstadoEliminable(String estado) {
+        return Tarea.ESTADO_COMPLETADO.equals(estado)
+            || Tarea.ESTADO_ERROR.equals(estado)
+            || Tarea.ESTADO_CANCELADO.equals(estado);
     }
 
     private List<TareaSeleccionada> capturarSeleccion(int[] filasVista) {

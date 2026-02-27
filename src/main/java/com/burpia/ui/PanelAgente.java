@@ -261,6 +261,11 @@ public class PanelAgente extends JPanel {
         iniciarConsola();
     }
 
+    private void reiniciarYSolicitarFoco() {
+        reiniciar();
+        solicitarFocoPestaniaAgente();
+    }
+
     public void asegurarConsolaIniciada() {
         PtyProcess procesoActual = process;
         if (procesoActual != null && procesoActual.isAlive()) {
@@ -313,7 +318,7 @@ public class PanelAgente extends JPanel {
         panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
 
         JButton btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(),
-            I18nUI.Tooltips.Agente.REINICIAR(), e -> reiniciar());
+            I18nUI.Tooltips.Agente.REINICIAR(), e -> reiniciarYSolicitarFoco());
 
         JButton btnCtrlC = crearBoton("⚡ " + I18nUI.Consola.BOTON_CTRL_C(),
             I18nUI.Tooltips.Agente.CTRL_C(), e -> escribirComandoCrudo("\u0003"));
@@ -384,7 +389,7 @@ public class PanelAgente extends JPanel {
                 handler.run();
             }
 
-            reiniciar();
+            reiniciarYSolicitarFoco();
 
             actualizarEstadoBotones();
             aplicarIdioma();
@@ -930,11 +935,17 @@ public class PanelAgente extends JPanel {
         UIUtils.actualizarTituloPanel(panel, titulo);
     }
 
-    public void inyectarPayloadInicialManual() {
+    private void solicitarFocoPestaniaAgente() {
         Runnable focoHandler = manejadorFocoPestania.get();
         if (focoHandler != null) {
             focoHandler.run();
+            return;
         }
+        enfocarTerminal();
+    }
+
+    public void inyectarPayloadInicialManual() {
+        solicitarFocoPestaniaAgente();
 
         String prompt = obtenerPromptPreflightFijo();
 

@@ -70,13 +70,7 @@ public class DialogoDetalleHallazgo extends JDialog {
         panelContenido.add(lblSeveridad, gbc);
 
         JPanel panelClasificacion = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        comboSeveridad = new JComboBox<>(new String[]{
-            I18nUI.Hallazgos.SEVERIDAD_CRITICAL(),
-            I18nUI.Hallazgos.SEVERIDAD_HIGH(),
-            I18nUI.Hallazgos.SEVERIDAD_MEDIUM(),
-            I18nUI.Hallazgos.SEVERIDAD_LOW(),
-            I18nUI.Hallazgos.SEVERIDAD_INFO()
-        });
+        comboSeveridad = new JComboBox<>(I18nUI.Hallazgos.OPCIONES_SEVERIDAD());
         comboSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
         comboSeveridad.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.SEVERIDAD());
         panelClasificacion.add(comboSeveridad);

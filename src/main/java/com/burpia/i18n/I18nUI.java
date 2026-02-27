@@ -307,6 +307,16 @@ public final class I18nUI {
         public static String CONFIANZA_MEDIA() { return tr("Media", "Medium"); }
         public static String CONFIANZA_BAJA() { return tr("Baja", "Low"); }
 
+        public static String[] OPCIONES_SEVERIDAD() {
+            return new String[]{
+                SEVERIDAD_CRITICAL(),
+                SEVERIDAD_HIGH(),
+                SEVERIDAD_MEDIUM(),
+                SEVERIDAD_LOW(),
+                SEVERIDAD_INFO()
+            };
+        }
+
         public static String TRADUCIR_CONFIANZA(String confianza) {
             if (confianza == null) return "";
             switch (confianza) {
@@ -319,6 +329,14 @@ public final class I18nUI {
 
         public static String OPCION_TODAS_CRITICIDADES() {
             return tr("Todas las Severidades", "All Severities");
+        }
+
+        public static String[] OPCIONES_FILTRO_SEVERIDAD() {
+            String[] severidades = OPCIONES_SEVERIDAD();
+            String[] opciones = new String[severidades.length + 1];
+            opciones[0] = OPCION_TODAS_CRITICIDADES();
+            System.arraycopy(severidades, 0, opciones, 1, severidades.length);
+            return opciones;
         }
 
         public static String TITULO_FILTROS() {
@@ -1279,7 +1297,7 @@ public final class I18nUI {
             }
 
             public static String ENLACE_INSTALAR_AGENTE(String nombreAgente) {
-                return trf("¿Cómo instalar %s?", "How to install %s?", nombreAgente);
+                return trf("¿Como instalar y configurar %s?", "How to install and configure %s?", nombreAgente);
             }
         }
 

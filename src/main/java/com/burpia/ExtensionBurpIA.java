@@ -489,22 +489,7 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void registrar(String mensaje) {
-        if (gestorConsola != null) {
-            gestorConsola.registrarInfo("BurpIA", mensaje);
-            return;
-        }
-        String mensajeLocalizado = I18nLogs.tr(mensaje);
-        if (stdout != null) {
-            stdout.println("[BurpIA] " + mensajeLocalizado);
-            stdout.flush();
-            return;
-        }
-        if (api != null) {
-            try {
-                api.logging().logToOutput("[BurpIA] " + mensajeLocalizado);
-            } catch (Exception ignored) {
-            }
-        }
+        registrarConFallback(mensaje, false);
     }
 
     private void registrarResumenInicio() {
@@ -557,19 +542,36 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void registrarError(String mensaje) {
+        registrarConFallback(mensaje, true);
+    }
+
+    private void registrarConFallback(String mensaje, boolean error) {
+        String mensajeSeguro = mensaje != null ? mensaje : "";
         if (gestorConsola != null) {
-            gestorConsola.registrarError("BurpIA", mensaje);
+            if (error) {
+                gestorConsola.registrarError("BurpIA", mensajeSeguro);
+            } else {
+                gestorConsola.registrarInfo("BurpIA", mensajeSeguro);
+            }
             return;
         }
-        String mensajeLocalizado = I18nLogs.tr(mensaje);
-        if (stderr != null) {
-            stderr.println("[BurpIA] [ERROR] " + mensajeLocalizado);
-            stderr.flush();
+
+        String mensajeLocalizado = I18nLogs.tr(mensajeSeguro);
+        String prefijo = error ? "[BurpIA] [ERROR] " : "[BurpIA] ";
+        PrintWriter stream = error ? stderr : stdout;
+        if (stream != null) {
+            stream.println(prefijo + mensajeLocalizado);
+            stream.flush();
             return;
         }
+
         if (api != null) {
             try {
-                api.logging().logToError("[BurpIA] [ERROR] " + mensajeLocalizado);
+                if (error) {
+                    api.logging().logToError(prefijo + mensajeLocalizado);
+                } else {
+                    api.logging().logToOutput(prefijo + mensajeLocalizado);
+                }
             } catch (Exception ignored) {
             }
         }

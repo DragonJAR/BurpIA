@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import javax.swing.*;
+import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -63,5 +64,18 @@ class PestaniaPrincipalTest {
 
         PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
         assertNotNull(panelAgente, "El panel de Agente no debe ser nulo");
+        assertEquals(panelAgente, obtenerTabbedPane(pestaniaPrincipal).getSelectedComponent(),
+            "La pestaña de agente debe quedar seleccionada al solicitar foco");
+    }
+
+    private JTabbedPane obtenerTabbedPane(PestaniaPrincipal pestania) {
+        try {
+            Field field = PestaniaPrincipal.class.getDeclaredField("tabbedPane");
+            field.setAccessible(true);
+            return (JTabbedPane) field.get(pestania);
+        } catch (ReflectiveOperationException e) {
+            fail("No se pudo acceder a tabbedPane para validar seleccion de foco");
+            return null;
+        }
     }
 }

@@ -8,8 +8,6 @@ import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.ProbadorConexionAI;
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -389,20 +387,7 @@ public class DialogoConfiguracion extends JDialog {
 
         panel.add(panelEditor, BorderLayout.CENTER);
 
-        txtPrompt.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                actualizarContador();
-            }
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                actualizarContador();
-            }
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                actualizarContador();
-            }
-        });
+        txtPrompt.getDocument().addDocumentListener(UIUtils.crearDocumentListener(this::actualizarContador));
 
         return panel;
     }
@@ -442,14 +427,7 @@ public class DialogoConfiguracion extends JDialog {
 
         txtAgenteBinario = new JTextField(30);
         txtAgenteBinario.setToolTipText(I18nUI.Tooltips.Configuracion.BINARIO_AGENTE());
-        txtAgenteBinario.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override
-            public void insertUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
-            @Override
-            public void removeUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
-            @Override
-            public void changedUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
-        });
+        txtAgenteBinario.getDocument().addDocumentListener(UIUtils.crearDocumentListener(this::actualizarRutaEnMemoria));
 
         gbc.gridwidth = 1;
         gbc.gridy = 2; gbc.gridx = 0; gbc.weightx = 0;
