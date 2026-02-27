@@ -10,35 +10,11 @@ public final class Normalizador {
     }
 
     public static String normalizarTexto(String valor) {
-        if (valor == null) {
-            return "";
-        }
-        int len = valor.length();
-        StringBuilder sb = new StringBuilder(len);
-        for (int i = 0; i < len; i++) {
-            char c = valor.charAt(i);
-            if (c == '\\' && i + 1 < len) {
-                char next = valor.charAt(i + 1);
-                if (next == 'n') {
-                    sb.append('\n');
-                    i++;
-                } else if (next == 'r') {
-                    sb.append('\r');
-                    i++;
-                } else if (next == 't') {
-                    sb.append('\t');
-                    i++;
-                } else if (next == '\"') {
-                    sb.append('\"');
-                    i++;
-                } else {
-                    sb.append(c);
-                }
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString().trim();
+        return desescaparSecuenciasBasicas(valor, false).trim();
+    }
+
+    public static String normalizarTextoConControlesEnEspacio(String valor) {
+        return desescaparSecuenciasBasicas(valor, true).trim();
     }
 
     public static String normalizarTexto(String valor, String porDefecto) {
@@ -105,10 +81,8 @@ public final class Normalizador {
         if (url == null) {
             return "";
         }
-        if (longitudMaxima <= 0) {
-            longitudMaxima = 50;
-        }
-        if (url.length() <= longitudMaxima) {
+        int maximo = longitudMaxima <= 0 ? 50 : longitudMaxima;
+        if (url.length() <= maximo) {
             return url;
         }
 
@@ -122,15 +96,15 @@ public final class Normalizador {
                 esquemaDominio = url.substring(0, idxPath);
                 inicioPath = idxPath;
             } else {
-                return url.length() <= longitudMaxima ? url : url.substring(0, longitudMaxima - 3) + "...";
+                return url.length() <= maximo ? url : url.substring(0, maximo - 3) + "...";
             }
         }
 
-        if (esquemaDominio.length() >= longitudMaxima - 10) {
-            return truncarParaVisualizacion(url, longitudMaxima);
+        if (esquemaDominio.length() >= maximo - 10) {
+            return truncarParaVisualizacion(url, maximo);
         }
 
-        int espacioPath = longitudMaxima - esquemaDominio.length() - 3;
+        int espacioPath = maximo - esquemaDominio.length() - 3;
 
         if (espacioPath <= 0) {
             return esquemaDominio + "...";
@@ -148,6 +122,42 @@ public final class Normalizador {
         String fin = pathCompleto.substring(pathCompleto.length() - mostrarFinal);
 
         return esquemaDominio + inicio + "..." + fin;
+    }
+
+    private static String desescaparSecuenciasBasicas(String valor, boolean controlesComoEspacio) {
+        if (valor == null) {
+            return "";
+        }
+        int len = valor.length();
+        StringBuilder sb = new StringBuilder(len);
+        int indice = 0;
+        while (indice < len) {
+            char actual = valor.charAt(indice);
+            if (actual == '\\' && indice + 1 < len) {
+                char siguiente = valor.charAt(indice + 1);
+                if (siguiente == 'n' || siguiente == 'r' || siguiente == 't') {
+                    if (controlesComoEspacio) {
+                        sb.append(' ');
+                    } else if (siguiente == 'n') {
+                        sb.append('\n');
+                    } else if (siguiente == 'r') {
+                        sb.append('\r');
+                    } else {
+                        sb.append('\t');
+                    }
+                    indice += 2;
+                    continue;
+                }
+                if (siguiente == '\"') {
+                    sb.append('\"');
+                    indice += 2;
+                    continue;
+                }
+            }
+            sb.append(actual);
+            indice++;
+        }
+        return sb.toString();
     }
 
     public static String formatearResultadoAccion(String resumen, int exitosos, int total,

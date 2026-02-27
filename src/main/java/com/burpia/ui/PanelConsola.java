@@ -108,14 +108,17 @@ public class PanelConsola extends JPanel {
             return;
         }
         ultimaVersionConsola = versionActual;
-        SwingUtilities.invokeLater(() -> {
-            etiquetaResumen.setText(I18nUI.Consola.RESUMEN(
-                gestorConsola.obtenerTotalLogs(),
-                gestorConsola.obtenerContadorInfo(),
-                gestorConsola.obtenerContadorVerbose(),
-                gestorConsola.obtenerContadorError()
-            ));
-        });
+        Runnable actualizarUi = () -> etiquetaResumen.setText(I18nUI.Consola.RESUMEN(
+            gestorConsola.obtenerTotalLogs(),
+            gestorConsola.obtenerContadorInfo(),
+            gestorConsola.obtenerContadorVerbose(),
+            gestorConsola.obtenerContadorError()
+        ));
+        if (SwingUtilities.isEventDispatchThread()) {
+            actualizarUi.run();
+        } else {
+            SwingUtilities.invokeLater(actualizarUi);
+        }
     }
 
     public void aplicarIdioma() {

@@ -43,7 +43,9 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             try {
                 datos.add(hallazgo);
                 addRow(hallazgo.aFilaTabla());
-                aplicarLimiteFilas();
+                if (aplicarLimiteFilas()) {
+                    fireTableDataChanged();
+                }
             } finally {
                 lock.unlock();
             }
@@ -72,8 +74,9 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                 }
                 
                 if (huboCambios) {
-                    aplicarLimiteFilas();
-                    fireTableDataChanged();
+                    if (aplicarLimiteFilas()) {
+                        fireTableDataChanged();
+                    }
                 }
             } finally {
                 lock.unlock();
@@ -81,7 +84,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         });
     }
 
-    private void aplicarLimiteFilas() {
+    private boolean aplicarLimiteFilas() {
         int rowCount = dataVector.size();
         if (rowCount > limiteFilas) {
             int filasAEliminar = rowCount - limiteFilas;
@@ -96,8 +99,10 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                 }
                 filasIgnoradas.clear();
                 filasIgnoradas.addAll(nuevosIgnorados);
+                return true;
             }
         }
+        return false;
     }
 
     public void limpiar() {

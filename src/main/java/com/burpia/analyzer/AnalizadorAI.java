@@ -22,12 +22,14 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 public class AnalizadorAI implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(AnalizadorAI.class.getName());
@@ -61,6 +63,9 @@ public class AnalizadorAI implements Runnable {
     private static final String[] CAMPOS_EVIDENCIA = {"evidencia", "evidence", "proof", "indicator"};
     private static final String[] CAMPOS_HALLAZGOS = {"hallazgos", "findings", "issues", "vulnerabilidades"};
     private static final String[] CAMPOS_TEXTO = {"text", "texto", "content", "mensaje", "message", "value", "descripcion", "description"};
+    private static final Pattern PATRON_ETIQUETA_TITULO = Pattern.compile("(?i)(título:|title:)");
+    private static final Pattern PATRON_ETIQUETA_SEVERIDAD = Pattern.compile("(?i)(severidad:|severity:)");
+    private static final Pattern PATRON_ETIQUETA_DESCRIPCION = Pattern.compile("(?i)(vulnerabilidad|descripcion:|description:)");
 
     public interface Callback {
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
@@ -1013,34 +1018,29 @@ public class AnalizadorAI implements Runnable {
             String confianza = Hallazgo.CONFIANZA_BAJA;
 
             for (String linea : lineas) {
-                linea = linea.trim();
-                String lineaLower = linea.toLowerCase();
+                String lineaNormalizada = linea.trim();
+                String lineaLower = lineaNormalizada.toLowerCase(Locale.ROOT);
 
-                if (lineaLower.contains("título:") ||
-                    lineaLower.contains("title:")) {
-
+                if (contieneAlguno(lineaLower, "título:", "title:")) {
                     if (descripcion.length() > 0) {
-                        String t = descripcion.substring(0, Math.min(30, descripcion.length())) + "...";
-                        hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), t, descripcion.toString().trim(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
-                        descripcion = new StringBuilder();
+                        agregarHallazgoDesdeDescripcion(hallazgos, descripcion.toString(), severidad, confianza);
+                        descripcion.setLength(0);
                     }
 
-                    descripcion.append(linea.replaceAll("(?i)(título:|title:)", "").trim()).append(" - ");
-                } else if (lineaLower.contains("severidad:") ||
-                    lineaLower.contains("severity:")) {
-                    String sev = linea.replaceAll("(?i)(severidad:|severity:)", "").trim();
+                    descripcion
+                        .append(PATRON_ETIQUETA_TITULO.matcher(lineaNormalizada).replaceAll("").trim())
+                        .append(" - ");
+                } else if (contieneAlguno(lineaLower, "severidad:", "severity:")) {
+                    String sev = PATRON_ETIQUETA_SEVERIDAD.matcher(lineaNormalizada).replaceAll("").trim();
                     severidad = Hallazgo.normalizarSeveridad(sev);
-                } else if (lineaLower.contains("vulnerabilidad") ||
-                           lineaLower.contains("descripcion:") ||
-                           lineaLower.contains("description:")) {
+                } else if (contieneAlguno(lineaLower, "vulnerabilidad", "descripcion:", "description:")) {
                     if (descripcion.length() > 0 && !descripcion.toString().contains(" - ")) {
-                        String t = descripcion.substring(0, Math.min(30, descripcion.length())) + "...";
-                        hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), t, descripcion.toString().trim(), severidad, confianza, solicitud.obtenerSolicitudHttp()));
-                        descripcion = new StringBuilder();
+                        agregarHallazgoDesdeDescripcion(hallazgos, descripcion.toString(), severidad, confianza);
+                        descripcion.setLength(0);
                     }
-                    descripcion.append(linea.replaceAll("(?i)(vulnerabilidad|descripcion:|description:)", "").trim());
-                } else if (linea.length() > 0 && !linea.startsWith("{") && !linea.startsWith("}")) {
-                    descripcion.append(" ").append(linea);
+                    descripcion.append(PATRON_ETIQUETA_DESCRIPCION.matcher(lineaNormalizada).replaceAll("").trim());
+                } else if (!lineaNormalizada.isEmpty() && !lineaNormalizada.startsWith("{") && !lineaNormalizada.startsWith("}")) {
+                    descripcion.append(" ").append(lineaNormalizada);
                 }
             }
 
@@ -1074,6 +1074,37 @@ public class AnalizadorAI implements Runnable {
         }
 
         return hallazgos;
+    }
+
+    private boolean contieneAlguno(String textoLower, String... terminos) {
+        if (textoLower == null || terminos == null) {
+            return false;
+        }
+        for (String termino : terminos) {
+            if (termino != null && textoLower.contains(termino)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void agregarHallazgoDesdeDescripcion(List<Hallazgo> hallazgos, String descripcion, String severidad, String confianza) {
+        if (hallazgos == null || descripcion == null) {
+            return;
+        }
+        String descripcionLimpia = descripcion.trim();
+        if (descripcionLimpia.isEmpty()) {
+            return;
+        }
+        String titulo = descripcionLimpia.substring(0, Math.min(30, descripcionLimpia.length())) + "...";
+        hallazgos.add(new Hallazgo(
+            solicitud.obtenerUrl(),
+            titulo,
+            descripcionLimpia,
+            severidad,
+            confianza,
+            solicitud.obtenerSolicitudHttp()
+        ));
     }
 
     private String extraerSeveridad(String contenido) {

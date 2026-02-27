@@ -276,7 +276,7 @@ public class PanelEstadisticas extends JPanel {
             return;
         }
         ultimaVersionEstadisticas = versionActual;
-        SwingUtilities.invokeLater(() -> {
+        Runnable actualizarUi = () -> {
             etiquetaResumenPrincipal.setText(I18nUI.Estadisticas.RESUMEN_TOTAL(estadisticas.obtenerHallazgosCreados()));
 
             etiquetaResumenSeveridad.setText(I18nUI.Estadisticas.RESUMEN_SEVERIDAD(
@@ -295,7 +295,12 @@ public class PanelEstadisticas extends JPanel {
                     estadisticas.obtenerTotalOmitidos(),
                     estadisticas.obtenerErrores()
             ));
-        });
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            actualizarUi.run();
+        } else {
+            SwingUtilities.invokeLater(actualizarUi);
+        }
     }
 
     public void establecerManejadorToggleCaptura(Runnable manejador) {
@@ -304,10 +309,15 @@ public class PanelEstadisticas extends JPanel {
 
     public void establecerEstadoCaptura(boolean activa) {
         this.capturaActiva = activa;
-        SwingUtilities.invokeLater(() -> {
+        Runnable actualizarUi = () -> {
             actualizarEstadoCapturaUI();
             actualizar();
-        });
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            actualizarUi.run();
+        } else {
+            SwingUtilities.invokeLater(actualizarUi);
+        }
     }
 
     private void actualizarEstadoCapturaUI() {

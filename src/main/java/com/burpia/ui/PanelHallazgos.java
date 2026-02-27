@@ -222,7 +222,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void aplicarFiltros() {
-        String textoBusqueda = campoBusqueda.getText().trim().toLowerCase();
+        String textoBusqueda = campoBusqueda.getText().trim();
         String severidadSeleccionada = (String) comboSeveridad.getSelectedItem();
 
         List<RowFilter<Object, Object>> filtros = new ArrayList<>();
@@ -232,7 +232,7 @@ public class PanelHallazgos extends JPanel {
         }
 
         if (severidadSeleccionada != null && comboSeveridad.getSelectedIndex() > 0) {
-            filtros.add(RowFilter.regexFilter("^" + severidadSeleccionada + "$", 3));
+            filtros.add(RowFilter.regexFilter("^" + java.util.regex.Pattern.quote(severidadSeleccionada) + "$", 3));
         }
 
         if (!filtros.isEmpty()) {

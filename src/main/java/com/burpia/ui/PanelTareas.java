@@ -542,7 +542,7 @@ public class PanelTareas extends JPanel {
             return;
         }
         ultimaVersionTareas = versionActual;
-        SwingUtilities.invokeLater(() -> {
+        Runnable actualizarUi = () -> {
             EstadisticasTareas estadisticas = calcularEstadisticasTareas();
 
             etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
@@ -558,7 +558,12 @@ public class PanelTareas extends JPanel {
                 botonPausarReanudar.setText(I18nUI.Tareas.BOTON_PAUSAR_TODO());
                 botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.PAUSAR_TODO());
             }
-        });
+        };
+        if (SwingUtilities.isEventDispatchThread()) {
+            actualizarUi.run();
+        } else {
+            SwingUtilities.invokeLater(actualizarUi);
+        }
     }
 
     public void aplicarIdioma() {

@@ -1,5 +1,7 @@
 package com.burpia.i18n;
 
+import java.util.Locale;
+
 public enum IdiomaUI {
     ES("es", "Español"),
     EN("en", "English");
@@ -28,7 +30,7 @@ public enum IdiomaUI {
         if (codigo == null) {
             return porDefecto();
         }
-        String limpio = codigo.trim().toLowerCase();
+        String limpio = codigo.trim().toLowerCase(Locale.ROOT);
         for (IdiomaUI idioma : values()) {
             if (idioma.codigo.equals(limpio)) {
                 return idioma;

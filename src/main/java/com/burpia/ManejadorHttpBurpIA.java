@@ -28,7 +28,6 @@ import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.DeduplicadorSolicitudes;
 import javax.swing.*;
 import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -39,6 +38,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 public class ManejadorHttpBurpIA implements HttpHandler {
     private static final String ORIGEN_LOG = "BurpIA";
@@ -222,19 +222,19 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             estadisticas.incrementarTotalSolicitudes();
         }
 
-        rastrear("Respuesta recibida: " + metodo + " " + url + " (estado: " + codigoEstado + ")");
+        rastrear(() -> "Respuesta recibida: " + metodo + " " + url + " (estado: " + codigoEstado + ")");
 
         if (!estaEnScope(respuestaRecibida.initiatingRequest())) {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        rastrear("DENTRO DE SCOPE - Procesando: " + metodo + " " + url);
+        rastrear(() -> "DENTRO DE SCOPE - Procesando: " + metodo + " " + url);
 
         if (esRecursoEstatico(url)) {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosBajaConfianza();
             }
-            rastrear("Omitiendo recurso estatico: " + url);
+            rastrear(() -> "Omitiendo recurso estatico: " + url);
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -246,30 +246,32 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             String contentTypeLog = (contentTypeRespuesta == null || contentTypeRespuesta.trim().isEmpty())
                 ? "desconocido"
                 : contentTypeRespuesta.trim();
-            rastrear("Omitiendo contenido no analizable: " + url + " (Content-Type: " + contentTypeLog + ")");
+            rastrear(() -> "Omitiendo contenido no analizable: " + url + " (Content-Type: " + contentTypeLog + ")");
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
         String hashSolicitud = HttpUtils.generarHashRapido(respuestaRecibida.initiatingRequest(), respuestaRecibida);
-        rastrear("Hash de solicitud: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...");
+        String hashAbreviado = abreviarHash(hashSolicitud);
+        rastrear(() -> "Hash de solicitud: " + hashAbreviado + "...");
 
         if (deduplicador.esDuplicadoYAgregar(hashSolicitud)) {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosDuplicado();
             }
-            rastrear("Solicitud duplicada omitida: " + url);
+            rastrear(() -> "Solicitud duplicada omitida: " + url);
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        rastrear("Nueva solicitud registrada: " + url + " (hash: " + hashSolicitud.substring(0, Math.min(8, hashSolicitud.length())) + "...)");
+        rastrear(() -> "Nueva solicitud registrada: " + url + " (hash: " + hashAbreviado + "...)");
 
-        int numEncabezados = 0;
+        int conteoEncabezados = 0;
         if (respuestaRecibida.initiatingRequest().headers() != null) {
-            numEncabezados = respuestaRecibida.initiatingRequest().headers().size();
+            conteoEncabezados = respuestaRecibida.initiatingRequest().headers().size();
         }
+        final int numEncabezados = conteoEncabezados;
 
-        rastrear("Detalles de solicitud: Metodo=" + metodo + ", URL=" + url +
-                ", Encabezados=" + numEncabezados + ", Codigo respuesta=" + codigoEstado);
+        rastrear(() -> "Detalles de solicitud: Metodo=" + metodo + ", URL=" + url +
+            ", Encabezados=" + numEncabezados + ", Codigo respuesta=" + codigoEstado);
 
         SolicitudAnalisis solicitudAnalisis = new SolicitudAnalisis(
             url,
@@ -300,10 +302,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         String url = solicitud.url() != null ? solicitud.url() : "[URL NULL]";
         String metodo = solicitud.method() != null ? solicitud.method() : "[METHOD NULL]";
-        String cadenaSolicitud = solicitud.toString() != null ? solicitud.toString() : metodo + " " + url;
-        String hashSolicitud = HttpUtils.generarHash(cadenaSolicitud.getBytes(StandardCharsets.UTF_8));
         String encabezados = HttpUtils.extraerEncabezados(solicitud);
         String cuerpo = HttpUtils.extraerCuerpo(solicitud);
+        String hashSolicitud = HttpUtils.generarHashPartes(metodo, url, encabezados, cuerpo);
         int codigoEstadoRespuesta = -1;
         String encabezadosRespuesta = "";
         String cuerpoRespuesta = "";
@@ -528,7 +529,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             }
             String tareaId = entry.getKey();
             if (tareaId == null || gestorTareas.obtenerTarea(tareaId) == null) {
-                contextosReintento.remove(tareaId, entry.getValue());
+                it.remove();
             }
         }
     }
@@ -669,6 +670,18 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
     }
 
+    private void rastrear(Supplier<String> proveedorMensaje) {
+        if (!config.esDetallado()) {
+            return;
+        }
+        if (proveedorMensaje == null) {
+            registrarInterno("", GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
+            return;
+        }
+        String mensaje = proveedorMensaje.get();
+        registrarInterno(mensaje != null ? mensaje : "", GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
+    }
+
     private void registrarError(String mensaje) {
         registrarInterno(mensaje, GestorConsolaGUI.TipoLog.ERROR, true, "[BurpIA] [ERROR] ");
     }
@@ -713,6 +726,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             e.printStackTrace(pw);
             rastrear(mensaje + "\n" + sw.toString());
         }
+    }
+
+    private String abreviarHash(String hashSolicitud) {
+        if (hashSolicitud == null || hashSolicitud.isEmpty()) {
+            return "";
+        }
+        return hashSolicitud.substring(0, Math.min(8, hashSolicitud.length()));
     }
 
     public void shutdown() {
