@@ -6,6 +6,7 @@ import burp.api.montoya.scanner.AuditConfiguration;
 import burp.api.montoya.scanner.BuiltInAuditConfiguration;
 import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.ExtensionBurpIA;
+import com.burpia.config.AgenteTipo;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import javax.swing.*;
@@ -499,10 +500,14 @@ public class PanelHallazgos extends JPanel {
                 e -> enviarAScanner(tabla.getSelectedRows())
             ));
         }
-        if (config != null && config.agenteFactoryDroidHabilitado() && manejadorEnviarADroid != null) {
+        if (config != null && config.agenteHabilitado() && manejadorEnviarADroid != null) {
+            String nombreAgente = AgenteTipo.obtenerNombreVisible(
+                config.obtenerTipoAgente(),
+                I18nUI.General.AGENTE_GENERICO()
+            );
             menu.add(crearMenuItemContextual(
-                I18nUI.Hallazgos.MENU_ENVIAR_FACTORY_DROID_ROCKET(),
-                I18nUI.Tooltips.Hallazgos.ENVIAR_FACTORY_DROID(),
+                I18nUI.Hallazgos.MENU_ENVIAR_AGENTE_ROCKET(nombreAgente),
+                I18nUI.Tooltips.Hallazgos.ENVIAR_AGENTE(nombreAgente),
                 e -> enviarADroid(tabla.getSelectedRows())
             ));
         }
@@ -600,7 +605,7 @@ public class PanelHallazgos extends JPanel {
             true,
             false,
             (solicitud, hallazgo) -> {
-                String nombreTab = "BurpIA-" + (hallazgo != null ? hallazgo.obtenerSeveridad() : "Hallazgo");
+                String nombreTab = "BurpIA-" + (hallazgo != null ? hallazgo.obtenerSeveridad() : I18nUI.General.HALLAZGO_GENERICO());
                 api.repeater().sendToRepeater(solicitud, nombreTab);
                 return "✅ " + solicitud.url();
             }

@@ -12,7 +12,7 @@ import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
-import com.burpia.ui.PanelFactoryDroid;
+import com.burpia.ui.PanelAgente;
 import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.ui.DialogoConfiguracion;
 import com.burpia.ui.FabricaMenuContextual;
@@ -142,7 +142,7 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar("  - Maximo Concurrente: " + config.obtenerMaximoConcurrente());
         registrar("  - Maximo Hallazgos en Tabla: " + config.obtenerMaximoHallazgosTabla());
         registrar("  - Modo Detallado: " + (config.esDetallado() ? "ACTIVADO" : "desactivado"));
-        registrar("  - Agente Factory Droid: " + (config.agenteFactoryDroidHabilitado() ? "HABILITADO" : "desactivado"));
+        registrar("  - Agente Activo (" + config.obtenerTipoAgente() + "): " + (config.agenteHabilitado() ? "HABILITADO" : "desactivado"));
         registrar("==================================================");
 
         limitador = new LimitadorTasa(config.obtenerMaximoConcurrente());
@@ -167,7 +167,7 @@ public class ExtensionBurpIA implements BurpExtension {
         inicializarPreferenciasUsuarioEnUI();
 
 
-        inicializarFactoryDroidSiHabilitado();
+        inicializarAgenteSiHabilitado();
 
         manejadorHttp = new ManejadorHttpBurpIA(
             api, config, pestaniaPrincipal, stdout, stderr, limitador,
@@ -210,7 +210,7 @@ public class ExtensionBurpIA implements BurpExtension {
             registrarError("No se puede usar Factory Droid: configuracion no inicializada");
             return;
         }
-        if (!config.agenteFactoryDroidHabilitado()) {
+        if (!config.agenteHabilitado()) {
             registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
             return;
         }
@@ -219,26 +219,26 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
 
-        String prompt = config.obtenerAgenteFactoryDroidPrompt();
+        String prompt = config.obtenerAgentePrompt();
         String request = solicitudRespuesta.request() != null ? solicitudRespuesta.request().toString() : "";
         String response = (solicitudRespuesta.response() != null) ? solicitudRespuesta.response().toString() : "";
 
         String inputFinal = prompt.replace("{REQUEST}", request).replace("{RESPONSE}", response);
 
-        PanelFactoryDroid panelDroid = obtenerPanelFactoryDroidDisponible();
-        if (panelDroid == null) {
+        PanelAgente panelAgente = obtenerPanelAgenteDisponible();
+        if (panelAgente == null) {
             return;
         }
-        pestaniaPrincipal.seleccionarPestaniaFactoryDroid();
+        pestaniaPrincipal.seleccionarPestaniaAgente();
 
-        String binario = config.obtenerAgenteFactoryDroidBinario();
+        String binario = config.obtenerRutaBinarioAgente(config.obtenerTipoAgente());
         if (binario == null || binario.trim().isEmpty()) {
             binario = "droid";
         }
 
-        panelDroid.escribirComando(binario);
+        panelAgente.escribirComando(binario);
 
-        panelDroid.inyectarComando(inputFinal, 0);
+        panelAgente.inyectarComando(inputFinal, 0);
     }
 
     private void enviarHallazgoAFactoryDroid(Hallazgo hallazgo) {
@@ -246,7 +246,7 @@ public class ExtensionBurpIA implements BurpExtension {
             registrarError("No se puede usar Factory Droid: configuracion no inicializada");
             return;
         }
-        if (!config.agenteFactoryDroidHabilitado()) {
+        if (!config.agenteHabilitado()) {
             registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
             return;
         }
@@ -255,7 +255,7 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
 
-        String prompt = config.obtenerAgenteFactoryDroidPrompt();
+        String prompt = config.obtenerAgentePrompt();
 
         HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
         String request = evidencia != null && evidencia.request() != null ? evidencia.request().toString() : "";
@@ -285,26 +285,26 @@ public class ExtensionBurpIA implements BurpExtension {
             .replace("{RESPONSE}", response)
             .replace("{OUTPUT_LANGUAGE}", lang);
 
-        PanelFactoryDroid panelDroid = obtenerPanelFactoryDroidDisponible();
-        if (panelDroid == null) {
+        PanelAgente panelAgente = obtenerPanelAgenteDisponible();
+        if (panelAgente == null) {
             return;
         }
-        pestaniaPrincipal.seleccionarPestaniaFactoryDroid();
+        pestaniaPrincipal.seleccionarPestaniaAgente();
 
-        panelDroid.inyectarComando(inputFinal, 0);
+        panelAgente.inyectarComando(inputFinal, 0);
     }
 
-    private PanelFactoryDroid obtenerPanelFactoryDroidDisponible() {
+    private PanelAgente obtenerPanelAgenteDisponible() {
         if (pestaniaPrincipal == null) {
-            registrarError("No se puede usar Factory Droid: pestaña principal no disponible");
+            registrarError("No se puede usar el Agente: pestaña principal no disponible");
             return null;
         }
-        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
-        if (panelDroid == null) {
-            registrarError("No se puede usar Factory Droid: panel no disponible");
+        PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
+        if (panelAgente == null) {
+            registrarError("No se puede usar el Agente: panel no disponible");
             return null;
         }
-        return panelDroid;
+        return panelAgente;
     }
 
     private void abrirConfiguracion() {
@@ -467,40 +467,40 @@ public class ExtensionBurpIA implements BurpExtension {
             guardarConfiguracionSilenciosa("auto-scroll");
         });
 
-        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
-        if (panelDroid != null) {
-            panelDroid.establecerManejadorCambioConfiguracion(() -> guardarConfiguracionSilenciosa("factory-droid-delay"));
+        PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
+        if (panelAgente != null) {
+            panelAgente.establecerManejadorCambioConfiguracion(() -> guardarConfiguracionSilenciosa("agente-delay"));
         }
     }
 
-    private void inicializarFactoryDroidSiHabilitado() {
-        if (!config.agenteFactoryDroidHabilitado()) {
-            registrar("Factory Droid deshabilitado en configuración");
+    private void inicializarAgenteSiHabilitado() {
+        if (!config.agenteHabilitado()) {
+            registrar("Agente deshabilitado en configuración");
             return;
         }
 
         if (pestaniaPrincipal == null) {
-            registrarError("No se puede inicializar Factory Droid: pestaniaPrincipal es null");
+            registrarError("No se puede inicializar el Agente: pestaniaPrincipal es null");
             return;
         }
 
-        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
-        if (panelDroid == null) {
-            registrarError("No se puede inicializar Factory Droid: panel no disponible");
+        PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
+        if (panelAgente == null) {
+            registrarError("No se puede inicializar el Agente: panel no disponible");
             return;
         }
 
         SwingUtilities.invokeLater(() -> {
             javax.swing.Timer timer = new javax.swing.Timer(1500, e -> {
-                panelDroid.forzarInyeccionPromptInicial();
-                registrar("Factory Droid inicializado - prompt inicial inyectado");
+                panelAgente.forzarInyeccionPromptInicial();
+                registrar("Agente inicializado - prompt inicial inyectado");
                 ((javax.swing.Timer) e.getSource()).stop();
             });
             timer.setRepeats(false);
             timer.start();
         });
 
-        registrar("Factory Droid programado para inicialización");
+        registrar("Agente programado para inicialización");
     }
 
     private void guardarConfiguracionSilenciosa(String origen) {

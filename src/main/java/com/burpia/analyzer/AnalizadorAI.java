@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
@@ -55,8 +56,6 @@ public class AnalizadorAI implements Runnable {
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
     private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = new ConcurrentHashMap<>();
-    private static final String TITULO_POR_DEFECTO = "Sin título";
-    private static final String DESCRIPCION_POR_DEFECTO = "Sin descripción";
     private static final String[] CAMPOS_TITULO = {"titulo", "title", "name", "nombre"};
     private static final String[] CAMPOS_DESCRIPCION = {"descripcion", "description", "hallazgo", "finding", "detalle", "details"};
     private static final String[] CAMPOS_SEVERIDAD = {"severidad", "severity", "risk", "impacto"};
@@ -69,6 +68,38 @@ public class AnalizadorAI implements Runnable {
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
         void alErrorAnalisis(String error);
         default void alCanceladoAnalisis() {}
+    }
+
+    private static String mensajeErrorSolicitudNoDisponible() {
+        return I18nUI.tr("Solicitud de analisis no disponible", "Analysis request is not available");
+    }
+
+    private static String alertaConfiguracionNoDisponible() {
+        return I18nUI.tr("ALERTA: Configuracion de IA no disponible", "ALERT: AI configuration is unavailable");
+    }
+
+    private static String mensajeAnalisisInterrumpido(String causa) {
+        return I18nUI.trf("Analisis interrumpido: %s", "Analysis interrupted: %s", causa);
+    }
+
+    private static String tituloPorDefecto() {
+        return I18nUI.tr("Sin título", "Untitled");
+    }
+
+    private static String descripcionPorDefecto() {
+        return I18nUI.tr("Sin descripción", "No description");
+    }
+
+    private static String tituloErrorAnalisis() {
+        return I18nUI.tr("Error de análisis", "Analysis error");
+    }
+
+    private static String descripcionErrorParseo(String detalle) {
+        return I18nUI.trf("Error al parsear respuesta: %s", "Error parsing response: %s", detalle);
+    }
+
+    private static String tituloHallazgoPlano() {
+        return I18nUI.tr("Hallazgo Plano", "Plain Finding");
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
@@ -129,7 +160,7 @@ public class AnalizadorAI implements Runnable {
         boolean permisoAdquirido = false;
 
         if (solicitud == null) {
-            String error = "Solicitud de analisis no disponible";
+            String error = mensajeErrorSolicitudNoDisponible();
             registrarError("[" + nombreHilo + "] " + error);
             callback.alErrorAnalisis(error);
             return;
@@ -186,7 +217,7 @@ public class AnalizadorAI implements Runnable {
                 callback.alCanceladoAnalisis();
             } else {
                 registrarError("[" + nombreHilo + "] Analisis interrumpido despues de " + duracion + "ms: " + causa);
-                callback.alErrorAnalisis("Analisis interrumpido: " + causa);
+                callback.alErrorAnalisis(mensajeAnalisisInterrumpido(causa));
             }
         } catch (Exception e) {
             long duracion = System.currentTimeMillis() - tiempoInicio;
@@ -220,7 +251,7 @@ public class AnalizadorAI implements Runnable {
 
     private String validarConfiguracionAntesDeConsulta() {
         if (config == null) {
-            return "ALERTA: Configuracion de IA no disponible";
+            return alertaConfiguracionNoDisponible();
         }
         String error = config.validarParaConsultaModelo();
         return error != null ? error.trim() : "";
@@ -631,8 +662,8 @@ public class AnalizadorAI implements Runnable {
             List<Hallazgo> hallazgosError = new ArrayList<>();
             hallazgosError.add(new Hallazgo(
                 solicitud.obtenerUrl(),
-                "Error de análisis",
-                "Error al parsear respuesta: " + e.getMessage(),
+                tituloErrorAnalisis(),
+                descripcionErrorParseo(e.getMessage()),
                 Hallazgo.SEVERIDAD_INFO,
                 Hallazgo.CONFIANZA_BAJA,
                 solicitud.obtenerSolicitudHttp()
@@ -947,7 +978,7 @@ public class AnalizadorAI implements Runnable {
         if (destino == null) {
             return;
         }
-        String titulo = normalizarTextoSimple(tituloRaw, TITULO_POR_DEFECTO);
+        String titulo = normalizarTextoSimple(tituloRaw, tituloPorDefecto());
         String descripcion = normalizarTextoSimple(descripcionRaw, "");
         String evidencia = normalizarTextoSimple(evidenciaRaw, "");
         if (descripcion.isEmpty()) {
@@ -956,7 +987,7 @@ public class AnalizadorAI implements Runnable {
             descripcion = descripcion + "\n" + etiquetaEvidencia() + ": " + evidencia;
         }
         if (descripcion.isEmpty()) {
-            descripcion = DESCRIPCION_POR_DEFECTO;
+            descripcion = descripcionPorDefecto();
         }
         String severidad = Hallazgo.normalizarSeveridad(normalizarTextoSimple(severidadRaw, Hallazgo.SEVERIDAD_INFO));
         String confianza = Hallazgo.normalizarConfianza(normalizarTextoSimple(confianzaRaw, Hallazgo.CONFIANZA_BAJA));
@@ -1043,7 +1074,7 @@ public class AnalizadorAI implements Runnable {
                 String sev = extraerSeveridad(contenido);
                 hallazgos.add(new Hallazgo(
                     solicitud.obtenerUrl(),
-                    "Hallazgo Plano",
+                    tituloHallazgoPlano(),
                     contenido.trim(),
                     sev,
                     Hallazgo.CONFIANZA_BAJA,

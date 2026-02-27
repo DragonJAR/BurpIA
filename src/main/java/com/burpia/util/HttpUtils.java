@@ -11,6 +11,8 @@ import java.util.Set;
 
 public final class HttpUtils {
 
+    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
+
     public static final Set<String> EXTENSIONES_ESTATICAS;
 
     static {
@@ -59,18 +61,17 @@ public final class HttpUtils {
 
     public static String generarHashPartes(String... partes) {
         MessageDigest md = obtenerSha256();
-        if (partes != null) {
-            for (String parte : partes) {
-                if (parte != null && !parte.isEmpty()) {
-                    md.update(parte.getBytes(StandardCharsets.UTF_8));
-                }
-                md.update((byte) 0); 
+        if (partes == null || partes.length == 0) {
+            return convertirDigestHex(md.digest());
+        }
+        for (String parte : partes) {
+            if (parte != null && !parte.isEmpty()) {
+                md.update(parte.getBytes(StandardCharsets.UTF_8));
             }
+            md.update((byte) 0); 
         }
         return convertirDigestHex(md.digest());
     }
-
-    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
 
     public static String convertirDigestHex(byte[] hash) {
         if (hash == null) {
@@ -119,21 +120,38 @@ public final class HttpUtils {
         if (solicitud == null || respuesta == null) {
             return "";
         }
-        String metodo = solicitud.method() != null ? solicitud.method() : "";
-        String url = solicitud.url() != null ? solicitud.url() : "";
-        int status = respuesta.statusCode();
         
-        long reqBodyLen = 0;
+        MessageDigest md = obtenerSha256();
+        
+        actualizarDigest(md, solicitud.method());
+        actualizarDigest(md, solicitud.url());
+        actualizarDigest(md, respuesta.statusCode());
+        
         try {
-            if (solicitud.body() != null) reqBodyLen = solicitud.body().length();
+            if (solicitud.body() != null) {
+                actualizarDigest(md, solicitud.body().length());
+            }
         } catch (Exception ignored) {}
         
-        long resBodyLen = 0;
         try {
-            if (respuesta.body() != null) resBodyLen = respuesta.body().length();
+            if (respuesta.body() != null) {
+                actualizarDigest(md, respuesta.body().length());
+            }
         } catch (Exception ignored) {}
 
-        return generarHashPartes(metodo, url, String.valueOf(status), String.valueOf(reqBodyLen), String.valueOf(resBodyLen));
+        return convertirDigestHex(md.digest());
+    }
+
+    private static void actualizarDigest(MessageDigest md, String valor) {
+        if (valor != null && !valor.isEmpty()) {
+            md.update(valor.getBytes(StandardCharsets.UTF_8));
+        }
+        md.update((byte) 0);
+    }
+
+    private static void actualizarDigest(MessageDigest md, long valor) {
+        md.update(String.valueOf(valor).getBytes(StandardCharsets.UTF_8));
+        md.update((byte) 0);
     }
 
     public static String extraerEncabezados(HttpResponse respuesta) {

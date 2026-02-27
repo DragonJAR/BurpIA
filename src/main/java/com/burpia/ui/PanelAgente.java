@@ -1,5 +1,6 @@
 package com.burpia.ui;
 
+import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
@@ -24,9 +25,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class PanelFactoryDroid extends JPanel {
+public class PanelAgente extends JPanel {
 
-    private static final Logger LOGGER = Logger.getLogger(PanelFactoryDroid.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(PanelAgente.class.getName());
 
     private static final int DELAY_INICIO_BINARIO_MS = 800;
     private static final int MAX_REINTENTOS_INYECCION = 3;
@@ -44,6 +45,7 @@ public class PanelFactoryDroid extends JPanel {
     private JediTermWidget terminalWidget;
     private JLabel lblDelay;
     private JSpinner spinnerDelay;
+    private JButton btnCambiarAgente;
 
     private PtyProcess process;
     private TtyConnector ttyConnector;
@@ -55,7 +57,7 @@ public class PanelFactoryDroid extends JPanel {
     private volatile String promptPendiente = null;
     private volatile int delayPendienteMs = 0;
 
-    public PanelFactoryDroid(ConfiguracionAPI config) {
+    public PanelAgente(ConfiguracionAPI config) {
         this.config = config;
         setLayout(new BorderLayout(EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL));
         setBorder(BorderFactory.createEmptyBorder(
@@ -139,8 +141,8 @@ public class PanelFactoryDroid extends JPanel {
 
     public void forzarInyeccionPromptInicial() {
         if (promptInicialEnviado.compareAndSet(false, true)) {
-            String prompt = generarPromptInicial();
-            inyectarComando(prompt, config.obtenerAgenteFactoryDroidDelay());
+            String prompt = config.obtenerAgentePrompt();
+            inyectarComando(prompt, config.obtenerAgenteDelay());
         }
     }
 
@@ -176,18 +178,33 @@ public class PanelFactoryDroid extends JPanel {
 
     public void aplicarIdioma() {
         actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
-        actualizarTituloPanel(panelResultadosWrapper, I18nUI.Pestanias.AGENTE_FACTORY_DROID());
-        
+        actualizarTituloPanel(panelResultadosWrapper, obtenerNombreDinamicoConsola());
+
+        if (btnCambiarAgente != null) {
+            btnCambiarAgente.setText("🔀 " + obtenerNombreBotonSwitch());
+            btnCambiarAgente.setToolTipText(I18nUI.Tooltips.FactoryDroid.CAMBIAR_AGENTE_RAPIDO());
+        }
         if (lblDelay != null) {
             lblDelay.setText(I18nUI.Consola.ETIQUETA_DELAY());
-            lblDelay.setToolTipText(I18nUI.Tooltips.FactoryDroid.DELAY());
+            lblDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
         }
         if (spinnerDelay != null) {
-            spinnerDelay.setToolTipText(I18nUI.Tooltips.FactoryDroid.DELAY());
+            spinnerDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
         }
 
         revalidate();
         repaint();
+    }
+    
+    private String obtenerNombreDinamicoConsola() {
+        String nombreAgente = AgenteTipo.obtenerNombreVisible(
+            config.obtenerTipoAgente(),
+            I18nUI.General.AGENTE_GENERICO()
+        );
+        if (nombreAgente == null || nombreAgente.trim().isEmpty()) {
+            return I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO();
+        }
+        return I18nUI.Consola.TITULO_PANEL_AGENTE(nombreAgente);
     }
 
     private void inicializarComponentesUI() {
@@ -204,29 +221,34 @@ public class PanelFactoryDroid extends JPanel {
 
         JButton btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(), 
             I18nUI.Tooltips.FactoryDroid.REINICIAR(), e -> reiniciar());
-        
+
         JButton btnCtrlC = crearBoton("⚡ " + I18nUI.Consola.BOTON_CTRL_C(), 
             I18nUI.Tooltips.FactoryDroid.CTRL_C(), e -> escribirComandoCrudo("\u0003"));
 
         JButton btnInyectarPayload = crearBoton("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD(), 
             I18nUI.Tooltips.FactoryDroid.INYECTAR_PAYLOAD(), e -> inyectarPayloadInicialManual());
 
+        btnCambiarAgente = crearBoton("🔀 " + obtenerNombreBotonSwitch(),
+            I18nUI.Tooltips.FactoryDroid.CAMBIAR_AGENTE_RAPIDO(), e -> cambiarAgenteRapido());
+
         panel.add(btnReiniciar);
         panel.add(btnCtrlC);
         panel.add(btnInyectarPayload);
+        panel.add(new JSeparator(SwingConstants.VERTICAL));
+        panel.add(btnCambiarAgente);
 
         lblDelay = new JLabel(I18nUI.Consola.ETIQUETA_DELAY());
         lblDelay.setFont(EstilosUI.FUENTE_ESTANDAR);
-        lblDelay.setToolTipText(I18nUI.Tooltips.FactoryDroid.DELAY());
+        lblDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
 
         spinnerDelay = new JSpinner(new SpinnerNumberModel(
-            config.obtenerAgenteFactoryDroidDelay(), 1000, 30000, 500));
+            config.obtenerAgenteDelay(), 1000, 30000, 500));
         spinnerDelay.setFont(EstilosUI.FUENTE_ESTANDAR);
-        spinnerDelay.setToolTipText(I18nUI.Tooltips.FactoryDroid.DELAY());
+        spinnerDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
         spinnerDelay.setPreferredSize(new Dimension(80, 24));
         spinnerDelay.addChangeListener(e -> {
             int nuevoDelay = (int) spinnerDelay.getValue();
-            config.establecerAgenteFactoryDroidDelay(nuevoDelay);
+            config.establecerAgenteDelay(nuevoDelay);
             Runnable handler = manejadorCambioConfiguracion.get();
             if (handler != null) {
                 handler.run();
@@ -239,10 +261,62 @@ public class PanelFactoryDroid extends JPanel {
 
         return panel;
     }
+    
+    private String obtenerNombreBotonSwitch() {
+        AgenteTipo actual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
+        if (actual == null) {
+            return I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO();
+        }
+        AgenteTipo destino = (actual == AgenteTipo.FACTORY_DROID)
+            ? AgenteTipo.CLAUDE_CODE
+            : AgenteTipo.FACTORY_DROID;
+        return I18nUI.Consola.BOTON_CAMBIAR_AGENTE(destino.getNombreVisible());
+    }
+    
+    private void cambiarAgenteRapido() {
+        try {
+            AgenteTipo actual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
+            if (actual == null) {
+                actual = AgenteTipo.FACTORY_DROID;
+            }
+            AgenteTipo destino = (actual == AgenteTipo.FACTORY_DROID)
+                ? AgenteTipo.CLAUDE_CODE
+                : AgenteTipo.FACTORY_DROID;
+
+            String rutaBinario = config.obtenerRutaBinarioAgente(destino.name());
+            if (!OSUtils.existeBinario(rutaBinario)) {
+                UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
+                    this,
+                    I18nUI.Configuracion.Agentes.TITULO_VALIDACION_AGENTE(),
+                    I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE(destino.getNombreVisible(), rutaBinario),
+                    I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(destino.getNombreVisible()),
+                    destino.getUrlDocPorIdioma(config.obtenerIdiomaUi())
+                );
+                return;
+            }
+
+            config.establecerTipoAgente(destino.name());
+
+            Runnable handler = manejadorCambioConfiguracion.get();
+            if (handler != null) {
+                handler.run();
+            }
+
+            reiniciar();
+
+            if (btnCambiarAgente != null) {
+                btnCambiarAgente.setText("🔀 " + obtenerNombreBotonSwitch());
+            }
+            aplicarIdioma();
+
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, I18nLogs.tr("Error al cambiar de agente"), ex);
+        }
+    }
 
     private JPanel crearPanelResultados() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Pestanias.AGENTE_FACTORY_DROID(), 3, 3));
+        panel.setBorder(UIUtils.crearBordeTitulado(obtenerNombreDinamicoConsola(), 3, 3));
         return panel;
     }
 
@@ -379,31 +453,22 @@ public class PanelFactoryDroid extends JPanel {
             ((Timer) evt.getSource()).stop();
 
             if (promptInicialEnviado.compareAndSet(false, true)) {
-                String prompt = generarPromptInicial();
+                String prompt = config.obtenerAgentePrompt();
 
-                inyectarComando(prompt, 1000 + config.obtenerAgenteFactoryDroidDelay());
+                inyectarComando(prompt, 1000 + config.obtenerAgenteDelay());
             }
         }).start();
     }
 
     private String resolverRutaBinario() {
-        String binarioConfig = config.obtenerAgenteFactoryDroidBinario();
+        String binarioConfig = config.obtenerRutaBinarioAgente(config.obtenerTipoAgente());
         
         if (Normalizador.esVacio(binarioConfig)) {
-            return "droid";
+            AgenteTipo tipo = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
+            return tipo != null ? tipo.getRutaPorDefecto() : "droid";
         }
 
-        String binario = binarioConfig.trim();
-        String userHome = System.getProperty("user.home");
-        
-        if (OSUtils.esWindows() && binario.contains("%USERPROFILE%")) {
-            binario = binario.replace("%USERPROFILE%", userHome);
-        }
-        if (binario.startsWith("~")) {
-            binario = binario.replaceFirst("^~", userHome);
-        }
-        
-        return binario;
+        return OSUtils.expandirRuta(binarioConfig.trim());
     }
 
     private boolean estaPanelListoParaInyeccion() {
@@ -458,12 +523,18 @@ public class PanelFactoryDroid extends JPanel {
         LOGGER.info(I18nLogs.tr("Payload en bufer usando escritura directa (tty stream con bracketed paste). Esperando confirmacion..."));
 
         INYECTOR_PTY.submit(() -> {
-            try { Thread.sleep(600); } catch (Exception ignored) {} 
+            try { Thread.sleep(800); } catch (Exception ignored) {} 
             SwingUtilities.invokeLater(() -> {
-                enviarEnterNativoAJediTerm();
-                LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia VK_ENTER a la capa de JediTerm (Submit) tras la inyeccion en lote."));
+                enviarMultiplesEnters(3);
+                LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia de triples VK_ENTER a la capa de JediTerm (Submit) tras la inyeccion."));
             });
         });
+    }
+
+    private void enviarMultiplesEnters(int cantidad) {
+        for (int i = 0; i < cantidad; i++) {
+            enviarEnterNativoAJediTerm();
+        }
     }
 
     private void enviarEnterNativoAJediTerm() {
@@ -472,37 +543,16 @@ public class PanelFactoryDroid extends JPanel {
         java.awt.Component target = terminalWidget.getTerminalPanel();
 
         target.dispatchEvent(new java.awt.event.KeyEvent(target, java.awt.event.KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, java.awt.event.KeyEvent.VK_ENTER, '\n'));
+        escribirComandoCrudo("\r\n");
         target.dispatchEvent(new java.awt.event.KeyEvent(target, java.awt.event.KeyEvent.KEY_TYPED, System.currentTimeMillis(), 0, java.awt.event.KeyEvent.VK_UNDEFINED, '\n'));
         target.dispatchEvent(new java.awt.event.KeyEvent(target, java.awt.event.KeyEvent.KEY_RELEASED, System.currentTimeMillis(), 0, java.awt.event.KeyEvent.VK_ENTER, '\n'));
-
-        escribirComandoCrudo("\r\n");
-    }
-
-    private String generarPromptInicial() {
-        return "BURPAI CRITICAL PRE-FLIGHT CHECK: Before executing any task, perform an immediate and complete inventory of all MCP tools currently available to you.\n\n" +
-               "Follow this enhanced discovery protocol strictly:\n\n" +
-               "1. **Full MCP Inventory**: List EVERY active MCP connection and tool with its exact name, description, and capabilities.\n\n" +
-               "2. **Burp Suite MCP Detection & Priority**:\n" +
-               "   - The Burp Suite MCP might be registered under various aliases such as `burp`, `burpsuite`, `burp suite`, `burp-mcp`, `burp_mcp` or `mcp_burp`.\n" +
-               "   - Expected tool patterns: `mcp_burp_*`, `burp_*`, `send_http*`, `get_proxy_*`, `get_scanner_issues`, `create_repeater_tab`,\n" +
-               "     `send_to_intruder`, `generate_collaborator_payload`, `set_proxy_intercept_state`, etc.\n" +
-               "   - **KNOWN ISSUE**: Even if Burp MCP is installed and the server is running (port listening, process active),\n" +
-               "     the tools may not appear in the current Droid session. In this case, IMMEDIATELY perform 'retry connection',\n" +
-               "     'reintentar conexión' or 'refresh/reconnect Burp MCP' to enable all tools in this session.\n" +
-               "     Do not proceed with any task until Burp tools are visible.\n" +
-               "   - Once available, Burp Suite MCP (under any alias) is ALWAYS your HIGHEST PRIORITY and PRIMARY interface.\n\n" +
-               "3. **Capability Classification**: Categorize all discovered tools strictly into the following groups:\n\n" +
-               "   - [CATEGORY A] (HIGH PRIORITY) — Burp Suite MCP: Active HTTP interaction, Repeater, Intruder, Proxy, Scanner, Collaborator, Editor.\n" +
-               "   - [CATEGORY B] — Additional MCP tools: Other configured standard MCP servers.\n" +
-               "   - [CATEGORY C] — Native capabilities: Built-in shell execution, curl, scripting environments.\n\n" +
-               "Respond ONLY with this structured inventory report before awaiting further instructions.";
     }
 
     private void manejarErrorPty(Throwable t) {
         logErrorPty(t);
         String mensaje = t.getMessage() != null ? t.getMessage() : I18nLogs.tr("Error desconocido PTY");
         SwingUtilities.invokeLater(() -> {
-            UIUtils.mostrarError(PanelFactoryDroid.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje);
+            UIUtils.mostrarError(PanelAgente.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje);
         });
     }
 
@@ -529,7 +579,7 @@ public class PanelFactoryDroid extends JPanel {
             focoHandler.run();
         }
 
-        String prompt = generarPromptInicial();
+        String prompt = config.obtenerAgentePrompt();
 
         promptInicialEnviado.set(false);
         inicializacionPendiente.set(false);

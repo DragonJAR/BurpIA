@@ -13,12 +13,32 @@ public final class Normalizador {
         if (valor == null) {
             return "";
         }
-        return valor
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
-            .replace("\\\"", "\"")
-            .trim();
+        int len = valor.length();
+        StringBuilder sb = new StringBuilder(len);
+        for (int i = 0; i < len; i++) {
+            char c = valor.charAt(i);
+            if (c == '\\' && i + 1 < len) {
+                char next = valor.charAt(i + 1);
+                if (next == 'n') {
+                    sb.append('\n');
+                    i++;
+                } else if (next == 'r') {
+                    sb.append('\r');
+                    i++;
+                } else if (next == 't') {
+                    sb.append('\t');
+                    i++;
+                } else if (next == '\"') {
+                    sb.append('\"');
+                    i++;
+                } else {
+                    sb.append(c);
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString().trim();
     }
 
     public static String normalizarTexto(String valor, String porDefecto) {

@@ -30,10 +30,11 @@ public class ConfiguracionAPI {
     private boolean ignorarErroresSSL;
     private boolean soloProxy;
 
-    private boolean agenteFactoryDroidHabilitado;
-    private String agenteFactoryDroidBinario;
-    private String agenteFactoryDroidPrompt;
-    private int agenteFactoryDroidDelay;
+    private boolean agenteHabilitado;
+    private String tipoAgente;
+    private Map<String, String> rutasBinarioPorAgente;
+    private String agentePrompt;
+    private int agenteDelay;
 
     private Map<String, String> apiKeysPorProveedor;
     private Map<String, String> urlsBasePorProveedor;
@@ -57,10 +58,11 @@ public class ConfiguracionAPI {
         this.promptModificado = false;
         this.ignorarErroresSSL = false;
         this.soloProxy = true;
-        this.agenteFactoryDroidHabilitado = false;
-        this.agenteFactoryDroidBinario = obtenerAgenteFactoryDroidBinarioPorDefecto();
-        this.agenteFactoryDroidPrompt = obtenerAgenteFactoryDroidPromptPorDefecto();
-        this.agenteFactoryDroidDelay = 4000;
+        this.agenteHabilitado = false;
+        this.tipoAgente = AgenteTipo.FACTORY_DROID.name();
+        this.rutasBinarioPorAgente = new HashMap<>();
+        this.agentePrompt = obtenerAgentePromptPorDefecto();
+        this.agenteDelay = 4000;
 
         this.promptConfigurable = obtenerPromptPorDefecto();
 
@@ -168,30 +170,52 @@ public class ConfiguracionAPI {
     public boolean soloProxy() { return soloProxy; }
     public void establecerSoloProxy(boolean soloProxy) { this.soloProxy = soloProxy; }
 
-    public boolean agenteFactoryDroidHabilitado() { return agenteFactoryDroidHabilitado; }
-    public void establecerAgenteFactoryDroidHabilitado(boolean habilitado) { this.agenteFactoryDroidHabilitado = habilitado; }
+    public boolean agenteHabilitado() { return agenteHabilitado; }
+    public void establecerAgenteHabilitado(boolean habilitado) { this.agenteHabilitado = habilitado; }
 
-    public String obtenerAgenteFactoryDroidBinario() { return agenteFactoryDroidBinario; }
-    public void establecerAgenteFactoryDroidBinario(String binario) { this.agenteFactoryDroidBinario = binario; }
+    public String obtenerTipoAgente() { return tipoAgente; }
+    public void establecerTipoAgente(String tipo) { this.tipoAgente = tipo; }
 
-    public String obtenerAgenteFactoryDroidPrompt() { return agenteFactoryDroidPrompt; }
-    public void establecerAgenteFactoryDroidPrompt(String prompt) { this.agenteFactoryDroidPrompt = prompt; }
-
-    public int obtenerAgenteFactoryDroidDelay() { return agenteFactoryDroidDelay; }
-    public void establecerAgenteFactoryDroidDelay(int delay) { this.agenteFactoryDroidDelay = normalizarDelayFactoryDroid(delay); }
-
-    public static String obtenerAgenteFactoryDroidBinarioPorDefecto() {
-        if (OSUtils.esWindows()) {
-            return "%USERPROFILE%\\bin\\droid.exe";
+    public String obtenerRutaBinarioAgente(String agente) {
+        if (rutasBinarioPorAgente == null) rutasBinarioPorAgente = new HashMap<>();
+        if (agente == null) return null;
+        String ruta = rutasBinarioPorAgente.get(agente);
+        if (ruta == null || ruta.trim().isEmpty()) {
+            AgenteTipo tipoEnum = AgenteTipo.desdeCodigo(agente, null);
+            return tipoEnum != null ? tipoEnum.getRutaPorDefecto() : "";
         }
-        return "~/.local/bin/droid";
+        return ruta;
     }
+
+    public void establecerRutaBinarioAgente(String agente, String ruta) {
+        if (rutasBinarioPorAgente == null) rutasBinarioPorAgente = new HashMap<>();
+        if (agente != null) {
+            rutasBinarioPorAgente.put(agente, ruta);
+        }
+    }
+
+    public Map<String, String> obtenerTodasLasRutasBinario() {
+        if (rutasBinarioPorAgente == null) rutasBinarioPorAgente = new HashMap<>();
+        return rutasBinarioPorAgente;
+    }
+
+    public void establecerTodasLasRutasBinario(Map<String, String> rutas) {
+        this.rutasBinarioPorAgente = rutas != null ? nuevasRutas(rutas) : new HashMap<>();
+    }
+
+    private Map<String, String> nuevasRutas(Map<String, String> map) { return new HashMap<>(map); }
+
+    public String obtenerAgentePrompt() { return agentePrompt; }
+    public void establecerAgentePrompt(String prompt) { this.agentePrompt = prompt; }
+
+    public int obtenerAgenteDelay() { return agenteDelay; }
+    public void establecerAgenteDelay(int delay) { this.agenteDelay = normalizarDelayAgente(delay); }
 
     public static String obtenerPromptAgentePorDefecto() {
         return I18nUI.Configuracion.PROMPT_POR_DEFECTO();
     }
 
-    public static String obtenerAgenteFactoryDroidPromptPorDefecto() {
+    public static String obtenerAgentePromptPorDefecto() {
         return "# ROLE\n" +
                "You are an Elite Offensive Security Researcher & Red Teamer. Your expertise lies in exploit development and manual vulnerability verification. You operate with a \"Prove it or it doesn't exist\" mindset.\n\n" +
                "# OBJECTIVE\n" +
@@ -842,7 +866,7 @@ public class ConfiguracionAPI {
         return "Light";
     }
 
-    private static int normalizarDelayFactoryDroid(int valor) {
+    private static int normalizarDelayAgente(int valor) {
         if (valor < 1000) return 1000;
         if (valor > 30000) return 30000;
         return valor;
@@ -871,10 +895,14 @@ public class ConfiguracionAPI {
         snapshot.promptModificado = this.promptModificado;
         snapshot.ignorarErroresSSL = this.ignorarErroresSSL;
         snapshot.soloProxy = this.soloProxy;
-        snapshot.agenteFactoryDroidHabilitado = this.agenteFactoryDroidHabilitado;
-        snapshot.agenteFactoryDroidBinario = this.agenteFactoryDroidBinario;
-        snapshot.agenteFactoryDroidPrompt = this.agenteFactoryDroidPrompt;
-        snapshot.agenteFactoryDroidDelay = this.agenteFactoryDroidDelay;
+        snapshot.agenteHabilitado = this.agenteHabilitado;
+        snapshot.tipoAgente = this.tipoAgente;
+        snapshot.rutasBinarioPorAgente = new HashMap<>();
+        if (this.rutasBinarioPorAgente != null) {
+            snapshot.rutasBinarioPorAgente.putAll(this.rutasBinarioPorAgente);
+        }
+        snapshot.agentePrompt = this.agentePrompt;
+        snapshot.agenteDelay = this.agenteDelay;
 
         snapshot.apiKeysPorProveedor = new HashMap<>(this.apiKeysPorProveedor);
         snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
@@ -905,10 +933,14 @@ public class ConfiguracionAPI {
         this.promptModificado = origen.promptModificado;
         this.ignorarErroresSSL = origen.ignorarErroresSSL;
         this.soloProxy = origen.soloProxy;
-        this.agenteFactoryDroidHabilitado = origen.agenteFactoryDroidHabilitado;
-        this.agenteFactoryDroidBinario = origen.agenteFactoryDroidBinario;
-        this.agenteFactoryDroidPrompt = origen.agenteFactoryDroidPrompt;
-        this.agenteFactoryDroidDelay = origen.agenteFactoryDroidDelay;
+        this.agenteHabilitado = origen.agenteHabilitado;
+        this.tipoAgente = origen.tipoAgente;
+        this.rutasBinarioPorAgente = new HashMap<>();
+        if (origen.rutasBinarioPorAgente != null) {
+            this.rutasBinarioPorAgente.putAll(origen.rutasBinarioPorAgente);
+        }
+        this.agentePrompt = origen.agentePrompt;
+        this.agenteDelay = origen.agenteDelay;
 
         this.apiKeysPorProveedor = new HashMap<>(origen.apiKeysPorProveedor);
         this.urlsBasePorProveedor = new HashMap<>(origen.urlsBasePorProveedor);

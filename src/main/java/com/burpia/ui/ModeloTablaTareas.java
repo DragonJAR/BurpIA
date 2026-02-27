@@ -38,11 +38,18 @@ public class ModeloTablaTareas extends DefaultTableModel {
         lock.lock();
         try {
             datos.add(tarea);
-            aplicarLimiteFilasEnDatos();
+            marcarCambio();
+            boolean purgaRealizada = aplicarLimiteFilasEnDatos();
+            if (purgaRealizada) {
+                programarSincronizacionTabla();
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    addRow(tarea.aFilaTabla());
+                });
+            }
         } finally {
             lock.unlock();
         }
-        programarSincronizacionTabla();
     }
 
     public void actualizarTarea(Tarea tarea) {
@@ -53,33 +60,46 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (idTarea == null || idTarea.isEmpty()) {
             return;
         }
-        boolean actualizada = false;
+        int indiceEnDatos = -1;
         lock.lock();
         try {
             for (int i = 0; i < datos.size(); i++) {
                 Tarea tareaActual = datos.get(i);
                 if (tareaActual != null && idTarea.equals(tareaActual.obtenerId())) {
                     datos.set(i, tarea);
-                    actualizada = true;
+                    indiceEnDatos = i;
+                    marcarCambio();
                     break;
                 }
             }
         } finally {
             lock.unlock();
         }
-        if (actualizada) {
-            programarSincronizacionTabla();
+        
+        if (indiceEnDatos != -1) {
+            final int filaUI = indiceEnDatos;
+            final Object[] nuevosValores = tarea.aFilaTabla();
+            SwingUtilities.invokeLater(() -> {
+                if (filaUI < getRowCount()) {
+                    for (int col = 0; col < TOTAL_COLUMNAS; col++) {
+                        setValueAt(nuevosValores[col], filaUI, col);
+                    }
+                }
+            });
         }
     }
 
-    private void aplicarLimiteFilasEnDatos() {
+    private boolean aplicarLimiteFilasEnDatos() {
+        boolean huboPurga = false;
         while (datos.size() > limiteFilas) {
             int indice = buscarIndicePurgablePorLimite();
             if (indice < 0 || indice >= datos.size()) {
                 break;
             }
             datos.remove(indice);
+            huboPurga = true;
         }
+        return huboPurga;
     }
 
     private int buscarIndicePurgablePorLimite() {
@@ -99,10 +119,13 @@ public class ModeloTablaTareas extends DefaultTableModel {
         lock.lock();
         try {
             datos.clear();
+            marcarCambio();
         } finally {
             lock.unlock();
         }
-        programarSincronizacionTabla();
+        SwingUtilities.invokeLater(() -> {
+            setRowCount(0);
+        });
     }
 
     public Tarea obtenerTarea(int indiceFila) {
@@ -137,7 +160,13 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (!eliminado) {
             return;
         }
-        programarSincronizacionTabla();
+        marcarCambio();
+        final int filaAEliminar = indiceFila;
+        SwingUtilities.invokeLater(() -> {
+            if (filaAEliminar < getRowCount()) {
+                removeRow(filaAEliminar);
+            }
+        });
     }
 
     public int buscarIndicePorId(String idTarea) {
@@ -199,8 +228,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (estados == null || estados.length == 0) {
             return;
         }
-        boolean cambio = false;
-
+        boolean huboCambios = false;
         lock.lock();
         try {
             for (int i = datos.size() - 1; i >= 0; i--) {
@@ -208,7 +236,11 @@ public class ModeloTablaTareas extends DefaultTableModel {
                 for (String estado : estados) {
                     if (tarea != null && estado != null && estado.equals(tarea.obtenerEstado())) {
                         datos.remove(i);
-                        cambio = true;
+                        huboCambios = true;
+                        final int fila = i;
+                        SwingUtilities.invokeLater(() -> {
+                            if (fila < getRowCount()) removeRow(fila);
+                        });
                         break;
                     }
                 }
@@ -216,8 +248,8 @@ public class ModeloTablaTareas extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
-        if (cambio) {
-            programarSincronizacionTabla();
+        if (huboCambios) {
+            marcarCambio();
         }
     }
 
@@ -243,18 +275,19 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     private void programarSincronizacionTabla() {
-        versionCambios.incrementAndGet();
         SwingUtilities.invokeLater(this::sincronizarTablaDesdeDatosEnEdt);
     }
 
     public int obtenerVersion() { return versionCambios.get(); }
 
-    @SuppressWarnings("unchecked")
+    private void marcarCambio() {
+        versionCambios.incrementAndGet();
+    }
+
     private void sincronizarTablaDesdeDatosEnEdt() {
         List<Object[]> snapshot = new ArrayList<>();
         lock.lock();
         try {
-            aplicarLimiteFilasEnDatos();
             for (Tarea tarea : datos) {
                 if (tarea != null) {
                     snapshot.add(tarea.aFilaTabla());
@@ -264,14 +297,9 @@ public class ModeloTablaTareas extends DefaultTableModel {
             lock.unlock();
         }
 
-        dataVector.clear();
+        setRowCount(0);
         for (Object[] fila : snapshot) {
-            java.util.Vector<Object> rowData = new java.util.Vector<>();
-            for (Object col : fila) {
-                rowData.add(col);
-            }
-            dataVector.add(rowData);
+            addRow(fila);
         }
-        fireTableDataChanged();
     }
 }
