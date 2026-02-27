@@ -130,6 +130,22 @@ Puedes pegarle a Droid el JSON anterior y decirle literalmente:
 
 ```text
 instale este mcp
+
+{
+  "mcpServers": {
+    "burp": {
+      "type": "stdio",
+      "command": "/Applications/Burp Suite Professional.app/Contents/Resources/jre.bundle/Contents/Home/bin/java",
+      "args": [
+        "-jar",
+        "/Users/usuario/.BurpSuite/mcp-proxy/mcp-proxy-all.jar",
+        "--sse-url",
+        "http://127.0.0.1:9876"
+      ],
+      "disabled": false
+    }
+  }
+}
 ```
 
 Luego valida con:
