@@ -38,7 +38,7 @@ final class SubmitSequenceBuilder {
         if (tipoAgente == AgenteTipo.CLAUDE_CODE) {
             return construirClaudeAuto(plataforma);
         }
-        return construirFija(EstrategiaSubmit.TRIPLE_ENTER_OS, plataforma);
+        return construirFija(EstrategiaSubmit.SMART_FALLBACK, plataforma);
     }
 
     private static SubmitSequence construirClaudeAuto(Plataforma plataforma) {
@@ -68,10 +68,15 @@ final class SubmitSequenceBuilder {
             case TRIPLE_CRLF:
                 return new SubmitSequence("\r\n", 3, 80, estrategia);
             case TRIPLE_ENTER_OS:
-                return new SubmitSequence(plataforma == Plataforma.WINDOWS ? "\r\n" : "\n", 3, 80, estrategia);
+                return new SubmitSequence(plataforma == Plataforma.WINDOWS ? "\r\n" : "\r", 3, 100, estrategia);
+            case SMART_FALLBACK:
+                // Estrategia "Escalera": CR -> LF -> CRLF para máxima compatibilidad
+                return new SubmitSequence("\r", 1, 0, estrategia)
+                    .conFallback("\n", 1, 100)
+                    .conFallback("\r\n", 1, 100);
             case AUTO:
             default:
-                return new SubmitSequence(plataforma == Plataforma.WINDOWS ? "\r\n" : "\n", 1, 0, EstrategiaSubmit.AUTO);
+                return new SubmitSequence(plataforma == Plataforma.WINDOWS ? "\r\n" : "\r", 1, 0, EstrategiaSubmit.AUTO);
         }
     }
 
@@ -80,12 +85,26 @@ final class SubmitSequenceBuilder {
         private final int repeticiones;
         private final int delayEntreEnviosMs;
         private final EstrategiaSubmit estrategia;
+        private SubmitSequence fallback;
 
         SubmitSequence(String payload, int repeticiones, int delayEntreEnviosMs, EstrategiaSubmit estrategia) {
             this.payload = payload;
             this.repeticiones = Math.max(1, repeticiones);
             this.delayEntreEnviosMs = Math.max(0, delayEntreEnviosMs);
             this.estrategia = estrategia != null ? estrategia : EstrategiaSubmit.AUTO;
+        }
+
+        SubmitSequence conFallback(String payload, int repeticiones, int delay) {
+            if (this.fallback == null) {
+                this.fallback = new SubmitSequence(payload, repeticiones, delay, this.estrategia);
+            } else {
+                this.fallback.conFallback(payload, repeticiones, delay);
+            }
+            return this;
+        }
+
+        SubmitSequence getFallback() {
+            return fallback;
         }
 
         String payload() {
@@ -113,7 +132,8 @@ final class SubmitSequenceBuilder {
         CR,
         CRLF,
         TRIPLE_ENTER_OS,
-        TRIPLE_CRLF;
+        TRIPLE_CRLF,
+        SMART_FALLBACK;
 
         static EstrategiaSubmit desdeValor(String valor, EstrategiaSubmit porDefecto) {
             if (valor == null || valor.trim().isEmpty()) {

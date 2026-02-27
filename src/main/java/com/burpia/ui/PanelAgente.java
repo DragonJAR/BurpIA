@@ -670,6 +670,8 @@ public class PanelAgente extends JPanel {
         long injectionId,
         String origen
     ) {
+        if (secuencia == null) return;
+
         if (opciones.probeSubmitActivo()) {
             LOGGER.info(I18nLogs.trTecnico(
                 "[ENTER-PROBE] agent=" + opciones.tipoAgente().name() +
@@ -693,12 +695,19 @@ public class PanelAgente extends JPanel {
                 dormirSilencioso(secuencia.delayEntreEnviosMs());
             }
         }
-        LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
-        LOGGER.info(I18nLogs.trTecnico(
-            "[ENTER-RESULT] id=" + injectionId +
-                " origin=" + origen +
-                " outcome=unknown reason=transport-level-dispatch-only"
-        ));
+
+        // Si hay un fallback (Smart Fallback), lo ejecutamos tras un pequeño respiro
+        if (secuencia.getFallback() != null) {
+            dormirSilencioso(secuencia.delayEntreEnviosMs() > 0 ? secuencia.delayEntreEnviosMs() : 100);
+            enviarSecuenciaSubmit(opciones, secuencia.getFallback(), injectionId, origen + "->FALLBACK");
+        } else {
+            LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
+            LOGGER.info(I18nLogs.trTecnico(
+                "[ENTER-RESULT] id=" + injectionId +
+                    " origin=" + origen +
+                    " outcome=unknown reason=transport-level-dispatch-only"
+            ));
+        }
     }
 
     private void dormirSilencioso(long ms) {
