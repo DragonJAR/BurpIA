@@ -107,7 +107,7 @@ set FACTORY_API_KEY=fk-...
       "command": "/Applications/Burp Suite Professional.app/Contents/Resources/jre.bundle/Contents/Home/bin/java",
       "args": [
         "-jar",
-        "/Users/jaimearestrepo/.BurpSuite/mcp-proxy/mcp-proxy-all.jar",
+        "/Users/usuario/.BurpSuite/mcp-proxy/mcp-proxy-all.jar",
         "--sse-url",
         "http://127.0.0.1:9876"
       ],
