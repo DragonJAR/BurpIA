@@ -10,8 +10,11 @@ import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GestorConsolaGUI {
+    private static final Logger LOGGER = Logger.getLogger(GestorConsolaGUI.class.getName());
     public enum TipoLog {
         INFO,
         VERBOSE,
@@ -320,7 +323,9 @@ public class GestorConsolaGUI {
             stderrOriginal.flush();
             return;
         }
-        System.err.println(texto);
+        if (LOGGER.isLoggable(Level.SEVERE)) {
+            LOGGER.log(Level.SEVERE, texto);
+        }
     }
 
     private static final class EntradaLog {

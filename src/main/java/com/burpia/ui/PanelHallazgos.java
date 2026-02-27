@@ -57,7 +57,7 @@ public class PanelHallazgos extends JPanel {
     private boolean actualizandoEstadoAutoIssues = false;
 
     private com.burpia.config.ConfiguracionAPI config;
-    private Consumer<Hallazgo> manejadorEnviarADroid;
+    private java.util.function.Consumer<Hallazgo> manejadorEnviarAAgente;
     private final ExecutorService ejecutorAcciones;
 
     public PanelHallazgos(MontoyaApi api) {
@@ -179,8 +179,11 @@ public class PanelHallazgos extends JPanel {
         panelTablaWrapper.add(panelDesplazable, BorderLayout.CENTER);
 
         campoBusqueda.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
             public void changedUpdate(DocumentEvent e) { aplicarFiltros(); }
+            @Override
             public void insertUpdate(DocumentEvent e) { aplicarFiltros(); }
+            @Override
             public void removeUpdate(DocumentEvent e) { aplicarFiltros(); }
         });
 
@@ -500,7 +503,7 @@ public class PanelHallazgos extends JPanel {
                 e -> enviarAScanner(tabla.getSelectedRows())
             ));
         }
-        if (config != null && config.agenteHabilitado() && manejadorEnviarADroid != null) {
+        if (config != null && config.agenteHabilitado() && manejadorEnviarAAgente != null) {
             String nombreAgente = AgenteTipo.obtenerNombreVisible(
                 config.obtenerTipoAgente(),
                 I18nUI.General.AGENTE_GENERICO()
@@ -508,7 +511,7 @@ public class PanelHallazgos extends JPanel {
             menu.add(crearMenuItemContextual(
                 I18nUI.Hallazgos.MENU_ENVIAR_AGENTE_ROCKET(nombreAgente),
                 I18nUI.Tooltips.Hallazgos.ENVIAR_AGENTE(nombreAgente),
-                e -> enviarADroid(tabla.getSelectedRows())
+                e -> enviarAAgente(tabla.getSelectedRows())
             ));
         }
         if (integracionIssuesDisponible && !guardadoAutomaticoIssuesActivo) {
@@ -585,13 +588,13 @@ public class PanelHallazgos extends JPanel {
             : I18nUI.Tooltips.Hallazgos.MENU_ISSUES_SOLO_PRO();
     }
 
-    private void enviarADroid(int[] filas) {
-        if (manejadorEnviarADroid == null) return;
+    private void enviarAAgente(int[] filas) {
+        if (manejadorEnviarAAgente == null) return;
         int[] filasModelo = convertirFilasVistaAModelo(filas);
         for (int filaModelo : filasModelo) {
             Hallazgo h = modelo.obtenerHallazgo(filaModelo);
             if (h != null) {
-                manejadorEnviarADroid.accept(h);
+                manejadorEnviarAAgente.accept(h);
             }
         }
     }
@@ -998,8 +1001,8 @@ public class PanelHallazgos extends JPanel {
         this.config = config;
     }
 
-    public void establecerManejadorEnviarADroid(Consumer<Hallazgo> manejador) {
-        this.manejadorEnviarADroid = manejador;
+    public void establecerManejadorEnviarAAgente(java.util.function.Consumer<Hallazgo> manejador) {
+        this.manejadorEnviarAAgente = manejador;
     }
 
     public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {

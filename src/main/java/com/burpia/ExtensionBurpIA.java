@@ -125,7 +125,7 @@ public class ExtensionBurpIA implements BurpExtension {
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
 
         registrar("==================================================");
-        registrar(" BurpIA v1.0.0 - Complemento de Seguridad con IA");
+        registrar(" BurpIA v1.0.1 - Complemento de Seguridad con IA");
         registrar("==================================================");
         registrar("Burp Suite: " + (esProfessional ? "Professional" : "Community Edition"));
 
@@ -207,7 +207,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void enviarAFactoryDroid(HttpRequestResponse solicitudRespuesta) {
         if (config == null) {
-            registrarError("No se puede usar Factory Droid: configuracion no inicializada");
+            registrarError("No se puede usar el Agente: configuracion no inicializada");
             return;
         }
         if (!config.agenteHabilitado()) {
@@ -215,7 +215,7 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
         if (solicitudRespuesta == null) {
-            registrarError("No se puede enviar a Factory Droid: solicitud/respuesta nula");
+            registrarError("No se puede enviar al Agente: solicitud/respuesta nula");
             return;
         }
 
@@ -243,7 +243,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void enviarHallazgoAFactoryDroid(Hallazgo hallazgo) {
         if (config == null) {
-            registrarError("No se puede usar Factory Droid: configuracion no inicializada");
+            registrarError("No se puede usar el Agente: configuracion no inicializada");
             return;
         }
         if (!config.agenteHabilitado()) {
@@ -362,7 +362,16 @@ public class ExtensionBurpIA implements BurpExtension {
         Runnable crearUi = () -> {
             pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas, modeloTablaHallazgos, esProfessional, config);
             pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
-            pestaniaPrincipal.establecerManejadorEnviarADroid(this::enviarHallazgoAFactoryDroid);
+            pestaniaPrincipal.establecerManejadorEnviarAAgente(this::enviarHallazgoAFactoryDroid);
+            pestaniaPrincipal.establecerManejadorCambioAgente(() -> {
+                guardarConfiguracionSilenciosa("cambio-agente-rapido");
+                if (manejadorHttp != null) {
+                    manejadorHttp.actualizarConfiguracion(config);
+                }
+                pestaniaPrincipal.actualizarVisibilidadAgentes();
+                pestaniaPrincipal.aplicarIdioma();
+                registrar("Agente cambiado rápidamente a: " + config.obtenerTipoAgente());
+            });
 
             api.userInterface().registerSuiteTab("BurpIA", pestaniaPrincipal.obtenerPanel());
             registrar("Pestania de UI registrada exitosamente");

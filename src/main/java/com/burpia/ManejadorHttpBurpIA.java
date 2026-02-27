@@ -66,14 +66,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private static final class ContextoReintento {
         private final SolicitudAnalisis solicitudAnalisis;
         private final HttpRequestResponse evidenciaHttp;
-        private final String tipoTarea;
 
         private ContextoReintento(SolicitudAnalisis solicitudAnalisis,
-                                  HttpRequestResponse evidenciaHttp,
-                                  String tipoTarea) {
+                                  HttpRequestResponse evidenciaHttp) {
             this.solicitudAnalisis = solicitudAnalisis;
             this.evidenciaHttp = evidenciaHttp;
-            this.tipoTarea = tipoTarea;
         }
     }
 
@@ -359,8 +356,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         ejecutarAnalisisExistente(
             tareaId,
             contexto.solicitudAnalisis,
-            contexto.evidenciaHttp,
-            contexto.tipoTarea
+            contexto.evidenciaHttp
         );
 
         registrar("Tarea reencolada: " + tareaId);
@@ -402,17 +398,16 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             tareaIdRef.set(tarea.obtenerId());
             contextosReintento.put(
                 tarea.obtenerId(),
-                new ContextoReintento(solicitudAnalisis, evidenciaHttp, tipoTarea)
+                new ContextoReintento(solicitudAnalisis, evidenciaHttp)
             );
-            ejecutarAnalisisExistente(tarea.obtenerId(), solicitudAnalisis, evidenciaHttp, tipoTarea);
+            ejecutarAnalisisExistente(tarea.obtenerId(), solicitudAnalisis, evidenciaHttp);
         }
         return tareaIdRef.get();
     }
 
     private void ejecutarAnalisisExistente(String tareaId,
                                           SolicitudAnalisis solicitudAnalisis,
-                                          HttpRequestResponse evidenciaHttp,
-                                          String tipoTarea) {
+                                          HttpRequestResponse evidenciaHttp) {
         if (tareaId == null || solicitudAnalisis == null) {
             return;
         }

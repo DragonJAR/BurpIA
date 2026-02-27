@@ -23,6 +23,7 @@ public class UIUtils {
             Border externo = ((CompoundBorder) borde).getOutsideBorder();
             if (externo instanceof TitledBorder) {
                 ((TitledBorder) externo).setTitle(titulo);
+                panel.repaint();
             }
         }
     }

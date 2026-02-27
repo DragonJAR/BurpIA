@@ -6,17 +6,25 @@ import java.util.List;
 
 public class ResultadoAnalisisMultiple {
     private final String url;
-    private final String marcaTiempo;
     private final List<Hallazgo> hallazgos;
     private final HttpRequest solicitudHttp;
 
-    public ResultadoAnalisisMultiple(String url, String marcaTiempo, List<Hallazgo> hallazgos) {
-        this(url, marcaTiempo, hallazgos, null);
+    public ResultadoAnalisisMultiple(String url, List<Hallazgo> hallazgos) {
+        this(url, hallazgos, null);
     }
 
+    @SuppressWarnings("PMD.UnusedFormalParameter")
+    public ResultadoAnalisisMultiple(String url, String marcaTiempo, List<Hallazgo> hallazgos) {
+        this(url, hallazgos, null);
+    }
+
+    @SuppressWarnings("PMD.UnusedFormalParameter")
     public ResultadoAnalisisMultiple(String url, String marcaTiempo, List<Hallazgo> hallazgos, HttpRequest solicitudHttp) {
+        this(url, hallazgos, solicitudHttp);
+    }
+
+    public ResultadoAnalisisMultiple(String url, List<Hallazgo> hallazgos, HttpRequest solicitudHttp) {
         this.url = url;
-        this.marcaTiempo = marcaTiempo;
         this.hallazgos = hallazgos != null ? new ArrayList<>(hallazgos) : new ArrayList<>();
         this.solicitudHttp = solicitudHttp;
     }

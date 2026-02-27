@@ -2,7 +2,7 @@
 
 BurpIA is a Burp Suite extension that analyzes HTTP traffic with LLMs to help you detect potential security findings in less time.
 
-**Current version:** `1.0.0`
+**Current version:** `1.0.1`
 ![BurpIA in English](src/assets/EN.png)
 
 Spanish version: [README.md](README.md)

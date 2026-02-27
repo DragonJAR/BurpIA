@@ -31,9 +31,9 @@ public class RenderizadorEstado extends DefaultTableCellRenderer {
                 Color colorFondo = Tarea.obtenerColorEstado(estado);
                 etiqueta.setBackground(colorFondo);
 
-                if (estado.equals(Tarea.ESTADO_EN_COLA) ||
-                    estado.equals(Tarea.ESTADO_ERROR) ||
-                    estado.equals(Tarea.ESTADO_CANCELADO)) {
+                if (Tarea.ESTADO_EN_COLA.equals(estado) ||
+                    Tarea.ESTADO_ERROR.equals(estado) ||
+                    Tarea.ESTADO_CANCELADO.equals(estado)) {
                     etiqueta.setForeground(Color.WHITE);
                 } else {
                     etiqueta.setForeground(Color.BLACK);

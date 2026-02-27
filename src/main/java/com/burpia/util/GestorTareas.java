@@ -1,7 +1,6 @@
 package com.burpia.util;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaTareas;
-import javax.swing.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -9,8 +8,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GestorTareas {
+    private static final Logger LOGGER = Logger.getLogger(GestorTareas.class.getName());
     private final Map<String, Tarea> tareas;
     private final ReentrantLock candado;
     private final ScheduledExecutorService monitorVerificacion;
@@ -134,9 +136,9 @@ public class GestorTareas {
 
             for (Map.Entry<String, Tarea> entry : tareas.entrySet()) {
                 String estado = entry.getValue().obtenerEstado();
-                if (estado.equals(Tarea.ESTADO_COMPLETADO) ||
-                    estado.equals(Tarea.ESTADO_ERROR) ||
-                    estado.equals(Tarea.ESTADO_CANCELADO)) {
+                if (Tarea.ESTADO_COMPLETADO.equals(estado) ||
+                    Tarea.ESTADO_ERROR.equals(estado) ||
+                    Tarea.ESTADO_CANCELADO.equals(estado)) {
                     idsAEliminar.add(entry.getKey());
                 }
             }
@@ -164,7 +166,7 @@ public class GestorTareas {
         try {
             for (Tarea tarea : tareas.values()) {
                 String estado = tarea.obtenerEstado();
-                if (estado.equals(Tarea.ESTADO_ANALIZANDO)) {
+                if (Tarea.ESTADO_ANALIZANDO.equals(estado)) {
                     long duracion = tarea.obtenerDuracionMilisegundos();
                     if (duracion > TAREA_ATASCADA_MS) {
                         tareasAtascadas.add(tarea);
@@ -344,7 +346,7 @@ public class GestorTareas {
             Tarea tarea = tareas.get(id);
             if (tarea != null) {
                 String estado = tarea.obtenerEstado();
-                return estado.equals(Tarea.ESTADO_CANCELADO);
+                return Tarea.ESTADO_CANCELADO.equals(estado);
             }
             return false;
         } finally {
@@ -358,7 +360,7 @@ public class GestorTareas {
             Tarea tarea = tareas.get(id);
             if (tarea != null) {
                 String estado = tarea.obtenerEstado();
-                return estado.equals(Tarea.ESTADO_PAUSADO);
+                return Tarea.ESTADO_PAUSADO.equals(estado);
             }
             return false;
         } finally {
@@ -472,8 +474,14 @@ public class GestorTareas {
         try {
             logger.accept(mensaje);
         } catch (Exception e) {
-            System.err.println("[GestorTareas] Error al registrar log: " +
-                (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+            if (LOGGER.isLoggable(Level.WARNING)) {
+                LOGGER.log(
+                    Level.WARNING,
+                    "[GestorTareas] Error al registrar log: " +
+                        (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()),
+                    e
+                );
+            }
         }
     }
 

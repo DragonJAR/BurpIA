@@ -246,11 +246,9 @@ public class GestorConfiguracion {
             config.establecerSoloProxy(archivo.soloProxy);
         }
 
-        // Migracion y Carga de Configuracion de Agentes
         if (archivo.agenteHabilitado != null) {
             config.establecerAgenteHabilitado(archivo.agenteHabilitado);
         } else if (archivo.agenteFactoryDroidHabilitado != null) {
-            // Legacy fallback
             config.establecerAgenteHabilitado(archivo.agenteFactoryDroidHabilitado);
         }
 
@@ -261,21 +259,18 @@ public class GestorConfiguracion {
         if (archivo.rutasBinarioPorAgente != null) {
             config.establecerTodasLasRutasBinario(archivo.rutasBinarioPorAgente);
         } else if (archivo.agenteFactoryDroidBinario != null) {
-            // Legacy fallback
             config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), archivo.agenteFactoryDroidBinario);
         }
         
         if (archivo.agentePrompt != null) {
             config.establecerAgentePrompt(archivo.agentePrompt);
         } else if (archivo.agenteFactoryDroidPrompt != null) {
-             // Legacy fallback
             config.establecerAgentePrompt(archivo.agenteFactoryDroidPrompt);
         }
 
         if (archivo.agenteDelay != null) {
             config.establecerAgenteDelay(archivo.agenteDelay);
         } else if (archivo.agenteFactoryDroidDelay != null) {
-             // Legacy fallback
             config.establecerAgenteDelay(archivo.agenteFactoryDroidDelay);
         }
 
