@@ -789,7 +789,7 @@ public final class I18nUI {
         }
 
         public static String TITULO_PANEL_AGENTE_GENERICO() {
-            return tr("Consola del Agente", "Agent Console");
+            return tr("🖥️ CONSOLA DEL AGENTE", "🖥️ AGENT CONSOLE");
         }
 
         public static String TAG_RASTREO() {

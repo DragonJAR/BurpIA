@@ -20,25 +20,35 @@ Spanish version: [README.md](README.md)
 
 ---
 
-## Current status (v1.0.0)
+## Current status (v1.0.1)
 
-- **Scope-Aware Validation:** Strict `Target Scope` control (Pro/Community) before any analysis to avoid out-of-scope noise.
-- **Task Management:** Full workflow control (pause, resume, cancel, retry, and clear tasks).
-- **Findings Control:** Optional automatic saving to `Site Map > Issues` or selective manual submission.
-- **Smart Deduplication:** SHA-256 hashes with LRU cache and TTL expiration to avoid processing duplicates.
-- **High-Performance Static Filter:** Elimination of irrelevant resources via string comparison (without URI parsing overhead).
-- **Data Resilience (Safe JSON Repair):** Recovery of corrupted or truncated JSON objects without loss of legitimate data.
-- **Log Optimization:** Buffer-based write system to prevent saturation of the Burp Suite API.
-- **Passive Capture and Architecture:** Non-intrusive analysis with a refactored structure and decoupled handlers for better maintainability.
+BurpIA is updated to `v1.0.1`.
+See the change summary in **Version history**.
+
+---
+
+## Version history
+
+### v1.0.1 (current)
+
+- Now with dynamic agentic manual testing using Factory Droid, Claude Code, and the Burp Suite MCP.
+- New LLM provider: Moonshot.
+- Translation and usability improvements.
+- Efficiency and overall performance improvements.
+
+### v1.0.0
+
+- Functional baseline for hybrid analysis, task/finding management, and passive/manual workflow.
+- Initial integration with major LLM providers and result export support.
 
 ---
 
 ## Quick Start (3 minutes)
 
-1. Download the `BurpIA-1.0.0.jar` file.
+1. Download the `BurpIA-1.0.1.jar` file.
 2. Load the extension in Burp Suite:
    - Go to the `Extensions` tab -> `Add`.
-   - Select the `BurpIA-1.0.0.jar` file.
+   - Select the `BurpIA-1.0.1.jar` file.
 3. Configure BurpIA in the plugin tab:
    - Select your **LLM Provider**.
    - Enter the **API Key** (if applicable).
@@ -54,6 +64,7 @@ Spanish version: [README.md](README.md)
 - **OpenAI** (GPT-4o, GPT-3.5, etc.).
 - **Claude** (Anthropic).
 - **Gemini** (Google).
+- **Moonshot (Kimi)**.
 - **Z.ai** / **Minimax**.
 - **Custom** (Any API compatible with the OpenAI format).
 

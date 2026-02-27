@@ -19,6 +19,7 @@ public class PestaniaPrincipal extends JPanel {
     private final PanelAgente panelAgente;
     private final JTabbedPane tabbedPane;
     private final ConfiguracionAPI config;
+    private Timer timerFocoAgente;
 
     public PestaniaPrincipal(MontoyaApi api,
                             Estadisticas estadisticas,
@@ -51,6 +52,7 @@ public class PestaniaPrincipal extends JPanel {
         }
         tabbedPane.addTab(I18nUI.Pestanias.CONSOLA(), panelConsola);
         tabbedPane.setSelectedComponent(panelConsola);
+        tabbedPane.addChangeListener(e -> manejarCambioPestania());
         aplicarTooltipsPestanias();
         aplicarIdioma();
 
@@ -120,18 +122,40 @@ public class PestaniaPrincipal extends JPanel {
         if (index != -1) {
             tabbedPane.setSelectedIndex(index);
             panelAgente.asegurarConsolaIniciada();
-            
-            new Timer(150, e -> {
-                ((Timer) e.getSource()).stop();
-                SwingUtilities.invokeLater(() -> {
+            programarFocoTerminalAgente(true);
+        }
+    }
+
+    private void manejarCambioPestania() {
+        if (tabbedPane.getSelectedComponent() != panelAgente) {
+            return;
+        }
+        panelAgente.asegurarConsolaIniciada();
+        programarFocoTerminalAgente(false);
+    }
+
+    private void programarFocoTerminalAgente(boolean traerVentanaAlFrente) {
+        if (timerFocoAgente != null && timerFocoAgente.isRunning()) {
+            timerFocoAgente.stop();
+        }
+
+        timerFocoAgente = new Timer(150, e -> {
+            ((Timer) e.getSource()).stop();
+            SwingUtilities.invokeLater(() -> {
+                if (tabbedPane.getSelectedComponent() != panelAgente) {
+                    return;
+                }
+                if (traerVentanaAlFrente) {
                     Window window = SwingUtilities.getWindowAncestor(this);
                     if (window != null) {
                         window.toFront();
                     }
-                    panelAgente.enfocarTerminal();
-                });
-            }).start();
-        }
+                }
+                panelAgente.enfocarTerminal();
+            });
+        });
+        timerFocoAgente.setRepeats(false);
+        timerFocoAgente.start();
     }
 
     public PanelHallazgos obtenerPanelHallazgos() {
@@ -208,6 +232,10 @@ public class PestaniaPrincipal extends JPanel {
     }
 
     public void destruir() {
+        if (timerFocoAgente != null) {
+            timerFocoAgente.stop();
+            timerFocoAgente = null;
+        }
         panelEstadisticas.destruir();
         panelConsola.destruir();
         panelTareas.destruir();

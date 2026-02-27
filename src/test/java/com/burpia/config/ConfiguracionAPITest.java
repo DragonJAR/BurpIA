@@ -28,6 +28,17 @@ class ConfiguracionAPITest {
         assertEquals("es", config.obtenerIdiomaUi());
         assertFalse(config.esDetallado());
         assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla());
+        assertEquals(ConfiguracionAPI.AGENTE_DELAY_DEFECTO_MS, config.obtenerAgenteDelay());
+    }
+
+    @Test
+    @DisplayName("Agente delay conserva valores sin normalizacion por rango")
+    void testAgenteDelaySinNormalizacionPorRango() {
+        config.establecerAgenteDelay(-250);
+        assertEquals(-250, config.obtenerAgenteDelay());
+
+        config.establecerAgenteDelay(120_000);
+        assertEquals(120_000, config.obtenerAgenteDelay());
     }
 
     @Test
