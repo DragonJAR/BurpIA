@@ -21,6 +21,8 @@ public class ConfiguracionAPI {
     public static final int MAXIMO_RETRASO_SEGUNDOS = 60;
     public static final int MINIMO_MAXIMO_CONCURRENTE = 1;
     public static final int MAXIMO_MAXIMO_CONCURRENTE = 10;
+    public static final int AGENTE_DELAY_DEFECTO_MS = 4000;
+    public static final int AGENTE_DELAY_PASO_MS = 500;
 
 
     private int retrasoSegundos;
@@ -72,7 +74,7 @@ public class ConfiguracionAPI {
         this.rutasBinarioPorAgente = new HashMap<>();
         this.agentePreflightPrompt = obtenerAgentePreflightPromptPorDefecto();
         this.agentePrompt = obtenerAgentePromptPorDefecto();
-        this.agenteDelay = 4000;
+        this.agenteDelay = AGENTE_DELAY_DEFECTO_MS;
 
         this.promptConfigurable = obtenerPromptPorDefecto();
 
@@ -224,7 +226,7 @@ public class ConfiguracionAPI {
     public void establecerAgentePrompt(String prompt) { this.agentePrompt = normalizarPromptAgente(prompt); }
 
     public int obtenerAgenteDelay() { return agenteDelay; }
-    public void establecerAgenteDelay(int delay) { this.agenteDelay = normalizarDelayAgente(delay); }
+    public void establecerAgenteDelay(int delay) { this.agenteDelay = delay; }
 
     public static String obtenerAgentePromptPorDefecto() {
         String compuesto = obtenerAgentePromptCompuestoPorDefecto();
@@ -967,12 +969,6 @@ public class ConfiguracionAPI {
         return prompt;
     }
 
-    private static int normalizarDelayAgente(int valor) {
-        if (valor < 1000) return 1000;
-        if (valor > 30000) return 30000;
-        return valor;
-    }
-
     private int obtenerMaxTokensPorDefectoProveedor(String proveedor) {
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
         return config != null ? config.obtenerMaxTokensPorDefecto() : 4096;
@@ -1043,7 +1039,7 @@ public class ConfiguracionAPI {
         }
         this.agentePreflightPrompt = normalizarPromptAgentePreflight(origen.agentePreflightPrompt);
         this.agentePrompt = normalizarPromptAgente(origen.agentePrompt);
-        this.agenteDelay = origen.agenteDelay;
+        establecerAgenteDelay(origen.agenteDelay);
 
         this.apiKeysPorProveedor = new HashMap<>(origen.apiKeysPorProveedor);
         this.urlsBasePorProveedor = new HashMap<>(origen.urlsBasePorProveedor);

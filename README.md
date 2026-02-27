@@ -2,7 +2,7 @@
 
 BurpIA es una extensión para Burp Suite que analiza tráfico HTTP con LLMs para ayudarte a detectar hallazgos potenciales de seguridad en menos tiempo.
 
-**Versión actual:** `1.0.0`
+**Versión actual:** `1.0.1`
 ![BurpIA en Español](src/assets/ES.png)
 
 English version: [README.en.md](README.en.md)
@@ -20,25 +20,35 @@ English version: [README.en.md](README.en.md)
 
 ---
 
-## Estado actual (v1.0.0)
+## Estado actual (v1.0.1)
 
-- **Validación Scope-Aware:** Control estricto del `Target Scope` (Pro/Community) antes de cualquier análisis para evitar ruido fuera de objetivo.
-- **Gestión de Tareas:** Control total del flujo de trabajo (pausar, reanudar, cancelar, reintentar y limpiar tareas).
-- **Control de Hallazgos:** Guardado automático opcional en `Site Map > Issues` o envío manual selectivo.
-- **Deduplicación Inteligente:** Uso de hashes SHA-256 con caché LRU y expiración TTL para evitar procesar duplicados.
-- **Filtro Estático de Alto Rendimiento:** Eliminación de recursos irrelevantes mediante comparación de strings (sin el overhead de URI parsing).
-- **Resiliencia de Datos (Safe JSON Repair):** Recuperación de objetos JSON corruptos o truncados sin pérdida de datos legítimos.
-- **Optimización de Logs:** Sistema de escritura por buffer para prevenir la saturación de la API de Burp Suite.
-- **Captura Pasiva y Arquitectura:** Análisis no intrusivo con una estructura refactorizada y manejadores desacoplados para mayor mantenibilidad.
+BurpIA está actualizado a `v1.0.1`.
+Consulta el resumen de cambios en **Historial de versiones**.
+
+---
+
+## Historial de versiones
+
+### v1.0.1 (actual)
+
+- Ahora con pruebas manuales dinámicas agénticas, con Factory Droid, Claude Code y el MCP de Burp Suite.
+- Nuevo proveedor de LLM: Moonshot.
+- Mejoras en traducción y usabilidad.
+- Mejoras en eficiencia y rendimiento general.
+
+### v1.0.0
+
+- Base funcional de análisis híbrido, gestión de tareas/hallazgos y flujo de trabajo pasivo/manual.
+- Integración inicial con proveedores LLM principales y exportación de resultados.
 
 ---
 
 ## Inicio rápido (3 minutos)
 
-1. Descarga el archivo `BurpIA-1.0.0.jar`.
+1. Descarga el archivo `BurpIA-1.0.1.jar`.
 2. Carga la extensión en Burp Suite:
     - Ve a la pestaña `Extensions` -> `Add`.
-    - Selecciona el archivo `BurpIA-1.0.0.jar`.
+    - Selecciona el archivo `BurpIA-1.0.1.jar`.
 3. Configura BurpIA en la pestaña del plugin:
     - Selecciona tu **Proveedor LLM**.
     - Ingresa la **API Key** (si aplica).
@@ -54,6 +64,7 @@ English version: [README.en.md](README.en.md)
 - **OpenAI** (GPT-4o, GPT-3.5, etc.).
 - **Claude** (Anthropic).
 - **Gemini** (Google).
+- **Moonshot (Kimi)**.
 - **Z.ai** / **Minimax**.
 - **Custom** (Cualquier API compatible con el formato de OpenAI).
 
@@ -90,7 +101,7 @@ BurpIA soporta los siguientes tokens para personalizar el análisis:
 - `{RESPONSE}`: Inserta la respuesta HTTP (si existe).
 - `{OUTPUT_LANGUAGE}`: Indica el idioma de salida esperado para la descripción del hallazgo.
 
-*Si omites estos tokens, BurpIA fallará al generar el prompt.*
+*Si omites estos tokens, BurpIA aplicará un bloque de contexto mínimo para mantener consistencia y el idioma de salida configurado.*
 
 ---
 

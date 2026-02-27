@@ -36,6 +36,7 @@ public class PanelAgente extends JPanel {
     private static final int DELAY_ENTRE_CHUNKS_PTY_MS = 10;
     private static final int INTENTOS_ENVIO_ARRANQUE = 6;
     private static final int DELAY_REINTENTO_ARRANQUE_MS = 200;
+    private static final int DELAY_REINTENTO_FOCO_TERMINAL_MS = 120;
 
     private static final ExecutorService INYECTOR_PTY = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "BurpIA-PTY-Injector");
@@ -334,12 +335,15 @@ public class PanelAgente extends JPanel {
         lblDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
 
         spinnerDelay = new JSpinner(new SpinnerNumberModel(
-            config.obtenerAgenteDelay(), 1000, 30000, 500));
+            config.obtenerAgenteDelay(), null, null, ConfiguracionAPI.AGENTE_DELAY_PASO_MS));
         spinnerDelay.setFont(EstilosUI.FUENTE_ESTANDAR);
         spinnerDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
         spinnerDelay.setPreferredSize(new Dimension(80, 24));
         spinnerDelay.addChangeListener(e -> {
-            int nuevoDelay = (int) spinnerDelay.getValue();
+            int nuevoDelay = ((Number) spinnerDelay.getValue()).intValue();
+            if (nuevoDelay == config.obtenerAgenteDelay()) {
+                return;
+            }
             config.establecerAgenteDelay(nuevoDelay);
             Runnable handler = manejadorCambioConfiguracion.get();
             if (handler != null) {
@@ -521,11 +525,25 @@ public class PanelAgente extends JPanel {
 
     public void enfocarTerminal() {
         SwingUtilities.invokeLater(() -> {
-            if (terminalWidget != null && terminalWidget.getTerminalPanel() != null) {
-                terminalWidget.getTerminalPanel().requestFocusInWindow();
+            if (solicitarFocoTerminal()) {
+                return;
             }
+            Timer reintento = new Timer(DELAY_REINTENTO_FOCO_TERMINAL_MS, e -> {
+                ((Timer) e.getSource()).stop();
+                SwingUtilities.invokeLater(this::solicitarFocoTerminal);
+            });
+            reintento.setRepeats(false);
+            reintento.start();
         });
-    }   
+    }
+
+    private boolean solicitarFocoTerminal() {
+        if (terminalWidget == null || terminalWidget.getTerminalPanel() == null) {
+            return false;
+        }
+        terminalWidget.getTerminalPanel().requestFocus();
+        return terminalWidget.getTerminalPanel().requestFocusInWindow();
+    }
 
     private JediTermWidget crearTerminalWidget() {
         JediTermWidget widget = new JediTermWidget(120, 24, new DefaultSettingsProvider() {

@@ -141,6 +141,55 @@ class GestorConfiguracionTest {
     }
 
     @Test
+    @DisplayName("Sin agenteDelay en JSON usa el valor por defecto")
+    void testAgenteDelayUsaDefaultCuandoNoExisteEnJson() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-config-test");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        Path configPath = tempDir.resolve(".burpia/config.json");
+        String json = "{\n" +
+            "  \"proveedorAI\": \"OpenAI\",\n" +
+            "  \"apiKeysPorProveedor\": {\"OpenAI\": \"\"},\n" +
+            "  \"urlsBasePorProveedor\": {\"OpenAI\": \"https://api.openai.com/v1\"},\n" +
+            "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
+            "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
+            "}";
+        Files.createDirectories(configPath.getParent());
+        Files.writeString(configPath, json, StandardCharsets.UTF_8);
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI cargada = gestor.cargarConfiguracion();
+
+        assertEquals(ConfiguracionAPI.AGENTE_DELAY_DEFECTO_MS, cargada.obtenerAgenteDelay());
+    }
+
+    @Test
+    @DisplayName("agenteDelay en JSON respeta exactamente el valor del usuario")
+    void testAgenteDelayJsonRespetaValorUsuario() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-config-test");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        Path configPath = tempDir.resolve(".burpia/config.json");
+        String json = "{\n" +
+            "  \"proveedorAI\": \"OpenAI\",\n" +
+            "  \"agenteDelay\": 75000,\n" +
+            "  \"apiKeysPorProveedor\": {\"OpenAI\": \"\"},\n" +
+            "  \"urlsBasePorProveedor\": {\"OpenAI\": \"https://api.openai.com/v1\"},\n" +
+            "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
+            "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
+            "}";
+        Files.createDirectories(configPath.getParent());
+        Files.writeString(configPath, json, StandardCharsets.UTF_8);
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI cargada = gestor.cargarConfiguracion();
+
+        assertEquals(75000, cargada.obtenerAgenteDelay());
+    }
+
+    @Test
     @DisplayName("Guarda y carga timeout por modelo en JSON")
     void testPersistenciaTimeoutPorModelo() throws Exception {
         Path tempDir = Files.createTempDirectory("burpia-config-test");
