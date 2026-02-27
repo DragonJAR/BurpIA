@@ -5,9 +5,11 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Desktop;
+import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
@@ -67,18 +69,48 @@ public class UIUtils {
             panel.add(new JLabel(mensajePrincipal), BorderLayout.NORTH);
             if (urlEnlace != null && !urlEnlace.trim().isEmpty()
                 && textoEnlace != null && !textoEnlace.trim().isEmpty()) {
-                JLabel enlace = new JLabel("<html><a href='" + urlEnlace + "'>" + textoEnlace + "</a></html>");
+                String textoVisible = extraerTextoVisibleEnlace(textoEnlace);
+                JButton enlace = new JButton(textoVisible);
                 enlace.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                enlace.setForeground(new Color(0, 102, 204));
+                enlace.setBorderPainted(false);
+                enlace.setContentAreaFilled(false);
+                enlace.setFocusPainted(false);
+                enlace.setOpaque(false);
+                enlace.setHorizontalAlignment(SwingConstants.LEFT);
+                enlace.addActionListener(e -> abrirUrlEnNavegador(urlEnlace));
                 enlace.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mouseClicked(MouseEvent e) {
-                        abrirUrlEnNavegador(urlEnlace);
+                    public void mouseEntered(MouseEvent e) {
+                        enlace.setText("<html><u>" + textoVisible + "</u></html>");
+                    }
+
+                    @Override
+                    public void mouseExited(MouseEvent e) {
+                        enlace.setText(textoVisible);
                     }
                 });
-                panel.add(enlace, BorderLayout.SOUTH);
+
+                JPanel panelEnlace = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+                panelEnlace.setOpaque(false);
+                panelEnlace.add(enlace);
+                panel.add(panelEnlace, BorderLayout.SOUTH);
             }
             JOptionPane.showMessageDialog(parent, panel, titulo, JOptionPane.ERROR_MESSAGE);
         });
+    }
+
+    static String extraerTextoVisibleEnlace(String textoEnlace) {
+        if (textoEnlace == null) {
+            return "";
+        }
+        String texto = textoEnlace.trim();
+        if (texto.isEmpty()) {
+            return "";
+        }
+        String sinAnchor = texto.replaceAll("(?is)<a\\b[^>]*>(.*?)</a>", "$1");
+        String sinHtml = sinAnchor.replaceAll("(?is)<[^>]+>", "").trim();
+        return sinHtml.isEmpty() ? texto : sinHtml;
     }
 
     public static boolean abrirUrlEnNavegador(String url) {
