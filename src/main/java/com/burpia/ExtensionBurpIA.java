@@ -2,14 +2,11 @@ package com.burpia;
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
-import burp.api.montoya.http.handler.HttpHandler;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
-import burp.api.montoya.ui.UserInterface;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.i18n.I18nLogs;
-import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
@@ -169,6 +166,9 @@ public class ExtensionBurpIA implements BurpExtension {
         crearYRegistrarPestaniaPrincipal();
         inicializarPreferenciasUsuarioEnUI();
 
+
+        inicializarFactoryDroidSiHabilitado();
+
         manejadorHttp = new ManejadorHttpBurpIA(
             api, config, pestaniaPrincipal, stdout, stderr, limitador,
             estadisticas, gestorTareas, gestorConsola, modeloTablaHallazgos
@@ -206,35 +206,52 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void enviarAFactoryDroid(HttpRequestResponse solicitudRespuesta) {
+        if (config == null) {
+            registrarError("No se puede usar Factory Droid: configuracion no inicializada");
+            return;
+        }
         if (!config.agenteFactoryDroidHabilitado()) {
-            api.logging().logToOutput(I18nLogs.Agente.ERROR_DESHABILITADO());
+            registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
+            return;
+        }
+        if (solicitudRespuesta == null) {
+            registrarError("No se puede enviar a Factory Droid: solicitud/respuesta nula");
             return;
         }
 
         String prompt = config.obtenerAgenteFactoryDroidPrompt();
-        String request = solicitudRespuesta.request().toString();
+        String request = solicitudRespuesta.request() != null ? solicitudRespuesta.request().toString() : "";
         String response = (solicitudRespuesta.response() != null) ? solicitudRespuesta.response().toString() : "";
 
         String inputFinal = prompt.replace("{REQUEST}", request).replace("{RESPONSE}", response);
 
+        PanelFactoryDroid panelDroid = obtenerPanelFactoryDroidDisponible();
+        if (panelDroid == null) {
+            return;
+        }
         pestaniaPrincipal.seleccionarPestaniaFactoryDroid();
-        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
 
         String binario = config.obtenerAgenteFactoryDroidBinario();
         if (binario == null || binario.trim().isEmpty()) {
             binario = "droid";
         }
 
-        // Iniciar el binario primero (si no está iniciado)
         panelDroid.escribirComando(binario);
 
-        // Usar la inyección inteligente del panel para el hallazgo
-        panelDroid.inyectarComandoViaPortapapeles(inputFinal);
+        panelDroid.inyectarComando(inputFinal, 0);
     }
 
     private void enviarHallazgoAFactoryDroid(Hallazgo hallazgo) {
+        if (config == null) {
+            registrarError("No se puede usar Factory Droid: configuracion no inicializada");
+            return;
+        }
         if (!config.agenteFactoryDroidHabilitado()) {
-            api.logging().logToOutput(I18nLogs.Agente.ERROR_DESHABILITADO());
+            registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
+            return;
+        }
+        if (hallazgo == null) {
+            registrarError("No se puede enviar a Factory Droid: hallazgo nulo");
             return;
         }
 
@@ -268,10 +285,26 @@ public class ExtensionBurpIA implements BurpExtension {
             .replace("{RESPONSE}", response)
             .replace("{OUTPUT_LANGUAGE}", lang);
 
+        PanelFactoryDroid panelDroid = obtenerPanelFactoryDroidDisponible();
+        if (panelDroid == null) {
+            return;
+        }
         pestaniaPrincipal.seleccionarPestaniaFactoryDroid();
-        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
 
-        panelDroid.escribirComando(inputFinal);
+        panelDroid.inyectarComando(inputFinal, 0);
+    }
+
+    private PanelFactoryDroid obtenerPanelFactoryDroidDisponible() {
+        if (pestaniaPrincipal == null) {
+            registrarError("No se puede usar Factory Droid: pestaña principal no disponible");
+            return null;
+        }
+        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
+        if (panelDroid == null) {
+            registrarError("No se puede usar Factory Droid: panel no disponible");
+            return null;
+        }
+        return panelDroid;
     }
 
     private void abrirConfiguracion() {
@@ -433,6 +466,41 @@ public class ExtensionBurpIA implements BurpExtension {
             config.establecerAutoScrollConsolaHabilitado(activo);
             guardarConfiguracionSilenciosa("auto-scroll");
         });
+
+        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
+        if (panelDroid != null) {
+            panelDroid.establecerManejadorCambioConfiguracion(() -> guardarConfiguracionSilenciosa("factory-droid-delay"));
+        }
+    }
+
+    private void inicializarFactoryDroidSiHabilitado() {
+        if (!config.agenteFactoryDroidHabilitado()) {
+            registrar("Factory Droid deshabilitado en configuración");
+            return;
+        }
+
+        if (pestaniaPrincipal == null) {
+            registrarError("No se puede inicializar Factory Droid: pestaniaPrincipal es null");
+            return;
+        }
+
+        PanelFactoryDroid panelDroid = pestaniaPrincipal.obtenerPanelFactoryDroid();
+        if (panelDroid == null) {
+            registrarError("No se puede inicializar Factory Droid: panel no disponible");
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            javax.swing.Timer timer = new javax.swing.Timer(1500, e -> {
+                panelDroid.forzarInyeccionPromptInicial();
+                registrar("Factory Droid inicializado - prompt inicial inyectado");
+                ((javax.swing.Timer) e.getSource()).stop();
+            });
+            timer.setRepeats(false);
+            timer.start();
+        });
+
+        registrar("Factory Droid programado para inicialización");
     }
 
     private void guardarConfiguracionSilenciosa(String origen) {

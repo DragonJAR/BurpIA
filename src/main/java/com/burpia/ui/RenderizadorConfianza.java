@@ -1,5 +1,4 @@
 package com.burpia.ui;
-import com.burpia.model.Hallazgo;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
@@ -37,6 +36,18 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         return Color.GRAY;
     }
 
+    private static final java.util.Map<String, Integer> SEGMENT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private int obtenerSegmentos(String conf) {
+        if (conf == null || conf.isEmpty()) return 0;
+        return SEGMENT_CACHE.computeIfAbsent(conf, c -> {
+            if (c.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_ALTA())) return 3;
+            if (c.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_MEDIA())) return 2;
+            if (c.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_BAJA())) return 1;
+            return 0;
+        });
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -58,10 +69,7 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         g2.setFont(font);
         FontMetrics fm = g2.getFontMetrics();
 
-        int filledSegments = 0;
-        if (confianzaStr.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_ALTA())) filledSegments = 3;
-        else if (confianzaStr.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_MEDIA())) filledSegments = 2;
-        else if (confianzaStr.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_BAJA())) filledSegments = 1;
+        int filledSegments = obtenerSegmentos(confianzaStr);
 
         Color colorBase = obtenerColorConfianzaTraducida(confianzaStr);
         if (isIgnorado) {
@@ -100,7 +108,7 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
                 g2.setColor(bgSegmentColor);
             }
             int segX = barX + i * (segmentWidth + segmentGap);
-            g2.fill(new RoundRectangle2D.Float(segX, barY, segmentWidth, barHeight, 4, 4));
+            g2.fillRoundRect(segX, barY, segmentWidth, barHeight, 4, 4);
         }
 
         g2.dispose();

@@ -15,6 +15,7 @@ public class Estadisticas {
     private final AtomicInteger hallazgosMedium;
     private final AtomicInteger hallazgosLow;
     private final AtomicInteger hallazgosInfo;
+    private final AtomicInteger versionCambios;
 
     public Estadisticas() {
         this.totalSolicitudes = new AtomicInteger(0);
@@ -30,14 +31,16 @@ public class Estadisticas {
         this.hallazgosMedium = new AtomicInteger(0);
         this.hallazgosLow = new AtomicInteger(0);
         this.hallazgosInfo = new AtomicInteger(0);
+        this.versionCambios = new AtomicInteger(0);
 
     }
 
-    public void incrementarTotalSolicitudes() { totalSolicitudes.incrementAndGet(); }
-    public void incrementarAnalizados() { analizados.incrementAndGet(); }
-    public void incrementarOmitidosDuplicado() { omitidosDuplicado.incrementAndGet(); }
-    public void incrementarOmitidosBajaConfianza() { omitidosBajaConfianza.incrementAndGet(); }
-    public void incrementarErrores() { errores.incrementAndGet(); }
+    public void incrementarTotalSolicitudes() { totalSolicitudes.incrementAndGet(); versionCambios.incrementAndGet(); }
+    public void incrementarAnalizados() { analizados.incrementAndGet(); versionCambios.incrementAndGet(); }
+    public void incrementarOmitidosDuplicado() { omitidosDuplicado.incrementAndGet(); versionCambios.incrementAndGet(); }
+    public void incrementarOmitidosBajaConfianza() { omitidosBajaConfianza.incrementAndGet(); versionCambios.incrementAndGet(); }
+    public void incrementarErrores() { errores.incrementAndGet(); versionCambios.incrementAndGet(); }
+    public int obtenerVersion() { return versionCambios.get(); }
 
     public void incrementarHallazgoSeveridad(String severidad) {
         switch (severidad) {
@@ -58,6 +61,7 @@ public class Estadisticas {
                 break;
         }
         hallazgosCreados.incrementAndGet();
+        versionCambios.incrementAndGet();
     }
 
     public int obtenerTotalSolicitudes() { return totalSolicitudes.get(); }

@@ -12,6 +12,7 @@ import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.LimitadorTasa;
+import com.burpia.util.Normalizador;
 import com.burpia.util.ParserRespuestasAI;
 import com.burpia.util.ReparadorJson;
 import okhttp3.*;
@@ -26,8 +27,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class AnalizadorAI implements Runnable {
+    private static final Logger LOGGER = Logger.getLogger(AnalizadorAI.class.getName());
     private static final String ORIGEN_LOG = "AnalizadorAI";
     private final SolicitudAnalisis solicitud;
     private final ConfiguracionAPI config;
@@ -283,18 +287,34 @@ public class AnalizadorAI implements Runnable {
         }
 
         try (Response respuesta = clienteHttp.newCall(solicitudHttp).execute()) {
-            registrar("Codigo de respuesta de API: " + respuesta.code());
+            int codigoRespuesta = respuesta.code();
+            registrar("Codigo de respuesta de API: " + codigoRespuesta);
             rastrearTecnico("Encabezados de respuesta de API: " + respuesta.headers());
 
             if (!respuesta.isSuccessful()) {
-                String cuerpoError = respuesta.body() != null ? respuesta.body().string() : "null";
+                String cuerpoError = "";
+                ResponseBody bodyError = respuesta.body();
+                if (bodyError != null) {
+                    try {
+                        cuerpoError = bodyError.string();
+                    } catch (IOException e) {
+                        rastrear("No se pudo leer cuerpo de error: " + e.getMessage());
+                    }
+                }
                 String retryAfterHeader = respuesta.header("Retry-After");
-                String mensajeError = "Error de API: " + respuesta.code() + " - " + cuerpoError;
-                throw new ApiHttpException(respuesta.code(), cuerpoError, retryAfterHeader, mensajeError);
+                String mensajeError = "Error de API: " + codigoRespuesta + " - " +
+                    (Normalizador.noEsVacio(cuerpoError) ? cuerpoError : "sin cuerpo");
+                throw new ApiHttpException(codigoRespuesta, cuerpoError, retryAfterHeader, mensajeError);
             }
 
             ResponseBody cuerpo = respuesta.body();
-            String cuerpoRespuesta = cuerpo != null ? cuerpo.string() : "";
+            if (cuerpo == null) {
+                throw new IOException("Respuesta de API sin cuerpo (null)");
+            }
+            String cuerpoRespuesta = cuerpo.string();
+            if (cuerpoRespuesta == null) {
+                cuerpoRespuesta = "";
+            }
             registrar("Longitud de respuesta de API: " + cuerpoRespuesta.length() + " caracteres");
             rastrearTecnico("Respuesta de API (preview):\n" + resumirParaLog(cuerpoRespuesta));
             return cuerpoRespuesta;
@@ -442,6 +462,11 @@ public class AnalizadorAI implements Runnable {
     }
 
     private static void configurarSslInseguro(OkHttpClient.Builder builder) {
+        String advertencia = "ADVERTENCIA DE SEGURIDAD: Verificación SSL deshabilitada. " +
+            "Esto expone a ataques Man-in-the-Middle. Solo usar en desarrollo.";
+        LOGGER.log(Level.WARNING, advertencia);
+        System.err.println("[BurpIA] " + advertencia);
+
         try {
             final javax.net.ssl.TrustManager[] trustAllCerts = new javax.net.ssl.TrustManager[]{
                 new javax.net.ssl.X509TrustManager() {
@@ -456,14 +481,14 @@ public class AnalizadorAI implements Runnable {
                 }
             };
 
-            final javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("SSL");
+            final javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
             sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
             final javax.net.ssl.SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
             builder.sslSocketFactory(sslSocketFactory, (javax.net.ssl.X509TrustManager) trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
-
+            LOGGER.log(Level.SEVERE, "Error al configurar SSL inseguro", e);
         }
     }
 
@@ -659,7 +684,14 @@ public class AnalizadorAI implements Runnable {
     }
 
     private String extraerBloqueArrayHallazgos(String contenido) {
-        int indiceHallazgos = contenido.indexOf("\"hallazgos\"");
+        int indiceHallazgos = -1;
+        String[] claves = {"\"hallazgos\"", "\"findings\"", "\"issues\"", "\"vulnerabilidades\""};
+        for (String clave : claves) {
+            int indice = contenido.indexOf(clave);
+            if (indice >= 0 && (indiceHallazgos < 0 || indice < indiceHallazgos)) {
+                indiceHallazgos = indice;
+            }
+        }
         if (indiceHallazgos < 0) {
             return "";
         }
@@ -941,16 +973,11 @@ public class AnalizadorAI implements Runnable {
 
     private String normalizarTextoSimple(String valor, String porDefecto) {
         if (valor == null) {
-            return porDefecto;
+            return porDefecto != null ? porDefecto : "";
         }
-        String normalizado = valor
-            .replace("\\n", "\n")
-            .replace("\\r", "\r")
-            .replace("\\t", "\t")
-            .replace("\\\"", "\"")
-            .trim();
+        String normalizado = Normalizador.normalizarTexto(valor);
         if (normalizado.isEmpty()) {
-            return porDefecto;
+            return porDefecto != null ? porDefecto : "";
         }
         return normalizado;
     }
@@ -1077,21 +1104,35 @@ public class AnalizadorAI implements Runnable {
     private void registrarInterno(String mensaje, GestorConsolaGUI.TipoLog tipo, boolean esError, String prefijoSalida,
                                   boolean mensajeTecnico) {
         String mensajeSeguro = mensaje != null ? mensaje : "";
+        GestorConsolaGUI consolaActual = this.gestorConsola;
+
+        if (consolaActual != null) {
+            if (mensajeTecnico) {
+                consolaActual.registrarTecnico(ORIGEN_LOG, mensajeSeguro, tipo);
+            } else {
+                consolaActual.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
+            }
+            return;
+        }
+
+        String prefijoLocalizado = I18nLogs.tr(prefijoSalida);
+        String mensajeLocalizado = mensajeTecnico ? I18nLogs.trTecnico(mensajeSeguro) : I18nLogs.tr(mensajeSeguro);
+        PrintWriter destinoStr;
+
         synchronized (logLock) {
-            if (gestorConsola != null) {
+            if (this.gestorConsola != null) {
                 if (mensajeTecnico) {
-                    gestorConsola.registrarTecnico(ORIGEN_LOG, mensajeSeguro, tipo);
+                    this.gestorConsola.registrarTecnico(ORIGEN_LOG, mensajeSeguro, tipo);
                 } else {
-                    gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
+                    this.gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
                 }
                 return;
             }
-
-            String prefijoLocalizado = I18nLogs.tr(prefijoSalida);
-            String mensajeLocalizado = mensajeTecnico ? I18nLogs.trTecnico(mensajeSeguro) : I18nLogs.tr(mensajeSeguro);
-            PrintWriter destino = esError ? stderr : stdout;
-            destino.println(prefijoLocalizado + mensajeLocalizado);
-            destino.flush();
+            destinoStr = esError ? stderr : stdout;
+            if (destinoStr != null) {
+                destinoStr.println(prefijoLocalizado + mensajeLocalizado);
+                destinoStr.flush();
+            }
         }
     }
 

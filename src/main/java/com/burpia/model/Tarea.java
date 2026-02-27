@@ -58,7 +58,8 @@ public class Tarea {
     public void establecerEstado(String estadoNuevo) {
         synchronized (candado) {
             String estadoAnterior = this.estado;
-            this.estado = estadoNuevo != null ? estadoNuevo : ESTADO_ERROR;
+
+            this.estado = (estadoNuevo != null && esEstadoValido(estadoNuevo)) ? estadoNuevo : ESTADO_ERROR;
 
             if (ESTADO_ANALIZANDO.equals(estadoAnterior) && !ESTADO_ANALIZANDO.equals(this.estado)) {
                 if (tiempoUltimoInicioAnalisis > 0) {
@@ -71,12 +72,16 @@ public class Tarea {
                 tiempoUltimoInicioAnalisis = System.currentTimeMillis();
             }
 
-            if (ESTADO_COMPLETADO.equals(this.estado) ||
-                ESTADO_ERROR.equals(this.estado) ||
-                ESTADO_CANCELADO.equals(this.estado)) {
+            if (esEstadoFinal(this.estado)) {
                 this.tiempoFin = System.currentTimeMillis();
             }
         }
+    }
+
+    public static boolean esEstadoFinal(String estado) {
+        return ESTADO_COMPLETADO.equals(estado) ||
+               ESTADO_ERROR.equals(estado) ||
+               ESTADO_CANCELADO.equals(estado);
     }
 
     public String obtenerMensajeInfo() {
@@ -173,9 +178,6 @@ public class Tarea {
     }
 
     public boolean esFinalizada() {
-        String estado = obtenerEstado();
-        return ESTADO_COMPLETADO.equals(estado) ||
-               ESTADO_ERROR.equals(estado) ||
-               ESTADO_CANCELADO.equals(estado);
+        return esEstadoFinal(obtenerEstado());
     }
 }

@@ -1,5 +1,4 @@
 package com.burpia.ui;
-import com.burpia.model.Hallazgo;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
@@ -39,6 +38,20 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         return Color.GRAY;
     }
 
+    private static final java.util.Map<String, String> TEXTO_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private String obtenerTextoMostrar(String k) {
+        return TEXTO_CACHE.computeIfAbsent(k, s -> {
+            StringBuilder texto = new StringBuilder(s);
+            if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) texto.insert(0, "⚠ ");
+            else if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_HIGH())) texto.insert(0, "▲ ");
+            else if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_MEDIUM())) texto.insert(0, "◆ ");
+            else if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_LOW())) texto.insert(0, "▽ ");
+            else if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_INFO())) texto.insert(0, "ℹ ");
+            return texto.toString();
+        });
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -51,14 +64,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         Color tableBg = getBackground();
         boolean isDarkTheme = EstilosUI.esTemaOscuro(tableBg);
 
-        StringBuilder texto = new StringBuilder(severidadStr);
-        if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) texto.insert(0, "⚠ ");
-        else if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_HIGH())) texto.insert(0, "▲ ");
-        else if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_MEDIUM())) texto.insert(0, "◆ ");
-        else if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_LOW())) texto.insert(0, "▽ ");
-        else if (severidadStr.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_INFO())) texto.insert(0, "ℹ ");
-
-        String displayText = texto.toString();
+        String displayText = obtenerTextoMostrar(severidadStr);
 
         Font font = getFont();
         g2.setFont(font);
@@ -83,7 +89,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         int y = (getHeight() - badgeHeight) / 2;
 
         g2.setColor(colorFondoPildora);
-        g2.fill(new RoundRectangle2D.Float(x, y, badgeWidth, badgeHeight, badgeHeight, badgeHeight));
+        g2.fillRoundRect(x, y, badgeWidth, badgeHeight, badgeHeight, badgeHeight);
 
         g2.setColor(colorTexto);
         int textX = x + paddingX;

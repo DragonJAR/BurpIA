@@ -62,7 +62,6 @@ public class GestorTareas {
             candado.unlock();
         }
 
-        aplicarRetencionFinalizadas();
         return tarea;
     }
 
@@ -79,11 +78,6 @@ public class GestorTareas {
             }
         } finally {
             candado.unlock();
-        }
-        if (Tarea.ESTADO_COMPLETADO.equals(nuevoEstado) ||
-            Tarea.ESTADO_ERROR.equals(nuevoEstado) ||
-            Tarea.ESTADO_CANCELADO.equals(nuevoEstado)) {
-            aplicarRetencionFinalizadas();
         }
     }
 
@@ -168,12 +162,10 @@ public class GestorTareas {
 
         candado.lock();
         try {
-            long ahora = System.currentTimeMillis();
-
             for (Tarea tarea : tareas.values()) {
                 String estado = tarea.obtenerEstado();
                 if (estado.equals(Tarea.ESTADO_ANALIZANDO)) {
-                    long duracion = ahora - tarea.obtenerTiempoInicio();
+                    long duracion = tarea.obtenerDuracionMilisegundos();
                     if (duracion > TAREA_ATASCADA_MS) {
                         tareasAtascadas.add(tarea);
                     }
@@ -199,6 +191,9 @@ public class GestorTareas {
             registrar(com.burpia.i18n.I18nUI.Tareas.LOG_TAREA_ATASCADA_DETECTADA() + tarea.obtenerId());
         }
         notificarCancelaciones(idsAInterrumpir);
+        
+        // Let the background thread take care of cleanup lockings
+        aplicarRetencionFinalizadas();
     }
 
     private void actualizarFilaTabla(Tarea tarea) {
@@ -463,13 +458,14 @@ public class GestorTareas {
 
     private long obtenerTimestampFinalizacion(Tarea tarea) {
         if (tarea == null) {
-            return Long.MAX_VALUE;
+            return 0L;
         }
         long fin = tarea.obtenerTiempoFin();
         if (fin > 0) {
             return fin;
         }
-        return tarea.obtenerTiempoInicio();
+        long inicio = tarea.obtenerTiempoInicio();
+        return inicio > 0 ? inicio : 0L;
     }
 
     private void registrar(String mensaje) {

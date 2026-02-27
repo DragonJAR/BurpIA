@@ -9,8 +9,27 @@ import java.util.Locale;
 import java.util.Set;
 
 public final class PoliticaReintentos {
-    private static final Set<Integer> CODIGOS_REINTENTABLES = Set.of(408, 409, 425, 429, 500, 502, 503, 504);
-    private static final Set<Integer> CODIGOS_NO_REINTENTABLES = Set.of(400, 401, 403, 404, 405, 410, 422);
+
+    private static final Set<Integer> CODIGOS_REINTENTABLES_SIEMPRE = Set.of(
+        408,
+        425,
+        429,
+        500,
+        502,
+        503,
+        504
+    );
+
+    private static final Set<Integer> CODIGOS_NO_REINTENTABLES = Set.of(
+        400,
+        401,
+        403,
+        404,
+        405,
+        410,
+        422
+    );
+    
     private static final long ESPERA_MINIMA_MS = 1000L;
 
     private PoliticaReintentos() {
@@ -27,11 +46,23 @@ public final class PoliticaReintentos {
             }
             return true;
         }
+
+        if (statusCode == 409) {
+            String error = cuerpoError != null ? cuerpoError.toLowerCase(Locale.ROOT) : "";
+            return !(error.contains("rate limit") || 
+                     error.contains("try again") ||
+                     error.contains("temporarily") ||
+                     error.contains("concurrent"));
+        }
+        
         return false;
     }
 
     public static boolean esCodigoReintentable(int statusCode) {
-        return CODIGOS_REINTENTABLES.contains(statusCode);
+        if (CODIGOS_REINTENTABLES_SIEMPRE.contains(statusCode)) {
+            return true;
+        }
+        return statusCode == 409;
     }
 
     public static boolean esExcepcionReintentable(IOException excepcion) {
@@ -81,6 +112,7 @@ public final class PoliticaReintentos {
 
     public static long calcularEsperaMs(int statusCode, String retryAfterHeader, long backoffActualMs, int intentoActual) {
         long backoffNormalizado = Math.max(ESPERA_MINIMA_MS, backoffActualMs);
+
         if (statusCode == 429) {
             long esperaDesdeHeader = parsearRetryAfterMs(retryAfterHeader, System.currentTimeMillis());
             if (esperaDesdeHeader > 0) {

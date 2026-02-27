@@ -85,7 +85,6 @@ public final class I18nLogs {
             "Could not reuse original evidence from manual analysis"},
         {"No se pudo construir evidencia desde analisis manual",
             "Could not build evidence from manual analysis"},
-        {"No se pudo encolar AuditIssue por saturación de cola", "Could not enqueue AuditIssue due to queue saturation"},
         {"No se pudo encolar AuditIssue por saturacion de cola", "Could not enqueue AuditIssue due to queue saturation"},
         {"No se pudo guardar AuditIssue: SiteMap API no disponible", "Could not save AuditIssue: SiteMap API unavailable"},
         {"Error al crear AuditIssue en Burp Suite", "Error creating AuditIssue in Burp Suite"},
@@ -111,7 +110,6 @@ public final class I18nLogs {
         {"Longitud de respuesta de API", "API response length"},
         {"Cuerpo de respuesta de error de API", "API error response body"},
         {"Solicitud HTTP fallida", "HTTP request failed"},
-        {"Stack trace de la excepción", "Exception stack trace"},
         {"Stack trace de la excepcion", "Exception stack trace"},
         {"Tiempo de espera agotado, intenta aumentarlo en los ajustes", "Timeout reached, try increasing it in the settings"},
         {"Sistema de retry", "Retry system"},
@@ -139,7 +137,6 @@ public final class I18nLogs {
         {"Intentando parsing de texto plano como fallback", "Attempting plain-text fallback parsing"},
         {"Total de hallazgos parseados", "Total parsed findings"},
         {"Error al parsear texto plano", "Error parsing plain text"},
-        {"Contenido extraído - Longitud", "Extracted content - Length"},
         {"Contenido extraido - Longitud", "Extracted content - Length"},
         {"Se encontraron", "Found"},
         {"en JSON", "in JSON"},
@@ -151,8 +148,12 @@ public final class I18nLogs {
         {"ExecutorService no termino en 5 segundos, forzando shutdown", "ExecutorService did not finish in 5 seconds, forcing shutdown"},
         {"Error al esperar terminacion de ExecutorService", "Error waiting for ExecutorService termination"},
         {"ExecutorService cerrado", "ExecutorService closed"},
-        {"Cola de análisis saturada, solicitud descartada", "Analysis queue saturated, request discarded"},
         {"Cola de analisis saturada, solicitud descartada", "Analysis queue saturated, request discarded"},
+        {"Maximo de reintentos de inyeccion alcanzado", "Maximum injection retries reached"},
+        {"Payload en bufer usando escritura directa", "Payload buffered using direct write"},
+        {"Se ha despachado la secuencia VK_ENTER", "VK_ENTER sequence dispatched"},
+        {"Payload inicial encolado para inyeccion manual por el usuario", "Initial payload queued for manual injection by user"},
+        {"Esperando el delay establecido por el usuario", "Waiting for user-configured delay"},
         {"Captura pausada por usuario", "Capture paused by user"},
         {"Captura reanudada por usuario", "Capture resumed by user"},
         {"ACTIVADO", "ENABLED"},
@@ -204,8 +205,32 @@ public final class I18nLogs {
         }
     }
 
-    private static final String[][] REEMPLAZOS_ES_A_EN = crearReemplazosOrdenados(0);
-    private static final String[][] REEMPLAZOS_EN_A_ES = crearReemplazosOrdenados(1);
+    private static final class EntradaReemplazo {
+        final String origen;
+        final String destino;
+        final Pattern patronCompilado;
+        final String destinoQuoted;
+
+        EntradaReemplazo(String origen, String destino) {
+            this.origen = origen;
+            this.destino = destino;
+            boolean usaRegex = ES_PALABRA_SIMPLE.matcher(origen).matches()
+                            && ES_PALABRA_SIMPLE.matcher(destino).matches();
+            if (usaRegex) {
+                this.patronCompilado = Pattern.compile(
+                    "(?<!\\p{L})" + Pattern.quote(origen) + "(?!\\p{L})");
+                this.destinoQuoted = Matcher.quoteReplacement(destino);
+            } else {
+                this.patronCompilado = null;
+                this.destinoQuoted = null;
+            }
+        }
+    }
+
+    private static final Pattern ES_PALABRA_SIMPLE = Pattern.compile("\\p{L}+");
+
+    private static final EntradaReemplazo[] REEMPLAZOS_ES_A_EN = crearReemplazos(0);
+    private static final EntradaReemplazo[] REEMPLAZOS_EN_A_ES = crearReemplazos(1);
 
     private I18nLogs() {
     }
@@ -215,56 +240,46 @@ public final class I18nLogs {
             return "";
         }
         if (I18nUI.obtenerIdioma() == IdiomaUI.ES) {
-            return aplicarReemplazos(mensaje, REEMPLAZOS_EN_A_ES, 1, 0);
+            return aplicarReemplazos(mensaje, REEMPLAZOS_EN_A_ES);
         }
         if (I18nUI.obtenerIdioma() != IdiomaUI.EN) {
             return mensaje;
         }
 
-        return aplicarReemplazos(mensaje, REEMPLAZOS_ES_A_EN, 0, 1);
+        return aplicarReemplazos(mensaje, REEMPLAZOS_ES_A_EN);
     }
 
     public static String trTecnico(String mensaje) {
         return mensaje != null ? mensaje : "";
     }
 
-    private static String aplicarReemplazos(String texto,
-                                            String[][] reemplazosOrdenados,
-                                            int indiceOrigen,
-                                            int indiceDestino) {
+    private static String aplicarReemplazos(String texto, EntradaReemplazo[] reemplazos) {
         String resultado = texto;
-        for (String[] reemplazo : reemplazosOrdenados) {
-            resultado = reemplazarLiteralSeguro(
-                resultado,
-                reemplazo[indiceOrigen],
-                reemplazo[indiceDestino]
-            );
+        for (EntradaReemplazo r : reemplazos) {
+            if (r.patronCompilado != null) {
+                resultado = r.patronCompilado.matcher(resultado).replaceAll(r.destinoQuoted);
+            } else {
+                resultado = resultado.replace(r.origen, r.destino);
+            }
         }
         return resultado;
     }
 
-    private static String reemplazarLiteralSeguro(String texto, String origen, String destino) {
-        if (texto == null || texto.isEmpty() || origen == null || origen.isEmpty()) {
-            return texto;
-        }
-        if (esPalabraSimple(origen) && esPalabraSimple(destino)) {
-            String patron = "(?<!\\p{L})" + Pattern.quote(origen) + "(?!\\p{L})";
-            return Pattern.compile(patron).matcher(texto).replaceAll(Matcher.quoteReplacement(destino));
-        }
-        return texto.replace(origen, destino);
-    }
-
-    private static boolean esPalabraSimple(String texto) {
-        return texto != null && texto.matches("\\p{L}+");
-    }
-
-    private static String[][] crearReemplazosOrdenados(int indiceOrigen) {
-        String[][] copia = new String[REEMPLAZOS_INGLES.length][2];
+    private static EntradaReemplazo[] crearReemplazos(int indiceOrigen) {
+        String[][] ordenados = new String[REEMPLAZOS_INGLES.length][2];
         for (int i = 0; i < REEMPLAZOS_INGLES.length; i++) {
-            copia[i][0] = REEMPLAZOS_INGLES[i][0];
-            copia[i][1] = REEMPLAZOS_INGLES[i][1];
+            ordenados[i][0] = REEMPLAZOS_INGLES[i][0];
+            ordenados[i][1] = REEMPLAZOS_INGLES[i][1];
         }
-        Arrays.sort(copia, (a, b) -> Integer.compare(b[indiceOrigen].length(), a[indiceOrigen].length()));
-        return copia;
+        Arrays.sort(ordenados, (a, b) -> Integer.compare(
+            b[indiceOrigen].length(), a[indiceOrigen].length()));
+
+        EntradaReemplazo[] resultado = new EntradaReemplazo[ordenados.length];
+        int idxOrigen = indiceOrigen;
+        int idxDestino = indiceOrigen == 0 ? 1 : 0;
+        for (int i = 0; i < ordenados.length; i++) {
+            resultado[i] = new EntradaReemplazo(ordenados[i][idxOrigen], ordenados[i][idxDestino]);
+        }
+        return resultado;
     }
 }

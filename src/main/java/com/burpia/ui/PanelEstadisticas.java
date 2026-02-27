@@ -2,9 +2,6 @@ package com.burpia.ui;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -23,6 +20,7 @@ public class PanelEstadisticas extends JPanel {
     private final JButton botonCaptura;
     private Runnable manejadorToggleCaptura;
     private volatile boolean capturaActiva = true;
+    private volatile int ultimaVersionEstadisticas = -1;
 
     private JPanel panelContenidoCentral;
     private JPanel panelHallazgos;
@@ -177,16 +175,7 @@ public class PanelEstadisticas extends JPanel {
     private JPanel crearPanelSeccion(String titulo) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        panel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
-                titulo,
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(12, 16, 12, 16)
-        ));
+        panel.setBorder(UIUtils.crearBordeTitulado(titulo, 12, 16));
         return panel;
     }
 
@@ -278,6 +267,15 @@ public class PanelEstadisticas extends JPanel {
     }
 
     public void actualizar() {
+        actualizar(false);
+    }
+
+    private void actualizar(boolean forzar) {
+        int versionActual = estadisticas.obtenerVersion();
+        if (!forzar && versionActual == ultimaVersionEstadisticas) {
+            return;
+        }
+        ultimaVersionEstadisticas = versionActual;
         SwingUtilities.invokeLater(() -> {
             etiquetaResumenPrincipal.setText(I18nUI.Estadisticas.RESUMEN_TOTAL(estadisticas.obtenerHallazgosCreados()));
 
@@ -297,8 +295,6 @@ public class PanelEstadisticas extends JPanel {
                     estadisticas.obtenerTotalOmitidos(),
                     estadisticas.obtenerErrores()
             ));
-
-            ajustarDimensionBotones();
         });
     }
 
@@ -333,21 +329,14 @@ public class PanelEstadisticas extends JPanel {
         etiquetaResumenOperativo.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_OPERATIVO());
         botonConfiguracion.setToolTipText(I18nUI.Tooltips.Estadisticas.CONFIGURACION());
         actualizarEstadoCapturaUI();
+        actualizar(true);
         revalidate();
         repaint();
     }
 
     private void actualizarTituloSeccion(JPanel panel, String titulo) {
-        if (panel == null) {
-            return;
-        }
-        Border borde = panel.getBorder();
-        if (!(borde instanceof CompoundBorder)) {
-            return;
-        }
-        Border bordeExterno = ((CompoundBorder) borde).getOutsideBorder();
-        if (bordeExterno instanceof TitledBorder) {
-            ((TitledBorder) bordeExterno).setTitle(titulo);
+        if (panel != null) {
+            UIUtils.actualizarTituloPanel(panel, titulo);
         }
     }
 

@@ -304,7 +304,25 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public void refrescarColumnasIdioma() {
-        SwingUtilities.invokeLater(() -> setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_HALLAZGOS()));
+        SwingUtilities.invokeLater(() -> {
+            List<Object[]> snapshot = new ArrayList<>();
+            lock.lock();
+            try {
+                for (Hallazgo hallazgo : datos) {
+                    if (hallazgo != null) {
+                        snapshot.add(hallazgo.aFilaTabla());
+                    }
+                }
+            } finally {
+                lock.unlock();
+            }
+
+            setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_HALLAZGOS());
+            setRowCount(0);
+            for (Object[] fila : snapshot) {
+                addRow(fila);
+            }
+        });
     }
 
     @Override
