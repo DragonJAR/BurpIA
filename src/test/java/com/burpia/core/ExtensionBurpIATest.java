@@ -13,6 +13,7 @@ import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -190,6 +192,87 @@ class ExtensionBurpIATest {
         assertTrue(contadorRequest.get() > 0);
         assertTrue(contadorResponse.get() > 0);
         verify(panelAgente).inyectarComando(anyString(), eq(0));
+    }
+
+    @Test
+    @DisplayName("Enviar hallazgo manual al Agente genera GET desde URL cuando falta evidencia")
+    void testEnviarHallazgoManualGeneraGetDesdeUrl() throws Exception {
+        ExtensionBurpIA extension = new ExtensionBurpIA();
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerAgenteHabilitado(true);
+        config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}\\nTITLE={TITLE}\\nDESC={DESCRIPTION}");
+        establecerCampo(extension, "config", config);
+
+        PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+        PanelAgente panelAgente = mock(PanelAgente.class);
+        when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+        establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+        Hallazgo hallazgoManual = new Hallazgo(
+            "https://example.com/login?x=1",
+            "Titulo Manual",
+            "Descripcion Manual",
+            "High",
+            "Medium"
+        );
+
+        Method enviarHallazgo = ExtensionBurpIA.class.getDeclaredMethod("enviarHallazgoAAgente", Hallazgo.class);
+        enviarHallazgo.setAccessible(true);
+        assertDoesNotThrow(() -> enviarHallazgo.invoke(extension, hallazgoManual));
+
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+        verify(panelAgente).inyectarComando(payloadCaptor.capture(), eq(0));
+        String payload = payloadCaptor.getValue();
+
+        assertNotNull(payload);
+        assertTrue(payload.contains("REQ="));
+        int inicioReq = payload.indexOf("REQ=") + 4;
+        int finReq = payload.indexOf("\nRES=", inicioReq);
+        if (finReq < 0) {
+            finReq = payload.indexOf("RES=", inicioReq);
+        }
+        String requestSerializado = finReq > inicioReq ? payload.substring(inicioReq, finReq) : payload.substring(inicioReq);
+        assertTrue(!requestSerializado.trim().isEmpty(), payload);
+        assertTrue(requestSerializado.toUpperCase().contains("GET"), payload);
+        assertTrue(payload.contains("TITLE=Titulo Manual"));
+        assertTrue(payload.contains("DESC=Descripcion Manual"));
+        assertTrue(payload.contains("RES="));
+    }
+
+    @Test
+    @DisplayName("Enviar hallazgo manual con URL invalida mantiene titulo y resumen")
+    void testEnviarHallazgoManualUrlInvalidaMantieneTituloResumen() throws Exception {
+        ExtensionBurpIA extension = new ExtensionBurpIA();
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerAgenteHabilitado(true);
+        config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
+        establecerCampo(extension, "config", config);
+
+        PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+        PanelAgente panelAgente = mock(PanelAgente.class);
+        when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+        establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+        Hallazgo hallazgoManual = new Hallazgo(
+            "://url-invalida",
+            "Titulo Manual",
+            "Descripcion Manual",
+            "Low",
+            "Low"
+        );
+
+        Method enviarHallazgo = ExtensionBurpIA.class.getDeclaredMethod("enviarHallazgoAAgente", Hallazgo.class);
+        enviarHallazgo.setAccessible(true);
+        assertDoesNotThrow(() -> enviarHallazgo.invoke(extension, hallazgoManual));
+
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+        verify(panelAgente).inyectarComando(payloadCaptor.capture(), eq(0));
+        String payload = payloadCaptor.getValue();
+
+        assertNotNull(payload);
+        assertTrue(payload.contains("Title: Titulo Manual"));
+        assertTrue(payload.contains("Summary: Descripcion Manual"));
+        assertTrue(payload.contains("REQ="));
     }
 
     @SuppressWarnings("unchecked")
