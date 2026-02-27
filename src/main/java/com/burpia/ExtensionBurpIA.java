@@ -23,6 +23,7 @@ import javax.swing.*;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 public class ExtensionBurpIA implements BurpExtension {
@@ -311,11 +312,44 @@ public class ExtensionBurpIA implements BurpExtension {
             return "";
         }
         try {
-            HttpRequest solicitudFallback = HttpRequest.httpRequestFromUrl(urlFallback);
-            return solicitudFallback != null ? solicitudFallback.toString() : "";
+            return construirSolicitudGetDesdeUrl(urlFallback);
         } catch (Exception ignored) {
             return "";
         }
+    }
+
+    private String construirSolicitudGetDesdeUrl(String url) {
+        if (!tieneContenido(url)) {
+            return "";
+        }
+        URI uri;
+        try {
+            uri = new URI(url.trim());
+        } catch (Exception ignored) {
+            return "";
+        }
+        String host = uri.getHost();
+        if (!tieneContenido(host)) {
+            return "";
+        }
+        String path = uri.getRawPath();
+        if (!tieneContenido(path)) {
+            path = "/";
+        }
+        String query = uri.getRawQuery();
+        String objetivo = tieneContenido(query) ? path + "?" + query : path;
+        String hostHeader = host;
+        int port = uri.getPort();
+        String scheme = uri.getScheme() != null ? uri.getScheme().toLowerCase() : "";
+        boolean puertoPorDefecto = ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
+        if (port > 0 && !puertoPorDefecto) {
+            hostHeader = host + ":" + port;
+        }
+        return "GET " + objetivo + " HTTP/1.1\r\n"
+            + "Host: " + hostHeader + "\r\n"
+            + "User-Agent: BurpIA/1.0.1\r\n"
+            + "Accept: */*\r\n"
+            + "Connection: close\r\n\r\n";
     }
 
     private String serializarRespuestaSiNecesario(String prompt, HttpRequestResponse evidencia) {

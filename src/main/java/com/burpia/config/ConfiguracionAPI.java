@@ -41,6 +41,7 @@ public class ConfiguracionAPI {
     private boolean agenteHabilitado;
     private String tipoAgente;
     private Map<String, String> rutasBinarioPorAgente;
+    private String agentePreflightPrompt;
     private String agentePrompt;
     private int agenteDelay;
 
@@ -69,6 +70,7 @@ public class ConfiguracionAPI {
         this.agenteHabilitado = false;
         this.tipoAgente = AgenteTipo.FACTORY_DROID.name();
         this.rutasBinarioPorAgente = new HashMap<>();
+        this.agentePreflightPrompt = obtenerAgentePreflightPromptPorDefecto();
         this.agentePrompt = obtenerAgentePromptPorDefecto();
         this.agenteDelay = 4000;
 
@@ -213,17 +215,40 @@ public class ConfiguracionAPI {
 
     private Map<String, String> nuevasRutas(Map<String, String> map) { return new HashMap<>(map); }
 
+    public String obtenerAgentePreflightPrompt() { return agentePreflightPrompt; }
+    public void establecerAgentePreflightPrompt(String prompt) {
+        this.agentePreflightPrompt = normalizarPromptAgentePreflight(prompt);
+    }
+
     public String obtenerAgentePrompt() { return agentePrompt; }
-    public void establecerAgentePrompt(String prompt) { this.agentePrompt = prompt; }
+    public void establecerAgentePrompt(String prompt) { this.agentePrompt = normalizarPromptAgente(prompt); }
 
     public int obtenerAgenteDelay() { return agenteDelay; }
     public void establecerAgenteDelay(int delay) { this.agenteDelay = normalizarDelayAgente(delay); }
 
-    public static String obtenerPromptAgentePorDefecto() {
-        return I18nUI.Configuracion.PROMPT_POR_DEFECTO();
+    public static String obtenerAgentePromptPorDefecto() {
+        String compuesto = obtenerAgentePromptCompuestoPorDefecto();
+        int indiceRol = compuesto.indexOf("# ROLE");
+        if (indiceRol < 0) {
+            return compuesto;
+        }
+        return compuesto.substring(indiceRol).trim();
     }
 
-    public static String obtenerAgentePromptPorDefecto() {
+    public static String obtenerAgentePreflightPromptPorDefecto() {
+        String compuesto = obtenerAgentePromptCompuestoPorDefecto();
+        int indiceRol = compuesto.indexOf("# ROLE");
+        if (indiceRol <= 0) {
+            return compuesto;
+        }
+        return compuesto.substring(0, indiceRol).trim();
+    }
+
+    public static String obtenerAgentePreflightPromptFijo() {
+        return obtenerAgentePreflightPromptPorDefecto();
+    }
+
+    private static String obtenerAgentePromptCompuestoPorDefecto() {
         return "BURPAI CRITICAL PRE-FLIGHT CHECK:\n" +
                "Before executing any task, perform an immediate and complete inventory of all tools currently available in this session.\n\n" +
                "Follow this discovery protocol strictly:\n\n" +
@@ -962,6 +987,20 @@ public class ConfiguracionAPI {
         return "Light";
     }
 
+    private static String normalizarPromptAgente(String prompt) {
+        if (prompt == null || prompt.trim().isEmpty()) {
+            return obtenerAgentePromptPorDefecto();
+        }
+        return prompt;
+    }
+
+    private static String normalizarPromptAgentePreflight(String prompt) {
+        if (prompt == null || prompt.trim().isEmpty()) {
+            return obtenerAgentePreflightPromptPorDefecto();
+        }
+        return prompt;
+    }
+
     private static int normalizarDelayAgente(int valor) {
         if (valor < 1000) return 1000;
         if (valor > 30000) return 30000;
@@ -997,6 +1036,7 @@ public class ConfiguracionAPI {
         if (this.rutasBinarioPorAgente != null) {
             snapshot.rutasBinarioPorAgente.putAll(this.rutasBinarioPorAgente);
         }
+        snapshot.agentePreflightPrompt = this.agentePreflightPrompt;
         snapshot.agentePrompt = this.agentePrompt;
         snapshot.agenteDelay = this.agenteDelay;
 
@@ -1035,7 +1075,8 @@ public class ConfiguracionAPI {
         if (origen.rutasBinarioPorAgente != null) {
             this.rutasBinarioPorAgente.putAll(origen.rutasBinarioPorAgente);
         }
-        this.agentePrompt = origen.agentePrompt;
+        this.agentePreflightPrompt = normalizarPromptAgentePreflight(origen.agentePreflightPrompt);
+        this.agentePrompt = normalizarPromptAgente(origen.agentePrompt);
         this.agenteDelay = origen.agenteDelay;
 
         this.apiKeysPorProveedor = new HashMap<>(origen.apiKeysPorProveedor);

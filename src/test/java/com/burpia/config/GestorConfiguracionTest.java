@@ -49,7 +49,7 @@ class GestorConfiguracionTest {
 
         assertTrue(gestor.guardarConfiguracion(config));
 
-        Path configPath = tempDir.resolve(".burpia.json");
+        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = Files.readString(configPath, StandardCharsets.UTF_8);
 
         assertFalse(json.contains("\"urlApi\""));
@@ -68,7 +68,7 @@ class GestorConfiguracionTest {
         userHomeOriginal = System.getProperty("user.home");
         System.setProperty("user.home", tempDir.toString());
 
-        Path configPath = tempDir.resolve(".burpia.json");
+        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = "{\n" +
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"retrasoSegundos\": 5,\n" +
@@ -79,6 +79,7 @@ class GestorConfiguracionTest {
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
             "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
             "}";
+        Files.createDirectories(configPath.getParent());
         Files.writeString(configPath, json, StandardCharsets.UTF_8);
 
         GestorConfiguracion gestor = new GestorConfiguracion();
@@ -108,11 +109,35 @@ class GestorConfiguracionTest {
         assertFalse(cargada.autoGuardadoIssuesHabilitado());
         assertFalse(cargada.autoScrollConsolaHabilitado());
 
-        Path configPath = tempDir.resolve(".burpia.json");
+        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = Files.readString(configPath, StandardCharsets.UTF_8);
         assertTrue(json.contains("\"escaneoPasivoHabilitado\": false"));
         assertTrue(json.contains("\"autoGuardadoIssuesHabilitado\": false"));
         assertTrue(json.contains("\"autoScrollConsolaHabilitado\": false"));
+    }
+
+    @Test
+    @DisplayName("Guarda y carga prompts de agente inicial y validacion")
+    void testPersistenciaPromptsAgente() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-config-test");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerAgentePreflightPrompt("PRE_FLIGHT_CUSTOM");
+        config.establecerAgentePrompt("VALIDACION_CUSTOM");
+
+        assertTrue(gestor.guardarConfiguracion(config));
+
+        Path configPath = tempDir.resolve(".burpia/config.json");
+        String json = Files.readString(configPath, StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"agentePreflightPrompt\": \"PRE_FLIGHT_CUSTOM\""));
+        assertTrue(json.contains("\"agentePrompt\": \"VALIDACION_CUSTOM\""));
+
+        ConfiguracionAPI cargada = gestor.cargarConfiguracion();
+        assertEquals("PRE_FLIGHT_CUSTOM", cargada.obtenerAgentePreflightPrompt());
+        assertEquals("VALIDACION_CUSTOM", cargada.obtenerAgentePrompt());
     }
 
     @Test
@@ -130,7 +155,7 @@ class GestorConfiguracionTest {
 
         assertTrue(gestor.guardarConfiguracion(config));
 
-        Path configPath = tempDir.resolve(".burpia.json");
+        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = Files.readString(configPath, StandardCharsets.UTF_8);
         assertTrue(json.contains("\"tiempoEsperaPorModelo\""));
         assertTrue(json.contains("\"Z.ai::glm-5\": 180"));
@@ -149,7 +174,7 @@ class GestorConfiguracionTest {
         userHomeOriginal = System.getProperty("user.home");
         System.setProperty("user.home", tempDir.toString());
 
-        Path configPath = tempDir.resolve(".burpia.json");
+        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = "{\n" +
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"tiempoEsperaAI\": 120,\n" +
@@ -158,6 +183,7 @@ class GestorConfiguracionTest {
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-5-mini\"},\n" +
             "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
             "}";
+        Files.createDirectories(configPath.getParent());
         Files.writeString(configPath, json, StandardCharsets.UTF_8);
 
         GestorConfiguracion gestor = new GestorConfiguracion();
@@ -195,8 +221,8 @@ class GestorConfiguracionTest {
         assertNotNull(mensajeError.toString());
         assertTrue(mensajeError.toString().toLowerCase().contains("null")
             || mensajeError.toString().toLowerCase().contains("nula"));
-        assertFalse(Files.exists(tempDir.resolve(".burpia.json")));
-        assertFalse(Files.exists(tempDir.resolve(".burpia.json.tmp")));
+        assertFalse(Files.exists(tempDir.resolve(".burpia/config.json")));
+        assertFalse(Files.exists(tempDir.resolve(".burpia/config.json.tmp")));
     }
 
     @Test
@@ -206,7 +232,7 @@ class GestorConfiguracionTest {
         userHomeOriginal = System.getProperty("user.home");
         System.setProperty("user.home", tempDir.toString());
 
-        Path configPath = tempDir.resolve(".burpia.json");
+        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = "{\n" +
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"promptConfigurable\": \"PROMPT_ANTIGUO\",\n" +
@@ -216,6 +242,7 @@ class GestorConfiguracionTest {
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
             "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
             "}";
+        Files.createDirectories(configPath.getParent());
         Files.writeString(configPath, json, StandardCharsets.UTF_8);
 
         GestorConfiguracion gestor = new GestorConfiguracion();

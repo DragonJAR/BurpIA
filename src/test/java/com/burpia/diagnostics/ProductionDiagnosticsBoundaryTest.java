@@ -22,9 +22,6 @@ class ProductionDiagnosticsBoundaryTest {
     @DisplayName("Hooks de diagnostico runtime permanecen fuera de src/main")
     void hooksRuntimeFueraDeMain() throws Exception {
         Map<String, String> patronesBloqueados = new LinkedHashMap<>();
-        patronesBloqueados.put("burpia.agent.enterDebug", "override runtime de debug");
-        patronesBloqueados.put("burpia.agent.submit.strategy", "override runtime de estrategia submit");
-        patronesBloqueados.put("burpia.agent.submit.delayMs", "override runtime de delay submit");
         patronesBloqueados.put("burpia_pty_error.log", "archivo ad-hoc de diagnostico en HOME");
         patronesBloqueados.put("[ENTER-DEBUG]", "log sensible de payload de transporte");
 

@@ -14,7 +14,6 @@ class SubmitSequenceFactoryTest {
     void autoClaudeCodeUnixUsaCr() {
         SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
             AgenteTipo.CLAUDE_CODE,
-            null,
             SubmitSequenceFactory.Plataforma.LINUX
         );
         assertEquals("\r", secuencia.payload());
@@ -26,7 +25,6 @@ class SubmitSequenceFactoryTest {
     void autoClaudeCodeWindowsUsaCrlf() {
         SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
             AgenteTipo.CLAUDE_CODE,
-            null,
             SubmitSequenceFactory.Plataforma.WINDOWS
         );
         assertEquals("\r\n", secuencia.payload());
@@ -38,7 +36,6 @@ class SubmitSequenceFactoryTest {
     void autoFactoryDroidUsaSmartFallback() {
         SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
             AgenteTipo.FACTORY_DROID,
-            null,
             SubmitSequenceFactory.Plataforma.LINUX
         );
         assertEquals("\r", secuencia.payload());
@@ -46,49 +43,7 @@ class SubmitSequenceFactoryTest {
 
         assertNotNull(secuencia.getFallback());
         assertEquals("\n", secuencia.getFallback().payload());
-    }
-
-    @Test
-    @DisplayName("Override CRLF fuerza secuencia CRLF")
-    void overrideCrlfFunciona() {
-        SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
-            AgenteTipo.CLAUDE_CODE,
-            "CRLF",
-            SubmitSequenceFactory.Plataforma.LINUX
-        );
-        assertEquals("\r\n", secuencia.payload());
-        assertEquals(1, secuencia.repeticiones());
-    }
-
-    @Test
-    @DisplayName("Override inválido cae en AUTO")
-    void overrideInvalidoCaeEnAuto() {
-        SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
-            AgenteTipo.CLAUDE_CODE,
-            "NO_EXISTE",
-            SubmitSequenceFactory.Plataforma.WINDOWS
-        );
-        assertEquals("\r\n", secuencia.payload());
-        assertEquals(1, secuencia.repeticiones());
-    }
-    
-    @Test
-    @DisplayName("TRIPLE_ENTER_OS usa el separador de plataforma")
-    void tripleEnterOsUsaSeparadorCorrecto() {
-        SubmitSequenceFactory.SubmitSequence win = SubmitSequenceFactory.construir(
-            AgenteTipo.FACTORY_DROID,
-            "TRIPLE_ENTER_OS",
-            SubmitSequenceFactory.Plataforma.WINDOWS
-        );
-        assertEquals("\r\n", win.payload());
-        assertEquals(3, win.repeticiones());
-
-        SubmitSequenceFactory.SubmitSequence linux = SubmitSequenceFactory.construir(
-            AgenteTipo.FACTORY_DROID,
-            "TRIPLE_ENTER_OS",
-            SubmitSequenceFactory.Plataforma.LINUX
-        );
-        assertEquals("\r", linux.payload());
-        assertEquals(3, linux.repeticiones());
+        assertNotNull(secuencia.getFallback().getFallback());
+        assertEquals("\r\n", secuencia.getFallback().getFallback().payload());
     }
 }

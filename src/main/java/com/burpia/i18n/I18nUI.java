@@ -1213,6 +1213,14 @@ public final class I18nUI {
                 return tr("🤖 CONFIGURACION AGENTE", "🤖 AGENT SETTINGS");
             }
 
+            public static String TITULO_EJECUCION_AGENTE() {
+                return tr("⚙️ EJECUCION DEL AGENTE", "⚙️ AGENT EXECUTION");
+            }
+
+            public static String TITULO_PROMPTS_AGENTE() {
+                return tr("🧾 PROMPTS DEL AGENTE", "🧾 AGENT PROMPTS");
+            }
+
             public static String CHECK_HABILITAR_AGENTE() {
                 return tr("Habilitar Agente", "Enable Agent");
             }
@@ -1229,6 +1237,24 @@ public final class I18nUI {
 
             public static String TITULO_PROMPT_AGENTE() {
                 return tr("✍️ PROMPT DEL AGENTE", "✍️ AGENT PROMPT");
+            }
+
+            public static String TITULO_PROMPT_INICIAL_AGENTE() {
+                return tr("🚀 PROMPT INICIAL (PRE-FLIGHT)", "🚀 INITIAL PROMPT (PRE-FLIGHT)");
+            }
+
+            public static String DESCRIPCION_PROMPT_INICIAL_AGENTE() {
+                return tr(
+                    "Se inyecta al iniciar/reiniciar/cambiar agente o al pulsar Inyectar Payload.",
+                    "Injected on start/restart/agent switch or when clicking Inject Payload."
+                );
+            }
+
+            public static String DESCRIPCION_PROMPT_VALIDACION_AGENTE() {
+                return tr(
+                    "Plantilla usada para validar hallazgos enviados al agente.",
+                    "Template used to validate findings sent to the agent."
+                );
             }
 
             public static String MSG_CONFIGURACION_REQUERIDA() {
@@ -1834,8 +1860,13 @@ public final class I18nUI {
         }
 
         public static String RESTAURAR_PROMPT_AGENTE() {
-            return I18nUI.tr("Restaura la plantilla por defecto recomendada para el Agente.",
-                "Restores the default template recommended for the Agent.");
+            return I18nUI.tr("Restaura el prompt de validación del agente al valor por defecto.",
+                "Restores the agent validation prompt to its default value.");
+        }
+
+        public static String RESTAURAR_PROMPT_INICIAL_AGENTE() {
+            return I18nUI.tr("Restaura el prompt inicial pre-flight al valor por defecto.",
+                "Restores the initial pre-flight prompt to its default value.");
         }
 
         public static String DELAY_PROMPT_AGENTE() {
@@ -1856,8 +1887,13 @@ public final class I18nUI {
         }
 
         public static String PROMPT_AGENTE() {
-            return I18nUI.tr("Prompt de sistema enviado al agente al iniciar.",
-                "System prompt sent to the agent on startup.");
+            return I18nUI.tr("Plantilla de validación enviada al agente cuando recibe un hallazgo.",
+                "Validation template sent to the agent when it receives a finding.");
+        }
+
+        public static String PROMPT_INICIAL_AGENTE() {
+            return I18nUI.tr("Prompt inicial pre-flight que prepara herramientas y deja el agente en READY.",
+                "Initial pre-flight prompt that prepares tools and leaves the agent in READY state.");
         }
 
         public static String IDIOMA() {

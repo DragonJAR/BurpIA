@@ -35,7 +35,7 @@ public class GestorConsolaGUI {
     private final AtomicInteger logsPendientes;
     private final AtomicInteger versionCambios;
     private static final int MAXIMO_CARACTERES = 200_000;
-    private static final int MAXIMO_BACKLOG_SIN_CONSOLA = 5000;
+    private static final int MAXIMO_BACKLOG_SIN_CONSOLA = PoliticaMemoria.MAXIMO_BACKLOG_CONSOLA;
     private static final Pattern ETIQUETAS_DESTACADAS =
         Pattern.compile("(?iu)\\b(?:NOTA|ACCION|ACCIÓN|NOTE|ACTION):");
 
@@ -329,7 +329,7 @@ public class GestorConsolaGUI {
     private void agregarPendiente(EntradaLog entrada) {
         colaPendiente.add(entrada);
         int total = logsPendientes.incrementAndGet();
-        if (documento == null && total > MAXIMO_BACKLOG_SIN_CONSOLA) {
+        if (total > MAXIMO_BACKLOG_SIN_CONSOLA) {
             recortarBacklogSinConsola();
         }
     }

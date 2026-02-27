@@ -8,72 +8,36 @@ final class SubmitSequenceFactory {
     private SubmitSequenceFactory() {
     }
 
-    static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride) {
-        return construir(tipoAgente, estrategiaOverride, Plataforma.desdeSistemaActual());
+    static SubmitSequence construir(AgenteTipo tipoAgente) {
+        return construir(tipoAgente, Plataforma.desdeSistemaActual());
     }
 
-    static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride, Plataforma plataforma) {
-        EstrategiaSubmit estrategia = EstrategiaSubmit.desdeValor(estrategiaOverride, EstrategiaSubmit.AUTO);
+    static SubmitSequence construir(AgenteTipo tipoAgente, Plataforma plataforma) {
         AgenteTipo agente = tipoAgente != null ? tipoAgente : AgenteTipo.FACTORY_DROID;
         Plataforma p = plataforma != null ? plataforma : Plataforma.LINUX;
-
-        if (estrategia == EstrategiaSubmit.AUTO) {
-            return construirAuto(agente, p);
+        if (agente == AgenteTipo.CLAUDE_CODE) {
+            String submit = (p == Plataforma.WINDOWS) ? "\r\n" : "\r";
+            return new SubmitSequence(submit, 1, 0, "AUTO_CLAUDE");
         }
-        return construirFija(estrategia, p);
-    }
-
-    private static SubmitSequence construirAuto(AgenteTipo tipoAgente, Plataforma plataforma) {
-        if (tipoAgente == AgenteTipo.CLAUDE_CODE) {
-            return construirFija(plataforma == Plataforma.WINDOWS ? EstrategiaSubmit.CRLF : EstrategiaSubmit.CR, plataforma);
-        }
-        return construirFija(EstrategiaSubmit.SMART_FALLBACK, plataforma);
-    }
-
-    private static SubmitSequence construirFija(EstrategiaSubmit estrategia, Plataforma plataforma) {
-        String sep = (plataforma == Plataforma.WINDOWS) ? "\r\n" : "\r";
-
-        switch (estrategia) {
-            case CTRL_J:
-            case LF:
-                return new SubmitSequence("\n", 1, 0, estrategia);
-            
-            case CTRL_M:
-            case CR:
-                return new SubmitSequence("\r", 1, 0, estrategia);
-            
-            case CRLF:
-                return new SubmitSequence("\r\n", 1, 0, estrategia);
-            
-            case TRIPLE_CRLF:
-                return new SubmitSequence("\r\n", 3, 80, estrategia);
-            
-            case TRIPLE_ENTER_OS:
-                return new SubmitSequence(sep, 3, 100, estrategia);
-            
-            case SMART_FALLBACK:
-                return new SubmitSequence("\r", 1, 0, estrategia)
-                    .conFallback("\n", 1, 100)
-                    .conFallback("\r\n", 1, 100);
-            
-            case AUTO:
-            default:
-                return new SubmitSequence(sep, 1, 0, EstrategiaSubmit.AUTO);
-        }
+        return new SubmitSequence("\r", 1, 0, "AUTO_DROID")
+            .conFallback("\n", 1, 100)
+            .conFallback("\r\n", 1, 100);
     }
 
     static final class SubmitSequence {
         private final String payload;
         private final int repeticiones;
         private final int delayEntreEnviosMs;
-        private final EstrategiaSubmit estrategia;
+        private final String estrategia;
         private SubmitSequence fallback;
 
-        SubmitSequence(String payload, int repeticiones, int delayEntreEnviosMs, EstrategiaSubmit estrategia) {
+        SubmitSequence(String payload, int repeticiones, int delayEntreEnviosMs, String estrategia) {
             this.payload = payload;
             this.repeticiones = Math.max(1, repeticiones);
             this.delayEntreEnviosMs = Math.max(0, delayEntreEnviosMs);
-            this.estrategia = estrategia != null ? estrategia : EstrategiaSubmit.AUTO;
+            this.estrategia = estrategia != null && !estrategia.trim().isEmpty()
+                ? estrategia
+                : "AUTO";
         }
 
         SubmitSequence conFallback(String payload, int repeticiones, int delay) {
@@ -102,20 +66,7 @@ final class SubmitSequenceFactory {
         }
 
         String descripcion() {
-            return estrategia.name() + " x" + repeticiones;
-        }
-    }
-
-    enum EstrategiaSubmit {
-        AUTO, CTRL_J, CTRL_M, LF, CR, CRLF, TRIPLE_ENTER_OS, TRIPLE_CRLF, SMART_FALLBACK;
-
-        static EstrategiaSubmit desdeValor(String valor, EstrategiaSubmit porDefecto) {
-            if (valor == null || valor.trim().isEmpty()) return porDefecto;
-            try {
-                return valueOf(valor.trim().toUpperCase(java.util.Locale.ROOT));
-            } catch (IllegalArgumentException e) {
-                return porDefecto;
-            }
+            return estrategia + " x" + repeticiones;
         }
     }
 

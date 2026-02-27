@@ -1,5 +1,6 @@
 package com.burpia.util;
 
+import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import java.nio.charset.StandardCharsets;
@@ -211,27 +212,70 @@ public final class HttpUtils {
     }
 
     public static String extraerCuerpo(HttpRequest solicitud) {
+        return extraerCuerpo(solicitud, Integer.MAX_VALUE);
+    }
+
+    public static String extraerCuerpo(HttpRequest solicitud, int maxCaracteres) {
         if (solicitud == null) {
             return "";
         }
         try {
-            String cuerpo = solicitud.bodyToString();
-            return cuerpo != null ? cuerpo : "";
+            return extraerCuerpoDesdeByteArray(solicitud.body(), maxCaracteres);
         } catch (Exception ignored) {
             return "";
         }
     }
 
     public static String extraerCuerpo(HttpResponse respuesta) {
+        return extraerCuerpo(respuesta, Integer.MAX_VALUE);
+    }
+
+    public static String extraerCuerpo(HttpResponse respuesta, int maxCaracteres) {
         if (respuesta == null) {
             return "";
         }
         try {
-            String cuerpo = respuesta.bodyToString();
-            return cuerpo != null ? cuerpo : "";
+            return extraerCuerpoDesdeByteArray(respuesta.body(), maxCaracteres);
         } catch (Exception ignored) {
             return "";
         }
+    }
+
+    private static String extraerCuerpoDesdeByteArray(ByteArray body, int maxCaracteres) {
+        if (body == null || body.length() <= 0) {
+            return "";
+        }
+        if (maxCaracteres <= 0) {
+            return "";
+        }
+        try {
+            if (maxCaracteres == Integer.MAX_VALUE) {
+                String textoCompleto = body.toString();
+                return textoCompleto != null ? textoCompleto : "";
+            }
+
+            int maxBytes = Math.min(body.length(), Math.max(64, maxCaracteres * 4));
+            ByteArray parcial = body.subArray(0, maxBytes);
+            String textoParcial = parcial != null ? parcial.toString() : "";
+            return truncarSiSupera(textoParcial != null ? textoParcial : "", maxCaracteres);
+        } catch (Exception e) {
+            try {
+                String fallback = body.toString();
+                return truncarSiSupera(fallback != null ? fallback : "", maxCaracteres);
+            } catch (Exception ignored) {
+                return "";
+            }
+        }
+    }
+
+    private static String truncarSiSupera(String texto, int maxCaracteres) {
+        if (texto == null) {
+            return "";
+        }
+        if (maxCaracteres <= 0 || texto.length() <= maxCaracteres) {
+            return texto;
+        }
+        return texto.substring(0, maxCaracteres);
     }
 
     public static boolean esRecursoEstatico(String url) {

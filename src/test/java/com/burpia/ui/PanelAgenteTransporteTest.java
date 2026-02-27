@@ -9,9 +9,11 @@ import org.mockito.ArgumentCaptor;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -81,9 +83,62 @@ class PanelAgenteTransporteTest {
         }
     }
 
+    @Test
+    @DisplayName("Prompt inicial del agente usa preflight configurado y no prompt de validacion")
+    void testPromptInicialUsaPreflightConfigurado() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerAgentePreflightPrompt("PROMPT_PREFLIGHT_CUSTOM");
+        config.establecerAgentePrompt("PROMPT_VALIDACION_CUSTOM");
+        config.establecerAgenteDelay(4000);
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            marcarConsolaArrancando(panel, true);
+
+            panel.forzarInyeccionPromptInicial();
+
+            String promptPendiente = obtenerCampoString(panel, "promptPendiente");
+            int delayPendiente = obtenerCampoInt(panel, "delayPendienteMs");
+            String esperado = "PROMPT_PREFLIGHT_CUSTOM";
+
+            assertEquals(esperado, promptPendiente);
+            assertNotEquals("PROMPT_VALIDACION_CUSTOM", promptPendiente);
+            assertEquals(4000, delayPendiente);
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Inyeccion manual de payload usa preflight configurado sin delay")
+    void testInyeccionManualUsaPreflightConfiguradoSinDelay() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerAgentePreflightPrompt("PROMPT_PREFLIGHT_CUSTOM");
+        config.establecerAgentePrompt("PROMPT_VALIDACION_CUSTOM");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            marcarConsolaArrancando(panel, true);
+
+            panel.inyectarPayloadInicialManual();
+
+            String promptPendiente = obtenerCampoString(panel, "promptPendiente");
+            int delayPendiente = obtenerCampoInt(panel, "delayPendienteMs");
+
+            assertEquals("PROMPT_PREFLIGHT_CUSTOM", promptPendiente);
+            assertEquals(0, delayPendiente);
+        } finally {
+            panel.destruir();
+        }
+    }
+
     private PanelAgente crearPanelSinConsola() throws Exception {
+        return crearPanelSinConsola(new ConfiguracionAPI());
+    }
+
+    private PanelAgente crearPanelSinConsola(ConfiguracionAPI config) throws Exception {
         final PanelAgente[] holder = new PanelAgente[1];
-        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelAgente(new ConfiguracionAPI(), false));
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelAgente(config, false));
         return holder[0];
     }
 
@@ -97,5 +152,25 @@ class PanelAgenteTransporteTest {
         Method method = PanelAgente.class.getDeclaredMethod("escribirTextoViaTtyConnector", String.class);
         method.setAccessible(true);
         return (boolean) method.invoke(panel, payload);
+    }
+
+    private void marcarConsolaArrancando(PanelAgente panel, boolean valor) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("consolaArrancando");
+        field.setAccessible(true);
+        AtomicBoolean bandera = (AtomicBoolean) field.get(panel);
+        bandera.set(valor);
+    }
+
+    private String obtenerCampoString(PanelAgente panel, String nombre) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField(nombre);
+        field.setAccessible(true);
+        Object valor = field.get(panel);
+        return valor != null ? valor.toString() : null;
+    }
+
+    private int obtenerCampoInt(PanelAgente panel, String nombre) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField(nombre);
+        field.setAccessible(true);
+        return field.getInt(panel);
     }
 }

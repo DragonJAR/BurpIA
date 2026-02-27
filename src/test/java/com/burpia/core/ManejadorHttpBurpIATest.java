@@ -15,6 +15,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -119,7 +120,9 @@ class ManejadorHttpBurpIATest {
         when(solicitud.url()).thenReturn("https://example.com/login");
         when(solicitud.method()).thenReturn("POST");
         when(solicitud.headers()).thenReturn(List.of());
-        when(solicitud.bodyToString()).thenReturn("username=admin");
+        when(solicitud.body().length()).thenReturn("username=admin".length());
+        when(solicitud.body().toString()).thenReturn("username=admin");
+        when(solicitud.body().subArray(anyInt(), anyInt()).toString()).thenReturn("username=admin");
 
         salida.manejador.analizarSolicitudForzada(solicitud);
         String error = salida.stderr.toString();
@@ -143,7 +146,9 @@ class ManejadorHttpBurpIATest {
         when(solicitud.url()).thenReturn("https://example.com/login");
         when(solicitud.method()).thenReturn("POST");
         when(solicitud.headers()).thenReturn(List.of());
-        when(solicitud.bodyToString()).thenReturn("username=admin");
+        when(solicitud.body().length()).thenReturn("username=admin".length());
+        when(solicitud.body().toString()).thenReturn("username=admin");
+        when(solicitud.body().subArray(anyInt(), anyInt()).toString()).thenReturn("username=admin");
 
         salida.manejador.analizarSolicitudForzada(solicitud);
         salida.manejador.analizarSolicitudForzada(solicitud);
