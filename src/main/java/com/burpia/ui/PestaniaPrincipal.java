@@ -1,6 +1,5 @@
 package com.burpia.ui;
 import burp.api.montoya.MontoyaApi;
-import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
@@ -9,7 +8,6 @@ import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import javax.swing.*;
 import java.awt.*;
-import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -121,6 +119,7 @@ public class PestaniaPrincipal extends JPanel {
         int index = tabbedPane.indexOfComponent(panelAgente);
         if (index != -1) {
             tabbedPane.setSelectedIndex(index);
+            panelAgente.asegurarConsolaIniciada();
             
             new Timer(150, e -> {
                 ((Timer) e.getSource()).stop();

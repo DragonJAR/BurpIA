@@ -67,7 +67,9 @@ public final class OSUtils {
                 }
             }
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, I18nLogs.tr("Error cerrando ventanas de ajustes"), e);
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, I18nLogs.tr("Error cerrando ventanas de ajustes"), e);
+            }
         }
     }
 

@@ -122,7 +122,7 @@ public class PanelAgente extends JPanel {
             }
             return escribirTextoDirectoPTY(comando);
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, I18nLogs.tr("Error escribiendo comando crudo PTY"), e);
+            registrarLog(Level.FINE, I18nLogs.tr("Error escribiendo comando crudo PTY"), e);
             return false;
         }
     }
@@ -136,16 +136,19 @@ public class PanelAgente extends JPanel {
             if (!ttyConnector.isConnected()) {
                 return false;
             }
-            for (int i = 0; i < texto.length(); i += CHUNK_ESCRITURA_PTY) {
-                int end = Math.min(texto.length(), i + CHUNK_ESCRITURA_PTY);
+            int longitud = texto.length();
+            if (!requiereChunking(longitud)) {
+                ttyConnector.write(texto);
+                return true;
+            }
+            for (int i = 0; i < longitud; i += CHUNK_ESCRITURA_PTY) {
+                int end = Math.min(longitud, i + CHUNK_ESCRITURA_PTY);
                 ttyConnector.write(texto.substring(i, end));
-                if (texto.length() > CHUNK_ESCRITURA_PTY) {
-                    dormirSilencioso(DELAY_ENTRE_CHUNKS_PTY_MS);
-                }
+                aplicarRetardoEntreChunks(end, longitud);
             }
             return true;
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, I18nLogs.tr("Error escribiendo por ttyConnector"), e);
+            registrarLog(Level.FINE, I18nLogs.tr("Error escribiendo por ttyConnector"), e);
             return false;
         }
     }
@@ -161,7 +164,7 @@ public class PanelAgente extends JPanel {
             os.flush();
             return true;
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, "Error escritura raw PTY", e);
+            registrarLog(Level.FINE, "Error escritura raw PTY", e);
             return false;
         }
     }
@@ -173,27 +176,31 @@ public class PanelAgente extends JPanel {
         
         byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
         if (process == null || !process.isAlive()) {
-            LOGGER.fine(I18nLogs.tr("Escritura PTY omitida: proceso no disponible"));
+            registrarLog(Level.FINE, I18nLogs.tr("Escritura PTY omitida: proceso no disponible"));
             return false;
         }
         
         try {
             java.io.OutputStream os = process.getOutputStream();
             if (os == null) {
-                LOGGER.fine(I18nLogs.tr("Escritura PTY omitida: stream de salida nulo"));
+                registrarLog(Level.FINE, I18nLogs.tr("Escritura PTY omitida: stream de salida nulo"));
                 return false;
             }
-            for (int i = 0; i < bytes.length; i += CHUNK_ESCRITURA_PTY) {
-                int end = Math.min(bytes.length, i + CHUNK_ESCRITURA_PTY);
-                os.write(bytes, i, end - i);
+            int longitud = bytes.length;
+            if (!requiereChunking(longitud)) {
+                os.write(bytes);
                 os.flush();
-                if (bytes.length > CHUNK_ESCRITURA_PTY) {
-                    dormirSilencioso(DELAY_ENTRE_CHUNKS_PTY_MS);
-                }
+                return true;
             }
+            for (int i = 0; i < longitud; i += CHUNK_ESCRITURA_PTY) {
+                int end = Math.min(longitud, i + CHUNK_ESCRITURA_PTY);
+                os.write(bytes, i, end - i);
+                aplicarRetardoEntreChunks(end, longitud);
+            }
+            os.flush();
             return true;
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, "Error escritura directa PTY", e);
+            registrarLog(Level.FINE, "Error escritura directa PTY", e);
             return false;
         }
     }
@@ -254,7 +261,7 @@ public class PanelAgente extends JPanel {
             try {
                 ttyConnector.close();
             } catch (Exception e) {
-                LOGGER.log(Level.FINE, I18nLogs.tr("Error cerrando ttyConnector"), e);
+                registrarLog(Level.FINE, I18nLogs.tr("Error cerrando ttyConnector"), e);
             }
             ttyConnector = null;
         }
@@ -373,7 +380,7 @@ public class PanelAgente extends JPanel {
             aplicarIdioma();
 
         } catch (Exception ex) {
-            LOGGER.log(Level.WARNING, I18nLogs.tr("Error al cambiar de agente"), ex);
+            registrarLog(Level.WARNING, I18nLogs.tr("Error al cambiar de agente"), ex);
         }
     }
 
@@ -466,28 +473,11 @@ public class PanelAgente extends JPanel {
                 public int read(char[] buf, int offset, int length) throws java.io.IOException { return rawConnector.read(buf, offset, length); }
                 @Override
                 public void write(byte[] bytes) throws java.io.IOException {
-                    int chunkSize = 64;
-                    int delaySleep = 20;
-                    for (int i = 0; i < bytes.length; i += chunkSize) {
-                        int end = Math.min(bytes.length, i + chunkSize);
-                        byte[] chunk = java.util.Arrays.copyOfRange(bytes, i, end);
-                        rawConnector.write(chunk);
-                        if (bytes.length > chunkSize) {
-                            try { Thread.sleep(delaySleep); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                        }
-                    }
+                    rawConnector.write(bytes);
                 }
                 @Override
                 public void write(String string) throws java.io.IOException {
-                    int chunkSize = 64;
-                    int delaySleep = 20;
-                    for (int i = 0; i < string.length(); i += chunkSize) {
-                        int end = Math.min(string.length(), i + chunkSize);
-                        rawConnector.write(string.substring(i, end));
-                        if (string.length() > chunkSize) {
-                            try { Thread.sleep(delaySleep); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-                        }
-                    }
+                    rawConnector.write(string);
                 }
                 @Override
                 public boolean isConnected() { return rawConnector.isConnected(); }
@@ -496,7 +486,10 @@ public class PanelAgente extends JPanel {
                 @Override
                 public boolean ready() throws java.io.IOException { return rawConnector.ready(); }
             @Override
-            public void resize(java.awt.Dimension termSize, java.awt.Dimension pixelSize) { rawConnector.resize(termSize, pixelSize); }
+            @SuppressWarnings("deprecation")
+            public void resize(java.awt.Dimension termSize, java.awt.Dimension pixelSize) {
+                rawConnector.resize(termSize, pixelSize);
+            }
             };
 
             SwingUtilities.invokeLater(() -> {
@@ -540,7 +533,7 @@ public class PanelAgente extends JPanel {
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
         String comandoArranque = resolverComandoArranque(tipoActual, opciones);
 
-        LOGGER.info(I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
+        registrarLog(Level.INFO, I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
 
         INYECTOR_PTY.execute(() -> {
             dormirSilencioso(DELAY_INICIO_BINARIO_MS);
@@ -568,7 +561,7 @@ public class PanelAgente extends JPanel {
     private String resolverComandoArranque(AgenteTipo tipoActual, AgentRuntimeOptions.EnterOptions opciones) {
         String comandoProbe = construirComandoProbe(opciones.probeMode());
         if (comandoProbe != null) {
-            LOGGER.info(I18nLogs.trTecnico(
+            registrarLog(Level.INFO, I18nLogs.trTecnico(
                 "[ENTER-PROBE] mode=" + opciones.probeMode().name() +
                     " os=" + describirPlataformaActual() +
                     " command='" + comandoProbe + "'"
@@ -589,7 +582,7 @@ public class PanelAgente extends JPanel {
             : "scripts/diagnostics/enter-probe-posix.sh";
         File script = new File(rutaRelativa);
         if (!script.isFile()) {
-            LOGGER.warning(I18nLogs.trTecnico(
+            registrarLog(Level.WARNING, I18nLogs.trTecnico(
                 "[ENTER-PROBE] script no encontrado: " + script.getAbsolutePath() + ". Usando agente real."
             ));
             return null;
@@ -660,7 +653,7 @@ public class PanelAgente extends JPanel {
         SwingUtilities.invokeLater(() -> {
             OSUtils.cerrarVentanaAjustes();
             if (delayMs > 0) {
-                LOGGER.info(I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayMs + " ms) antes de la inyeccion..."));
+                registrarLog(Level.INFO, I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayMs + " ms) antes de la inyeccion..."));
                 new Timer(delayMs, ev -> {
                     ((Timer) ev.getSource()).stop();
                     aplicarEscrituraDirecta(texto, opciones, origen);
@@ -683,7 +676,7 @@ public class PanelAgente extends JPanel {
         );
 
         INYECTOR_PTY.execute(() -> {
-            LOGGER.info(I18nLogs.trTecnico(
+            registrarLog(Level.INFO, I18nLogs.trTecnico(
                 "[ENTER-FLOW] id=" + injectionId +
                     " origin=" + origen +
                     " agent=" + opciones.tipoAgente().name() +
@@ -695,7 +688,7 @@ public class PanelAgente extends JPanel {
             if (!escribirComandoCrudoSeguro(payloadConBrackets)) {
                 return;
             }
-            LOGGER.info(I18nLogs.tr("Payload en bufer usando escritura directa (tty stream con bracketed paste). Esperando confirmacion..."));
+            registrarLog(Level.INFO, I18nLogs.tr("Payload en bufer usando escritura directa (tty stream con bracketed paste). Esperando confirmacion..."));
             dormirSilencioso(opciones.delaySubmitPostPasteMs());
             enviarSecuenciaSubmit(opciones, secuencia, injectionId, origen);
         });
@@ -710,7 +703,7 @@ public class PanelAgente extends JPanel {
         if (secuencia == null) return;
 
         if (opciones.probeSubmitActivo()) {
-            LOGGER.info(I18nLogs.trTecnico(
+            registrarLog(Level.INFO, I18nLogs.trTecnico(
                 "[ENTER-PROBE] agent=" + opciones.tipoAgente().name() +
                 " os=" + describirPlataformaActual() +
                 " strategyOverride=" + (opciones.estrategiaSubmitOverride() != null ? opciones.estrategiaSubmitOverride() : "AUTO") +
@@ -747,7 +740,7 @@ public class PanelAgente extends JPanel {
         }
 
         if (!envioExitoso && secuencia.getFallback() != null) {
-            LOGGER.warning(I18nLogs.trTecnico(
+            registrarLog(Level.WARNING, I18nLogs.trTecnico(
                 "[ENTER-FALLBACK] id=" + injectionId +
                     " origin=" + origen +
                     " motivo=fallo_escritura payload='" + escaparControl(secuencia.payload()) + "'"
@@ -758,7 +751,7 @@ public class PanelAgente extends JPanel {
         }
 
         if (!envioExitoso) {
-            LOGGER.warning(I18nLogs.trTecnico(
+            registrarLog(Level.WARNING, I18nLogs.trTecnico(
                 "[ENTER-RESULT] id=" + injectionId +
                     " origin=" + origen +
                     " outcome=failed reason=submit-write-failed-no-fallback"
@@ -766,8 +759,8 @@ public class PanelAgente extends JPanel {
             return;
         }
 
-        LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
-        LOGGER.info(I18nLogs.trTecnico(
+        registrarLog(Level.INFO, I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
+        registrarLog(Level.INFO, I18nLogs.trTecnico(
             "[ENTER-RESULT] id=" + injectionId +
                 " origin=" + origen +
                 " outcome=unknown reason=transport-level-dispatch-only"
@@ -785,12 +778,22 @@ public class PanelAgente extends JPanel {
         }
     }
 
+    private boolean requiereChunking(int longitud) {
+        return longitud > CHUNK_ESCRITURA_PTY;
+    }
+
+    private void aplicarRetardoEntreChunks(int finChunk, int total) {
+        if (finChunk < total) {
+            dormirSilencioso(DELAY_ENTRE_CHUNKS_PTY_MS);
+        }
+    }
+
     private void logDebugTransporte(boolean activo, String etapa, String payload) {
         if (!activo) {
             return;
         }
         String seguro = payload != null ? payload : "";
-        LOGGER.info(I18nLogs.trTecnico(
+        registrarLog(Level.INFO, I18nLogs.trTecnico(
             "[ENTER-DEBUG] " + etapa +
             " len=" + seguro.length() +
             " esc='" + escaparControl(seguro) + "'" +
@@ -851,7 +854,7 @@ public class PanelAgente extends JPanel {
                 t.printStackTrace(pw);
             }
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, I18nLogs.tr("No se pudo escribir log de error PTY"), e);
+            registrarLog(Level.WARNING, I18nLogs.tr("No se pudo escribir log de error PTY"), e);
         }
     }
 
@@ -872,6 +875,18 @@ public class PanelAgente extends JPanel {
 
         inyectarComando(prompt, 0);
 
-        LOGGER.info(I18nLogs.tr("Payload inicial encolado para inyeccion manual por el usuario"));
+        registrarLog(Level.INFO, I18nLogs.tr("Payload inicial encolado para inyeccion manual por el usuario"));
+    }
+
+    private void registrarLog(Level nivel, String mensaje) {
+        if (LOGGER.isLoggable(nivel)) {
+            LOGGER.log(nivel, mensaje);
+        }
+    }
+
+    private void registrarLog(Level nivel, String mensaje, Throwable error) {
+        if (LOGGER.isLoggable(nivel)) {
+            LOGGER.log(nivel, mensaje, error);
+        }
     }
 }

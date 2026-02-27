@@ -100,7 +100,7 @@ public class GestorConsolaGUI {
 
         String hora = LocalTime.now().format(formateadorHora);
         String etiquetaNivel = etiquetaNivel(tipo);
-        String mensajeFormateado = String.format("[%s] [%s]%s %s%n", hora, origenSeguro, etiquetaNivel, mensajeLocalizado);
+        String mensajeFormateado = construirMensajeConsola(hora, origenSeguro, etiquetaNivel, mensajeLocalizado);
 
         agregarPendiente(new EntradaLog(mensajeFormateado, tipo));
         programarFlush();
@@ -191,8 +191,11 @@ public class GestorConsolaGUI {
     }
 
     private void duplicarAStreamOriginal(String origen, String mensajeLocalizado, TipoLog tipo, String hora) {
+        if (stdoutOriginal == null && stderrOriginal == null) {
+            return;
+        }
         String etiquetaNivel = etiquetaNivel(tipo);
-        String mensajeConPrefijo = String.format("[%s]%s [%s] %s%n", origen, etiquetaNivel, hora, mensajeLocalizado);
+        String mensajeConPrefijo = construirMensajeDuplicado(origen, etiquetaNivel, hora, mensajeLocalizado);
         if (tipo == TipoLog.ERROR) {
             if (stderrOriginal != null) {
                 stderrOriginal.print(mensajeConPrefijo);
@@ -314,6 +317,26 @@ public class GestorConsolaGUI {
             return com.burpia.i18n.I18nUI.Consola.TAG_RASTREO();
         }
         return "";
+    }
+
+    private String construirMensajeConsola(String hora, String origen, String etiquetaNivel, String mensaje) {
+        StringBuilder sb = new StringBuilder(64 + (mensaje != null ? mensaje.length() : 0));
+        sb.append('[').append(hora).append("] [").append(origen).append(']').append(etiquetaNivel).append(' ');
+        if (mensaje != null) {
+            sb.append(mensaje);
+        }
+        sb.append('\n');
+        return sb.toString();
+    }
+
+    private String construirMensajeDuplicado(String origen, String etiquetaNivel, String hora, String mensaje) {
+        StringBuilder sb = new StringBuilder(64 + (mensaje != null ? mensaje.length() : 0));
+        sb.append('[').append(origen).append(']').append(etiquetaNivel).append(" [").append(hora).append("] ");
+        if (mensaje != null) {
+            sb.append(mensaje);
+        }
+        sb.append('\n');
+        return sb.toString();
     }
 
     private void registrarErrorInterno(String mensaje) {

@@ -1,0 +1,106 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+    id 'pmd'
+}
+
+pmd {
+    consoleOutput = true
+    toolVersion = "6.55.0"
+    ruleSets = ["category/java/bestpractices.xml"]
+    ignoreFailures = true
+}
+
+jacoco {
+    toolVersion = "0.8.11"
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:all,-serial"
+}
+
+group = 'com.burpia'
+version = '1.0.1'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://packages.jetbrains.team/maven/p/ij/intellij-dependencies' }
+}
+
+dependencies {
+    implementation 'net.portswigger.burp.extensions:montoya-api:2026.2'
+
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    implementation 'com.google.code.gson:gson:2.10.1'
+    
+    // Dependencias para JediTerm (Terminal PTY)
+    implementation 'org.jetbrains.jediterm:jediterm-pty:2.69'
+    implementation 'org.jetbrains.jediterm:jediterm-typeahead:2.69'
+    implementation 'org.jetbrains.pty4j:pty4j:0.12.13'
+    
+    // JNA y PureJavaComm (requerido por Pty4J para invocar la API nativa de MacOS/Linux/Win)
+    implementation 'net.java.dev.jna:jna:5.12.1'
+    implementation 'net.java.dev.jna:jna-platform:5.12.1'
+    implementation 'org.jetbrains.pty4j:purejavacomm:0.0.11.1'
+
+    // SLF4J (requerido por JediTerm internamente)
+    implementation 'org.slf4j:slf4j-api:2.0.12'
+    implementation 'org.slf4j:slf4j-simple:2.0.12'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.10.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.1'
+    testImplementation 'org.mockito:mockito-core:5.8.0'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.8.0'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
+    }
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        csv.required = false
+        html.required = true
+    }
+    // Excluir clases de UI u otras que no apliquen (opcional)
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                'com/burpia/ui/**',
+                '**/*DTO*'
+            ])
+        }))
+    }
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.burpia.ExtensionBurpIA'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    archiveFileName = 'BurpIA-1.0.1.jar'
+    destinationDirectory = file("$buildDir/libs")
+}
+
+tasks.register('fatJar') {
+    group = 'build'
+    description = 'Alias de compatibilidad: genera el mismo fat JAR que la tarea jar.'
+    dependsOn tasks.named('jar')
+}
+
+build {
+    dependsOn 'jar'
+}

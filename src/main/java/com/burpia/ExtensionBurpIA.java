@@ -26,6 +26,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 
 public class ExtensionBurpIA implements BurpExtension {
+    private static final String TOKEN_REQUEST = "{REQUEST}";
+    private static final String TOKEN_RESPONSE = "{RESPONSE}";
+    private static final String TOKEN_TITLE = "{TITLE}";
+    private static final String TOKEN_SUMMARY = "{SUMMARY}";
+    private static final String TOKEN_DESCRIPTION = "{DESCRIPTION}";
+    private static final String TOKEN_URL = "{URL}";
+
     private MontoyaApi api;
     private ConfiguracionAPI config;
     private GestorConfiguracion gestorConfig;
@@ -219,9 +226,9 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
 
-        String prompt = config.obtenerAgentePrompt();
-        String request = solicitudRespuesta.request() != null ? solicitudRespuesta.request().toString() : "";
-        String response = (solicitudRespuesta.response() != null) ? solicitudRespuesta.response().toString() : "";
+        String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
+        String request = serializarSolicitudSiNecesario(prompt, solicitudRespuesta);
+        String response = serializarRespuestaSiNecesario(prompt, solicitudRespuesta);
         String inputFinal = aplicarTokensPromptAgente(prompt, request, response, config.obtenerIdiomaUi());
 
         PanelAgente panelAgente = obtenerPanelAgenteDisponible();
@@ -246,25 +253,28 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
 
-        String prompt = config.obtenerAgentePrompt();
+        String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
 
         HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
-        String request = evidencia != null && evidencia.request() != null ? evidencia.request().toString() : "";
-        String response = evidencia != null && evidencia.response() != null ? evidencia.response().toString() : "";
-        String titulo = hallazgo.obtenerTitulo() != null ? hallazgo.obtenerTitulo() : "";
-        String resumen = hallazgo.obtenerHallazgo() != null ? hallazgo.obtenerHallazgo() : "";
-        String urlContext = hallazgo.obtenerUrl() != null ? hallazgo.obtenerUrl() : "";
+        String request = serializarSolicitudSiNecesario(prompt, evidencia);
+        String response = serializarRespuestaSiNecesario(prompt, evidencia);
+        String tituloValor = valorSeguro(hallazgo.obtenerTitulo());
+        String resumenValor = valorSeguro(hallazgo.obtenerHallazgo());
+        String urlContextValor = valorSeguro(hallazgo.obtenerUrl());
+        boolean usaTitulo = contieneToken(prompt, TOKEN_TITLE);
+        boolean usaResumen = contieneAlgunToken(prompt, TOKEN_SUMMARY, TOKEN_DESCRIPTION);
+        boolean usaUrl = contieneToken(prompt, TOKEN_URL);
+        String titulo = usaTitulo && tieneContenido(tituloValor) ? tituloValor : "";
+        String resumen = usaResumen && tieneContenido(resumenValor) ? resumenValor : "";
+        String urlContext = usaUrl && tieneContenido(urlContextValor) ? urlContextValor : "";
         String lang = config.obtenerIdiomaUi();
 
         StringBuilder inputBuilder = new StringBuilder();
-        if (!prompt.contains("{TITLE}")) {
-            inputBuilder.append("Title: ").append(titulo).append("\n");
-        }
-        if (!prompt.contains("{SUMMARY}") && !prompt.contains("{DESCRIPTION}")) {
-            inputBuilder.append("Summary: ").append(resumen).append("\n");
-        }
-        if (!prompt.contains("{URL}")) {
-            inputBuilder.append("URL: ").append(urlContext).append("\n\n");
+        agregarLineaSiHayContenido(inputBuilder, !usaTitulo, "Title", tituloValor);
+        agregarLineaSiHayContenido(inputBuilder, !usaResumen, "Summary", resumenValor);
+        agregarLineaSiHayContenido(inputBuilder, !usaUrl, "URL", urlContextValor);
+        if (inputBuilder.length() > 0) {
+            inputBuilder.append("\n");
         }
 
         String inputFinal = inputBuilder.toString() + aplicarTokensPromptAgente(prompt, request, response, lang, titulo, resumen, urlContext);
@@ -285,18 +295,67 @@ public class ExtensionBurpIA implements BurpExtension {
     private String aplicarTokensPromptAgente(String prompt, String request, String response, String idioma, 
                                             String titulo, String resumen, String url) {
         String resultado = prompt != null ? prompt : "";
-        resultado = resultado.replace("{REQUEST}", request != null ? request : "");
-        resultado = resultado.replace("{RESPONSE}", response != null ? response : "");
+        resultado = resultado.replace(TOKEN_REQUEST, request != null ? request : "");
+        resultado = resultado.replace(TOKEN_RESPONSE, response != null ? response : "");
         resultado = resultado.replace("{OUTPUT_LANGUAGE}", (idioma != null && !idioma.trim().isEmpty()) ? idioma : "es");
         
-        if (titulo != null) resultado = resultado.replace("{TITLE}", titulo);
+        if (titulo != null) resultado = resultado.replace(TOKEN_TITLE, titulo);
         if (resumen != null) {
-            resultado = resultado.replace("{SUMMARY}", resumen);
-            resultado = resultado.replace("{DESCRIPTION}", resumen);
+            resultado = resultado.replace(TOKEN_SUMMARY, resumen);
+            resultado = resultado.replace(TOKEN_DESCRIPTION, resumen);
         }
-        if (url != null) resultado = resultado.replace("{URL}", url);
+        if (url != null) resultado = resultado.replace(TOKEN_URL, url);
 
         return resultado;
+    }
+
+    private String normalizarPromptAgente(String prompt) {
+        return prompt != null ? prompt : "";
+    }
+
+    private String serializarSolicitudSiNecesario(String prompt, HttpRequestResponse evidencia) {
+        if (!contieneToken(prompt, TOKEN_REQUEST) || evidencia == null || evidencia.request() == null) {
+            return "";
+        }
+        return evidencia.request().toString();
+    }
+
+    private String serializarRespuestaSiNecesario(String prompt, HttpRequestResponse evidencia) {
+        if (!contieneToken(prompt, TOKEN_RESPONSE) || evidencia == null || evidencia.response() == null) {
+            return "";
+        }
+        return evidencia.response().toString();
+    }
+
+    private void agregarLineaSiHayContenido(StringBuilder builder, boolean habilitado, String etiqueta, String valor) {
+        if (!habilitado || !tieneContenido(valor)) {
+            return;
+        }
+        builder.append(etiqueta).append(": ").append(valor).append("\n");
+    }
+
+    private boolean contieneToken(String prompt, String token) {
+        return prompt != null && token != null && prompt.contains(token);
+    }
+
+    private boolean contieneAlgunToken(String prompt, String... tokens) {
+        if (tokens == null || tokens.length == 0) {
+            return false;
+        }
+        for (String token : tokens) {
+            if (contieneToken(prompt, token)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean tieneContenido(String texto) {
+        return texto != null && !texto.trim().isEmpty();
+    }
+
+    private String valorSeguro(String texto) {
+        return texto != null ? texto : "";
     }
 
     private PanelAgente obtenerPanelAgenteDisponible() {

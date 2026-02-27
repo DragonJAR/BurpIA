@@ -237,10 +237,6 @@ public class ModeloTablaTareas extends DefaultTableModel {
                     if (tarea != null && estado != null && estado.equals(tarea.obtenerEstado())) {
                         datos.remove(i);
                         huboCambios = true;
-                        final int fila = i;
-                        SwingUtilities.invokeLater(() -> {
-                            if (fila < getRowCount()) removeRow(fila);
-                        });
                         break;
                     }
                 }
@@ -250,6 +246,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         }
         if (huboCambios) {
             marcarCambio();
+            programarSincronizacionTabla();
         }
     }
 

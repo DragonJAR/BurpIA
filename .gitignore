@@ -20,10 +20,4 @@ replay_pid*
 
 .burpia.json
 BurpIA.zip
-build-jar.sh
-build.gradle
 /docs
-/gradle
-gradlew
-/src/test
-*.gradle

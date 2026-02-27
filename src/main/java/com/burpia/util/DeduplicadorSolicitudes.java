@@ -12,7 +12,7 @@ public class DeduplicadorSolicitudes {
     private final Object lock = new Object();
     private final int maxHashes;
     private final long ttlMillis;
-    private final LinkedHashMap<String, Long> hashesProcesados;
+    private final Map<String, Long> hashesProcesados;
     private long ultimoBarridoMillis;
 
     public DeduplicadorSolicitudes() {

@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonArray;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -145,7 +146,9 @@ public class ParserRespuestasAI {
             return limpiarBloquesPensamiento(contenido != null ? contenido : "");
 
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, I18nLogs.tr("No se pudo parsear la respuesta JSON del proveedor"), e);
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, I18nLogs.tr("No se pudo parsear la respuesta JSON del proveedor"), e);
+            }
             return limpiarBloquesPensamiento(respuestaJson.trim());
         }
     }
@@ -297,7 +300,7 @@ public class ParserRespuestasAI {
             return false;
         }
 
-        String contenidoUpper = contenido.toUpperCase().trim();
+        String contenidoUpper = contenido.toUpperCase(Locale.ROOT).trim();
         return contenidoUpper.contains("OK") || contenidoUpper.contains("HOLA");
     }
 
@@ -358,7 +361,9 @@ public class ParserRespuestasAI {
             String valor = elemento.getAsString();
             return valor != null ? valor : "";
         } catch (Exception e) {
-            LOGGER.log(Level.FINEST, I18nLogs.tr("No se pudo extraer texto desde elemento JSON"), e);
+            if (LOGGER.isLoggable(Level.FINEST)) {
+                LOGGER.log(Level.FINEST, I18nLogs.tr("No se pudo extraer texto desde elemento JSON"), e);
+            }
             return "";
         }
     }
@@ -406,26 +411,6 @@ public class ParserRespuestasAI {
     }
 
     private static String normalizarContenidoExtraido(String valor) {
-        if (valor == null) return "";
-        int len = valor.length();
-        StringBuilder sb = new StringBuilder(len);
-        for (int i = 0; i < len; i++) {
-            char c = valor.charAt(i);
-            if (c == '\\' && i + 1 < len) {
-                char next = valor.charAt(i + 1);
-                if (next == 'n' || next == 't' || next == 'r') {
-                    sb.append(' ');
-                    i++;
-                } else if (next == '\"') {
-                    sb.append('\"');
-                    i++;
-                } else {
-                    sb.append(c);
-                }
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString().trim();
+        return Normalizador.normalizarTextoConControlesEnEspacio(valor);
     }
 }
