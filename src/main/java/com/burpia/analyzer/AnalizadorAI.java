@@ -488,7 +488,7 @@ public class AnalizadorAI implements Runnable {
             builder.sslSocketFactory(sslSocketFactory, (javax.net.ssl.X509TrustManager) trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error al configurar SSL inseguro", e);
+            LOGGER.log(Level.SEVERE, I18nLogs.tr("Error al configurar SSL inseguro"), e);
         }
     }
 

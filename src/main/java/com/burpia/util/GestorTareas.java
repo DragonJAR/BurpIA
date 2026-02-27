@@ -192,7 +192,7 @@ public class GestorTareas {
         }
         notificarCancelaciones(idsAInterrumpir);
         
-        // Let the background thread take care of cleanup lockings
+
         aplicarRetencionFinalizadas();
     }
 

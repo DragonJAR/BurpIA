@@ -117,7 +117,7 @@ public class PanelFactoryDroid extends JPanel {
                     }
                 }
             } catch (Exception e) {
-                LOGGER.log(Level.FINE, "Error escribiendo comando crudo PTY", e);
+                LOGGER.log(Level.FINE, I18nLogs.tr("Error escribiendo comando crudo PTY"), e);
             }
         });
     }
@@ -164,7 +164,7 @@ public class PanelFactoryDroid extends JPanel {
             try {
                 ttyConnector.close();
             } catch (Exception e) {
-                LOGGER.log(Level.FINE, "Error cerrando ttyConnector", e);
+                LOGGER.log(Level.FINE, I18nLogs.tr("Error cerrando ttyConnector"), e);
             }
             ttyConnector = null;
         }
@@ -380,7 +380,7 @@ public class PanelFactoryDroid extends JPanel {
 
             if (promptInicialEnviado.compareAndSet(false, true)) {
                 String prompt = generarPromptInicial();
-                // 1000ms base wait for droid startup + user configured delay
+
                 inyectarComando(prompt, 1000 + config.obtenerAgenteFactoryDroidDelay());
             }
         }).start();
@@ -500,7 +500,7 @@ public class PanelFactoryDroid extends JPanel {
 
     private void manejarErrorPty(Throwable t) {
         logErrorPty(t);
-        String mensaje = t.getMessage() != null ? t.getMessage() : "Error desconocido PTY";
+        String mensaje = t.getMessage() != null ? t.getMessage() : I18nLogs.tr("Error desconocido PTY");
         SwingUtilities.invokeLater(() -> {
             UIUtils.mostrarError(PanelFactoryDroid.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje);
         });
@@ -515,7 +515,7 @@ public class PanelFactoryDroid extends JPanel {
                 t.printStackTrace(pw);
             }
         } catch (Exception e) {
-            LOGGER.log(Level.WARNING, "No se pudo escribir log de error PTY", e);
+            LOGGER.log(Level.WARNING, I18nLogs.tr("No se pudo escribir log de error PTY"), e);
         }
     }
 

@@ -2,6 +2,7 @@ package com.burpia.util;
 
 import javax.swing.*;
 import java.awt.*;
+import com.burpia.i18n.I18nLogs;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -63,7 +64,7 @@ public final class OSUtils {
                 }
             }
         } catch (Exception e) {
-            LOGGER.log(Level.FINE, "Error cerrando ventanas de ajustes", e);
+            LOGGER.log(Level.FINE, I18nLogs.tr("Error cerrando ventanas de ajustes"), e);
         }
     }
 }
