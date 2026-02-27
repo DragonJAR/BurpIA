@@ -194,7 +194,7 @@ Tambien inyecta prompt inicial cuando:
 - Reinicias consola del agente.
 - Cambias de agente.
 
-Y lo inyecta manualmente (sin delay) cuando pulsas `Inyectar Payload`.
+Si cuando se incerta el prompt pre-flight, los mcps no han cargado, puedes inyecta manualmente (sin delay) usando `Inyectar Payload`.
 
 ---
 
