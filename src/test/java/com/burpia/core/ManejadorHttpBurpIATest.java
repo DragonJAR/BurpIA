@@ -23,6 +23,18 @@ class ManejadorHttpBurpIATest {
 
     private final List<ManejadorHttpBurpIA> manejadores = new ArrayList<>();
 
+    private static final class SalidaManejador {
+        private final ManejadorHttpBurpIA manejador;
+        private final StringWriter stdout;
+        private final StringWriter stderr;
+
+        private SalidaManejador(ManejadorHttpBurpIA manejador, StringWriter stdout, StringWriter stderr) {
+            this.manejador = manejador;
+            this.stdout = stdout;
+            this.stderr = stderr;
+        }
+    }
+
     @AfterEach
     void tearDown() {
         for (ManejadorHttpBurpIA manejador : manejadores) {
@@ -93,23 +105,96 @@ class ManejadorHttpBurpIATest {
         assertFalse(manejador.estaCapturaActiva());
     }
 
+    @Test
+    @DisplayName("Avisa con accion cuando analisis manual se bloquea por configuracion LLM invalida")
+    void testAnalisisManualBloqueadoPorConfigInvalidaMuestraAccion() {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "");
+        SalidaManejador salida = crearManejadorConSalida(null, config);
+
+        HttpRequest solicitud = mock(HttpRequest.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        when(solicitud.url()).thenReturn("https://example.com/login");
+        when(solicitud.method()).thenReturn("POST");
+        when(solicitud.headers()).thenReturn(List.of());
+        when(solicitud.bodyToString()).thenReturn("username=admin");
+
+        salida.manejador.analizarSolicitudForzada(solicitud);
+        String error = salida.stderr.toString();
+
+        assertTrue(error.contains("ANALISIS BLOQUEADO"));
+        assertTrue(error.contains("Config") || error.contains("config"));
+        assertTrue(error.contains("Probar Conexion") || error.contains("Test Connection"));
+    }
+
+    @Test
+    @DisplayName("Rate-limit evita spam cuando configuracion LLM sigue invalida")
+    void testRateLimitAlertaConfiguracion() {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "");
+        SalidaManejador salida = crearManejadorConSalida(null, config);
+
+        HttpRequest solicitud = mock(HttpRequest.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        when(solicitud.url()).thenReturn("https://example.com/login");
+        when(solicitud.method()).thenReturn("POST");
+        when(solicitud.headers()).thenReturn(List.of());
+        when(solicitud.bodyToString()).thenReturn("username=admin");
+
+        salida.manejador.analizarSolicitudForzada(solicitud);
+        salida.manejador.analizarSolicitudForzada(solicitud);
+
+        String error = salida.stderr.toString();
+        int ocurrencias = contarCoincidencias(error, "ANALISIS BLOQUEADO");
+        assertTrue(ocurrencias <= 1);
+    }
+
+    @Test
+    @DisplayName("Nota de scope incluye guia de Target > Scope")
+    void testNotaScopeIncluyeGuia() {
+        SalidaManejador salida = crearManejadorConSalida(null, new ConfiguracionAPI());
+        String info = salida.stdout.toString();
+        assertTrue(info.contains("Target > Scope"));
+    }
+
+    @Test
+    @DisplayName("Desde configuracion limpia informa que LLM no esta listo al iniciar")
+    void testEstadoInicialLlMNoListoConConfiguracionLimpia() {
+        SalidaManejador salida = crearManejadorConSalida(null, new ConfiguracionAPI());
+        String error = salida.stderr.toString();
+        String info = salida.stdout.toString();
+
+        assertTrue(error.contains("Estado LLM al inicio") || error.contains("LLM startup status"));
+        assertTrue(info.contains("Probar Conexion") || info.contains("Test Connection"));
+    }
+
     private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {
         return crearManejador(api, null);
     }
 
     private ManejadorHttpBurpIA crearManejador(MontoyaApi api, ConfiguracionAPI config) {
+        return crearManejadorConSalida(api, config).manejador;
+    }
+
+    private SalidaManejador crearManejadorConSalida(MontoyaApi api, ConfiguracionAPI config) {
         ConfiguracionAPI configFinal = config != null ? config : new ConfiguracionAPI();
         configFinal.establecerDetallado(false);
+        StringWriter stdoutBuffer = new StringWriter();
+        StringWriter stderrBuffer = new StringWriter();
         ManejadorHttpBurpIA manejador = new ManejadorHttpBurpIA(
             api,
             configFinal,
             null,
-            new PrintWriter(new StringWriter(), true),
-            new PrintWriter(new StringWriter(), true),
+            new PrintWriter(stdoutBuffer, true),
+            new PrintWriter(stderrBuffer, true),
             new LimitadorTasa(1)
         );
         manejadores.add(manejador);
-        return manejador;
+        return new SalidaManejador(manejador, stdoutBuffer, stderrBuffer);
     }
 
     private boolean invocarEsRecursoEstatico(ManejadorHttpBurpIA manejador, String url) throws Exception {
@@ -122,5 +207,18 @@ class ManejadorHttpBurpIATest {
         Method metodo = ManejadorHttpBurpIA.class.getDeclaredMethod("estaEnScope", HttpRequest.class);
         metodo.setAccessible(true);
         return (boolean) metodo.invoke(manejador, solicitud);
+    }
+
+    private int contarCoincidencias(String texto, String patron) {
+        if (texto == null || patron == null || patron.isEmpty()) {
+            return 0;
+        }
+        int contador = 0;
+        int indice = 0;
+        while ((indice = texto.indexOf(patron, indice)) >= 0) {
+            contador++;
+            indice += patron.length();
+        }
+        return contador;
     }
 }

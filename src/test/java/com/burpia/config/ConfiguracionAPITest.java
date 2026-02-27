@@ -113,6 +113,10 @@ class ConfiguracionAPITest {
 
         String alerta = config.validarParaConsultaModelo();
         assertTrue(alerta.contains("ALERTA: Clave de API requerida para OpenAI"));
+        assertEquals(
+            ConfiguracionAPI.CodigoValidacionConsulta.API_KEY_REQUERIDA,
+            config.validarCodigoParaConsultaModelo()
+        );
     }
 
     @Test
@@ -124,6 +128,10 @@ class ConfiguracionAPITest {
         config.establecerApiKeyParaProveedor("Ollama", "");
 
         assertEquals("", config.validarParaConsultaModelo());
+        assertEquals(
+            ConfiguracionAPI.CodigoValidacionConsulta.OK,
+            config.validarCodigoParaConsultaModelo()
+        );
     }
 
     @Test

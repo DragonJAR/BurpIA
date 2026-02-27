@@ -41,11 +41,9 @@ class SubmitSequenceFactoryTest {
             null,
             SubmitSequenceFactory.Plataforma.LINUX
         );
-        // SMART_FALLBACK empieza con \r (1 vez)
         assertEquals("\r", secuencia.payload());
         assertEquals(1, secuencia.repeticiones());
-        
-        // Y tiene fallbacks
+
         assertNotNull(secuencia.getFallback());
         assertEquals("\n", secuencia.getFallback().payload());
     }
@@ -77,7 +75,6 @@ class SubmitSequenceFactoryTest {
     @Test
     @DisplayName("TRIPLE_ENTER_OS usa el separador de plataforma")
     void tripleEnterOsUsaSeparadorCorrecto() {
-        // Windows -> \r\n
         SubmitSequenceFactory.SubmitSequence win = SubmitSequenceFactory.construir(
             AgenteTipo.FACTORY_DROID,
             "TRIPLE_ENTER_OS",
@@ -85,8 +82,7 @@ class SubmitSequenceFactoryTest {
         );
         assertEquals("\r\n", win.payload());
         assertEquals(3, win.repeticiones());
-        
-        // Linux -> \r (Optimización Darwin/POSIX)
+
         SubmitSequenceFactory.SubmitSequence linux = SubmitSequenceFactory.construir(
             AgenteTipo.FACTORY_DROID,
             "TRIPLE_ENTER_OS",

@@ -650,11 +650,57 @@ public final class I18nUI {
         }
 
         public static String TITULO_ERROR_PTY() { return tr("Error de PTY", "PTY Error"); }
-        public static String MSG_ERROR_NATIVO_PTY(String error) { 
-            return trf("Error nativo iniciando Consola PTY: %s\nRevisa los logs de BurpIA para mas detalles", 
-                       "Native error starting PTY Console: %s\nCheck BurpIA logs for more details", error); 
+        public static String NOTA_SCOPE_ANALISIS() {
+            return tr(
+                "NOTA: BurpIA solo analiza trafico DENTRO del Scope de Burp Suite.",
+                "NOTE: BurpIA only analyzes traffic INSIDE Burp Suite Scope."
+            );
         }
-        public static String HEADER_LOG_ERROR_PTY() { return tr("\n--- ERROR PTY ---\n", "\n--- PTY ERROR ---\n"); }
+        public static String NOTA_SCOPE_ANALISIS_ACCION() {
+            return tr(
+                "ACCION: Si no ves analisis, agrega el objetivo en Target > Scope.",
+                "ACTION: If you do not see analysis, add the target in Target > Scope."
+            );
+        }
+        public static String ANALISIS_BLOQUEADO_CONFIG(String razon, String origen, String url) {
+            return trf(
+                "ANALISIS BLOQUEADO: %s. ACCION: abre BurpIA > Configuracion, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexion. Origen=%s, URL=%s",
+                "ANALYSIS BLOCKED: %s. ACTION: open BurpIA > Settings, complete Provider/URL/Model/API Key, save, and run Test Connection. Origin=%s, URL=%s",
+                razon, origen, url
+            );
+        }
+        public static String TAREA_BLOQUEADA_CONFIG_LLM() {
+            return tr("Bloqueada por configuracion LLM", "Blocked by LLM configuration");
+        }
+
+        public static String ESTADO_INICIAL_LLM_LISTO(String proveedor, String modelo) {
+            return trf(
+                "Estado LLM al inicio: listo para analizar (Proveedor=%s, Modelo=%s)",
+                "LLM startup status: ready to analyze (Provider=%s, Model=%s)",
+                proveedor, modelo
+            );
+        }
+
+        public static String ESTADO_INICIAL_LLM_BLOQUEADO(String razon) {
+            return trf(
+                "Estado LLM al inicio: no listo (%s). ACCION: abre BurpIA > Configuracion, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexion.",
+                "LLM startup status: not ready (%s). ACTION: open BurpIA > Settings, complete Provider/URL/Model/API Key, save, and run Test Connection.",
+                razon
+            );
+        }
+        public static String ESTADO_INICIAL_LLM_BLOQUEADO_CABECERA(String razon) {
+            return trf(
+                "Estado LLM al inicio: no listo (%s).",
+                "LLM startup status: not ready (%s).",
+                razon
+            );
+        }
+        public static String ESTADO_INICIAL_LLM_BLOQUEADO_ACCION() {
+            return tr(
+                "ACCION: abre BurpIA > Configuracion, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexion.",
+                "ACTION: open BurpIA > Settings, complete Provider/URL/Model/API Key, save, and run Test Connection."
+            );
+        }
 
         public static String TITULO_CONTROLES() {
             return tr("⚙️ CONTROLES DE CONSOLA", "⚙️ CONSOLE CONTROLS");

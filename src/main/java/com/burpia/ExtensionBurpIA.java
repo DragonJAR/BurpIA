@@ -26,6 +26,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 
 public class ExtensionBurpIA implements BurpExtension {
+    private static final String LOG_SEPARADOR = "==================================================";
     private static final String TOKEN_REQUEST = "{REQUEST}";
     private static final String TOKEN_RESPONSE = "{RESPONSE}";
     private static final String TOKEN_TITLE = "{TITLE}";
@@ -131,26 +132,7 @@ public class ExtensionBurpIA implements BurpExtension {
         gestorConsola = new GestorConsolaGUI();
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
 
-        registrar("==================================================");
-        registrar(" BurpIA v1.0.1 - Complemento de Seguridad con IA");
-        registrar("==================================================");
-        registrar("Burp Suite: " + (esProfessional ? "Professional" : "Community Edition"));
-
-        actualizarVersionBurp();
-        registrar("==================================================");
-
-        registrar("Configuracion cargada:");
-        registrar("  - URL de API: " + config.obtenerUrlApi());
-        registrar("  - Modelo: " + config.obtenerModelo());
-        registrar("  - Timeout AI (global): " + config.obtenerTiempoEsperaAI() + " segundos");
-        registrar("  - Timeout AI (modelo activo): " +
-            config.obtenerTiempoEsperaParaModelo(config.obtenerProveedorAI(), config.obtenerModelo()) + " segundos");
-        registrar("  - Retraso: " + config.obtenerRetrasoSegundos() + " segundos");
-        registrar("  - Maximo Concurrente: " + config.obtenerMaximoConcurrente());
-        registrar("  - Maximo Hallazgos en Tabla: " + config.obtenerMaximoHallazgosTabla());
-        registrar("  - Modo Detallado: " + (config.esDetallado() ? "ACTIVADO" : "desactivado"));
-        registrar("  - Agente Activo (" + config.obtenerTipoAgente() + "): " + (config.agenteHabilitado() ? "HABILITADO" : "desactivado"));
-        registrar("==================================================");
+        registrarResumenInicio();
 
         limitador = new LimitadorTasa(config.obtenerMaximoConcurrente());
 
@@ -475,6 +457,55 @@ public class ExtensionBurpIA implements BurpExtension {
         }
     }
 
+    private void registrarResumenInicio() {
+        registrar(LOG_SEPARADOR);
+        registrar(" BurpIA v1.0.1 - " + I18nUI.tr("Complemento de Seguridad con IA", "AI Security Plugin"));
+        registrar(LOG_SEPARADOR);
+
+        registrar("[" + I18nUI.tr("Entorno", "Environment") + "]");
+        registrarLineaInicio("Burp Suite", esProfessional ? "Professional" : "Community Edition");
+        String versionBurp = obtenerVersionBurp(api);
+        if (versionBurp != null) {
+            registrarLineaInicio("Version Burp Suite", versionBurp);
+        }
+
+        registrar("[" + I18nUI.tr("Configuracion IA", "AI Configuration") + "]");
+        String proveedor = config.obtenerProveedorAI();
+        String modelo = config.obtenerModelo();
+        registrarLineaInicio("Proveedor", proveedor);
+        registrarLineaInicio("URL de API", config.obtenerUrlApi());
+        registrarLineaInicio("Modelo", modelo);
+        registrarLineaInicio(
+            "Timeout AI (global)",
+            config.obtenerTiempoEsperaAI() + " " + I18nUI.tr("segundos", "seconds")
+        );
+        registrarLineaInicio(
+            "Timeout AI (modelo activo)",
+            config.obtenerTiempoEsperaParaModelo(proveedor, modelo) + " " + I18nUI.tr("segundos", "seconds")
+        );
+        registrarLineaInicio(
+            "Retraso",
+            config.obtenerRetrasoSegundos() + " " + I18nUI.tr("segundos", "seconds")
+        );
+        registrarLineaInicio("Maximo Concurrente", config.obtenerMaximoConcurrente());
+        registrarLineaInicio("Maximo Hallazgos en Tabla", config.obtenerMaximoHallazgosTabla());
+        registrarLineaInicio(
+            "Modo Detallado",
+            config.esDetallado() ? I18nUI.tr("ACTIVADO", "ENABLED") : I18nUI.tr("desactivado", "disabled")
+        );
+        registrarLineaInicio(
+            "Agente Activo (" + config.obtenerTipoAgente() + ")",
+            config.agenteHabilitado() ? I18nUI.tr("ACTIVADO", "ENABLED") : I18nUI.tr("desactivado", "disabled")
+        );
+        registrar(LOG_SEPARADOR);
+    }
+
+    private void registrarLineaInicio(String etiqueta, Object valor) {
+        String etiquetaSegura = etiqueta != null ? etiqueta : "";
+        String valorSeguro = valor != null ? String.valueOf(valor) : "";
+        registrar(String.format("  - %-28s %s", etiquetaSegura + ":", valorSeguro));
+    }
+
     private void registrarError(String mensaje) {
         if (gestorConsola != null) {
             gestorConsola.registrarError("BurpIA", mensaje);
@@ -725,13 +756,6 @@ public class ExtensionBurpIA implements BurpExtension {
             return api.ai() != null && api.ai().isEnabled();
         } catch (Exception ignored) {
             return false;
-        }
-    }
-
-    private void actualizarVersionBurp() {
-        String version = obtenerVersionBurp(api);
-        if (version != null) {
-            registrar("Version Burp Suite: " + version);
         }
     }
 
