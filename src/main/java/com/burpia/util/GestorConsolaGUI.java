@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GestorConsolaGUI {
     private static final Logger LOGGER = Logger.getLogger(GestorConsolaGUI.class.getName());
@@ -34,10 +36,15 @@ public class GestorConsolaGUI {
     private final AtomicInteger versionCambios;
     private static final int MAXIMO_CARACTERES = 200_000;
     private static final int MAXIMO_BACKLOG_SIN_CONSOLA = 5000;
+    private static final Pattern ETIQUETAS_DESTACADAS =
+        Pattern.compile("(?iu)\\b(?:NOTA|ACCION|ACCIÓN|NOTE|ACTION):");
 
     private Style estiloInfo;
     private Style estiloVerbose;
     private Style estiloError;
+    private Style estiloInfoDestacado;
+    private Style estiloVerboseDestacado;
+    private Style estiloErrorDestacado;
 
     private PrintWriter stdoutOriginal;
     private PrintWriter stderrOriginal;
@@ -61,16 +68,22 @@ public class GestorConsolaGUI {
         estiloInfo = documento.addStyle("Info", null);
         StyleConstants.setForeground(estiloInfo, Color.BLACK);
         StyleConstants.setFontFamily(estiloInfo, Font.MONOSPACED);
+        estiloInfoDestacado = documento.addStyle("InfoDestacado", estiloInfo);
+        StyleConstants.setBold(estiloInfoDestacado, true);
 
         estiloVerbose = documento.addStyle("Verbose", null);
         StyleConstants.setForeground(estiloVerbose, Color.GRAY);
         StyleConstants.setFontFamily(estiloVerbose, Font.MONOSPACED);
         StyleConstants.setItalic(estiloVerbose, true);
+        estiloVerboseDestacado = documento.addStyle("VerboseDestacado", estiloVerbose);
+        StyleConstants.setBold(estiloVerboseDestacado, true);
 
         estiloError = documento.addStyle("Error", null);
         StyleConstants.setForeground(estiloError, Color.RED);
         StyleConstants.setFontFamily(estiloError, Font.MONOSPACED);
         StyleConstants.setBold(estiloError, true);
+        estiloErrorDestacado = documento.addStyle("ErrorDestacado", estiloError);
+        StyleConstants.setBold(estiloErrorDestacado, true);
 
         programarFlush();
     }
@@ -190,6 +203,18 @@ public class GestorConsolaGUI {
         }
     }
 
+    private Style obtenerEstiloDestacado(TipoLog tipo) {
+        switch (tipo) {
+            case VERBOSE:
+                return estiloVerboseDestacado;
+            case ERROR:
+                return estiloErrorDestacado;
+            case INFO:
+            default:
+                return estiloInfoDestacado;
+        }
+    }
+
     private void duplicarAStreamOriginal(String origen, String mensajeLocalizado, TipoLog tipo, String hora) {
         if (stdoutOriginal == null && stderrOriginal == null) {
             return;
@@ -234,7 +259,7 @@ public class GestorConsolaGUI {
             EntradaLog entrada;
             while ((entrada = colaPendiente.poll()) != null) {
                 logsPendientes.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
-                documento.insertString(documento.getLength(), entrada.mensaje, obtenerEstilo(entrada.tipo));
+                insertarConEtiquetasDestacadas(entrada);
             }
 
             trimDocumentoSiEsNecesario();
@@ -258,6 +283,29 @@ public class GestorConsolaGUI {
         }
         int exceso = longitud - MAXIMO_CARACTERES;
         documento.remove(0, exceso);
+    }
+
+    private void insertarConEtiquetasDestacadas(EntradaLog entrada) throws BadLocationException {
+        String texto = entrada.mensaje != null ? entrada.mensaje : "";
+        Style estiloBase = obtenerEstilo(entrada.tipo);
+        Matcher matcher = ETIQUETAS_DESTACADAS.matcher(texto);
+        if (!matcher.find()) {
+            documento.insertString(documento.getLength(), texto, estiloBase);
+            return;
+        }
+        Style estiloDestacado = obtenerEstiloDestacado(entrada.tipo);
+        int cursor = 0;
+        do {
+            int inicio = matcher.start();
+            if (inicio > cursor) {
+                documento.insertString(documento.getLength(), texto.substring(cursor, inicio), estiloBase);
+            }
+            documento.insertString(documento.getLength(), texto.substring(inicio, matcher.end()), estiloDestacado);
+            cursor = matcher.end();
+        } while (matcher.find());
+        if (cursor < texto.length()) {
+            documento.insertString(documento.getLength(), texto.substring(cursor), estiloBase);
+        }
     }
 
     private void incrementarContador(TipoLog tipo) {
