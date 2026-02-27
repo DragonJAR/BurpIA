@@ -35,4 +35,3 @@ class UIUtilsTest {
         assertEquals("", UIUtils.extraerTextoVisibleEnlace("   "));
     }
 }
-

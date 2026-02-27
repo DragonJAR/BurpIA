@@ -12,6 +12,13 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class PestaniaPrincipal extends JPanel {
+    private enum DestinoPestania {
+        TAREAS,
+        HALLAZGOS,
+        AGENTE,
+        CONSOLA
+    }
+
     private final PanelEstadisticas panelEstadisticas;
     private final PanelTareas panelTareas;
     private final PanelHallazgos panelHallazgos;
@@ -39,7 +46,7 @@ public class PestaniaPrincipal extends JPanel {
         panelHallazgos.establecerConfiguracion(config);
         this.panelConsola = new PanelConsola(gestorConsola);
         this.panelAgente = new PanelAgente(config, config.agenteHabilitado());
-        this.panelAgente.establecerManejadorFocoPestania(this::seleccionarPestaniaAgente);
+        this.panelAgente.establecerManejadorFocoPestania(this::enfocarPestaniaAgenteDesdeManejador);
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         tabbedPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
@@ -102,8 +109,9 @@ public class PestaniaPrincipal extends JPanel {
             tabbedPane.removeTabAt(index);
             panelAgente.destruir();
         } else if (habilitado && index != -1) {
-            tabbedPane.setTitleAt(index, I18nUI.Pestanias.AGENTE());
-            tabbedPane.setToolTipTextAt(index, I18nUI.Tooltips.Pestanias.AGENTE());
+            DestinoPestania destinoAgente = DestinoPestania.AGENTE;
+            tabbedPane.setTitleAt(index, resolverTituloPestania(destinoAgente));
+            tabbedPane.setToolTipTextAt(index, resolverTooltipPestania(destinoAgente));
             
             tabbedPane.revalidate();
             tabbedPane.repaint();
@@ -118,20 +126,126 @@ public class PestaniaPrincipal extends JPanel {
     }
 
     public void seleccionarPestaniaAgente() {
-        int index = tabbedPane.indexOfComponent(panelAgente);
-        if (index != -1) {
-            tabbedPane.setSelectedIndex(index);
-            panelAgente.asegurarConsolaIniciada();
-            programarFocoTerminalAgente(true);
-        }
+        enfocarPestania(DestinoPestania.AGENTE, true);
     }
 
     private void manejarCambioPestania() {
-        if (tabbedPane.getSelectedComponent() != panelAgente) {
+        DestinoPestania destino = obtenerDestinoSeleccionado();
+        if (destino != DestinoPestania.AGENTE) {
             return;
         }
-        panelAgente.asegurarConsolaIniciada();
-        programarFocoTerminalAgente(false);
+        enfocarPestania(destino, false);
+    }
+
+    private void enfocarPestaniaAgenteDesdeManejador() {
+        enfocarPestania(DestinoPestania.AGENTE, true);
+    }
+
+    private void enfocarPestania(DestinoPestania destino, boolean traerVentanaAlFrente) {
+        if (destino == null) {
+            return;
+        }
+        Component componente = resolverComponentePestania(destino);
+        if (componente == null || tabbedPane.indexOfComponent(componente) == -1) {
+            return;
+        }
+
+        tabbedPane.setSelectedComponent(componente);
+
+        if (destino == DestinoPestania.AGENTE) {
+            panelAgente.asegurarConsolaIniciada();
+            programarFocoTerminalAgente(traerVentanaAlFrente);
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> enfocarComponenteSeleccionado(componente, traerVentanaAlFrente));
+    }
+
+    private DestinoPestania obtenerDestinoSeleccionado() {
+        return resolverDestinoPestania(tabbedPane.getSelectedComponent());
+    }
+
+    private DestinoPestania resolverDestinoPestania(Component componente) {
+        if (componente == panelTareas) {
+            return DestinoPestania.TAREAS;
+        }
+        if (componente == panelHallazgos) {
+            return DestinoPestania.HALLAZGOS;
+        }
+        if (componente == panelAgente) {
+            return DestinoPestania.AGENTE;
+        }
+        if (componente == panelConsola) {
+            return DestinoPestania.CONSOLA;
+        }
+        return null;
+    }
+
+    private Component resolverComponentePestania(DestinoPestania destino) {
+        if (destino == null) {
+            return null;
+        }
+        switch (destino) {
+            case TAREAS:
+                return panelTareas;
+            case HALLAZGOS:
+                return panelHallazgos;
+            case AGENTE:
+                return panelAgente;
+            case CONSOLA:
+                return panelConsola;
+            default:
+                return null;
+        }
+    }
+
+    private String resolverTituloPestania(DestinoPestania destino) {
+        if (destino == null) {
+            return null;
+        }
+        switch (destino) {
+            case TAREAS:
+                return I18nUI.Pestanias.TAREAS();
+            case HALLAZGOS:
+                return I18nUI.Pestanias.HALLAZGOS();
+            case AGENTE:
+                return I18nUI.Pestanias.AGENTE();
+            case CONSOLA:
+                return I18nUI.Pestanias.CONSOLA();
+            default:
+                return null;
+        }
+    }
+
+    private String resolverTooltipPestania(DestinoPestania destino) {
+        if (destino == null) {
+            return null;
+        }
+        switch (destino) {
+            case TAREAS:
+                return I18nUI.Tooltips.Pestanias.TAREAS();
+            case HALLAZGOS:
+                return I18nUI.Tooltips.Pestanias.HALLAZGOS();
+            case AGENTE:
+                return I18nUI.Tooltips.Pestanias.AGENTE();
+            case CONSOLA:
+                return I18nUI.Tooltips.Pestanias.CONSOLA();
+            default:
+                return null;
+        }
+    }
+
+    private void enfocarComponenteSeleccionado(Component componente, boolean traerVentanaAlFrente) {
+        if (tabbedPane.getSelectedComponent() != componente) {
+            return;
+        }
+        if (traerVentanaAlFrente) {
+            Window window = SwingUtilities.getWindowAncestor(this);
+            if (window != null) {
+                window.toFront();
+            }
+        }
+        componente.requestFocusInWindow();
     }
 
     private void programarFocoTerminalAgente(boolean traerVentanaAlFrente) {
@@ -211,11 +325,11 @@ public class PestaniaPrincipal extends JPanel {
 
         int totalTabs = tabbedPane.getTabCount();
         for (int i = 0; i < totalTabs; i++) {
-            Component c = tabbedPane.getComponentAt(i);
-            if (c == panelTareas) tabbedPane.setTitleAt(i, I18nUI.Pestanias.TAREAS());
-            else if (c == panelHallazgos) tabbedPane.setTitleAt(i, I18nUI.Pestanias.HALLAZGOS());
-            else if (c == panelConsola) tabbedPane.setTitleAt(i, I18nUI.Pestanias.CONSOLA());
-            else if (c == panelAgente) tabbedPane.setTitleAt(i, I18nUI.Pestanias.AGENTE());
+            DestinoPestania destino = resolverDestinoPestania(tabbedPane.getComponentAt(i));
+            String titulo = resolverTituloPestania(destino);
+            if (titulo != null) {
+                tabbedPane.setTitleAt(i, titulo);
+            }
         }
         aplicarTooltipsPestanias();
     }
@@ -223,11 +337,11 @@ public class PestaniaPrincipal extends JPanel {
     private void aplicarTooltipsPestanias() {
         int totalTabs = tabbedPane.getTabCount();
         for (int i = 0; i < totalTabs; i++) {
-            Component c = tabbedPane.getComponentAt(i);
-            if (c == panelTareas) tabbedPane.setToolTipTextAt(i, I18nUI.Tooltips.Pestanias.TAREAS());
-            else if (c == panelHallazgos) tabbedPane.setToolTipTextAt(i, I18nUI.Tooltips.Pestanias.HALLAZGOS());
-            else if (c == panelConsola) tabbedPane.setToolTipTextAt(i, I18nUI.Tooltips.Pestanias.CONSOLA());
-            else if (c == panelAgente) tabbedPane.setToolTipTextAt(i, I18nUI.Tooltips.Pestanias.AGENTE());
+            DestinoPestania destino = resolverDestinoPestania(tabbedPane.getComponentAt(i));
+            String tooltip = resolverTooltipPestania(destino);
+            if (tooltip != null) {
+                tabbedPane.setToolTipTextAt(i, tooltip);
+            }
         }
     }
 

@@ -10,8 +10,6 @@ import com.burpia.config.AgenteTipo;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
@@ -104,14 +102,7 @@ public class PanelHallazgos extends JPanel {
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
         panelTodosControles.add(campoBusqueda);
 
-        comboSeveridad = new JComboBox<>(new String[]{
-            I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES(),
-            I18nUI.Hallazgos.SEVERIDAD_CRITICAL(),
-            I18nUI.Hallazgos.SEVERIDAD_HIGH(),
-            I18nUI.Hallazgos.SEVERIDAD_MEDIUM(),
-            I18nUI.Hallazgos.SEVERIDAD_LOW(),
-            I18nUI.Hallazgos.SEVERIDAD_INFO()
-        });
+        comboSeveridad = new JComboBox<>(I18nUI.Hallazgos.OPCIONES_FILTRO_SEVERIDAD());
         comboSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
         comboSeveridad.setToolTipText(I18nUI.Tooltips.Hallazgos.FILTRO_SEVERIDAD());
         panelTodosControles.add(comboSeveridad);
@@ -178,14 +169,7 @@ public class PanelHallazgos extends JPanel {
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         panelTablaWrapper.add(panelDesplazable, BorderLayout.CENTER);
 
-        campoBusqueda.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void changedUpdate(DocumentEvent e) { aplicarFiltros(); }
-            @Override
-            public void insertUpdate(DocumentEvent e) { aplicarFiltros(); }
-            @Override
-            public void removeUpdate(DocumentEvent e) { aplicarFiltros(); }
-        });
+        campoBusqueda.getDocument().addDocumentListener(UIUtils.crearDocumentListener(this::aplicarFiltros));
 
         comboSeveridad.addActionListener(e -> aplicarFiltros());
 
@@ -926,14 +910,8 @@ public class PanelHallazgos extends JPanel {
 
     private void actualizarOpcionesSeveridadIdioma() {
         int indiceSeleccionado = comboSeveridad.getSelectedIndex();
-        DefaultComboBoxModel<String> nuevoModelo = new DefaultComboBoxModel<>(new String[]{
-            I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES(),
-            I18nUI.Hallazgos.SEVERIDAD_CRITICAL(),
-            I18nUI.Hallazgos.SEVERIDAD_HIGH(),
-            I18nUI.Hallazgos.SEVERIDAD_MEDIUM(),
-            I18nUI.Hallazgos.SEVERIDAD_LOW(),
-            I18nUI.Hallazgos.SEVERIDAD_INFO()
-        });
+        DefaultComboBoxModel<String> nuevoModelo =
+            new DefaultComboBoxModel<>(I18nUI.Hallazgos.OPCIONES_FILTRO_SEVERIDAD());
         comboSeveridad.setModel(nuevoModelo);
 
         int indiceSeguro = Math.max(0, Math.min(indiceSeleccionado, nuevoModelo.getSize() - 1));

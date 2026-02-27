@@ -1,6 +1,8 @@
 package com.burpia.ui;
 
+import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.util.OSUtils;
 import com.jediterm.terminal.TtyConnector;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -187,6 +189,45 @@ class PanelAgenteTransporteTest {
         }
     }
 
+    @Test
+    @DisplayName("Cambiar agente rapido recupera foco mediante manejador configurado")
+    void testCambiarAgenteRapidoRecuperaFocoConManejador() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+        String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), binarioExistente);
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            AtomicBoolean focoSolicitado = new AtomicBoolean(false);
+            panel.establecerManejadorFocoPestania(() -> focoSolicitado.set(true));
+
+            invocarCambiarAgenteRapido(panel);
+
+            assertTrue(focoSolicitado.get());
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), config.obtenerTipoAgente());
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Reiniciar reutiliza la misma ruta de foco configurada")
+    void testReiniciarReutilizaRutaUnicaDeFoco() throws Exception {
+        PanelAgente panel = crearPanelSinConsola();
+        try {
+            AtomicBoolean focoSolicitado = new AtomicBoolean(false);
+            panel.establecerManejadorFocoPestania(() -> focoSolicitado.set(true));
+
+            invocarReiniciarYSolicitarFoco(panel);
+
+            assertTrue(focoSolicitado.get());
+        } finally {
+            panel.destruir();
+        }
+    }
+
     private PanelAgente crearPanelSinConsola() throws Exception {
         return crearPanelSinConsola(new ConfiguracionAPI());
     }
@@ -201,6 +242,30 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField("ttyConnector");
         field.setAccessible(true);
         field.set(panel, connector);
+    }
+
+    private void invocarCambiarAgenteRapido(PanelAgente panel) throws Exception {
+        Method method = PanelAgente.class.getDeclaredMethod("cambiarAgenteRapido");
+        method.setAccessible(true);
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                method.invoke(panel);
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
+    private void invocarReiniciarYSolicitarFoco(PanelAgente panel) throws Exception {
+        Method method = PanelAgente.class.getDeclaredMethod("reiniciarYSolicitarFoco");
+        method.setAccessible(true);
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                method.invoke(panel);
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     private boolean invocarEscrituraTty(PanelAgente panel, String payload) throws Exception {

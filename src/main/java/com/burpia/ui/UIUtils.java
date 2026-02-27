@@ -1,6 +1,8 @@
 package com.burpia.ui;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
@@ -10,9 +12,13 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+import java.awt.font.TextAttribute;
 
 public class UIUtils {
 
@@ -59,6 +65,26 @@ public class UIUtils {
         ejecutarEnEDT(() -> JOptionPane.showMessageDialog(parent, mensaje, titulo, JOptionPane.INFORMATION_MESSAGE));
     }
 
+    public static DocumentListener crearDocumentListener(Runnable onChange) {
+        Runnable accionSegura = onChange != null ? onChange : () -> { };
+        return new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                accionSegura.run();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                accionSegura.run();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                accionSegura.run();
+            }
+        };
+    }
+
     public static void mostrarErrorBinarioAgenteNoEncontrado(Component parent,
                                                              String titulo,
                                                              String mensajePrincipal,
@@ -66,6 +92,7 @@ public class UIUtils {
                                                              String urlEnlace) {
         ejecutarEnEDT(() -> {
             JPanel panel = new JPanel(new BorderLayout(0, 6));
+            panel.setOpaque(false);
             panel.add(new JLabel(mensajePrincipal), BorderLayout.NORTH);
             if (urlEnlace != null && !urlEnlace.trim().isEmpty()
                 && textoEnlace != null && !textoEnlace.trim().isEmpty()) {
@@ -79,15 +106,17 @@ public class UIUtils {
                 enlace.setOpaque(false);
                 enlace.setHorizontalAlignment(SwingConstants.LEFT);
                 enlace.addActionListener(e -> abrirUrlEnNavegador(urlEnlace));
+                Font fuenteNormal = enlace.getFont();
+                Font fuenteSubrayada = crearFuenteSubrayada(fuenteNormal);
                 enlace.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseEntered(MouseEvent e) {
-                        enlace.setText("<html><u>" + textoVisible + "</u></html>");
+                        enlace.setFont(fuenteSubrayada);
                     }
 
                     @Override
                     public void mouseExited(MouseEvent e) {
-                        enlace.setText(textoVisible);
+                        enlace.setFont(fuenteNormal);
                     }
                 });
 
@@ -111,6 +140,22 @@ public class UIUtils {
         String sinAnchor = texto.replaceAll("(?is)<a\\b[^>]*>(.*?)</a>", "$1");
         String sinHtml = sinAnchor.replaceAll("(?is)<[^>]+>", "").trim();
         return sinHtml.isEmpty() ? texto : sinHtml;
+    }
+
+    private static Font crearFuenteSubrayada(Font fuenteBase) {
+        if (fuenteBase == null) {
+            return null;
+        }
+        Map<TextAttribute, Object> atributos = new HashMap<>();
+        for (Map.Entry<?, ?> entry : fuenteBase.getAttributes().entrySet()) {
+            Object key = entry.getKey();
+            Object value = entry.getValue();
+            if (key instanceof TextAttribute) {
+                atributos.put((TextAttribute) key, value);
+            }
+        }
+        atributos.put(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON);
+        return fuenteBase.deriveFont(atributos);
     }
 
     public static boolean abrirUrlEnNavegador(String url) {
