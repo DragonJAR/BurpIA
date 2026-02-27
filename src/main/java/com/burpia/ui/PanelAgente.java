@@ -15,12 +15,14 @@ import com.pty4j.PtyProcessBuilder;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -31,7 +33,8 @@ public class PanelAgente extends JPanel {
 
     private static final int DELAY_INICIO_BINARIO_MS = 800;
     private static final int MAX_REINTENTOS_INYECCION = 3;
-    private static final int DELAY_REINTENTO_MS = 500;
+    private static final int CHUNK_ESCRITURA_PTY = 128;
+    private static final int DELAY_ENTRE_CHUNKS_PTY_MS = 10;
 
     private static final ExecutorService INYECTOR_PTY = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "BurpIA-PTY-Injector");
@@ -50,16 +53,25 @@ public class PanelAgente extends JPanel {
     private PtyProcess process;
     private TtyConnector ttyConnector;
 
-    private final AtomicReference<Runnable> manejadorFocoPestania = new AtomicReference<>();
-    private final AtomicReference<Runnable> manejadorCambioConfiguracion = new AtomicReference<>();
-    private final AtomicBoolean inicializacionPendiente = new AtomicBoolean(false);
-    private final AtomicBoolean promptInicialEnviado = new AtomicBoolean(false);
+    private final AtomicReference<Runnable> manejadorFocoPestania;
+    private final AtomicReference<Runnable> manejadorCambioConfiguracion;
+    private final AtomicBoolean inicializacionPendiente;
+    private final AtomicBoolean promptInicialEnviado;
+    private final AtomicLong contadorInyeccion;
     private volatile String promptPendiente = null;
     private volatile int delayPendienteMs = 0;
+    private volatile String ultimoAgenteIniciado = null;
 
     public PanelAgente(ConfiguracionAPI config) {
         this.config = config;
-        setLayout(new BorderLayout(EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL));
+        this.promptInicialEnviado = new AtomicBoolean(false);
+        this.inicializacionPendiente = new AtomicBoolean(false);
+        this.contadorInyeccion = new AtomicLong(0);
+        this.manejadorFocoPestania = new AtomicReference<>();
+        this.manejadorCambioConfiguracion = new AtomicReference<>();
+        
+        BorderLayout layout = new BorderLayout(EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL);
+        setLayout(layout);
         setBorder(BorderFactory.createEmptyBorder(
             EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL, 
             EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL
@@ -93,36 +105,76 @@ public class PanelAgente extends JPanel {
         if (comando == null || comando.isEmpty()) {
             return;
         }
-        INYECTOR_PTY.submit(() -> {
-            try {
-                int chunkSize = 128;
-                int delaySleep = 10; 
-
-                if (ttyConnector != null) {
-                    for (int i = 0; i < comando.length(); i += chunkSize) {
-                        int end = Math.min(comando.length(), i + chunkSize);
-                        ttyConnector.write(comando.substring(i, end));
-                        if (comando.length() > chunkSize) {
-                            Thread.sleep(delaySleep);
-                        }
-                    }
-                } else if (process != null) {
-                    byte[] bytes = comando.getBytes(StandardCharsets.UTF_8);
-                    java.io.OutputStream os = process.getOutputStream();
-                    for (int i = 0; i < bytes.length; i += chunkSize) {
-                        int end = Math.min(bytes.length, i + chunkSize);
-                        os.write(bytes, i, end - i);
-                        os.flush();
-                        if (bytes.length > chunkSize) {
-                            Thread.sleep(delaySleep);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.log(Level.FINE, I18nLogs.tr("Error escribiendo comando crudo PTY"), e);
-            }
-        });
+        INYECTOR_PTY.execute(() -> escribirComandoCrudoSeguro(comando));
     }
+
+    private boolean escribirComandoCrudoSeguro(String comando) {
+        try {
+            if (escribirTextoViaTtyConnector(comando)) {
+                return true;
+            }
+            return escribirTextoDirectoPTY(comando);
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE, I18nLogs.tr("Error escribiendo comando crudo PTY"), e);
+            return false;
+        }
+    }
+
+    private boolean escribirTextoViaTtyConnector(String texto) {
+        if (texto == null || texto.isEmpty() || ttyConnector == null) {
+            return false;
+        }
+
+        try {
+            if (!ttyConnector.isConnected()) {
+                return false;
+            }
+            for (int i = 0; i < texto.length(); i += CHUNK_ESCRITURA_PTY) {
+                int end = Math.min(texto.length(), i + CHUNK_ESCRITURA_PTY);
+                ttyConnector.write(texto.substring(i, end));
+                if (texto.length() > CHUNK_ESCRITURA_PTY) {
+                    dormirSilencioso(DELAY_ENTRE_CHUNKS_PTY_MS);
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE, I18nLogs.tr("Error escribiendo por ttyConnector"), e);
+            return false;
+        }
+    }
+
+    private boolean escribirTextoDirectoPTY(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return false;
+        }
+        
+        byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
+        if (process == null || !process.isAlive()) {
+            LOGGER.fine(I18nLogs.tr("Escritura PTY omitida: proceso no disponible"));
+            return false;
+        }
+        
+        try {
+            java.io.OutputStream os = process.getOutputStream();
+            if (os == null) {
+                LOGGER.fine(I18nLogs.tr("Escritura PTY omitida: stream de salida nulo"));
+                return false;
+            }
+            for (int i = 0; i < bytes.length; i += CHUNK_ESCRITURA_PTY) {
+                int end = Math.min(bytes.length, i + CHUNK_ESCRITURA_PTY);
+                os.write(bytes, i, end - i);
+                os.flush();
+                if (bytes.length > CHUNK_ESCRITURA_PTY) {
+                    dormirSilencioso(DELAY_ENTRE_CHUNKS_PTY_MS);
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            LOGGER.log(Level.FINE, "Error escritura directa PTY", e);
+            return false;
+        }
+    }
+
 
     public void inyectarComando(String texto, int delayMs) {
         if (texto == null || texto.trim().isEmpty()) {
@@ -178,10 +230,10 @@ public class PanelAgente extends JPanel {
 
     public void aplicarIdioma() {
         actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
-        actualizarTituloPanel(panelResultadosWrapper, obtenerNombreDinamicoConsola());
+        actualizarTituloPanel(panelResultadosWrapper, I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO());
 
         if (btnCambiarAgente != null) {
-            btnCambiarAgente.setText("🔀 " + obtenerNombreBotonSwitch());
+            btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
             btnCambiarAgente.setToolTipText(I18nUI.Tooltips.FactoryDroid.CAMBIAR_AGENTE_RAPIDO());
         }
         if (lblDelay != null) {
@@ -196,17 +248,6 @@ public class PanelAgente extends JPanel {
         repaint();
     }
     
-    private String obtenerNombreDinamicoConsola() {
-        String nombreAgente = AgenteTipo.obtenerNombreVisible(
-            config.obtenerTipoAgente(),
-            I18nUI.General.AGENTE_GENERICO()
-        );
-        if (nombreAgente == null || nombreAgente.trim().isEmpty()) {
-            return I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO();
-        }
-        return I18nUI.Consola.TITULO_PANEL_AGENTE(nombreAgente);
-    }
-
     private void inicializarComponentesUI() {
         panelControles = crearPanelControles();
         panelResultadosWrapper = crearPanelResultados();
@@ -228,7 +269,7 @@ public class PanelAgente extends JPanel {
         JButton btnInyectarPayload = crearBoton("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD(), 
             I18nUI.Tooltips.FactoryDroid.INYECTAR_PAYLOAD(), e -> inyectarPayloadInicialManual());
 
-        btnCambiarAgente = crearBoton("🔀 " + obtenerNombreBotonSwitch(),
+        btnCambiarAgente = crearBoton("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO(),
             I18nUI.Tooltips.FactoryDroid.CAMBIAR_AGENTE_RAPIDO(), e -> cambiarAgenteRapido());
 
         panel.add(btnReiniciar);
@@ -262,17 +303,6 @@ public class PanelAgente extends JPanel {
         return panel;
     }
     
-    private String obtenerNombreBotonSwitch() {
-        AgenteTipo actual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
-        if (actual == null) {
-            return I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO();
-        }
-        AgenteTipo destino = (actual == AgenteTipo.FACTORY_DROID)
-            ? AgenteTipo.CLAUDE_CODE
-            : AgenteTipo.FACTORY_DROID;
-        return I18nUI.Consola.BOTON_CAMBIAR_AGENTE(destino.getNombreVisible());
-    }
-    
     private void cambiarAgenteRapido() {
         try {
             AgenteTipo actual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
@@ -283,12 +313,12 @@ public class PanelAgente extends JPanel {
                 ? AgenteTipo.CLAUDE_CODE
                 : AgenteTipo.FACTORY_DROID;
 
-            String rutaBinario = config.obtenerRutaBinarioAgente(destino.name());
+            String rutaBinario = resolverRutaBinario(destino);
             if (!OSUtils.existeBinario(rutaBinario)) {
                 UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
                     this,
-                    I18nUI.Configuracion.Agentes.TITULO_VALIDACION_AGENTE(),
-                    I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE(destino.getNombreVisible(), rutaBinario),
+                    destino.getNombreVisible(),
+                    I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE_SIMPLE(rutaBinario),
                     I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(destino.getNombreVisible()),
                     destino.getUrlDocPorIdioma(config.obtenerIdiomaUi())
                 );
@@ -304,9 +334,7 @@ public class PanelAgente extends JPanel {
 
             reiniciar();
 
-            if (btnCambiarAgente != null) {
-                btnCambiarAgente.setText("🔀 " + obtenerNombreBotonSwitch());
-            }
+            actualizarEstadoBotones();
             aplicarIdioma();
 
         } catch (Exception ex) {
@@ -314,9 +342,20 @@ public class PanelAgente extends JPanel {
         }
     }
 
+    public String obtenerUltimoAgenteIniciado() {
+        return ultimoAgenteIniciado;
+    }
+
+    private void actualizarEstadoBotones() {
+        if (btnCambiarAgente != null) {
+            btnCambiarAgente.setEnabled(true);
+            btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
+        }
+    }
+
     private JPanel crearPanelResultados() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(UIUtils.crearBordeTitulado(obtenerNombreDinamicoConsola(), 3, 3));
+        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), 3, 3));
         return panel;
     }
 
@@ -417,14 +456,19 @@ public class PanelAgente extends JPanel {
                 public int waitFor() throws InterruptedException { return rawConnector.waitFor(); }
                 @Override
                 public boolean ready() throws java.io.IOException { return rawConnector.ready(); }
-                @Override
-                public void resize(java.awt.Dimension termSize, java.awt.Dimension pixelSize) { rawConnector.resize(termSize, pixelSize); }
+            @Override
+            public void resize(java.awt.Dimension termSize, java.awt.Dimension pixelSize) { rawConnector.resize(termSize, pixelSize); }
             };
 
             SwingUtilities.invokeLater(() -> {
                 if (terminalWidget != null) {
                     terminalWidget.setTtyConnector(ttyConnector);
                     terminalWidget.start();
+                    ultimoAgenteIniciado = config.obtenerTipoAgente();
+                    if (inicializacionPendiente.get()) {
+                        inicializacionPendiente.set(false);
+                        procesarInicializacionDiferida();
+                    }
                     programarInyeccionInicial();
                 }
             });
@@ -447,24 +491,87 @@ public class PanelAgente extends JPanel {
     }
 
     private void programarInyeccionInicial() {
-        new Timer(DELAY_INICIO_BINARIO_MS, evt -> {
-            String binario = resolverRutaBinario();
-            escribirComando(binario);
-            ((Timer) evt.getSource()).stop();
+        if (promptInicialEnviado.get()) return;
 
-            if (promptInicialEnviado.compareAndSet(false, true)) {
-                String prompt = config.obtenerAgentePrompt();
+        AgenteTipo tipoActual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
+        String prompt = config.obtenerAgentePrompt();
+        int usuarioDelay = config.obtenerAgenteDelay();
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
+        String comandoArranque = resolverComandoArranque(tipoActual, opciones);
 
-                inyectarComando(prompt, 1000 + config.obtenerAgenteDelay());
+        LOGGER.info(I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
+
+        INYECTOR_PTY.execute(() -> {
+            dormirSilencioso(DELAY_INICIO_BINARIO_MS);
+
+            if (!escribirComandoCrudoSeguro(OSUtils.prepararComando(comandoArranque))) {
+                return;
             }
-        }).start();
+
+            if (prompt == null || prompt.trim().isEmpty()) {
+                return;
+            }
+            if (!promptInicialEnviado.compareAndSet(false, true)) {
+                return;
+            }
+
+            inyectarComandoConRetraso(
+                prompt,
+                Math.max(0, usuarioDelay),
+                opciones,
+                "AUTO_INIT"
+            );
+        });
     }
 
-    private String resolverRutaBinario() {
-        String binarioConfig = config.obtenerRutaBinarioAgente(config.obtenerTipoAgente());
+    private String resolverComandoArranque(AgenteTipo tipoActual, AgentRuntimeOptions.EnterOptions opciones) {
+        String comandoProbe = construirComandoProbe(opciones.probeMode());
+        if (comandoProbe != null) {
+            LOGGER.info(I18nLogs.trTecnico(
+                "[ENTER-PROBE] mode=" + opciones.probeMode().name() +
+                    " os=" + describirPlataformaActual() +
+                    " command='" + comandoProbe + "'"
+            ));
+            return comandoProbe;
+        }
+        return resolverRutaBinario(tipoActual);
+    }
+
+    private String construirComandoProbe(AgentRuntimeOptions.ProbeMode probeMode) {
+        AgentRuntimeOptions.ProbeMode modo = probeMode != null ? probeMode : AgentRuntimeOptions.ProbeMode.OFF;
+        if (modo == AgentRuntimeOptions.ProbeMode.OFF) {
+            return null;
+        }
+
+        String rutaRelativa = modo == AgentRuntimeOptions.ProbeMode.WINDOWS
+            ? "scripts/diagnostics/enter-probe-windows.ps1"
+            : "scripts/diagnostics/enter-probe-posix.sh";
+        File script = new File(rutaRelativa);
+        if (!script.isFile()) {
+            LOGGER.warning(I18nLogs.trTecnico(
+                "[ENTER-PROBE] script no encontrado: " + script.getAbsolutePath() + ". Usando agente real."
+            ));
+            return null;
+        }
+
+        String ruta = escaparComillasDobles(script.getAbsolutePath());
+        if (modo == AgentRuntimeOptions.ProbeMode.WINDOWS) {
+            return "powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File \"" + ruta + "\"";
+        }
+        return "bash \"" + ruta + "\"";
+    }
+
+    private String escaparComillasDobles(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        return texto.replace("\"", "\\\"");
+    }
+
+    private String resolverRutaBinario(AgenteTipo tipo) {
+        String binarioConfig = config.obtenerRutaBinarioAgente(tipo != null ? tipo.name() : config.obtenerTipoAgente());
         
         if (Normalizador.esVacio(binarioConfig)) {
-            AgenteTipo tipo = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
             return tipo != null ? tipo.getRutaPorDefecto() : "droid";
         }
 
@@ -474,7 +581,9 @@ public class PanelAgente extends JPanel {
     private boolean estaPanelListoParaInyeccion() {
         return manejadorFocoPestania.get() != null
             && terminalWidget != null
-            && terminalWidget.getTerminalPanel() != null;
+            && terminalWidget.getTerminalPanel() != null
+            && process != null
+            && process.isAlive();
     }
 
     private void procesarInicializacionDiferida() {
@@ -496,56 +605,160 @@ public class PanelAgente extends JPanel {
             LOGGER.warning(I18nLogs.tr("Maximo de reintentos de inyeccion alcanzado"));
             return;
         }
-
-        inyectarComandoConRetraso(texto, delayPendienteMsUsuario);
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(config.obtenerTipoAgente());
+        inyectarComandoConRetraso(texto, delayPendienteMsUsuario, opciones, "API_OR_UI");
     }
 
     private void inyectarComandoConRetraso(String texto, int delayMs) {
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(config.obtenerTipoAgente());
+        inyectarComandoConRetraso(texto, delayMs, opciones, "API_OR_UI");
+    }
+
+    private void inyectarComandoConRetraso(
+        String texto,
+        int delayMs,
+        AgentRuntimeOptions.EnterOptions opciones,
+        String origen
+    ) {
         SwingUtilities.invokeLater(() -> {
             OSUtils.cerrarVentanaAjustes();
             if (delayMs > 0) {
                 LOGGER.info(I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayMs + " ms) antes de la inyeccion..."));
                 new Timer(delayMs, ev -> {
                     ((Timer) ev.getSource()).stop();
-                    aplicarEscrituraDirecta(texto);
+                    aplicarEscrituraDirecta(texto, opciones, origen);
                 }).start();
             } else {
-                aplicarEscrituraDirecta(texto);
+                aplicarEscrituraDirecta(texto, opciones, origen);
             }
         });
     }
 
-    private void aplicarEscrituraDirecta(String texto) {
+    private void aplicarEscrituraDirecta(String texto, AgentRuntimeOptions.EnterOptions opciones, String origen) {
         String ansiStart = "\u001b[200~";
         String ansiEnd = "\u001b[201~";
 
-        escribirComandoCrudo(ansiStart + texto + ansiEnd);
-        LOGGER.info(I18nLogs.tr("Payload en bufer usando escritura directa (tty stream con bracketed paste). Esperando confirmacion..."));
+        String payloadConBrackets = ansiStart + texto + ansiEnd;
+        long injectionId = contadorInyeccion.incrementAndGet();
+        SubmitSequenceBuilder.SubmitSequence secuencia = SubmitSequenceBuilder.construir(
+            opciones.tipoAgente(),
+            opciones.estrategiaSubmitOverride()
+        );
 
-        INYECTOR_PTY.submit(() -> {
-            try { Thread.sleep(800); } catch (Exception ignored) {} 
-            SwingUtilities.invokeLater(() -> {
-                enviarMultiplesEnters(3);
-                LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia de triples VK_ENTER a la capa de JediTerm (Submit) tras la inyeccion."));
-            });
+        INYECTOR_PTY.execute(() -> {
+            LOGGER.info(I18nLogs.trTecnico(
+                "[ENTER-FLOW] id=" + injectionId +
+                    " origin=" + origen +
+                    " agent=" + opciones.tipoAgente().name() +
+                    " os=" + describirPlataformaActual() +
+                    " strategyOverride=" + (opciones.estrategiaSubmitOverride() != null ? opciones.estrategiaSubmitOverride() : "AUTO") +
+                    " strategyFinal=" + secuencia.descripcion()
+            ));
+            logDebugTransporte(opciones.enterDebugActivo(), "PASTE_WRITE#" + injectionId, payloadConBrackets);
+            if (!escribirComandoCrudoSeguro(payloadConBrackets)) {
+                return;
+            }
+            LOGGER.info(I18nLogs.tr("Payload en bufer usando escritura directa (tty stream con bracketed paste). Esperando confirmacion..."));
+            dormirSilencioso(opciones.delaySubmitPostPasteMs());
+            enviarSecuenciaSubmit(opciones, secuencia, injectionId, origen);
         });
     }
 
-    private void enviarMultiplesEnters(int cantidad) {
-        for (int i = 0; i < cantidad; i++) {
-            enviarEnterNativoAJediTerm();
+    private void enviarSecuenciaSubmit(
+        AgentRuntimeOptions.EnterOptions opciones,
+        SubmitSequenceBuilder.SubmitSequence secuencia,
+        long injectionId,
+        String origen
+    ) {
+        if (opciones.probeSubmitActivo()) {
+            LOGGER.info(I18nLogs.trTecnico(
+                "[ENTER-PROBE] agent=" + opciones.tipoAgente().name() +
+                " os=" + describirPlataformaActual() +
+                " strategyOverride=" + (opciones.estrategiaSubmitOverride() != null ? opciones.estrategiaSubmitOverride() : "AUTO") +
+                " sequence=" + secuencia.descripcion() +
+                " payloadEsc='" + escaparControl(secuencia.payload()) + "'"
+            ));
+        }
+
+        for (int i = 0; i < secuencia.repeticiones(); i++) {
+            logDebugTransporte(
+                opciones.enterDebugActivo(),
+                "SUBMIT_WRITE#" + injectionId + "[" + (i + 1) + "/" + secuencia.repeticiones() + "]",
+                secuencia.payload()
+            );
+            if (!escribirComandoCrudoSeguro(secuencia.payload())) {
+                return;
+            }
+            if (i + 1 < secuencia.repeticiones()) {
+                dormirSilencioso(secuencia.delayEntreEnviosMs());
+            }
+        }
+        LOGGER.info(I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
+        LOGGER.info(I18nLogs.trTecnico(
+            "[ENTER-RESULT] id=" + injectionId +
+                " origin=" + origen +
+                " outcome=unknown reason=transport-level-dispatch-only"
+        ));
+    }
+
+    private void dormirSilencioso(long ms) {
+        if (ms <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
-    private void enviarEnterNativoAJediTerm() {
-        if (terminalWidget == null || terminalWidget.getTerminalPanel() == null) return;
-        
-        java.awt.Component target = terminalWidget.getTerminalPanel();
+    private void logDebugTransporte(boolean activo, String etapa, String payload) {
+        if (!activo) {
+            return;
+        }
+        String seguro = payload != null ? payload : "";
+        LOGGER.info(I18nLogs.trTecnico(
+            "[ENTER-DEBUG] " + etapa +
+            " len=" + seguro.length() +
+            " esc='" + escaparControl(seguro) + "'" +
+            " hex=" + hexResumen(seguro)
+        ));
+    }
 
-        target.dispatchEvent(new java.awt.event.KeyEvent(target, java.awt.event.KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, java.awt.event.KeyEvent.VK_ENTER, '\n'));
-        escribirComandoCrudo("\r\n");
-        target.dispatchEvent(new java.awt.event.KeyEvent(target, java.awt.event.KeyEvent.KEY_TYPED, System.currentTimeMillis(), 0, java.awt.event.KeyEvent.VK_UNDEFINED, '\n'));
-        target.dispatchEvent(new java.awt.event.KeyEvent(target, java.awt.event.KeyEvent.KEY_RELEASED, System.currentTimeMillis(), 0, java.awt.event.KeyEvent.VK_ENTER, '\n'));
+    private String escaparControl(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        return texto
+            .replace("\\", "\\\\")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+            .replace("\u001b", "\\u001b");
+    }
+
+    private String hexResumen(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return "[]";
+        }
+        byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
+        StringBuilder sb = new StringBuilder();
+        sb.append('[');
+        int limite = Math.min(bytes.length, 16);
+        for (int i = 0; i < limite; i++) {
+            if (i > 0) sb.append(' ');
+            sb.append(String.format("%02X", bytes[i]));
+        }
+        if (bytes.length > limite) {
+            sb.append(" ...");
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
+    private String describirPlataformaActual() {
+        return SubmitSequenceBuilder.Plataforma.desdeSistemaActual()
+            .name()
+            .toLowerCase(java.util.Locale.ROOT);
     }
 
     private void manejarErrorPty(Throwable t) {

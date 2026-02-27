@@ -42,12 +42,8 @@ public final class I18nUI {
             return tr("📝 CONSOLA", "📝 CONSOLE");
         }
 
-        public static String AGENTE_FACTORY_DROID() {
-            return tr("🤖 FACTORY DROID", "🤖 FACTORY DROID");
-        }
-
-        public static String AGENTE_DINAMICO(String nombreAgente) {
-            return trf("🤖 %s", "🤖 %s", nombreAgente != null ? nombreAgente : General.AGENTE_GENERICO());
+        public static String AGENTE() {
+            return tr("🤖 AGENTE", "🤖 AGENT");
         }
     }
 
@@ -746,10 +742,6 @@ public final class I18nUI {
             return tr("Cambiar Agente", "Switch Agent");
         }
 
-        public static String TITULO_PANEL_AGENTE(String nombreAgente) {
-            return trf("Consola %s", "%s Console", nombreAgente);
-        }
-
         public static String TITULO_PANEL_AGENTE_GENERICO() {
             return tr("Consola del Agente", "Agent Console");
         }
@@ -1228,7 +1220,7 @@ public final class I18nUI {
         }
 
         public static String VERSION() {
-            return tr("Version 1.0.0 - Febrero 2026", "Version 1.0.0 - February 2026");
+            return tr("Version 1.0.1 - Febrero 2026", "Version 1.0.1 - February 2026");
         }
 
         public static String TITULO_ENLACE() {
@@ -1404,29 +1396,29 @@ public final class I18nUI {
         private Tooltips() {}
 
         public static final class Pestanias {
-        private Pestanias() {
-        }
+            private Pestanias() {
+            }
 
-        public static String TAREAS() {
-            return I18nUI.tr("Monitoriza la cola de análisis y controla su ejecución.",
-                "Monitor the analysis queue and control execution.");
-        }
+            public static String TAREAS() {
+                return I18nUI.tr("Monitoriza la cola de análisis y controla su ejecución.",
+                    "Monitor the analysis queue and control execution.");
+            }
 
-        public static String HALLAZGOS() {
-            return I18nUI.tr("Revisa, filtra y exporta hallazgos detectados por BurpIA.",
-                "Review, filter, and export BurpIA findings.");
-        }
+            public static String HALLAZGOS() {
+                return I18nUI.tr("Revisa, filtra y exporta hallazgos detectados por BurpIA.",
+                    "Review, filter, and export BurpIA findings.");
+            }
 
-        public static String CONSOLA() {
-            return I18nUI.tr("Consulta logs operativos y de diagnóstico del complemento.",
-                "Review extension operational and diagnostic logs.");
-        }
+            public static String CONSOLA() {
+                return I18nUI.tr("Consulta logs operativos y de diagnóstico del complemento.",
+                    "Review extension operational and diagnostic logs.");
+            }
 
-        public static String AGENTE_FACTORY_DROID() {
-            return I18nUI.tr("Terminal interactiva del agente Factory Droid (pentesting asistido por IA).",
-                "Factory Droid agent interactive terminal (AI-assisted pentesting).");
+            public static String AGENTE() {
+                return I18nUI.tr("Terminal interactiva del agente (pentesting asistido por IA).",
+                    "Interactive terminal for agent (AI-assisted pentesting).");
+            }
         }
-    }
 
     public static final class Estadisticas {
         private Estadisticas() {

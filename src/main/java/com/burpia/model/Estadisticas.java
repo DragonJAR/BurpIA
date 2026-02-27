@@ -43,7 +43,8 @@ public class Estadisticas {
     public int obtenerVersion() { return versionCambios.get(); }
 
     public void incrementarHallazgoSeveridad(String severidad) {
-        switch (severidad) {
+        String severidadNormalizada = severidad != null ? severidad : "";
+        switch (severidadNormalizada) {
             case Hallazgo.SEVERIDAD_CRITICAL:
                 hallazgosCritical.incrementAndGet();
                 break;
@@ -58,6 +59,8 @@ public class Estadisticas {
                 break;
             case Hallazgo.SEVERIDAD_INFO:
                 hallazgosInfo.incrementAndGet();
+                break;
+            default:
                 break;
         }
         hallazgosCreados.incrementAndGet();

@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final burp.api.montoya.MontoyaApi api;
     private final ConsumerSolicitud manejadorAnalisis;
-    private final com.burpia.config.ConfiguracionAPI config;
+    private final ConfiguracionAPI config;
     private final java.util.function.Consumer<HttpRequestResponse> manejadorAgente;
     private final AtomicReference<RegistroClic> ultimoClic;
     private static final long VENTANA_DEBOUNCE_MS = 500L;
@@ -26,7 +26,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal);
     }
 
-    public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis, com.burpia.config.ConfiguracionAPI config, java.util.function.Consumer<HttpRequestResponse> manejadorAgente) {
+    public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis, ConfiguracionAPI config, java.util.function.Consumer<HttpRequestResponse> manejadorAgente) {
         this.api = api;
         this.manejadorAnalisis = manejadorAnalisis;
         this.config = config;

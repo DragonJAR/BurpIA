@@ -20,8 +20,6 @@ import okhttp3.*;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -376,7 +374,7 @@ public class AnalizadorAI implements Runnable {
             } catch (ApiHttpException e) {
                 ultimaExcepcion = e;
                 if (PoliticaReintentos.esCodigoNoReintentable(e.obtenerCodigoEstado(), e.obtenerCuerpoError())) {
-                    throw new NonRetryableApiException(e.getMessage());
+                    throw new NonRetryableApiException(e.getMessage(), e);
                 }
                 if (!PoliticaReintentos.esCodigoReintentable(e.obtenerCodigoEstado())) {
                     throw e;
@@ -495,8 +493,9 @@ public class AnalizadorAI implements Runnable {
     private static void configurarSslInseguro(OkHttpClient.Builder builder) {
         String advertencia = "ADVERTENCIA DE SEGURIDAD: Verificación SSL deshabilitada. " +
             "Esto expone a ataques Man-in-the-Middle. Solo usar en desarrollo.";
-        LOGGER.log(Level.WARNING, advertencia);
-        System.err.println("[BurpIA] " + advertencia);
+        if (LOGGER.isLoggable(Level.WARNING)) {
+            LOGGER.log(Level.WARNING, advertencia);
+        }
 
         try {
             final javax.net.ssl.TrustManager[] trustAllCerts = new javax.net.ssl.TrustManager[]{
@@ -519,7 +518,9 @@ public class AnalizadorAI implements Runnable {
             builder.sslSocketFactory(sslSocketFactory, (javax.net.ssl.X509TrustManager) trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, I18nLogs.tr("Error al configurar SSL inseguro"), e);
+            if (LOGGER.isLoggable(Level.SEVERE)) {
+                LOGGER.log(Level.SEVERE, I18nLogs.tr("Error al configurar SSL inseguro"), e);
+            }
         }
     }
 
@@ -534,8 +535,8 @@ public class AnalizadorAI implements Runnable {
     }
 
     private static final class NonRetryableApiException extends IOException {
-        private NonRetryableApiException(String message) {
-            super(message);
+        private NonRetryableApiException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 
@@ -564,12 +565,6 @@ public class AnalizadorAI implements Runnable {
         }
     }
 
-    private void rastrear(String mensaje, Throwable e) {
-        if (config.esDetallado()) {
-            rastrearTecnico(mensaje + "\n" + obtenerStackTrace(e));
-        }
-    }
-
     private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
         rastrear("Parseando respuesta JSON");
         List<Hallazgo> hallazgos = new ArrayList<>();
@@ -577,17 +572,16 @@ public class AnalizadorAI implements Runnable {
 
         try {
             String jsonReparado = ReparadorJson.repararJson(respuestaOriginal);
+            String respuestaProcesada = respuestaOriginal;
             if (jsonReparado != null && !jsonReparado.equals(respuestaOriginal)) {
                 rastrear("JSON reparado exitosamente");
-                respuestaJson = jsonReparado;
-            } else {
-                respuestaJson = respuestaOriginal;
+                respuestaProcesada = jsonReparado;
             }
 
             String proveedor = config.obtenerProveedorAI() != null ? config.obtenerProveedorAI() : "";
-            String contenido = ParserRespuestasAI.extraerContenido(respuestaJson, proveedor);
+            String contenido = ParserRespuestasAI.extraerContenido(respuestaProcesada, proveedor);
             if (contenido == null || contenido.trim().isEmpty()) {
-                contenido = respuestaJson != null ? respuestaJson : "";
+                contenido = respuestaProcesada;
             }
 
             rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
@@ -626,7 +620,7 @@ public class AnalizadorAI implements Runnable {
                 }
             }
 
-            if (!respuestaJson.equals(respuestaOriginal)) {
+            if (!respuestaProcesada.equals(respuestaOriginal)) {
                 String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedor);
                 if (contenidoOriginal == null || contenidoOriginal.trim().isEmpty()) {
                     contenidoOriginal = respuestaOriginal;
@@ -644,21 +638,14 @@ public class AnalizadorAI implements Runnable {
                 }
             }
 
-            String marcaTiempo = LocalDateTime.now().format(
-                    DateTimeFormatter.ofPattern("HH:mm:ss")
-            );
-
             rastrear("Total de hallazgos parseados: " + hallazgos.size());
 
-            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), marcaTiempo, hallazgos, solicitud.obtenerSolicitudHttp());
+            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), hallazgos, solicitud.obtenerSolicitudHttp());
 
         } catch (Exception e) {
             registrarError("Error al parsear respuesta de API: " + e.getMessage());
             rastrearTecnico("JSON fallido (preview):\n" + resumirParaLog(respuestaJson));
 
-            String marcaTiempo = LocalDateTime.now().format(
-                    DateTimeFormatter.ofPattern("HH:mm:ss")
-            );
             List<Hallazgo> hallazgosError = new ArrayList<>();
             hallazgosError.add(new Hallazgo(
                 solicitud.obtenerUrl(),
@@ -669,7 +656,7 @@ public class AnalizadorAI implements Runnable {
                 solicitud.obtenerSolicitudHttp()
             ));
 
-            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), marcaTiempo, hallazgosError, solicitud.obtenerSolicitudHttp());
+            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), hallazgosError, solicitud.obtenerSolicitudHttp());
         }
     }
 

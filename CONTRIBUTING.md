@@ -184,7 +184,7 @@ Si aplica, agrega screenshots
 - Burp Suite version: [ej. 2024.10]
 - OS: [ej. Windows 11, macOS 15]
 - Java version: [ej. 17.0.9]
-- BurpIA version: [ej. 1.0.0]
+- BurpIA version: [ej. 1.0.1]
 ```
 
 ## 💡 Sugerencias de Features
@@ -216,7 +216,7 @@ Agrega Javadoc a clases y métodos públicos:
  * <p>Descripción más detallada si es necesario.
  *
  * @author Nombre del autor
- * @since 1.0.0
+ * @since 1.0.1
 public class MiClase {
 
      * Breve descripción del método.

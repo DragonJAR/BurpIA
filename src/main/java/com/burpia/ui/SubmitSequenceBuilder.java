@@ -1,0 +1,149 @@
+package com.burpia.ui;
+
+import com.burpia.config.AgenteTipo;
+import com.burpia.util.OSUtils;
+
+final class SubmitSequenceBuilder {
+
+    private SubmitSequenceBuilder() {
+    }
+
+    static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride) {
+        return construir(tipoAgente, estrategiaOverride, Plataforma.desdeSistemaActual());
+    }
+
+    static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride, boolean esWindows) {
+        return construir(
+            tipoAgente,
+            estrategiaOverride,
+            esWindows ? Plataforma.WINDOWS : Plataforma.LINUX
+        );
+    }
+
+    static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride, Plataforma plataforma) {
+        EstrategiaSubmit estrategia = EstrategiaSubmit.desdeValor(
+            estrategiaOverride,
+            EstrategiaSubmit.AUTO
+        );
+        AgenteTipo agenteSeguro = tipoAgente != null ? tipoAgente : AgenteTipo.FACTORY_DROID;
+        Plataforma plataformaSegura = plataforma != null ? plataforma : Plataforma.LINUX;
+
+        if (estrategia == EstrategiaSubmit.AUTO) {
+            return construirAuto(agenteSeguro, plataformaSegura);
+        }
+        return construirFija(estrategia, plataformaSegura);
+    }
+
+    private static SubmitSequence construirAuto(AgenteTipo tipoAgente, Plataforma plataforma) {
+        if (tipoAgente == AgenteTipo.CLAUDE_CODE) {
+            return construirClaudeAuto(plataforma);
+        }
+        return construirFija(EstrategiaSubmit.TRIPLE_ENTER_OS, plataforma);
+    }
+
+    private static SubmitSequence construirClaudeAuto(Plataforma plataforma) {
+        switch (plataforma) {
+            case WINDOWS:
+                return construirFija(EstrategiaSubmit.CRLF, plataforma);
+            case MAC:
+            case LINUX:
+            case OTHER:
+            default:
+                return construirFija(EstrategiaSubmit.CR, plataforma);
+        }
+    }
+
+    private static SubmitSequence construirFija(EstrategiaSubmit estrategia, Plataforma plataforma) {
+        switch (estrategia) {
+            case CTRL_J:
+                return new SubmitSequence("\n", 1, 0, estrategia);
+            case CTRL_M:
+                return new SubmitSequence("\r", 1, 0, estrategia);
+            case LF:
+                return new SubmitSequence("\n", 1, 0, estrategia);
+            case CR:
+                return new SubmitSequence("\r", 1, 0, estrategia);
+            case CRLF:
+                return new SubmitSequence("\r\n", 1, 0, estrategia);
+            case TRIPLE_CRLF:
+                return new SubmitSequence("\r\n", 3, 80, estrategia);
+            case TRIPLE_ENTER_OS:
+                return new SubmitSequence(plataforma == Plataforma.WINDOWS ? "\r\n" : "\n", 3, 80, estrategia);
+            case AUTO:
+            default:
+                return new SubmitSequence(plataforma == Plataforma.WINDOWS ? "\r\n" : "\n", 1, 0, EstrategiaSubmit.AUTO);
+        }
+    }
+
+    static final class SubmitSequence {
+        private final String payload;
+        private final int repeticiones;
+        private final int delayEntreEnviosMs;
+        private final EstrategiaSubmit estrategia;
+
+        SubmitSequence(String payload, int repeticiones, int delayEntreEnviosMs, EstrategiaSubmit estrategia) {
+            this.payload = payload;
+            this.repeticiones = Math.max(1, repeticiones);
+            this.delayEntreEnviosMs = Math.max(0, delayEntreEnviosMs);
+            this.estrategia = estrategia != null ? estrategia : EstrategiaSubmit.AUTO;
+        }
+
+        String payload() {
+            return payload;
+        }
+
+        int repeticiones() {
+            return repeticiones;
+        }
+
+        int delayEntreEnviosMs() {
+            return delayEntreEnviosMs;
+        }
+
+        String descripcion() {
+            return estrategia.name() + " x" + repeticiones;
+        }
+    }
+
+    enum EstrategiaSubmit {
+        AUTO,
+        CTRL_J,
+        CTRL_M,
+        LF,
+        CR,
+        CRLF,
+        TRIPLE_ENTER_OS,
+        TRIPLE_CRLF;
+
+        static EstrategiaSubmit desdeValor(String valor, EstrategiaSubmit porDefecto) {
+            if (valor == null || valor.trim().isEmpty()) {
+                return porDefecto;
+            }
+            try {
+                return valueOf(valor.trim().toUpperCase(java.util.Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                return porDefecto;
+            }
+        }
+    }
+
+    enum Plataforma {
+        WINDOWS,
+        MAC,
+        LINUX,
+        OTHER;
+
+        static Plataforma desdeSistemaActual() {
+            if (OSUtils.esWindows()) {
+                return WINDOWS;
+            }
+            if (OSUtils.esMac()) {
+                return MAC;
+            }
+            if (OSUtils.esLinux()) {
+                return LINUX;
+            }
+            return OTHER;
+        }
+    }
+}

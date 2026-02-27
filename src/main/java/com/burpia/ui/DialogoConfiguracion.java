@@ -41,7 +41,6 @@ public class DialogoConfiguracion extends JDialog {
     private JTextField txtAgenteBinario;
     private JTextArea txtAgentePrompt;
     private JButton btnRestaurarPromptAgente;
-    private JLabel lblContadorPromptAgente;
 
     private JComboBox<String> comboProveedor;
     private JComboBox<String> comboModelo;
@@ -444,8 +443,11 @@ public class DialogoConfiguracion extends JDialog {
         txtAgenteBinario = new JTextField(30);
         txtAgenteBinario.setToolTipText(I18nUI.Tooltips.Configuracion.BINARIO_AGENTE());
         txtAgenteBinario.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override
             public void insertUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
+            @Override
             public void removeUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
+            @Override
             public void changedUpdate(javax.swing.event.DocumentEvent e) { actualizarRutaEnMemoria(); }
         });
 

@@ -48,14 +48,14 @@ public final class ReparadorJson {
             return false;
         }
 
-        json = json.trim();
+        String normalizado = json.trim();
 
-        if (!json.startsWith("{") && !json.startsWith("[")) {
+        if (!normalizado.startsWith("{") && !normalizado.startsWith("[")) {
             return false;
         }
 
         try {
-            JsonElement element = JsonParser.parseString(json);
+            JsonElement element = JsonParser.parseString(normalizado);
             return element != null && (element.isJsonObject() || element.isJsonArray());
         } catch (Exception ignored) {
             return false;
@@ -77,14 +77,9 @@ public final class ReparadorJson {
         int inicioObjeto = texto.indexOf('{');
         int inicioArreglo = texto.indexOf('[');
 
-        int inicio = -1;
-        if (inicioObjeto != -1 && inicioArreglo != -1) {
-            inicio = Math.min(inicioObjeto, inicioArreglo);
-        } else if (inicioObjeto != -1) {
-            inicio = inicioObjeto;
-        } else {
-            inicio = inicioArreglo;
-        }
+        int inicio = (inicioObjeto != -1 && inicioArreglo != -1)
+            ? Math.min(inicioObjeto, inicioArreglo)
+            : (inicioObjeto != -1 ? inicioObjeto : inicioArreglo);
 
         if (inicio == -1) {
             return texto;
@@ -164,11 +159,11 @@ public final class ReparadorJson {
     }
 
     private static String eliminarContenidoExtra(String texto) {
-        texto = texto.trim();
+        String textoLimpio = texto.trim();
 
         int ultimoCierre = -1;
-        for (int i = texto.length() - 1; i >= 0; i--) {
-            char c = texto.charAt(i);
+        for (int i = textoLimpio.length() - 1; i >= 0; i--) {
+            char c = textoLimpio.charAt(i);
             if (c == '}' || c == ']') {
                 ultimoCierre = i + 1;
                 break;
@@ -176,10 +171,10 @@ public final class ReparadorJson {
         }
 
         if (ultimoCierre > 0) {
-            return texto.substring(0, ultimoCierre);
+            return textoLimpio.substring(0, ultimoCierre);
         }
 
-        return texto;
+        return textoLimpio;
     }
 
     private static final Pattern COMILLA_ESCAPE_PATTERN = Pattern.compile(",\\s*([\\]}])");

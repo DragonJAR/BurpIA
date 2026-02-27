@@ -8,8 +8,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public final class HttpUtils {
+    private static final Logger LOGGER = Logger.getLogger(HttpUtils.class.getName());
 
     private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
 
@@ -126,20 +129,40 @@ public final class HttpUtils {
         actualizarDigest(md, solicitud.method());
         actualizarDigest(md, solicitud.url());
         actualizarDigest(md, respuesta.statusCode());
-        
-        try {
-            if (solicitud.body() != null) {
-                actualizarDigest(md, solicitud.body().length());
-            }
-        } catch (Exception ignored) {}
-        
-        try {
-            if (respuesta.body() != null) {
-                actualizarDigest(md, respuesta.body().length());
-            }
-        } catch (Exception ignored) {}
+
+        long longitudSolicitud = obtenerLongitudCuerpoSeguro(solicitud);
+        if (longitudSolicitud >= 0L) {
+            actualizarDigest(md, longitudSolicitud);
+        }
+
+        long longitudRespuesta = obtenerLongitudCuerpoSeguro(respuesta);
+        if (longitudRespuesta >= 0L) {
+            actualizarDigest(md, longitudRespuesta);
+        }
 
         return convertirDigestHex(md.digest());
+    }
+
+    private static long obtenerLongitudCuerpoSeguro(HttpRequest solicitud) {
+        try {
+            return solicitud.body() != null ? solicitud.body().length() : -1L;
+        } catch (Exception e) {
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, "No se pudo obtener longitud de body request para hash rápido", e);
+            }
+            return -1L;
+        }
+    }
+
+    private static long obtenerLongitudCuerpoSeguro(HttpResponse respuesta) {
+        try {
+            return respuesta.body() != null ? respuesta.body().length() : -1L;
+        } catch (Exception e) {
+            if (LOGGER.isLoggable(Level.FINE)) {
+                LOGGER.log(Level.FINE, "No se pudo obtener longitud de body response para hash rápido", e);
+            }
+            return -1L;
+        }
     }
 
     private static void actualizarDigest(MessageDigest md, String valor) {

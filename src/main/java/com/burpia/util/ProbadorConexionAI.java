@@ -118,11 +118,11 @@ public class ProbadorConexionAI {
                 mensaje.append(I18nUI.Conexion.ERROR_EXTRAER_CONTENIDO());
                 mensaje.append(I18nUI.Conexion.EXITO_FORMATO_INCORRECTO());
                 mensaje.append(I18nUI.Conexion.RESPUESTA_CRUDA());
-                respuesta = respuesta.replaceAll("\\s+", " ");
-                if (respuesta.length() > 200) {
-                    mensaje.append("   ").append(respuesta.substring(0, 200)).append("...");
+                String respuestaNormalizada = respuesta.replaceAll("\\s+", " ");
+                if (respuestaNormalizada.length() > 200) {
+                    mensaje.append("   ").append(respuestaNormalizada.substring(0, 200)).append("...");
                 } else {
-                    mensaje.append("   ").append(respuesta);
+                    mensaje.append("   ").append(respuestaNormalizada);
                 }
             }
         }
