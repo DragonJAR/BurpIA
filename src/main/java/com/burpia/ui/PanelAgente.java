@@ -223,7 +223,7 @@ public class PanelAgente extends JPanel {
 
     public void forzarInyeccionPromptInicial() {
         if (promptInicialEnviado.compareAndSet(false, true)) {
-            String prompt = config.obtenerAgentePrompt();
+            String prompt = obtenerPromptPreflightFijo();
             inyectarComando(prompt, config.obtenerAgenteDelay());
         }
     }
@@ -527,7 +527,7 @@ public class PanelAgente extends JPanel {
         if (promptInicialEnviado.get()) return;
 
         AgenteTipo tipoActual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
-        String prompt = config.obtenerAgentePrompt();
+        String prompt = obtenerPromptPreflightFijo();
         int usuarioDelay = config.obtenerAgenteDelay();
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
         String comandoArranque = resolverComandoArranque(tipoActual);
@@ -629,10 +629,7 @@ public class PanelAgente extends JPanel {
 
         String payloadConBrackets = ansiStart + texto + ansiEnd;
         long injectionId = contadorInyeccion.incrementAndGet();
-        SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
-            opciones.tipoAgente(),
-            opciones.estrategiaSubmitOverride()
-        );
+        SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(opciones.tipoAgente());
 
         INYECTOR_PTY.execute(() -> {
             registrarLog(Level.INFO, I18nLogs.trTecnico(
@@ -640,7 +637,6 @@ public class PanelAgente extends JPanel {
                     " origin=" + origen +
                     " agent=" + opciones.tipoAgente().name() +
                     " os=" + describirPlataformaActual() +
-                    " strategyOverride=" + (opciones.estrategiaSubmitOverride() != null ? opciones.estrategiaSubmitOverride() : "AUTO") +
                     " strategyFinal=" + secuencia.descripcion()
             ));
             if (!escribirComandoCrudoSeguro(payloadConBrackets)) {
@@ -765,7 +761,7 @@ public class PanelAgente extends JPanel {
             focoHandler.run();
         }
 
-        String prompt = config.obtenerAgentePrompt();
+        String prompt = obtenerPromptPreflightFijo();
 
         promptInicialEnviado.set(false);
         inicializacionPendiente.set(false);
@@ -773,6 +769,10 @@ public class PanelAgente extends JPanel {
         inyectarComando(prompt, 0);
 
         registrarLog(Level.INFO, I18nLogs.tr("Payload inicial encolado para inyeccion manual por el usuario"));
+    }
+
+    private String obtenerPromptPreflightFijo() {
+        return config.obtenerAgentePreflightPrompt();
     }
 
     private void registrarLog(Level nivel, String mensaje) {

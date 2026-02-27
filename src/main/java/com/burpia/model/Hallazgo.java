@@ -19,6 +19,13 @@ public class Hallazgo {
     public static final String CONFIANZA_MEDIA = "Medium";
     public static final String CONFIANZA_BAJA = "Low";
 
+    @FunctionalInterface
+    public interface ResolutorEvidencia {
+        HttpRequestResponse resolver(String evidenciaId);
+    }
+
+    private static volatile ResolutorEvidencia resolutorEvidencia;
+
     private final String horaDescubrimiento;
     private final String url;
     private final String titulo;
@@ -26,7 +33,12 @@ public class Hallazgo {
     private final String severidad;
     private final String confianza;
     private final HttpRequest solicitudHttp;
-    private final HttpRequestResponse evidenciaHttp;
+    private final String evidenciaId;
+    private transient volatile HttpRequestResponse evidenciaHttp;
+
+    public static void establecerResolutorEvidencia(ResolutorEvidencia resolutor) {
+        resolutorEvidencia = resolutor;
+    }
 
     public Hallazgo(String url, String titulo, String hallazgo, String severidad, String confianza) {
         this(url, titulo, hallazgo, severidad, confianza, (HttpRequest) null, (HttpRequestResponse) null);
@@ -51,7 +63,8 @@ public class Hallazgo {
             severidad,
             confianza,
             solicitudHttp,
-            evidenciaHttp
+            evidenciaHttp,
+            null
         );
     }
 
@@ -67,6 +80,18 @@ public class Hallazgo {
                     String confianza,
                     HttpRequest solicitudHttp,
                     HttpRequestResponse evidenciaHttp) {
+        this(horaDescubrimiento, url, titulo, hallazgo, severidad, confianza, solicitudHttp, evidenciaHttp, null);
+    }
+
+    public Hallazgo(String horaDescubrimiento,
+                    String url,
+                    String titulo,
+                    String hallazgo,
+                    String severidad,
+                    String confianza,
+                    HttpRequest solicitudHttp,
+                    HttpRequestResponse evidenciaHttp,
+                    String evidenciaId) {
         this.horaDescubrimiento = horaDescubrimiento;
         this.url = url;
         this.titulo = titulo;
@@ -75,6 +100,7 @@ public class Hallazgo {
         this.confianza = confianza;
         this.solicitudHttp = solicitudHttp;
         this.evidenciaHttp = evidenciaHttp;
+        this.evidenciaId = evidenciaId;
     }
 
     public String obtenerHoraDescubrimiento() {
@@ -106,7 +132,26 @@ public class Hallazgo {
     }
 
     public HttpRequestResponse obtenerEvidenciaHttp() {
-        return evidenciaHttp;
+        HttpRequestResponse evidenciaActual = evidenciaHttp;
+        if (evidenciaActual != null) {
+            return evidenciaActual;
+        }
+        String id = evidenciaId;
+        ResolutorEvidencia resolutor = resolutorEvidencia;
+        if (id == null || id.trim().isEmpty() || resolutor == null) {
+            return null;
+        }
+        try {
+            evidenciaActual = resolutor.resolver(id);
+            evidenciaHttp = evidenciaActual;
+            return evidenciaActual;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String obtenerEvidenciaId() {
+        return evidenciaId;
     }
 
     public Hallazgo conEvidenciaHttp(HttpRequestResponse evidenciaHttp) {
@@ -121,7 +166,28 @@ public class Hallazgo {
             severidad,
             confianza,
             solicitudHttp,
-            evidenciaHttp
+            evidenciaHttp,
+            evidenciaId
+        );
+    }
+
+    public Hallazgo conEvidenciaId(String nuevoEvidenciaId) {
+        if (nuevoEvidenciaId == null || nuevoEvidenciaId.trim().isEmpty()) {
+            return this;
+        }
+        if (nuevoEvidenciaId.equals(this.evidenciaId)) {
+            return this;
+        }
+        return new Hallazgo(
+            horaDescubrimiento,
+            url,
+            titulo,
+            hallazgo,
+            severidad,
+            confianza,
+            solicitudHttp,
+            null,
+            nuevoEvidenciaId
         );
     }
 
@@ -134,7 +200,8 @@ public class Hallazgo {
             normalizarSeveridad(nuevaSeveridad),
             normalizarConfianza(nuevaConfianza),
             solicitudHttp,
-            evidenciaHttp
+            evidenciaHttp,
+            evidenciaId
         );
     }
 

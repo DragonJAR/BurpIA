@@ -1,6 +1,7 @@
 package com.burpia.config;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.RutasBurpIA;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
@@ -15,7 +16,6 @@ import java.util.Map;
 import java.util.Set;
 
 public class GestorConfiguracion {
-    private static final String NOMBRE_ARCHIVO = ".burpia.json";
     private final Path rutaConfig;
     private final Gson gson;
     private final PrintWriter out;
@@ -29,12 +29,7 @@ public class GestorConfiguracion {
         this.gson = new GsonBuilder().setPrettyPrinting().create();
         this.out = out != null ? out : new PrintWriter(System.out, true);
         this.err = err != null ? err : new PrintWriter(System.err, true);
-
-        String userHome = System.getProperty("user.home");
-        if (userHome == null || userHome.isEmpty()) {
-            userHome = System.getProperty("user.dir", ".");
-        }
-        this.rutaConfig = Paths.get(userHome, NOMBRE_ARCHIVO);
+        this.rutaConfig = RutasBurpIA.obtenerRutaConfig();
 
         logInfo("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
     }
@@ -103,12 +98,16 @@ public class GestorConfiguracion {
 
             Path directorioPadre = path.getParent();
             if (directorioPadre != null && !Files.exists(directorioPadre)) {
-                logError("[Configuracion] Directorio padre no existe: " + directorioPadre);
-                if (mensajeError != null) {
-                    mensajeError.append(I18nUI.Configuracion.MSG_DIRECTORIO_NO_EXISTE())
-                        .append(directorioPadre);
+                try {
+                    Files.createDirectories(directorioPadre);
+                } catch (Exception e) {
+                    logError("[Configuracion] Directorio padre no existe: " + directorioPadre);
+                    if (mensajeError != null) {
+                        mensajeError.append(I18nUI.Configuracion.MSG_DIRECTORIO_NO_EXISTE())
+                            .append(directorioPadre);
+                    }
+                    return false;
                 }
-                return false;
             }
 
             if (directorioPadre != null && !Files.isWritable(directorioPadre)) {
@@ -268,6 +267,10 @@ public class GestorConfiguracion {
             config.establecerAgentePrompt(archivo.agenteFactoryDroidPrompt);
         }
 
+        if (archivo.agentePreflightPrompt != null) {
+            config.establecerAgentePreflightPrompt(archivo.agentePreflightPrompt);
+        }
+
         if (archivo.agenteDelay != null) {
             config.establecerAgenteDelay(archivo.agenteDelay);
         } else if (archivo.agenteFactoryDroidDelay != null) {
@@ -304,6 +307,7 @@ public class GestorConfiguracion {
         archivo.soloProxy = config.soloProxy();
         archivo.agenteHabilitado = config.agenteHabilitado();
         archivo.tipoAgente = config.obtenerTipoAgente();
+        archivo.agentePreflightPrompt = config.obtenerAgentePreflightPrompt();
         archivo.agentePrompt = config.obtenerAgentePrompt();
         archivo.agenteDelay = config.obtenerAgenteDelay();
         archivo.rutasBinarioPorAgente = new HashMap<>(config.obtenerTodasLasRutasBinario());
@@ -381,6 +385,7 @@ public class GestorConfiguracion {
         
         private Boolean agenteHabilitado;
         private String tipoAgente;
+        private String agentePreflightPrompt;
         private String agentePrompt;
         private Integer agenteDelay;
         private Map<String, String> rutasBinarioPorAgente;

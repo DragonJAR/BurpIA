@@ -148,19 +148,46 @@ class ConfiguracionAPITest {
     }
 
     @Test
-    @DisplayName("Prompt de agente por defecto arranca en modo espera")
-    void testPromptAgentePorDefectoModoEspera() {
-        String promptAgente = ConfiguracionAPI.obtenerAgentePromptPorDefecto();
+    @DisplayName("Prompt pre-flight fijo de agente arranca en modo espera")
+    void testPromptAgentePreflightFijoModoEspera() {
+        String promptPreflight = ConfiguracionAPI.obtenerAgentePreflightPromptPorDefecto();
 
-        assertNotNull(promptAgente);
-        assertTrue(promptAgente.startsWith("BURPAI CRITICAL PRE-FLIGHT CHECK:"));
-        assertTrue(promptAgente.contains("Level 1: Burp Suite MCP tools."));
-        assertTrue(promptAgente.contains("Level 2: Other MCP tools that may be useful."));
-        assertTrue(promptAgente.contains("Level 3: Other useful tools/native capabilities"));
-        assertTrue(promptAgente.contains("reply exactly: READY"));
-        assertTrue(promptAgente.contains("Burp Suite MCP is always highest priority"));
-        assertTrue(promptAgente.contains("{REQUEST}"));
-        assertTrue(promptAgente.contains("{RESPONSE}"));
+        assertNotNull(promptPreflight);
+        assertTrue(promptPreflight.startsWith("BURPAI CRITICAL PRE-FLIGHT CHECK:"));
+        assertTrue(promptPreflight.contains("Level 1: Burp Suite MCP tools."));
+        assertTrue(promptPreflight.contains("Level 2: Other MCP tools that may be useful."));
+        assertTrue(promptPreflight.contains("Level 3: Other useful tools/native capabilities"));
+        assertTrue(promptPreflight.contains("reply exactly: READY"));
+        assertTrue(promptPreflight.contains("Burp Suite MCP is always highest priority"));
+    }
+
+    @Test
+    @DisplayName("Prompt pre-flight configurable usa default cuando viene vacio")
+    void testPromptAgentePreflightConfigurableNormalizaDefault() {
+        config.establecerAgentePreflightPrompt("PROMPT_PREFLIGHT_CUSTOM");
+        assertEquals("PROMPT_PREFLIGHT_CUSTOM", config.obtenerAgentePreflightPrompt());
+
+        config.establecerAgentePreflightPrompt("  ");
+        assertEquals(
+            ConfiguracionAPI.obtenerAgentePreflightPromptPorDefecto(),
+            config.obtenerAgentePreflightPrompt()
+        );
+    }
+
+    @Test
+    @DisplayName("Prompt de validacion de agente incluye issue_context y placeholders")
+    void testPromptAgenteValidacionPorDefecto() {
+        String promptValidacion = ConfiguracionAPI.obtenerAgentePromptPorDefecto();
+
+        assertNotNull(promptValidacion);
+        assertFalse(promptValidacion.startsWith("BURPAI CRITICAL PRE-FLIGHT CHECK:"));
+        assertTrue(promptValidacion.contains("# ROLE"));
+        assertTrue(promptValidacion.contains("<issue_context>"));
+        assertTrue(promptValidacion.contains("{TITLE}"));
+        assertTrue(promptValidacion.contains("{DESCRIPTION}"));
+        assertTrue(promptValidacion.contains("{REQUEST}"));
+        assertTrue(promptValidacion.contains("{RESPONSE}"));
+        assertTrue(promptValidacion.contains("{OUTPUT_LANGUAGE}"));
     }
 
     @Test
@@ -258,6 +285,7 @@ class ConfiguracionAPITest {
         origen.establecerSoloProxy(false);
         origen.establecerAgenteHabilitado(true);
         origen.establecerRutaBinarioAgente("FACTORY_DROID", "/tmp/droid");
+        origen.establecerAgentePreflightPrompt("preflight-prueba");
         origen.establecerAgentePrompt("prompt-prueba");
         origen.establecerAgenteDelay(2500);
 
@@ -265,6 +293,7 @@ class ConfiguracionAPITest {
         assertFalse(snapshot.soloProxy());
         assertTrue(snapshot.agenteHabilitado());
         assertEquals("/tmp/droid", snapshot.obtenerRutaBinarioAgente("FACTORY_DROID"));
+        assertEquals("preflight-prueba", snapshot.obtenerAgentePreflightPrompt());
         assertEquals("prompt-prueba", snapshot.obtenerAgentePrompt());
         assertEquals(2500, snapshot.obtenerAgenteDelay());
 
@@ -273,6 +302,7 @@ class ConfiguracionAPITest {
         assertFalse(destino.soloProxy());
         assertTrue(destino.agenteHabilitado());
         assertEquals("/tmp/droid", destino.obtenerRutaBinarioAgente("FACTORY_DROID"));
+        assertEquals("preflight-prueba", destino.obtenerAgentePreflightPrompt());
         assertEquals("prompt-prueba", destino.obtenerAgentePrompt());
         assertEquals(2500, destino.obtenerAgenteDelay());
     }

@@ -41,8 +41,8 @@ class I18nUITest {
         assertEquals(mensaje, I18nLogs.tr(mensaje));
         assertEquals("Analisis completado: https://target",
             I18nLogs.tr("Analysis completed: https://target"));
-        assertEquals("Configuracion guardada exitosamente en: /tmp/.burpia.json",
-            I18nLogs.tr("Configuration saved successfully to: /tmp/.burpia.json"));
+        assertEquals("Configuracion guardada exitosamente en: /tmp/.burpia/config.json",
+            I18nLogs.tr("Configuration saved successfully to: /tmp/.burpia/config.json"));
     }
 
     @Test
@@ -63,7 +63,7 @@ class I18nUITest {
             I18nLogs.tr("Tarea creada: Analisis HTTP - https://target"));
         assertTrue(I18nLogs.tr("Stack trace de la excepcion:")
             .startsWith("Exception stack trace"));
-        assertEquals("Configuration saved successfully to: /tmp/.burpia.json",
-            I18nLogs.tr("Configuracion guardada exitosamente en: /tmp/.burpia.json"));
+        assertEquals("Configuration saved successfully to: /tmp/.burpia/config.json",
+            I18nLogs.tr("Configuracion guardada exitosamente en: /tmp/.burpia/config.json"));
     }
 }

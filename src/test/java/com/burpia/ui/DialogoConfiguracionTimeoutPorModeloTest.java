@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JComboBox;
 import javax.swing.JPasswordField;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
@@ -119,10 +120,71 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             assertTrue(guardadoCallback.get());
             assertEquals(210, config.obtenerTiempoEsperaParaModelo("Z.ai", "glm-5"));
 
-            Path configPath = tempDir.resolve(".burpia.json");
+            Path configPath = tempDir.resolve(".burpia/config.json");
             String json = Files.readString(configPath, StandardCharsets.UTF_8);
             assertTrue(json.contains("\"tiempoEsperaPorModelo\""));
             assertTrue(json.contains("\"Z.ai::glm-5\": 210"));
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Pestaña agentes permite editar y guardar prompt inicial y prompt de validación")
+    void testGuardarPromptsAgenteDesdeUI() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-prompts-agente");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("Z.ai");
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> guardadoCallback.set(true));
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+            JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
+            JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
+            JTextField txtMaximoConcurrente = obtenerCampo(dialogo, "txtMaximoConcurrente", JTextField.class);
+            JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogo, "txtMaximoHallazgosTabla", JTextField.class);
+            JTextField txtMaxTokens = obtenerCampo(dialogo, "txtMaxTokens", JTextField.class);
+            JTextArea txtAgentePromptInicial = obtenerCampo(dialogo, "txtAgentePromptInicial", JTextArea.class);
+            JTextArea txtAgentePrompt = obtenerCampo(dialogo, "txtAgentePrompt", JTextArea.class);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("Z.ai");
+                comboModelo.setSelectedItem("glm-5");
+                comboModelo.getEditor().setItem("glm-5");
+                txtClave.setText("test-key");
+                txtRetraso.setText("5");
+                txtMaximoConcurrente.setText("3");
+                txtMaximoHallazgosTabla.setText("1000");
+                txtMaxTokens.setText("4096");
+                txtTimeoutModelo.setText("180");
+                txtAgentePromptInicial.setText("PRE_FLIGHT_EDITADO");
+                txtAgentePrompt.setText("PROMPT_VALIDACION_EDITADO");
+            });
+            flushEdt();
+
+            Method guardar = DialogoConfiguracion.class.getDeclaredMethod("guardarConfiguracion");
+            guardar.setAccessible(true);
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    guardar.invoke(dialogo);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            flushEdt();
+
+            assertTrue(guardadoCallback.get());
+            assertEquals("PRE_FLIGHT_EDITADO", config.obtenerAgentePreflightPrompt());
+            assertEquals("PROMPT_VALIDACION_EDITADO", config.obtenerAgentePrompt());
         } finally {
             destruirDialogo(dialogo);
         }

@@ -41,7 +41,9 @@ public class DialogoConfiguracion extends JDialog {
     private JComboBox<String> comboAgente;
     private JCheckBox chkAgenteHabilitado;
     private JTextField txtAgenteBinario;
+    private JTextArea txtAgentePromptInicial;
     private JTextArea txtAgentePrompt;
+    private JButton btnRestaurarPromptAgenteInicial;
     private JButton btnRestaurarPromptAgente;
 
     private JComboBox<String> comboProveedor;
@@ -409,14 +411,9 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(16, 20, 12, 20));
 
-        JPanel contenedor = new JPanel();
-        contenedor.setLayout(new BoxLayout(contenedor, BoxLayout.Y_AXIS));
-        contenedor.setOpaque(false);
-
         JPanel panelAgenteGeneral = new JPanel(new GridBagLayout());
-        panelAgenteGeneral.setAlignmentX(Component.LEFT_ALIGNMENT);
         panelAgenteGeneral.setBorder(UIUtils.crearBordeTitulado(
-            I18nUI.Configuracion.TAB_AGENTES(), 12, 16));
+            I18nUI.Configuracion.Agentes.TITULO_EJECUCION_AGENTE(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6, 6, 6, 6);
@@ -459,35 +456,88 @@ public class DialogoConfiguracion extends JDialog {
         panelAgenteGeneral.add(new JLabel(I18nUI.Configuracion.Agentes.LABEL_RUTA_BINARIO()), gbc);
         gbc.gridx = 1; gbc.weightx = 1.0;
         panelAgenteGeneral.add(txtAgenteBinario, gbc);
-        
-        txtAgentePrompt = new JTextArea(6, 40);
+
+        JPanel panelPrompts = new JPanel(new GridLayout(2, 1, 0, 10));
+        panelPrompts.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.Agentes.TITULO_PROMPTS_AGENTE(), 12, 16));
+
+        txtAgentePromptInicial = new JTextArea(8, 40);
+        txtAgentePromptInicial.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+        txtAgentePromptInicial.setLineWrap(false);
+        txtAgentePromptInicial.setWrapStyleWord(false);
+        txtAgentePromptInicial.setTabSize(2);
+        txtAgentePromptInicial.setToolTipText(I18nUI.Tooltips.Configuracion.PROMPT_INICIAL_AGENTE());
+
+        btnRestaurarPromptAgenteInicial = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
+        btnRestaurarPromptAgenteInicial.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnRestaurarPromptAgenteInicial.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_INICIAL_AGENTE());
+        btnRestaurarPromptAgenteInicial.addActionListener(
+            e -> txtAgentePromptInicial.setText(ConfiguracionAPI.obtenerAgentePreflightPromptPorDefecto())
+        );
+
+        txtAgentePrompt = new JTextArea(10, 40);
         txtAgentePrompt.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        txtAgentePrompt.setLineWrap(true);
-        txtAgentePrompt.setWrapStyleWord(true);
-        JScrollPane scrollPromptAgente = new JScrollPane(txtAgentePrompt);
+        txtAgentePrompt.setLineWrap(false);
+        txtAgentePrompt.setWrapStyleWord(false);
+        txtAgentePrompt.setTabSize(2);
         txtAgentePrompt.setToolTipText(I18nUI.Tooltips.Configuracion.PROMPT_AGENTE());
-
-        gbc.gridx = 0; gbc.gridy = 3; gbc.gridwidth = 2; gbc.weightx = 1.0;
-        panelAgenteGeneral.add(new JLabel(I18nUI.Configuracion.Agentes.TITULO_PROMPT_AGENTE()), gbc);
-
-        gbc.gridy = 4; gbc.weighty = 1.0; gbc.fill = GridBagConstraints.BOTH;
-        panelAgenteGeneral.add(scrollPromptAgente, gbc);
 
         btnRestaurarPromptAgente = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
         btnRestaurarPromptAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnRestaurarPromptAgente.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_AGENTE());
-        btnRestaurarPromptAgente.addActionListener(e -> txtAgentePrompt.setText(ConfiguracionAPI.obtenerAgentePromptPorDefecto()));
+        btnRestaurarPromptAgente.addActionListener(
+            e -> txtAgentePrompt.setText(ConfiguracionAPI.obtenerAgentePromptPorDefecto())
+        );
 
-        JPanel panelSurAgente = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        panelSurAgente.add(btnRestaurarPromptAgente);
+        panelPrompts.add(crearSeccionPromptAgente(
+            I18nUI.Configuracion.Agentes.TITULO_PROMPT_INICIAL_AGENTE(),
+            txtAgentePromptInicial,
+            btnRestaurarPromptAgenteInicial,
+            I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_INICIAL_AGENTE()
+        ));
+        panelPrompts.add(crearSeccionPromptAgente(
+            I18nUI.Configuracion.Agentes.TITULO_PROMPT_AGENTE(),
+            txtAgentePrompt,
+            btnRestaurarPromptAgente,
+            I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_VALIDACION_AGENTE()
+        ));
 
-        gbc.gridy = 5; gbc.weighty = 0.0; gbc.fill = GridBagConstraints.HORIZONTAL;
-        panelAgenteGeneral.add(panelSurAgente, gbc);
+        JPanel contenido = new JPanel(new BorderLayout(0, 10));
+        contenido.add(panelAgenteGeneral, BorderLayout.NORTH);
+        contenido.add(panelPrompts, BorderLayout.CENTER);
 
-        contenedor.add(panelAgenteGeneral);
-        panel.add(new JScrollPane(contenedor), BorderLayout.CENTER);
+        JScrollPane scroll = new JScrollPane(contenido);
+        scroll.setBorder(null);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        panel.add(scroll, BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private JPanel crearSeccionPromptAgente(String titulo,
+                                            JTextArea area,
+                                            JButton botonRestaurar,
+                                            String descripcion) {
+        JPanel seccion = new JPanel(new BorderLayout(0, 6));
+        seccion.setBorder(UIUtils.crearBordeTitulado(titulo, 8, 10));
+
+        if (descripcion != null && !descripcion.trim().isEmpty()) {
+            JLabel lblDescripcion = new JLabel(descripcion);
+            lblDescripcion.setFont(EstilosUI.FUENTE_ESTANDAR);
+            lblDescripcion.setForeground(new Color(90, 90, 90));
+            seccion.add(lblDescripcion, BorderLayout.NORTH);
+        }
+
+        JScrollPane scroll = new JScrollPane(area);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        seccion.add(scroll, BorderLayout.CENTER);
+
+        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        acciones.add(botonRestaurar);
+        seccion.add(acciones, BorderLayout.SOUTH);
+
+        return seccion;
     }
 
     private JPanel crearPanelAcercaDe() {
@@ -653,6 +703,7 @@ public class DialogoConfiguracion extends JDialog {
         }
 
         chkAgenteHabilitado.setSelected(config.agenteHabilitado());
+        txtAgentePromptInicial.setText(config.obtenerAgentePreflightPrompt());
         txtAgentePrompt.setText(config.obtenerAgentePrompt());
         
         alCambiarAgente();
@@ -721,6 +772,7 @@ public class DialogoConfiguracion extends JDialog {
 
         configTemporal.establecerAgenteHabilitado(chkAgenteHabilitado.isSelected());
         configTemporal.establecerTipoAgente(agenteSeleccionado);
+        configTemporal.establecerAgentePreflightPrompt(txtAgentePromptInicial.getText());
         configTemporal.establecerAgentePrompt(txtAgentePrompt.getText());
         aplicarRutasBinarioAgente(configTemporal);
 

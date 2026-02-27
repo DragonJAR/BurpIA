@@ -1,6 +1,5 @@
 package com.burpia.util;
 
-import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpHeader;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
@@ -120,15 +119,16 @@ class HttpUtilsTest {
 
     @Test
     void extraerCuerpoRequest_valid() {
-        HttpRequest request = Mockito.mock(HttpRequest.class);
-        when(request.bodyToString()).thenReturn("body content");
+        HttpRequest request = Mockito.mock(HttpRequest.class, Mockito.RETURNS_DEEP_STUBS);
+        when(request.body().length()).thenReturn("body content".length());
+        when(request.body().toString()).thenReturn("body content");
         assertEquals("body content", HttpUtils.extraerCuerpo(request));
     }
 
     @Test
     void extraerCuerpoRequest_exception() {
         HttpRequest request = Mockito.mock(HttpRequest.class);
-        when(request.bodyToString()).thenThrow(new RuntimeException("Error"));
+        when(request.body()).thenThrow(new RuntimeException("Error"));
         assertEquals("", HttpUtils.extraerCuerpo(request));
     }
 
@@ -139,15 +139,16 @@ class HttpUtilsTest {
 
     @Test
     void extraerCuerpoResponse_valid() {
-        HttpResponse response = Mockito.mock(HttpResponse.class);
-        when(response.bodyToString()).thenReturn("response body");
+        HttpResponse response = Mockito.mock(HttpResponse.class, Mockito.RETURNS_DEEP_STUBS);
+        when(response.body().length()).thenReturn("response body".length());
+        when(response.body().toString()).thenReturn("response body");
         assertEquals("response body", HttpUtils.extraerCuerpo(response));
     }
 
     @Test
     void extraerCuerpoResponse_exception() {
         HttpResponse response = Mockito.mock(HttpResponse.class);
-        when(response.bodyToString()).thenThrow(new RuntimeException("Error"));
+        when(response.body()).thenThrow(new RuntimeException("Error"));
         assertEquals("", HttpUtils.extraerCuerpo(response));
     }
 

@@ -1,13 +1,14 @@
 package com.burpia.analyzer;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.SolicitudAnalisis;
+import com.burpia.util.PoliticaMemoria;
 
 public class ConstructorPrompts {
     private static final String TOKEN_REQUEST = "{REQUEST}";
     private static final String TOKEN_RESPONSE = "{RESPONSE}";
     private static final String TOKEN_OUTPUT_LANGUAGE = "{OUTPUT_LANGUAGE}";
-    private static final int MAX_CARACTERES_CUERPO_REQUEST = 12000;
-    private static final int MAX_CARACTERES_CUERPO_RESPONSE = 12000;
+    private static final int MAX_CARACTERES_CUERPO_REQUEST = PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES;
+    private static final int MAX_CARACTERES_CUERPO_RESPONSE = PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES;
 
     private final ConfiguracionAPI config;
 
