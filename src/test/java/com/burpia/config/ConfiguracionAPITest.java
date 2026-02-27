@@ -153,12 +153,12 @@ class ConfiguracionAPITest {
         String promptPreflight = ConfiguracionAPI.obtenerAgentePreflightPromptPorDefecto();
 
         assertNotNull(promptPreflight);
-        assertTrue(promptPreflight.startsWith("BURPAI CRITICAL PRE-FLIGHT CHECK:"));
-        assertTrue(promptPreflight.contains("Level 1: Burp Suite MCP tools."));
-        assertTrue(promptPreflight.contains("Level 2: Other MCP tools that may be useful."));
-        assertTrue(promptPreflight.contains("Level 3: Other useful tools/native capabilities"));
-        assertTrue(promptPreflight.contains("reply exactly: READY"));
-        assertTrue(promptPreflight.contains("Burp Suite MCP is always highest priority"));
+        assertTrue(promptPreflight.startsWith("# BURPAI CRITICAL PRE-FLIGHT CHECK"));
+        assertTrue(promptPreflight.contains("**Level 1**: Burp Suite MCP tools (High Priority)."));
+        assertTrue(promptPreflight.contains("**Level 2**: Other MCP tools (Auxiliary)."));
+        assertTrue(promptPreflight.contains("**Level 3**: Native capabilities (Shell, Curl, Scripting)."));
+        assertTrue(promptPreflight.contains("reply exactly: **READY**"));
+        assertTrue(promptPreflight.contains("Burp Suite MCP is the PRIMARY interface."));
     }
 
     @Test
