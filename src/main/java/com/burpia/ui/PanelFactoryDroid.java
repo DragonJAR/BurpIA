@@ -169,6 +169,9 @@ public class PanelFactoryDroid extends JPanel {
             ttyConnector = null;
         }
         promptInicialEnviado.set(false);
+        promptPendiente = null;
+        delayPendienteMs = 0;
+        inicializacionPendiente.set(false);
     }
 
     public void aplicarIdioma() {
@@ -270,7 +273,7 @@ public class PanelFactoryDroid extends JPanel {
                 terminalWidget.getTerminalPanel().requestFocusInWindow();
             }
         });
-    }
+    }   
 
     private JediTermWidget crearTerminalWidget() {
         JediTermWidget widget = new JediTermWidget(120, 24, new DefaultSettingsProvider() {
@@ -375,14 +378,11 @@ public class PanelFactoryDroid extends JPanel {
             escribirComando(binario);
             ((Timer) evt.getSource()).stop();
 
-            new Timer(1000, evt2 -> {
-                if (!promptInicialEnviado.get()) {
-                    String prompt = generarPromptInicial();
-                    inyectarComando(prompt, config.obtenerAgenteFactoryDroidDelay());
-                    promptInicialEnviado.set(true);
-                }
-                ((Timer) evt2.getSource()).stop();
-            }).start();
+            if (promptInicialEnviado.compareAndSet(false, true)) {
+                String prompt = generarPromptInicial();
+                // 1000ms base wait for droid startup + user configured delay
+                inyectarComando(prompt, 1000 + config.obtenerAgenteFactoryDroidDelay());
+            }
         }).start();
     }
 
@@ -413,7 +413,7 @@ public class PanelFactoryDroid extends JPanel {
     }
 
     private void procesarInicializacionDiferida() {
-        if (promptPendiente != null && !promptInicialEnviado.get()) {
+        if (promptPendiente != null) {
             String prompt = promptPendiente;
             int delay = this.delayPendienteMs;
 
@@ -421,9 +421,8 @@ public class PanelFactoryDroid extends JPanel {
             this.delayPendienteMs = 0;
             
             SwingUtilities.invokeLater(() -> 
-                ejecutarInyeccionConOpciones(prompt, 0, delay)
+                inyectarComandoConRetraso(prompt, delay)
             );
-            promptInicialEnviado.set(true);
         }
     }
 
@@ -433,12 +432,15 @@ public class PanelFactoryDroid extends JPanel {
             return;
         }
 
+        inyectarComandoConRetraso(texto, delayPendienteMsUsuario);
+    }
+
+    private void inyectarComandoConRetraso(String texto, int delayMs) {
         SwingUtilities.invokeLater(() -> {
             OSUtils.cerrarVentanaAjustes();
-
-            if (delayPendienteMsUsuario > 0) {
-                LOGGER.info(I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayPendienteMsUsuario + " ms) antes de la inyeccion..."));
-                new Timer(delayPendienteMsUsuario, ev -> {
+            if (delayMs > 0) {
+                LOGGER.info(I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayMs + " ms) antes de la inyeccion..."));
+                new Timer(delayMs, ev -> {
                     ((Timer) ev.getSource()).stop();
                     aplicarEscrituraDirecta(texto);
                 }).start();
