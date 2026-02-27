@@ -33,7 +33,6 @@ class PanelHallazgosFiltrosTest {
     @Test
     @DisplayName("Volver a 'Todas las Criticidades' no deja filtro residual")
     void testFiltroTodasLasCriticidades() throws Exception {
-        // Asegurar idioma español para consistencia con los strings del test
         I18nUI.establecerIdioma("es");
         
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
@@ -54,12 +53,8 @@ class PanelHallazgosFiltrosTest {
 
         assertEquals(2, tabla.getRowCount());
 
-        // El test fallaba porque esperaba "Alta" (ES) pero quizás estaba en EN o viceversa.
-        // I18nUI.Hallazgos.SEVERIDAD_HIGH() nos da el string correcto para el idioma activo.
         SwingUtilities.invokeAndWait(() -> comboSeveridad.setSelectedItem(I18nUI.Hallazgos.SEVERIDAD_HIGH()));
         flushEdt();
-        // Nota: RowFilter usa el texto visible. Si el modelo tiene "High" interno pero la tabla muestra "Alta", 
-        // el regex debe coincidir con lo que el RowSorter ve.
         assertEquals(1, tabla.getRowCount());
 
         SwingUtilities.invokeAndWait(() -> comboSeveridad.setSelectedItem(I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES()));

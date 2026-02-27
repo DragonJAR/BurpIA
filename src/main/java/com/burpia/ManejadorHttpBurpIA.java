@@ -42,6 +42,7 @@ import java.util.function.Supplier;
 
 public class ManejadorHttpBurpIA implements HttpHandler {
     private static final String ORIGEN_LOG = "BurpIA";
+    private static final long INTERVALO_ALERTA_CONFIG_MS = 120000L;
     private final MontoyaApi api;
     private final ConfiguracionAPI config;
     private final PestaniaPrincipal pestaniaPrincipal;
@@ -62,6 +63,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final ControlBackpressureGlobal controlBackpressure;
     private final Map<String, ContextoReintento> contextosReintento;
     private final Map<String, Future<?>> ejecucionesActivas;
+    private final Map<ConfiguracionAPI.CodigoValidacionConsulta, Long> alertasConfiguracionEmitidas;
 
     private static final class ContextoReintento {
         private final SolicitudAnalisis solicitudAnalisis;
@@ -92,6 +94,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.controlBackpressure = new ControlBackpressureGlobal();
         this.contextosReintento = new ConcurrentHashMap<>();
         this.ejecucionesActivas = new ConcurrentHashMap<>();
+        this.alertasConfiguracionEmitidas = new ConcurrentHashMap<>();
         this.esBurpProfessional = ExtensionBurpIA.esBurpProfessional(api);
         this.capturaActiva = configSegura.escaneoPasivoHabilitado();
         this.avisoIssuesNoDisponiblesEmitido = false;
@@ -125,7 +128,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             configSegura.obtenerRetrasoSegundos(),
             configSegura.esDetallado()
         ));
-        registrar("NOTA: Solo se analizaran solicitudes DENTRO del SCOPE de Burp Suite");
+        registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS());
+        registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS_ACCION());
+        registrarEstadoInicialLlM();
     }
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
@@ -250,6 +255,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
+        if (!puedeIniciarAnalisis("Analisis HTTP", url)) {
+            if (estadisticas != null) {
+                estadisticas.incrementarOmitidosBajaConfianza();
+            }
+            return ResponseReceivedAction.continueWith(respuestaRecibida);
+        }
+
         String hashSolicitud = HttpUtils.generarHashRapido(respuestaRecibida.initiatingRequest(), respuestaRecibida);
         String hashAbreviado = abreviarHash(hashSolicitud);
         rastrear(() -> "Hash de solicitud: " + hashAbreviado + "...");
@@ -302,6 +314,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         String url = solicitud.url() != null ? solicitud.url() : "[URL NULL]";
         String metodo = solicitud.method() != null ? solicitud.method() : "[METHOD NULL]";
+        if (!puedeIniciarAnalisis("Analisis Manual", url)) {
+            return;
+        }
         String encabezados = HttpUtils.extraerEncabezados(solicitud);
         String cuerpo = HttpUtils.extraerCuerpo(solicitud);
         String hashSolicitud = HttpUtils.generarHashPartes(metodo, url, encabezados, cuerpo);
@@ -384,6 +399,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             registrarError("No se pudo programar analisis: solicitud null");
             return null;
         }
+        if (!puedeIniciarAnalisis(tipoTarea, solicitudAnalisis.obtenerUrl())) {
+            return null;
+        }
 
         depurarContextosHuerfanos();
         final String url = solicitudAnalisis.obtenerUrl();
@@ -415,6 +433,16 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         final String url = solicitudAnalisis.obtenerUrl();
         final AtomicReference<String> tareaIdRef = new AtomicReference<>(tareaId);
+        if (!puedeIniciarAnalisis("Reintento", url)) {
+            if (gestorTareas != null && tareaId != null) {
+                gestorTareas.actualizarTarea(
+                    tareaId,
+                    Tarea.ESTADO_ERROR,
+                    I18nUI.Consola.TAREA_BLOQUEADA_CONFIG_LLM()
+                );
+            }
+            return;
+        }
 
         SwingUtilities.invokeLater(() -> {
             if (pestaniaPrincipal != null) {
@@ -639,6 +667,62 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         return esEstatico;
+    }
+
+    private boolean puedeIniciarAnalisis(String origen, String url) {
+        ConfiguracionAPI.CodigoValidacionConsulta codigo = codigoValidacionConsulta();
+        if (codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK) {
+            return true;
+        }
+        registrarAlertaConfiguracionLimitada(codigo, origen, url);
+        return false;
+    }
+
+    private void registrarEstadoInicialLlM() {
+        ConfiguracionAPI.CodigoValidacionConsulta codigo = codigoValidacionConsulta();
+        if (codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK) {
+            registrar(
+                I18nUI.Consola.ESTADO_INICIAL_LLM_LISTO(
+                    config.obtenerProveedorAI(),
+                    config.obtenerModelo()
+                )
+            );
+            return;
+        }
+        String razon = config != null ? config.validarParaConsultaModelo() : I18nUI.Configuracion.MSG_CONFIGURACION_NULA();
+        registrarError(I18nUI.Consola.ESTADO_INICIAL_LLM_BLOQUEADO_CABECERA(razon));
+        registrar(I18nUI.Consola.ESTADO_INICIAL_LLM_BLOQUEADO_ACCION());
+    }
+
+    private ConfiguracionAPI.CodigoValidacionConsulta codigoValidacionConsulta() {
+        if (config == null) {
+            return ConfiguracionAPI.CodigoValidacionConsulta.CONFIGURACION_NULA;
+        }
+        ConfiguracionAPI.CodigoValidacionConsulta codigo = config.validarCodigoParaConsultaModelo();
+        return codigo != null ? codigo : ConfiguracionAPI.CodigoValidacionConsulta.CONFIGURACION_NULA;
+    }
+
+    private void registrarAlertaConfiguracionLimitada(
+        ConfiguracionAPI.CodigoValidacionConsulta codigo,
+        String origen,
+        String url
+    ) {
+        if (codigo == null || codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK) {
+            return;
+        }
+        long ahora = System.currentTimeMillis();
+        synchronized (alertasConfiguracionEmitidas) {
+            Long ultimaEmision = alertasConfiguracionEmitidas.get(codigo);
+            if (ultimaEmision != null && (ahora - ultimaEmision) < INTERVALO_ALERTA_CONFIG_MS) {
+                return;
+            }
+            alertasConfiguracionEmitidas.put(codigo, ahora);
+        }
+
+        String razon = config != null ? config.validarParaConsultaModelo() : I18nUI.Configuracion.MSG_CONFIGURACION_NULA();
+        String origenSeguro = (origen != null && !origen.trim().isEmpty()) ? origen : "desconocido";
+        String urlSegura = (url != null && !url.trim().isEmpty()) ? url : "[URL NULL]";
+        registrarError(I18nUI.Consola.ANALISIS_BLOQUEADO_CONFIG(razon, origenSeguro, urlSegura));
     }
 
     private String obtenerContentTypeRespuesta(HttpResponseReceived respuestaRecibida) {

@@ -662,7 +662,6 @@ public class PanelAgente extends JPanel {
 
         boolean envioExitoso = true;
         for (int i = 0; i < secuencia.repeticiones(); i++) {
-            // Si es un Enter simple en Mac, priorizamos el byte crudo (13)
             if (OSUtils.esMac() && "\r".equals(secuencia.payload()) && i == 0) {
                 if (!escribirDirectoAlPTY(new byte[]{13})) {
                     if (!escribirComandoCrudoSeguro(secuencia.payload())) {

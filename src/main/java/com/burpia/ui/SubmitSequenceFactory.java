@@ -3,10 +3,6 @@ package com.burpia.ui;
 import com.burpia.config.AgenteTipo;
 import com.burpia.util.OSUtils;
 
-/**
- * Fabrica de secuencias de envio (Enters) para la terminal.
- * Sigue patrones DRY y optimizacion por plataforma.
- */
 final class SubmitSequenceFactory {
 
     private SubmitSequenceFactory() {
@@ -14,10 +10,6 @@ final class SubmitSequenceFactory {
 
     static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride) {
         return construir(tipoAgente, estrategiaOverride, Plataforma.desdeSistemaActual());
-    }
-
-    static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride, boolean esWindows) {
-        return construir(tipoAgente, estrategiaOverride, esWindows ? Plataforma.WINDOWS : Plataforma.LINUX);
     }
 
     static SubmitSequence construir(AgenteTipo tipoAgente, String estrategiaOverride, Plataforma plataforma) {
@@ -35,7 +27,6 @@ final class SubmitSequenceFactory {
         if (tipoAgente == AgenteTipo.CLAUDE_CODE) {
             return construirFija(plataforma == Plataforma.WINDOWS ? EstrategiaSubmit.CRLF : EstrategiaSubmit.CR, plataforma);
         }
-        // Para la mayoria de los agentes, usamos la escalera de fallback para maxima confiabilidad
         return construirFija(EstrategiaSubmit.SMART_FALLBACK, plataforma);
     }
 
@@ -61,7 +52,6 @@ final class SubmitSequenceFactory {
                 return new SubmitSequence(sep, 3, 100, estrategia);
             
             case SMART_FALLBACK:
-                // Estrategia "Escalera": CR -> LF -> CRLF para máxima compatibilidad
                 return new SubmitSequence("\r", 1, 0, estrategia)
                     .conFallback("\n", 1, 100)
                     .conFallback("\r\n", 1, 100);
