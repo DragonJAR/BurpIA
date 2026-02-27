@@ -30,50 +30,34 @@ class AgentRuntimeOptionsTest {
     void opcionesPorDefecto() {
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(AgenteTipo.CLAUDE_CODE);
         assertEquals(AgenteTipo.CLAUDE_CODE, opciones.tipoAgente());
-        assertFalse(opciones.enterDebugActivo());
         assertNull(opciones.estrategiaSubmitOverride());
         assertEquals(800, opciones.delaySubmitPostPasteMs());
     }
 
     @Test
-    @DisplayName("Override por agente tiene prioridad sobre global")
-    void overridePorAgenteTienePrioridad() {
+    @DisplayName("Propiedades runtime de depuracion no alteran opciones del plugin")
+    void propiedadesRuntimeNoAfectanOpciones() {
+        System.setProperty("burpia.agent.enterDebug", "true");
         System.setProperty("burpia.agent.submit.strategy", "CRLF");
         System.setProperty("burpia.agent.submit.strategy.CLAUDE_CODE", "CTRL_J");
+        System.setProperty("burpia.agent.submit.delayMs", "9999");
+        System.setProperty("burpia.agent.submit.delayMs.CLAUDE_CODE", "10");
 
         AgentRuntimeOptions.EnterOptions claude = AgentRuntimeOptions.cargar(AgenteTipo.CLAUDE_CODE);
         AgentRuntimeOptions.EnterOptions factory = AgentRuntimeOptions.cargar(AgenteTipo.FACTORY_DROID);
 
-        assertEquals("CTRL_J", claude.estrategiaSubmitOverride());
-        assertEquals("CRLF", factory.estrategiaSubmitOverride());
+        assertNull(claude.estrategiaSubmitOverride());
+        assertNull(factory.estrategiaSubmitOverride());
+        assertEquals(800, claude.delaySubmitPostPasteMs());
+        assertEquals(800, factory.delaySubmitPostPasteMs());
     }
 
     @Test
-    @DisplayName("Booleanos globales y por agente se resuelven correctamente")
-    void booleanosGlobalesYPorAgente() {
-        System.setProperty("burpia.agent.enterDebug", "false");
-        System.setProperty("burpia.agent.enterDebug.CLAUDE_CODE", "true");
-
-        AgentRuntimeOptions.EnterOptions claude = AgentRuntimeOptions.cargar(AgenteTipo.CLAUDE_CODE);
-        AgentRuntimeOptions.EnterOptions factory = AgentRuntimeOptions.cargar(AgenteTipo.FACTORY_DROID);
-
-        assertTrue(claude.enterDebugActivo());
-        assertFalse(factory.enterDebugActivo());
-    }
-
-    @Test
-    @DisplayName("Delay respeta rango y fallback robusto")
-    void delayRespetaRango() {
-        System.setProperty("burpia.agent.submit.delayMs", "abc");
-        AgentRuntimeOptions.EnterOptions invalido = AgentRuntimeOptions.cargar(AgenteTipo.FACTORY_DROID);
-        assertEquals(800, invalido.delaySubmitPostPasteMs());
-
-        System.setProperty("burpia.agent.submit.delayMs", "-10");
-        AgentRuntimeOptions.EnterOptions minimo = AgentRuntimeOptions.cargar(AgenteTipo.FACTORY_DROID);
-        assertEquals(0, minimo.delaySubmitPostPasteMs());
-
-        System.setProperty("burpia.agent.submit.delayMs.CLAUDE_CODE", "999999");
-        AgentRuntimeOptions.EnterOptions maximo = AgentRuntimeOptions.cargar(AgenteTipo.CLAUDE_CODE);
-        assertEquals(60000, maximo.delaySubmitPostPasteMs());
+    @DisplayName("Cargar con agente nulo usa fallback seguro")
+    void cargarConAgenteNuloUsaFallback() {
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar((AgenteTipo) null);
+        assertEquals(AgenteTipo.FACTORY_DROID, opciones.tipoAgente());
+        assertNull(opciones.estrategiaSubmitOverride());
+        assertEquals(800, opciones.delaySubmitPostPasteMs());
     }
 }

@@ -643,7 +643,6 @@ public class PanelAgente extends JPanel {
                     " strategyOverride=" + (opciones.estrategiaSubmitOverride() != null ? opciones.estrategiaSubmitOverride() : "AUTO") +
                     " strategyFinal=" + secuencia.descripcion()
             ));
-            logDebugTransporte(opciones.enterDebugActivo(), "PASTE_WRITE#" + injectionId, payloadConBrackets);
             if (!escribirComandoCrudoSeguro(payloadConBrackets)) {
                 return;
             }
@@ -663,11 +662,6 @@ public class PanelAgente extends JPanel {
 
         boolean envioExitoso = true;
         for (int i = 0; i < secuencia.repeticiones(); i++) {
-            logDebugTransporte(
-                opciones.enterDebugActivo(),
-                "SUBMIT_WRITE#" + injectionId + "[" + (i + 1) + "/" + secuencia.repeticiones() + "]",
-                secuencia.payload()
-            );
             // Si es un Enter simple en Mac, priorizamos el byte crudo (13)
             if (OSUtils.esMac() && "\r".equals(secuencia.payload()) && i == 0) {
                 if (!escribirDirectoAlPTY(new byte[]{13})) {
@@ -737,19 +731,6 @@ public class PanelAgente extends JPanel {
         }
     }
 
-    private void logDebugTransporte(boolean activo, String etapa, String payload) {
-        if (!activo) {
-            return;
-        }
-        String seguro = payload != null ? payload : "";
-        registrarLog(Level.INFO, I18nLogs.trTecnico(
-            "[ENTER-DEBUG] " + etapa +
-            " len=" + seguro.length() +
-            " esc='" + escaparControl(seguro) + "'" +
-            " hex=" + hexResumen(seguro)
-        ));
-    }
-
     private String escaparControl(String texto) {
         if (texto == null) {
             return "";
@@ -761,25 +742,6 @@ public class PanelAgente extends JPanel {
             .replace("\u001b", "\\u001b");
     }
 
-    private String hexResumen(String texto) {
-        if (texto == null || texto.isEmpty()) {
-            return "[]";
-        }
-        byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
-        StringBuilder sb = new StringBuilder();
-        sb.append('[');
-        int limite = Math.min(bytes.length, 16);
-        for (int i = 0; i < limite; i++) {
-            if (i > 0) sb.append(' ');
-            sb.append(String.format("%02X", bytes[i]));
-        }
-        if (bytes.length > limite) {
-            sb.append(" ...");
-        }
-        sb.append(']');
-        return sb.toString();
-    }
-
     private String describirPlataformaActual() {
         return SubmitSequenceFactory.Plataforma.desdeSistemaActual()
             .name()
@@ -787,24 +749,11 @@ public class PanelAgente extends JPanel {
     }
 
     private void manejarErrorPty(Throwable t) {
-        logErrorPty(t);
+        registrarLog(Level.SEVERE, I18nLogs.tr("Error nativo iniciando Consola PTY"), t);
         String mensaje = t.getMessage() != null ? t.getMessage() : I18nLogs.tr("Error desconocido PTY");
         SwingUtilities.invokeLater(() -> {
             UIUtils.mostrarError(PanelAgente.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje);
         });
-    }
-
-    private void logErrorPty(Throwable t) {
-        try {
-            String homeDir = System.getProperty("user.home");
-            java.io.FileWriter fw = new java.io.FileWriter(homeDir + "/burpia_pty_error.log", true);
-            try (java.io.PrintWriter pw = new java.io.PrintWriter(fw)) {
-                pw.println(I18nUI.Consola.HEADER_LOG_ERROR_PTY());
-                t.printStackTrace(pw);
-            }
-        } catch (Exception e) {
-            registrarLog(Level.WARNING, I18nLogs.tr("No se pudo escribir log de error PTY"), e);
-        }
     }
 
     private void actualizarTituloPanel(JPanel panel, String titulo) {
