@@ -124,7 +124,7 @@ set FACTORY_API_KEY=fk-...
 /mcp list
 ```
 
-### Opcion B: pedirle a Droid que lo configure por ti
+### Opcion B: pedirle a Droid que lo configure por ti, en Mac OS seria así
 
 Puedes pegarle a Droid el JSON anterior y decirle literalmente:
 
