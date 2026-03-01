@@ -4,6 +4,16 @@ plugins {
     id 'pmd'
 }
 
+def fuenteVersion = file('src/main/java/com/burpia/util/VersionBurpIA.java')
+if (!fuenteVersion.exists()) {
+    throw new GradleException("No se encontro la fuente de version centralizada: ${fuenteVersion}")
+}
+def matcherVersion = (fuenteVersion.getText('UTF-8') =~ /VERSION_ACTUAL\s*=\s*"([^"]+)"/)
+if (!matcherVersion.find()) {
+    throw new GradleException("No se pudo extraer VERSION_ACTUAL desde ${fuenteVersion}")
+}
+def versionCentral = matcherVersion.group(1)
+
 pmd {
     consoleOutput = true
     toolVersion = "6.55.0"
@@ -20,7 +30,7 @@ tasks.withType(JavaCompile) {
 }
 
 group = 'com.burpia'
-version = '1.0.1'
+version = versionCentral
 
 repositories {
     mavenCentral()
@@ -87,7 +97,7 @@ jar {
     }
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from { configurations.compileClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-    archiveFileName = 'BurpIA-1.0.1.jar'
+    archiveFileName = "BurpIA-${project.version}.jar"
     destinationDirectory = file("$buildDir/libs")
 }
 

@@ -7,6 +7,7 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.ProbadorConexionAI;
+import com.burpia.util.VersionBurpIA;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
@@ -49,12 +50,15 @@ public class DialogoConfiguracion extends JDialog {
     private JComboBox<IdiomaUI> comboIdioma;
     private JButton btnRefrescarModelos;
     private JButton btnProbarConexion;
+    private JButton btnBuscarActualizaciones;
     private JTextField txtMaxTokens;
     private JTextField txtTimeoutModelo;
     private final Map<String, String> rutasBinarioAgenteTemporal = new HashMap<>();
 
     private static final int TIMEOUT_CONEXION_MODELOS_SEG = 8;
     private static final int TIMEOUT_LECTURA_MODELOS_SEG = 12;
+    private static final int TIMEOUT_CONEXION_ACTUALIZACIONES_SEG = 8;
+    private static final int TIMEOUT_LECTURA_ACTUALIZACIONES_SEG = 12;
 
     @SuppressWarnings("this-escape")
     public DialogoConfiguracion(Window padre, ConfiguracionAPI config, GestorConfiguracion gestorConfig, Runnable alGuardar) {
@@ -312,7 +316,7 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panelInstrucciones = new JPanel(new BorderLayout(0, 8));
         panelInstrucciones.setBorder(UIUtils.crearBordeTitulado(
             I18nUI.Configuracion.TITULO_INSTRUCCIONES(), 12, 16));
-        panelInstrucciones.setBackground(new Color(244, 248, 255));
+        panelInstrucciones.setBackground(EstilosUI.colorFondoSecundario(resolverFondoPanelBase()));
 
         JTextArea txtInstrucciones = new JTextArea();
         txtInstrucciones.setEditable(false);
@@ -320,15 +324,17 @@ public class DialogoConfiguracion extends JDialog {
         txtInstrucciones.setWrapStyleWord(true);
         txtInstrucciones.setLineWrap(true);
         txtInstrucciones.setFont(EstilosUI.FUENTE_ESTANDAR);
+        txtInstrucciones.setForeground(EstilosUI.colorTextoPrimario(panelInstrucciones.getBackground()));
         txtInstrucciones.setText(I18nUI.Configuracion.TEXTO_INSTRUCCIONES());
         txtInstrucciones.setBorder(BorderFactory.createEmptyBorder(8, 10, 0, 10));
 
         JTextArea ejemploJson = new JTextArea();
         ejemploJson.setEditable(false);
         ejemploJson.setFont(EstilosUI.FUENTE_TABLA);
-        ejemploJson.setBackground(new Color(255, 255, 255));
+        ejemploJson.setBackground(resolverColorUI("TextPane.background", Color.WHITE));
+        ejemploJson.setForeground(EstilosUI.colorTextoPrimario(ejemploJson.getBackground()));
         ejemploJson.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(210, 210, 210), 1),
+            BorderFactory.createLineBorder(EstilosUI.colorSeparador(ejemploJson.getBackground()), 1),
             BorderFactory.createEmptyBorder(8, 8, 8, 8)
         ));
         ejemploJson.setText("{\"hallazgos\":[{\"titulo\":\"string\",\"descripcion\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"evidencia\":\"string\"}]}");
@@ -381,7 +387,7 @@ public class DialogoConfiguracion extends JDialog {
 
         JLabel etiquetaAdvertencia = new JLabel(I18nUI.Configuracion.ADVERTENCIA_PROMPT());
         etiquetaAdvertencia.setFont(EstilosUI.FUENTE_ESTANDAR);
-        etiquetaAdvertencia.setForeground(new Color(139, 0, 0));
+        etiquetaAdvertencia.setForeground(EstilosUI.colorErrorAccesible(resolverFondoPanelBase()));
         panelSur.add(etiquetaAdvertencia, BorderLayout.SOUTH);
 
         panelEditor.add(panelSur, BorderLayout.SOUTH);
@@ -503,7 +509,7 @@ public class DialogoConfiguracion extends JDialog {
         if (descripcion != null && !descripcion.trim().isEmpty()) {
             JLabel lblDescripcion = new JLabel(descripcion);
             lblDescripcion.setFont(EstilosUI.FUENTE_ESTANDAR);
-            lblDescripcion.setForeground(new Color(90, 90, 90));
+            lblDescripcion.setForeground(EstilosUI.colorTextoSecundario(resolverFondoPanelBase()));
             seccion.add(lblDescripcion, BorderLayout.NORTH);
         }
 
@@ -529,6 +535,7 @@ public class DialogoConfiguracion extends JDialog {
 
         JLabel titulo = new JLabel(I18nUI.Configuracion.TITULO_APP());
         titulo.setFont(new Font(Font.MONOSPACED, Font.BOLD, 26));
+        titulo.setForeground(EstilosUI.colorTextoPrimario(resolverFondoPanelBase()));
         titulo.setAlignmentX(Component.CENTER_ALIGNMENT);
         contenedor.add(titulo);
 
@@ -536,6 +543,7 @@ public class DialogoConfiguracion extends JDialog {
 
         JLabel subtitulo = new JLabel(I18nUI.Configuracion.SUBTITULO_APP());
         subtitulo.setFont(EstilosUI.FUENTE_NEGRITA);
+        subtitulo.setForeground(EstilosUI.colorTextoSecundario(resolverFondoPanelBase()));
         subtitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
         contenedor.add(subtitulo);
 
@@ -552,7 +560,8 @@ public class DialogoConfiguracion extends JDialog {
         descripcion.setWrapStyleWord(true);
         descripcion.setLineWrap(true);
         descripcion.setFont(EstilosUI.FUENTE_ESTANDAR);
-        descripcion.setBackground(new Color(245, 250, 255));
+        descripcion.setBackground(EstilosUI.colorFondoSecundario(resolverFondoPanelBase()));
+        descripcion.setForeground(EstilosUI.colorTextoPrimario(descripcion.getBackground()));
         descripcion.setText(I18nUI.Configuracion.DESCRIPCION_APP());
         descripcion.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         panelDescripcion.add(descripcion, BorderLayout.CENTER);
@@ -565,7 +574,7 @@ public class DialogoConfiguracion extends JDialog {
         panelAutor.setMaximumSize(new Dimension(760, 140));
         panelAutor.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                BorderFactory.createLineBorder(EstilosUI.colorSeparador(resolverFondoPanelBase()), 1),
                 I18nUI.Configuracion.TITULO_DESARROLLADO_POR(),
                 javax.swing.border.TitledBorder.CENTER,
                 javax.swing.border.TitledBorder.TOP,
@@ -594,11 +603,40 @@ public class DialogoConfiguracion extends JDialog {
         panelAutor.add(panelBoton, BorderLayout.SOUTH);
         contenedor.add(panelAutor);
 
+        contenedor.add(Box.createVerticalStrut(12));
+
+        JPanel panelActualizaciones = new JPanel(new BorderLayout(0, 8));
+        panelActualizaciones.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panelActualizaciones.setMaximumSize(new Dimension(760, 140));
+        panelActualizaciones.setBorder(UIUtils.crearBordeTitulado(
+            I18nUI.Configuracion.TITULO_ACTUALIZACIONES(), 12, 16));
+
+        JTextArea txtActualizaciones = new JTextArea(I18nUI.Configuracion.DESCRIPCION_ACTUALIZACIONES());
+        txtActualizaciones.setEditable(false);
+        txtActualizaciones.setLineWrap(true);
+        txtActualizaciones.setWrapStyleWord(true);
+        txtActualizaciones.setOpaque(false);
+        txtActualizaciones.setFont(EstilosUI.FUENTE_ESTANDAR);
+        txtActualizaciones.setForeground(EstilosUI.colorTextoPrimario(resolverFondoPanelBase()));
+        txtActualizaciones.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        panelActualizaciones.add(txtActualizaciones, BorderLayout.CENTER);
+
+        btnBuscarActualizaciones = new JButton(I18nUI.Configuracion.BOTON_BUSCAR_ACTUALIZACIONES());
+        btnBuscarActualizaciones.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
+        btnBuscarActualizaciones.setToolTipText(I18nUI.Tooltips.Configuracion.CHECK_ACTUALIZACIONES());
+        btnBuscarActualizaciones.addActionListener(e -> verificarActualizaciones());
+
+        JPanel panelBotonActualizaciones = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        panelBotonActualizaciones.setOpaque(false);
+        panelBotonActualizaciones.add(btnBuscarActualizaciones);
+        panelActualizaciones.add(panelBotonActualizaciones, BorderLayout.SOUTH);
+        contenedor.add(panelActualizaciones);
+
         contenedor.add(Box.createVerticalStrut(10));
 
-        JLabel lblVersion = new JLabel(I18nUI.Configuracion.VERSION());
+        JLabel lblVersion = new JLabel(I18nUI.Configuracion.VERSION_ACTUAL(VersionBurpIA.obtenerVersionActual()));
         lblVersion.setFont(EstilosUI.FUENTE_ESTANDAR);
-        lblVersion.setForeground(new Color(128, 128, 128));
+        lblVersion.setForeground(EstilosUI.colorTextoSecundario(resolverFondoPanelBase()));
         lblVersion.setAlignmentX(Component.CENTER_ALIGNMENT);
         contenedor.add(lblVersion);
 
@@ -622,15 +660,24 @@ public class DialogoConfiguracion extends JDialog {
         return panel;
     }
 
+    private Color resolverFondoPanelBase() {
+        return resolverColorUI("Panel.background", EstilosUI.COLOR_FONDO_PANEL);
+    }
+
+    private Color resolverColorUI(String clave, Color fallback) {
+        Color color = UIManager.getColor(clave);
+        return color != null ? color : fallback;
+    }
+
     private void actualizarContador() {
         int longitud = txtPrompt.getText().length();
         lblContadorPrompt.setText(I18nUI.Configuracion.CONTADOR_CARACTERES(longitud));
 
         if (!txtPrompt.getText().contains("{REQUEST}")) {
             lblContadorPrompt.setText(I18nUI.Configuracion.CONTADOR_FALTA_REQUEST(longitud));
-            lblContadorPrompt.setForeground(Color.RED);
+            lblContadorPrompt.setForeground(EstilosUI.colorErrorAccesible(resolverFondoPanelBase()));
         } else {
-            lblContadorPrompt.setForeground(Color.BLACK);
+            lblContadorPrompt.setForeground(EstilosUI.colorTextoPrimario(resolverFondoPanelBase()));
         }
     }
 
@@ -1123,6 +1170,102 @@ public class DialogoConfiguracion extends JDialog {
             return I18nUI.Configuracion.SIN_DETALLE_ERROR();
         }
         return mensaje.trim();
+    }
+
+    private void verificarActualizaciones() {
+        if (btnBuscarActualizaciones == null) {
+            return;
+        }
+
+        btnBuscarActualizaciones.setEnabled(false);
+        btnBuscarActualizaciones.setText(I18nUI.Configuracion.BOTON_BUSCANDO_ACTUALIZACIONES());
+
+        SwingWorker<ResultadoActualizacion, Void> worker = new SwingWorker<>() {
+            @Override
+            protected ResultadoActualizacion doInBackground() throws Exception {
+                String versionRemota = obtenerVersionRemota();
+                String versionActual = VersionBurpIA.obtenerVersionActual();
+                boolean hayActualizacion = VersionBurpIA.sonVersionesDiferentes(versionActual, versionRemota);
+                return new ResultadoActualizacion(versionActual, versionRemota, hayActualizacion);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    ResultadoActualizacion resultado = get();
+                    if (resultado.hayActualizacion) {
+                        UIUtils.mostrarInfo(
+                            DialogoConfiguracion.this,
+                            I18nUI.Configuracion.TITULO_ACTUALIZACIONES(),
+                            I18nUI.Configuracion.MSG_ACTUALIZACION_DISPONIBLE(
+                                resultado.versionActual,
+                                resultado.versionRemota,
+                                VersionBurpIA.URL_DESCARGA
+                            )
+                        );
+                    } else {
+                        UIUtils.mostrarInfo(
+                            DialogoConfiguracion.this,
+                            I18nUI.Configuracion.TITULO_ACTUALIZACIONES(),
+                            I18nUI.Configuracion.MSG_VERSION_AL_DIA(resultado.versionActual)
+                        );
+                    }
+                } catch (Exception e) {
+                    UIUtils.mostrarError(
+                        DialogoConfiguracion.this,
+                        I18nUI.Configuracion.TITULO_ERROR(),
+                        I18nUI.Configuracion.MSG_ERROR_VERIFICAR_ACTUALIZACIONES(extraerMensajeError(e))
+                    );
+                } finally {
+                    btnBuscarActualizaciones.setEnabled(true);
+                    btnBuscarActualizaciones.setText(I18nUI.Configuracion.BOTON_BUSCAR_ACTUALIZACIONES());
+                }
+            }
+        };
+
+        worker.execute();
+    }
+
+    private String obtenerVersionRemota() throws Exception {
+        okhttp3.OkHttpClient cliente = crearClienteActualizaciones();
+        okhttp3.Request request = new okhttp3.Request.Builder()
+            .url(VersionBurpIA.URL_VERSION_REMOTA)
+            .get()
+            .build();
+
+        try (okhttp3.Response response = cliente.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IllegalStateException(I18nUI.Configuracion.MSG_ERROR_HTTP_VERSION_REMOTA(response.code()));
+            }
+            okhttp3.ResponseBody body = response.body();
+            if (body == null) {
+                throw new IllegalStateException(I18nUI.Configuracion.MSG_VERSION_REMOTA_VACIA());
+            }
+            String versionRemota = VersionBurpIA.normalizarVersion(body.string());
+            if (versionRemota.isEmpty()) {
+                throw new IllegalStateException(I18nUI.Configuracion.MSG_VERSION_REMOTA_VACIA());
+            }
+            return versionRemota;
+        }
+    }
+
+    private okhttp3.OkHttpClient crearClienteActualizaciones() {
+        return new okhttp3.OkHttpClient.Builder()
+            .connectTimeout(TIMEOUT_CONEXION_ACTUALIZACIONES_SEG, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(TIMEOUT_LECTURA_ACTUALIZACIONES_SEG, java.util.concurrent.TimeUnit.SECONDS)
+            .build();
+    }
+
+    private static final class ResultadoActualizacion {
+        private final String versionActual;
+        private final String versionRemota;
+        private final boolean hayActualizacion;
+
+        private ResultadoActualizacion(String versionActual, String versionRemota, boolean hayActualizacion) {
+            this.versionActual = versionActual;
+            this.versionRemota = versionRemota;
+            this.hayActualizacion = hayActualizacion;
+        }
     }
 
     private void probarConexion() {

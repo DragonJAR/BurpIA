@@ -6,6 +6,22 @@ cd "$PROJECT_DIR"
 
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$PROJECT_DIR/.gradle-local}"
 
+resolver_version_actual() {
+    local fuente_version="$PROJECT_DIR/src/main/java/com/burpia/util/VersionBurpIA.java"
+    if [[ ! -f "$fuente_version" ]]; then
+        echo "desconocida"
+        return 0
+    fi
+
+    local extraida
+    extraida=$(sed -n 's/.*VERSION_ACTUAL[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$fuente_version" | head -n 1)
+    if [[ -z "$extraida" ]]; then
+        echo "desconocida"
+        return 0
+    fi
+    echo "$extraida"
+}
+
 resolver_java_home() {
     if [[ -n "${JAVA_HOME:-}" ]] && [[ -x "${JAVA_HOME}/bin/java" ]]; then
         echo "${JAVA_HOME}"
@@ -56,9 +72,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
+VERSION_ACTUAL="$(resolver_version_actual)"
 
 echo -e "${BLUE}================================================${NC}"
-echo -e "${BLUE}  BurpIA v1.0.1 - Constructor de JAR${NC}"
+echo -e "${BLUE}  BurpIA v${VERSION_ACTUAL} - Constructor de JAR${NC}"
 echo -e "${BLUE}================================================${NC}"
 echo ""
 

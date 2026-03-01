@@ -286,7 +286,7 @@ public class Hallazgo {
             return valorPorDefecto;
         }
         String valor = severidad.trim().toLowerCase(Locale.ROOT);
-        if (valor.contains("critical") || valor.contains("critica")) {
+        if (valor.contains("critical") || valor.contains("crítica") || valor.contains("critica")) {
             return SEVERIDAD_CRITICAL;
         }
         if (valor.contains("high") || valor.contains("alta") || valor.contains("severa")) {

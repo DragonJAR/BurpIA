@@ -25,7 +25,6 @@ public final class ConstructorSolicitudesProveedor {
 
     private static final long CACHE_MODELOS_GEMINI_MS = 5 * 60 * 1000L;
     private static final int MAX_ENTRADAS_CACHE_GEMINI = 128;
-    private static final char[] HEX = "0123456789abcdef".toCharArray();
     private static final Map<String, CacheModelosGemini> CACHE_GEMINI = new ConcurrentHashMap<>();
 
     private ConstructorSolicitudesProveedor() {
@@ -207,24 +206,10 @@ public final class ConstructorSolicitudesProveedor {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(apiKey.getBytes(StandardCharsets.UTF_8));
-            return convertirHex(hash, 12);
+            return HttpUtils.convertirDigestHex(hash, 12);
         } catch (Exception e) {
             return Integer.toHexString(apiKey.hashCode());
         }
-    }
-
-    private static String convertirHex(byte[] bytes, int maxBytes) {
-        if (bytes == null || bytes.length == 0) {
-            return "";
-        }
-        int limite = Math.min(bytes.length, Math.max(1, maxBytes));
-        StringBuilder sb = new StringBuilder(limite * 2);
-        for (int i = 0; i < limite; i++) {
-            int valor = bytes[i] & 0xff;
-            sb.append(HEX[valor >>> 4]);
-            sb.append(HEX[valor & 0x0f]);
-        }
-        return sb.toString();
     }
 
     private static void depurarCacheGemini(long ahoraMs) {

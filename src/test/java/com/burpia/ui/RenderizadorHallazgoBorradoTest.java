@@ -42,6 +42,8 @@ class RenderizadorHallazgoBorradoTest {
         assertEquals(Boolean.TRUE, label.getClientProperty("html.disable"));
         assertNotNull(label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH));
         assertTrue(label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH).equals(TextAttribute.STRIKETHROUGH_ON));
+        assertEquals(EstilosUI.colorFondoIgnorado(tabla.getBackground()), label.getBackground());
+        assertEquals(EstilosUI.colorTextoIgnorado(label.getBackground()), label.getForeground());
     }
 
     private void flushEdt() throws Exception {

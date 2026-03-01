@@ -30,14 +30,12 @@ public class RenderizadorEstado extends DefaultTableCellRenderer {
             if (!isSelected) {
                 Color colorFondo = Tarea.obtenerColorEstado(estado);
                 etiqueta.setBackground(colorFondo);
-
-                if (Tarea.ESTADO_EN_COLA.equals(estado) ||
-                    Tarea.ESTADO_ERROR.equals(estado) ||
-                    Tarea.ESTADO_CANCELADO.equals(estado)) {
-                    etiqueta.setForeground(Color.WHITE);
-                } else {
-                    etiqueta.setForeground(Color.BLACK);
-                }
+                Color colorTexto = EstilosUI.obtenerColorTextoContraste(colorFondo);
+                etiqueta.setForeground(EstilosUI.ajustarParaContrasteMinimo(
+                    colorTexto,
+                    colorFondo,
+                    EstilosUI.CONTRASTE_AA_NORMAL
+                ));
             }
 
             etiqueta.setText(com.burpia.i18n.I18nUI.Tareas.TRADUCIR_ESTADO(estado));

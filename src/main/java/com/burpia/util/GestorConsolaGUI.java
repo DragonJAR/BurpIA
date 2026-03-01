@@ -1,6 +1,7 @@
 package com.burpia.util;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
+import com.burpia.ui.EstilosUI;
 import javax.swing.*;
 import javax.swing.text.*;
 import java.awt.*;
@@ -64,28 +65,101 @@ public class GestorConsolaGUI {
     public void establecerConsola(JTextPane consola) {
         this.consola = consola;
         this.documento = consola.getStyledDocument();
-
-        estiloInfo = documento.addStyle("Info", null);
-        StyleConstants.setForeground(estiloInfo, Color.BLACK);
-        StyleConstants.setFontFamily(estiloInfo, Font.MONOSPACED);
-        estiloInfoDestacado = documento.addStyle("InfoDestacado", estiloInfo);
-        StyleConstants.setBold(estiloInfoDestacado, true);
-
-        estiloVerbose = documento.addStyle("Verbose", null);
-        StyleConstants.setForeground(estiloVerbose, Color.GRAY);
-        StyleConstants.setFontFamily(estiloVerbose, Font.MONOSPACED);
-        StyleConstants.setItalic(estiloVerbose, true);
-        estiloVerboseDestacado = documento.addStyle("VerboseDestacado", estiloVerbose);
-        StyleConstants.setBold(estiloVerboseDestacado, true);
-
-        estiloError = documento.addStyle("Error", null);
-        StyleConstants.setForeground(estiloError, Color.RED);
-        StyleConstants.setFontFamily(estiloError, Font.MONOSPACED);
-        StyleConstants.setBold(estiloError, true);
-        estiloErrorDestacado = documento.addStyle("ErrorDestacado", estiloError);
-        StyleConstants.setBold(estiloErrorDestacado, true);
+        aplicarTemaConsola(consola);
 
         programarFlush();
+    }
+
+    public void aplicarTemaConsola() {
+        if (consola == null) {
+            return;
+        }
+        aplicarTemaConsola(consola);
+    }
+
+    public void aplicarTemaConsola(JTextPane nuevaConsola) {
+        if (nuevaConsola == null) {
+            return;
+        }
+
+        Runnable aplicar = () -> {
+            this.consola = nuevaConsola;
+            this.documento = nuevaConsola.getStyledDocument();
+
+            Color fondo = nuevaConsola.getBackground();
+            if (fondo == null) {
+                fondo = UIManager.getColor("TextPane.background");
+            }
+            if (fondo == null) {
+                fondo = UIManager.getColor("Panel.background");
+            }
+            if (fondo == null) {
+                fondo = Color.WHITE;
+            }
+
+            Color colorInfo = EstilosUI.colorTextoPrimario(fondo);
+            Color colorVerbose = EstilosUI.colorTextoSecundario(fondo);
+            Color colorError = EstilosUI.colorErrorAccesible(fondo);
+
+            nuevaConsola.setForeground(colorInfo);
+            nuevaConsola.setCaretColor(colorInfo);
+
+            estiloInfo = obtenerOCrearEstilo("Info", null);
+            StyleConstants.setForeground(estiloInfo, colorInfo);
+            StyleConstants.setFontFamily(estiloInfo, Font.MONOSPACED);
+            StyleConstants.setFontSize(estiloInfo, nuevaConsola.getFont().getSize());
+            StyleConstants.setBold(estiloInfo, false);
+            StyleConstants.setItalic(estiloInfo, false);
+
+            estiloInfoDestacado = obtenerOCrearEstilo("InfoDestacado", estiloInfo);
+            StyleConstants.setForeground(estiloInfoDestacado, colorInfo);
+            StyleConstants.setFontFamily(estiloInfoDestacado, Font.MONOSPACED);
+            StyleConstants.setFontSize(estiloInfoDestacado, nuevaConsola.getFont().getSize());
+            StyleConstants.setBold(estiloInfoDestacado, true);
+            StyleConstants.setItalic(estiloInfoDestacado, false);
+
+            estiloVerbose = obtenerOCrearEstilo("Verbose", null);
+            StyleConstants.setForeground(estiloVerbose, colorVerbose);
+            StyleConstants.setFontFamily(estiloVerbose, Font.MONOSPACED);
+            StyleConstants.setFontSize(estiloVerbose, nuevaConsola.getFont().getSize());
+            StyleConstants.setItalic(estiloVerbose, true);
+            StyleConstants.setBold(estiloVerbose, false);
+
+            estiloVerboseDestacado = obtenerOCrearEstilo("VerboseDestacado", estiloVerbose);
+            StyleConstants.setForeground(estiloVerboseDestacado, colorVerbose);
+            StyleConstants.setFontFamily(estiloVerboseDestacado, Font.MONOSPACED);
+            StyleConstants.setFontSize(estiloVerboseDestacado, nuevaConsola.getFont().getSize());
+            StyleConstants.setItalic(estiloVerboseDestacado, true);
+            StyleConstants.setBold(estiloVerboseDestacado, true);
+
+            estiloError = obtenerOCrearEstilo("Error", null);
+            StyleConstants.setForeground(estiloError, colorError);
+            StyleConstants.setFontFamily(estiloError, Font.MONOSPACED);
+            StyleConstants.setFontSize(estiloError, nuevaConsola.getFont().getSize());
+            StyleConstants.setBold(estiloError, true);
+            StyleConstants.setItalic(estiloError, false);
+
+            estiloErrorDestacado = obtenerOCrearEstilo("ErrorDestacado", estiloError);
+            StyleConstants.setForeground(estiloErrorDestacado, colorError);
+            StyleConstants.setFontFamily(estiloErrorDestacado, Font.MONOSPACED);
+            StyleConstants.setFontSize(estiloErrorDestacado, nuevaConsola.getFont().getSize());
+            StyleConstants.setBold(estiloErrorDestacado, true);
+            StyleConstants.setItalic(estiloErrorDestacado, false);
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            aplicar.run();
+        } else {
+            SwingUtilities.invokeLater(aplicar);
+        }
+    }
+
+    private Style obtenerOCrearEstilo(String nombre, Style padre) {
+        Style estilo = documento.getStyle(nombre);
+        if (estilo == null) {
+            estilo = documento.addStyle(nombre, padre);
+        }
+        return estilo;
     }
 
     public void capturarStreamsOriginales(PrintWriter stdout, PrintWriter stderr) {

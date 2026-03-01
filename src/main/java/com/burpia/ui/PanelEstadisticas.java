@@ -28,6 +28,8 @@ public class PanelEstadisticas extends JPanel {
     private JPanel panelLateral;
     private JPanel panelLineaHallazgos;
     private JPanel panelLineaOperativo;
+    private JLabel etiquetaSeparadorHallazgos;
+    private JLabel etiquetaSeparadorLimite;
 
     private static final int UMBRAL_RESPONSIVE = 900;
     private static final int TAMANIO_FIJO_BOTON = 60;
@@ -119,6 +121,7 @@ public class PanelEstadisticas extends JPanel {
         timerActualizacion = new Timer(1000, e -> actualizar());
         timerActualizacion.start();
         aplicarIdioma();
+        aplicarTema();
         actualizar();
         SwingUtilities.invokeLater(this::ajustarDimensionBotones);
     }
@@ -130,27 +133,22 @@ public class PanelEstadisticas extends JPanel {
         panelLineaHallazgos.setOpaque(false);
 
         etiquetaResumenPrincipal.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
-        etiquetaResumenPrincipal.setForeground(new Color(0, 102, 204));
         etiquetaResumenPrincipal.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_TOTAL());
         panelLineaHallazgos.add(etiquetaResumenPrincipal);
 
-        JLabel separador = new JLabel(" | ");
-        separador.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
-        separador.setForeground(new Color(140, 140, 140));
-        panelLineaHallazgos.add(separador);
+        etiquetaSeparadorHallazgos = new JLabel(" | ");
+        etiquetaSeparadorHallazgos.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
+        panelLineaHallazgos.add(etiquetaSeparadorHallazgos);
 
         etiquetaResumenSeveridad.setFont(EstilosUI.FUENTE_MONO);
-        etiquetaResumenSeveridad.setForeground(new Color(70, 70, 70));
         etiquetaResumenSeveridad.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_SEVERIDAD());
         panelLineaHallazgos.add(etiquetaResumenSeveridad);
 
-        JLabel separador2 = new JLabel(" | ");
-        separador2.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
-        separador2.setForeground(new Color(140, 140, 140));
-        panelLineaHallazgos.add(separador2);
+        etiquetaSeparadorLimite = new JLabel(" | ");
+        etiquetaSeparadorLimite.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
+        panelLineaHallazgos.add(etiquetaSeparadorLimite);
 
         etiquetaLimiteHallazgos.setFont(EstilosUI.FUENTE_MONO);
-        etiquetaLimiteHallazgos.setForeground(new Color(80, 80, 80));
         etiquetaLimiteHallazgos.setToolTipText(I18nUI.Tooltips.Estadisticas.LIMITE_HALLAZGOS());
         panelLineaHallazgos.add(etiquetaLimiteHallazgos);
 
@@ -162,7 +160,6 @@ public class PanelEstadisticas extends JPanel {
         JPanel panel = crearPanelSeccion(I18nUI.Estadisticas.TITULO_OPERATIVO());
 
         etiquetaResumenOperativo.setFont(EstilosUI.FUENTE_MONO);
-        etiquetaResumenOperativo.setForeground(new Color(90, 90, 90));
         etiquetaResumenOperativo.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_OPERATIVO());
 
         panelLineaOperativo = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
@@ -340,9 +337,51 @@ public class PanelEstadisticas extends JPanel {
         etiquetaResumenOperativo.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_OPERATIVO());
         botonConfiguracion.setToolTipText(I18nUI.Tooltips.Estadisticas.CONFIGURACION());
         actualizarEstadoCapturaUI();
+        aplicarTema();
         actualizar(true);
         revalidate();
         repaint();
+    }
+
+    public void aplicarTema() {
+        Runnable aplicar = () -> {
+            Color fondoPanel = UIManager.getColor("Panel.background");
+            if (fondoPanel == null) {
+                fondoPanel = EstilosUI.COLOR_FONDO_PANEL;
+            }
+
+            setBackground(fondoPanel);
+            if (panelHallazgos != null) {
+                panelHallazgos.setBorder(UIUtils.crearBordeTitulado(I18nUI.Estadisticas.TITULO_HALLAZGOS(), 12, 16));
+            }
+            if (panelOperativo != null) {
+                panelOperativo.setBorder(UIUtils.crearBordeTitulado(I18nUI.Estadisticas.TITULO_OPERATIVO(), 12, 16));
+            }
+
+            Color colorPrincipal = EstilosUI.colorEnlaceAccesible(fondoPanel);
+            Color colorSecundario = EstilosUI.colorTextoSecundario(fondoPanel);
+            Color colorSeparador = EstilosUI.colorSeparador(fondoPanel);
+
+            etiquetaResumenPrincipal.setForeground(colorPrincipal);
+            etiquetaResumenSeveridad.setForeground(colorSecundario);
+            etiquetaLimiteHallazgos.setForeground(colorSecundario);
+            etiquetaResumenOperativo.setForeground(colorSecundario);
+
+            if (etiquetaSeparadorHallazgos != null) {
+                etiquetaSeparadorHallazgos.setForeground(colorSeparador);
+            }
+            if (etiquetaSeparadorLimite != null) {
+                etiquetaSeparadorLimite.setForeground(colorSeparador);
+            }
+
+            repaint();
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            aplicar.run();
+        } else {
+            SwingUtilities.invokeLater(aplicar);
+        }
     }
 
     private void actualizarTituloSeccion(JPanel panel, String titulo) {

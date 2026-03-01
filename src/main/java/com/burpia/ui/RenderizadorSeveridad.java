@@ -62,7 +62,6 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         Color tableBg = getBackground();
-        boolean isDarkTheme = EstilosUI.esTemaOscuro(tableBg);
 
         String displayText = obtenerTextoMostrar(severidadStr);
 
@@ -71,11 +70,15 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         FontMetrics fm = g2.getFontMetrics();
 
         Color colorFondoPildora = obtenerColorSeveridadTraducida(severidadStr);
-        Color colorTexto = EstilosUI.obtenerColorTextoContraste(colorFondoPildora);
+        Color colorTexto = EstilosUI.ajustarParaContrasteMinimo(
+            EstilosUI.obtenerColorTextoContraste(colorFondoPildora),
+            colorFondoPildora,
+            EstilosUI.CONTRASTE_AA_NORMAL
+        );
 
         if (isIgnorado) {
-            colorFondoPildora = isDarkTheme ? new Color(70, 70, 70) : new Color(220, 220, 220);
-            colorTexto = EstilosUI.colorTextoIgnorado(isDarkTheme);
+            colorFondoPildora = EstilosUI.colorFondoIgnorado(tableBg);
+            colorTexto = EstilosUI.colorTextoIgnorado(colorFondoPildora);
         }
 
         int textWidth = fm.stringWidth(displayText);

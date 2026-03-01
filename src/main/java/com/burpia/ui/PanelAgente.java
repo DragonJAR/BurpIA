@@ -9,7 +9,6 @@ import com.burpia.util.OSUtils;
 import com.jediterm.pty.PtyProcessTtyConnector;
 import com.jediterm.terminal.TtyConnector;
 import com.jediterm.terminal.ui.JediTermWidget;
-import com.jediterm.terminal.ui.settings.DefaultSettingsProvider;
 import com.pty4j.PtyProcess;
 import com.pty4j.PtyProcessBuilder;
 
@@ -83,13 +82,14 @@ public class PanelAgente extends JPanel {
         this.manejadorFocoPestania = new AtomicReference<>();
         this.manejadorCambioConfiguracion = new AtomicReference<>();
 
-        inicializarComponentesUI();
-        
         setLayout(new BorderLayout(EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL));
         setBorder(BorderFactory.createEmptyBorder(
             EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL, 
             EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL
         ));
+
+        inicializarComponentesUI();
+        aplicarTema();
 
         if (iniciarConsola) {
             iniciarConsola();
@@ -303,8 +303,42 @@ public class PanelAgente extends JPanel {
             spinnerDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
         }
 
+        aplicarTema();
         revalidate();
         repaint();
+    }
+
+    public void aplicarTema() {
+        Runnable aplicar = () -> {
+            Color fondoPanel = UIManager.getColor("Panel.background");
+            if (fondoPanel == null) {
+                fondoPanel = EstilosUI.COLOR_FONDO_PANEL;
+            }
+
+            setBackground(fondoPanel);
+            if (panelControles != null) {
+                panelControles.setBackground(fondoPanel);
+                panelControles.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
+            }
+            if (panelResultadosWrapper != null) {
+                panelResultadosWrapper.setBackground(fondoPanel);
+                panelResultadosWrapper.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), 3, 3));
+            }
+
+            if (lblDelay != null) {
+                lblDelay.setForeground(EstilosUI.colorTextoSecundario(fondoPanel));
+            }
+
+            if (terminalWidget != null && terminalWidget.getTerminalPanel() != null) {
+                terminalWidget.getTerminalPanel().setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+            }
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            aplicar.run();
+        } else {
+            SwingUtilities.invokeLater(aplicar);
+        }
     }
     
     private void inicializarComponentesUI() {
@@ -553,16 +587,7 @@ public class PanelAgente extends JPanel {
     }
 
     private JediTermWidget crearTerminalWidget() {
-        JediTermWidget widget = new JediTermWidget(120, 24, new DefaultSettingsProvider() {
-            @Override
-            public float getTerminalFontSize() { return 14; }
-            @Override
-            public boolean useAntialiasing() { return true; }
-            @Override
-            public boolean copyOnSelect() { return true; }
-            @Override
-            public boolean pasteOnMiddleMouseClick() { return true; }
-        });
+        JediTermWidget widget = new JediTermWidget(120, 24, new AgentTerminalSettingsProvider());
         widget.getTerminalPanel().setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         return widget;
     }

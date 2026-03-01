@@ -1333,8 +1333,64 @@ public final class I18nUI {
             return tr("Visitar DragonJAR.org", "Visit DragonJAR.org");
         }
 
+        public static String TITULO_ACTUALIZACIONES() {
+            return tr("ACTUALIZACIONES", "UPDATES");
+        }
+
+        public static String DESCRIPCION_ACTUALIZACIONES() {
+            return tr(
+                "Comprueba si hay una nueva version disponible comparando con el repositorio oficial.",
+                "Check whether a newer version is available from the official repository."
+            );
+        }
+
+        public static String BOTON_BUSCAR_ACTUALIZACIONES() {
+            return tr("Buscar actualizaciones", "Check for Updates");
+        }
+
+        public static String BOTON_BUSCANDO_ACTUALIZACIONES() {
+            return tr("Buscando...", "Checking...");
+        }
+
+        public static String VERSION_ACTUAL(String version) {
+            return trf("Version actual: %s", "Current version: %s", version);
+        }
+
         public static String VERSION() {
-            return tr("Version 1.0.1 - Febrero 2026", "Version 1.0.1 - February 2026");
+            return VERSION_ACTUAL(com.burpia.util.VersionBurpIA.obtenerVersionActual());
+        }
+
+        public static String MSG_ACTUALIZACION_DISPONIBLE(String versionActual, String versionRemota, String urlDescarga) {
+            return trf(
+                "Hay una nueva version disponible.\nVersion actual: %s\nVersion remota: %s\n\nVisita %s para descargar la ultima version.",
+                "A new version is available.\nCurrent version: %s\nRemote version: %s\n\nVisit %s to download the latest version.",
+                versionActual,
+                versionRemota,
+                urlDescarga
+            );
+        }
+
+        public static String MSG_VERSION_AL_DIA(String versionActual) {
+            return trf("Ya tienes la ultima version instalada (%s).",
+                "You already have the latest version installed (%s).",
+                versionActual);
+        }
+
+        public static String MSG_ERROR_VERIFICAR_ACTUALIZACIONES(String detalle) {
+            return trf("No se pudieron verificar actualizaciones: %s",
+                "Could not check for updates: %s",
+                detalle);
+        }
+
+        public static String MSG_ERROR_HTTP_VERSION_REMOTA(int codigoHttp) {
+            return trf("Error HTTP consultando version remota: %d",
+                "HTTP error while fetching remote version: %d",
+                codigoHttp);
+        }
+
+        public static String MSG_VERSION_REMOTA_VACIA() {
+            return tr("El archivo remoto VERSION.txt esta vacio o no es valido.",
+                "The remote VERSION.txt file is empty or invalid.");
         }
 
         public static String TITULO_ENLACE() {
@@ -1889,6 +1945,11 @@ public final class I18nUI {
         public static String SITIO_AUTOR() {
             return I18nUI.tr("Abre el sitio web oficial del autor del proyecto.",
                 "Open the project author's official website.");
+        }
+
+        public static String CHECK_ACTUALIZACIONES() {
+            return I18nUI.tr("Consulta la version remota y avisa si hay una nueva disponible.",
+                "Check remote version and notify when a newer one is available.");
         }
 
         public static String IGNORAR_SSL() {

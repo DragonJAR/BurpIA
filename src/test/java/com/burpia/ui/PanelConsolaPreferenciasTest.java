@@ -5,7 +5,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JLabel;
+import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
+import java.awt.Color;
 import java.lang.reflect.Field;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -63,6 +65,25 @@ class PanelConsolaPreferenciasTest {
         }
     }
 
+    @Test
+    @DisplayName("aplicarTema mantiene contraste legible en resumen y consola")
+    void testAplicarTemaMantieneContraste() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            JLabel etiquetaResumen = obtenerEtiquetaResumen(panel);
+            JTextPane consola = obtenerConsola(panel);
+
+            SwingUtilities.invokeAndWait(panel::aplicarTema);
+            flushEdt();
+
+            Color fondoPanel = panel.getBackground();
+            assertTrue(EstilosUI.ratioContraste(etiquetaResumen.getForeground(), fondoPanel) >= EstilosUI.CONTRASTE_AA_NORMAL);
+            assertTrue(EstilosUI.ratioContraste(consola.getForeground(), consola.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
+        } finally {
+            panel.destruir();
+        }
+    }
+
     private PanelConsola crearPanel() throws Exception {
         final PanelConsola[] holder = new PanelConsola[1];
         SwingUtilities.invokeAndWait(() -> holder[0] = new PanelConsola(new GestorConsolaGUI()));
@@ -73,6 +94,12 @@ class PanelConsolaPreferenciasTest {
         Field field = PanelConsola.class.getDeclaredField("etiquetaResumen");
         field.setAccessible(true);
         return (JLabel) field.get(panel);
+    }
+
+    private JTextPane obtenerConsola(PanelConsola panel) throws Exception {
+        Field field = PanelConsola.class.getDeclaredField("consola");
+        field.setAccessible(true);
+        return (JTextPane) field.get(panel);
     }
 
     private void flushEdt() throws Exception {

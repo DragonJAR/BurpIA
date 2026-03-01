@@ -19,6 +19,7 @@ import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
+import com.burpia.util.VersionBurpIA;
 import javax.swing.*;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -347,7 +348,7 @@ public class ExtensionBurpIA implements BurpExtension {
         }
         return "GET " + objetivo + " HTTP/1.1\r\n"
             + "Host: " + hostHeader + "\r\n"
-            + "User-Agent: BurpIA/1.0.1\r\n"
+            + "User-Agent: BurpIA/" + VersionBurpIA.obtenerVersionActual() + "\r\n"
             + "Accept: */*\r\n"
             + "Connection: close\r\n\r\n";
     }
@@ -494,7 +495,8 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void registrarResumenInicio() {
         registrar(LOG_SEPARADOR);
-        registrar(" BurpIA v1.0.1 - " + I18nUI.General.COMPLEMENTO_SEGURIDAD_IA());
+        registrar(" BurpIA v" + VersionBurpIA.obtenerVersionActual() + " - "
+            + I18nUI.General.COMPLEMENTO_SEGURIDAD_IA());
         registrar(LOG_SEPARADOR);
 
         registrar("[" + I18nUI.General.ENTORNO() + "]");

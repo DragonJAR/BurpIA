@@ -58,11 +58,10 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
         Color tableBg = getBackground();
-        boolean isDarkTheme = EstilosUI.esTemaOscuro(tableBg);
-        Color textColor = getForeground();
+        Color textColor = EstilosUI.colorTextoSecundario(tableBg);
 
         if (isIgnorado) {
-            textColor = EstilosUI.colorTextoIgnorado(isDarkTheme);
+            textColor = EstilosUI.colorTextoIgnorado(tableBg);
         }
 
         Font font = getFont();
@@ -72,8 +71,13 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         int filledSegments = obtenerSegmentos(confianzaStr);
 
         Color colorBase = obtenerColorConfianzaTraducida(confianzaStr);
+        colorBase = EstilosUI.ajustarParaContrasteMinimo(
+            colorBase,
+            tableBg,
+            EstilosUI.CONTRASTE_AA_GRANDE
+        );
         if (isIgnorado) {
-            colorBase = isDarkTheme ? new Color(100, 100, 100) : new Color(180, 180, 180);
+            colorBase = EstilosUI.colorFondoIgnorado(tableBg);
         }
 
         int textWidth = fm.stringWidth(confianzaStr);
@@ -99,7 +103,13 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         int segmentWidth = 8;
         int segmentGap = 3;
 
-        Color bgSegmentColor = isDarkTheme ? new Color(255, 255, 255, 30) : new Color(0, 0, 0, 30);
+        Color baseSegmento = EstilosUI.colorSeparador(tableBg);
+        Color bgSegmentColor = new Color(
+            baseSegmento.getRed(),
+            baseSegmento.getGreen(),
+            baseSegmento.getBlue(),
+            96
+        );
 
         for (int i = 0; i < 3; i++) {
             if (i < filledSegments) {

@@ -72,6 +72,24 @@ class PanelEstadisticasCapturaTest {
         }
     }
 
+    @Test
+    @DisplayName("aplicarTema mantiene contraste en etiquetas de estadísticas")
+    void testAplicarTemaContraste() throws Exception {
+        PanelEstadisticas panel = crearPanel();
+        try {
+            JLabel total = obtenerEtiqueta(panel, "etiquetaResumenPrincipal");
+            JLabel limite = obtenerEtiqueta(panel, "etiquetaLimiteHallazgos");
+
+            SwingUtilities.invokeAndWait(panel::aplicarTema);
+            flushEdt();
+
+            assertTrue(EstilosUI.ratioContraste(total.getForeground(), panel.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
+            assertTrue(EstilosUI.ratioContraste(limite.getForeground(), panel.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
+        } finally {
+            panel.destruir();
+        }
+    }
+
     private PanelEstadisticas crearPanel() throws Exception {
         final PanelEstadisticas[] holder = new PanelEstadisticas[1];
         SwingUtilities.invokeAndWait(() -> holder[0] = new PanelEstadisticas(new Estadisticas(), () -> 1000));
@@ -86,6 +104,12 @@ class PanelEstadisticasCapturaTest {
 
     private JLabel obtenerEtiquetaLimite(PanelEstadisticas panel) throws Exception {
         Field field = PanelEstadisticas.class.getDeclaredField("etiquetaLimiteHallazgos");
+        field.setAccessible(true);
+        return (JLabel) field.get(panel);
+    }
+
+    private JLabel obtenerEtiqueta(PanelEstadisticas panel, String campo) throws Exception {
+        Field field = PanelEstadisticas.class.getDeclaredField(campo);
         field.setAccessible(true);
         return (JLabel) field.get(panel);
     }

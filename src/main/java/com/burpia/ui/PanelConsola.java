@@ -96,6 +96,7 @@ public class PanelConsola extends JPanel {
         add(panelControles, BorderLayout.NORTH);
         add(panelConsolaWrapper, BorderLayout.CENTER);
 
+        aplicarTema();
         gestorConsola.registrarInfo(I18nUI.Consola.LOG_INICIALIZADA());
     }
 
@@ -131,9 +132,47 @@ public class PanelConsola extends JPanel {
         botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
         etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
         consola.setToolTipText(I18nUI.Tooltips.Consola.AREA_LOGS());
+        aplicarTema();
         actualizarResumen(true);
         revalidate();
         repaint();
+    }
+
+    public void aplicarTema() {
+        Runnable aplicar = () -> {
+            Color fondoPanel = UIManager.getColor("Panel.background");
+            if (fondoPanel == null) {
+                fondoPanel = EstilosUI.COLOR_FONDO_PANEL;
+            }
+            Color fondoConsola = UIManager.getColor("TextPane.background");
+            if (fondoConsola == null) {
+                fondoConsola = EstilosUI.colorFondoSecundario(fondoPanel);
+            }
+
+            setBackground(fondoPanel);
+            panelControles.setBackground(fondoPanel);
+            panelConsolaWrapper.setBackground(fondoPanel);
+            checkboxAutoScroll.setOpaque(false);
+
+            consola.setBackground(fondoConsola);
+            consola.setForeground(EstilosUI.colorTextoPrimario(fondoConsola));
+            consola.setCaretColor(EstilosUI.colorTextoPrimario(fondoConsola));
+
+            etiquetaResumen.setForeground(EstilosUI.colorTextoSecundario(fondoPanel));
+
+            panelControles.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
+            panelConsolaWrapper.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_LOGS(), 12, 16));
+            gestorConsola.aplicarTemaConsola(consola);
+
+            revalidate();
+            repaint();
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            aplicar.run();
+        } else {
+            SwingUtilities.invokeLater(aplicar);
+        }
     }
 
     private void actualizarTituloPanel(JPanel panel, String titulo) {

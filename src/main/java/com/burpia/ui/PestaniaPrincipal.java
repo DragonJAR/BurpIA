@@ -8,6 +8,7 @@ import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import javax.swing.*;
 import java.awt.*;
+import java.beans.PropertyChangeListener;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -26,6 +27,7 @@ public class PestaniaPrincipal extends JPanel {
     private final PanelAgente panelAgente;
     private final JTabbedPane tabbedPane;
     private final ConfiguracionAPI config;
+    private final PropertyChangeListener listenerLookAndFeel;
     private Timer timerFocoAgente;
 
     @SuppressWarnings("this-escape")
@@ -66,6 +68,14 @@ public class PestaniaPrincipal extends JPanel {
         setLayout(new BorderLayout(10, 2));
         add(panelEstadisticas, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
+
+        listenerLookAndFeel = evt -> {
+            if ("lookAndFeel".equals(evt.getPropertyName())) {
+                SwingUtilities.invokeLater(this::aplicarTema);
+            }
+        };
+        UIManager.addPropertyChangeListener(listenerLookAndFeel);
+        aplicarTema();
     }
 
     public void agregarHallazgo(Hallazgo hallazgo) {
@@ -335,6 +345,16 @@ public class PestaniaPrincipal extends JPanel {
         aplicarTooltipsPestanias();
     }
 
+    public void aplicarTema() {
+        panelEstadisticas.aplicarTema();
+        panelConsola.aplicarTema();
+        panelAgente.aplicarTema();
+        panelTareas.repaint();
+        panelHallazgos.repaint();
+        tabbedPane.repaint();
+        repaint();
+    }
+
     private void aplicarTooltipsPestanias() {
         int totalTabs = tabbedPane.getTabCount();
         for (int i = 0; i < totalTabs; i++) {
@@ -347,6 +367,7 @@ public class PestaniaPrincipal extends JPanel {
     }
 
     public void destruir() {
+        UIManager.removePropertyChangeListener(listenerLookAndFeel);
         if (timerFocoAgente != null) {
             timerFocoAgente.stop();
             timerFocoAgente = null;

@@ -37,9 +37,14 @@ public class UIUtils {
     }
 
     public static Border crearBordeTitulado(String titulo, int pV, int pH) {
+        Color fondoBase = UIManager.getColor("Panel.background");
+        if (fondoBase == null) {
+            fondoBase = EstilosUI.COLOR_FONDO_PANEL;
+        }
+        Color colorBorde = EstilosUI.colorSeparador(fondoBase);
         return BorderFactory.createCompoundBorder(
             BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(EstilosUI.COLOR_BORDE_PANEL, 1),
+                BorderFactory.createLineBorder(colorBorde, 1),
                 titulo,
                 TitledBorder.LEFT,
                 TitledBorder.TOP,
@@ -99,7 +104,14 @@ public class UIUtils {
                 String textoVisible = extraerTextoVisibleEnlace(textoEnlace);
                 JButton enlace = new JButton(textoVisible);
                 enlace.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                enlace.setForeground(new Color(0, 102, 204));
+                Color fondoReferencia = panel.getBackground();
+                if (fondoReferencia == null) {
+                    fondoReferencia = UIManager.getColor("Panel.background");
+                }
+                if (fondoReferencia == null) {
+                    fondoReferencia = EstilosUI.COLOR_FONDO_PANEL;
+                }
+                enlace.setForeground(EstilosUI.colorEnlaceAccesible(fondoReferencia));
                 enlace.setBorderPainted(false);
                 enlace.setContentAreaFilled(false);
                 enlace.setFocusPainted(false);

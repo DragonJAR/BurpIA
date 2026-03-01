@@ -1,6 +1,7 @@
 package com.burpia.util;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
+import com.burpia.ui.EstilosUI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -8,9 +9,11 @@ import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.StyleConstants;
+import java.awt.Color;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -120,6 +123,48 @@ class GestorConsolaGUITest {
         assertTrue(estaEnNegrilla(consola, texto, "ACCION:"));
         assertTrue(estaEnNegrilla(consola, texto, "NOTE:"));
         assertTrue(estaEnNegrilla(consola, texto, "ACTION:"));
+    }
+
+    @Test
+    @DisplayName("Reaplicar tema de consola conserva contadores y mantiene contraste AA")
+    void testAplicarTemaConsolaConfiable() throws Exception {
+        GestorConsolaGUI gestor = new GestorConsolaGUI();
+        JTextPane consola = new JTextPane();
+
+        SwingUtilities.invokeAndWait(() -> {
+            consola.setBackground(new Color(30, 32, 36));
+            gestor.establecerConsola(consola);
+        });
+        SwingUtilities.invokeAndWait(() -> {
+            gestor.registrarInfo("info inicial");
+            gestor.registrarError("error inicial");
+        });
+        SwingUtilities.invokeAndWait(() -> {
+        });
+
+        int totalAntes = gestor.obtenerTotalLogs();
+        Color colorInfoAntes = StyleConstants.getForeground(
+            consola.getStyledDocument().getStyle("Info")
+        );
+
+        SwingUtilities.invokeAndWait(() -> {
+            consola.setBackground(new Color(247, 247, 247));
+            gestor.aplicarTemaConsola();
+        });
+        SwingUtilities.invokeAndWait(() -> {
+        });
+
+        Color colorInfoDespues = StyleConstants.getForeground(
+            consola.getStyledDocument().getStyle("Info")
+        );
+        assertNotEquals(colorInfoAntes, colorInfoDespues);
+        assertEquals(totalAntes, gestor.obtenerTotalLogs());
+        assertTrue(EstilosUI.ratioContraste(colorInfoDespues, consola.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
+
+        SwingUtilities.invokeAndWait(() -> gestor.registrarVerbose("trace posterior"));
+        SwingUtilities.invokeAndWait(() -> {
+        });
+        assertTrue(consola.getText().contains("trace posterior"));
     }
 
     private boolean estaEnNegrilla(JTextPane consola, String texto, String etiqueta) {
