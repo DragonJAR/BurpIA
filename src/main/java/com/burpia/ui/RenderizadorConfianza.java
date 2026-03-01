@@ -8,6 +8,7 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
     private String confianzaStr = "";
     private boolean isIgnorado = false;
 
+    @SuppressWarnings("this-escape")
     public RenderizadorConfianza() {
         setHorizontalAlignment(SwingConstants.CENTER);
     }
@@ -61,7 +62,7 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         Color textColor = getForeground();
 
         if (isIgnorado) {
-            textColor = isDarkTheme ? new Color(130, 130, 130) : new Color(150, 150, 150);
+            textColor = EstilosUI.colorTextoIgnorado(isDarkTheme);
         }
 
         Font font = getFont();

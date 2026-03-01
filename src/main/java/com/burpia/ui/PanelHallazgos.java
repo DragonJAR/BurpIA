@@ -58,6 +58,7 @@ public class PanelHallazgos extends JPanel {
     private java.util.function.Consumer<Hallazgo> manejadorEnviarAAgente;
     private final ExecutorService ejecutorAcciones;
 
+    @SuppressWarnings("this-escape")
     public PanelHallazgos(MontoyaApi api) {
         this.api = api;
         this.esBurpProfessional = false;
@@ -72,6 +73,7 @@ public class PanelHallazgos extends JPanel {
         this(api, modeloCompartido, false);
     }
 
+    @SuppressWarnings("this-escape")
     public PanelHallazgos(MontoyaApi api, ModeloTablaHallazgos modeloCompartido, boolean esBurpProfessional) {
         this.api = api;
         this.esBurpProfessional = esBurpProfessional;

@@ -34,6 +34,7 @@ public class PanelEstadisticas extends JPanel {
     private static final int ESPACIADO_BOTONES = 8;
     private static final int AJUSTE_Y_BOTONES = -3;
 
+    @SuppressWarnings("this-escape")
     public PanelEstadisticas(Estadisticas estadisticas, IntSupplier proveedorLimiteHallazgos) {
         this.estadisticas = estadisticas;
         this.proveedorLimiteHallazgos = proveedorLimiteHallazgos != null ? proveedorLimiteHallazgos : () -> 1000;

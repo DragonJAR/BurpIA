@@ -38,7 +38,7 @@ public class PanelAgente extends JPanel {
     private static final int DELAY_REINTENTO_ARRANQUE_MS = 200;
     private static final int DELAY_REINTENTO_FOCO_TERMINAL_MS = 120;
 
-    private static final ExecutorService INYECTOR_PTY = Executors.newSingleThreadExecutor(r -> {
+    private final ExecutorService inyectorPty = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "BurpIA-PTY-Injector");
         t.setDaemon(true);
         return t;
@@ -71,6 +71,7 @@ public class PanelAgente extends JPanel {
         this(config, true);
     }
 
+    @SuppressWarnings("this-escape")
     public PanelAgente(ConfiguracionAPI config, boolean iniciarConsola) {
         this.config = config;
         this.promptInicialEnviado = new AtomicBoolean(false);
@@ -81,15 +82,15 @@ public class PanelAgente extends JPanel {
         this.sesionActivaId = 0L;
         this.manejadorFocoPestania = new AtomicReference<>();
         this.manejadorCambioConfiguracion = new AtomicReference<>();
+
+        inicializarComponentesUI();
         
-        BorderLayout layout = new BorderLayout(EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL);
-        setLayout(layout);
+        setLayout(new BorderLayout(EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL));
         setBorder(BorderFactory.createEmptyBorder(
             EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL, 
             EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL
         ));
 
-        inicializarComponentesUI();
         if (iniciarConsola) {
             iniciarConsola();
         }
@@ -120,7 +121,7 @@ public class PanelAgente extends JPanel {
             return;
         }
         long sesionObjetivo = sesionActivaId;
-        INYECTOR_PTY.execute(() -> escribirComandoCrudoSeguro(comando, sesionObjetivo));
+        inyectorPty.execute(() -> escribirComandoCrudoSeguro(comando, sesionObjetivo));
     }
 
     private boolean escribirComandoCrudoSeguro(String comando) {
@@ -279,6 +280,7 @@ public class PanelAgente extends JPanel {
 
     public void destruir() {
         invalidarSesionActiva();
+        inyectorPty.shutdownNow();
         cerrarSesionActiva();
         cerrarTerminalWidget();
         terminalWidget = null;
@@ -662,7 +664,7 @@ public class PanelAgente extends JPanel {
 
         registrarLog(Level.INFO, I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
 
-        INYECTOR_PTY.execute(() -> {
+        inyectorPty.execute(() -> {
             if (!esSesionVigente(sesionObjetivo)) {
                 return;
             }
@@ -801,7 +803,7 @@ public class PanelAgente extends JPanel {
         long injectionId = contadorInyeccion.incrementAndGet();
         SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(opciones.tipoAgente());
 
-        INYECTOR_PTY.execute(() -> {
+        inyectorPty.execute(() -> {
             if (!esSesionVigente(sesionObjetivo)) {
                 return;
             }

@@ -28,6 +28,7 @@ public class PestaniaPrincipal extends JPanel {
     private final ConfiguracionAPI config;
     private Timer timerFocoAgente;
 
+    @SuppressWarnings("this-escape")
     public PestaniaPrincipal(MontoyaApi api,
                             Estadisticas estadisticas,
                             GestorTareas gestorTareas,
@@ -36,7 +37,6 @@ public class PestaniaPrincipal extends JPanel {
                             ModeloTablaHallazgos modeloHallazgos,
                             boolean esBurpProfessional,
                             ConfiguracionAPI config) {
-        setLayout(new BorderLayout(10, 2));
         this.config = config;
 
         panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas);
@@ -63,6 +63,7 @@ public class PestaniaPrincipal extends JPanel {
         aplicarTooltipsPestanias();
         aplicarIdioma();
 
+        setLayout(new BorderLayout(10, 2));
         add(panelEstadisticas, BorderLayout.NORTH);
         add(tabbedPane, BorderLayout.CENTER);
     }

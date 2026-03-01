@@ -18,6 +18,7 @@ public class PanelConsola extends JPanel {
     private boolean actualizandoAutoScroll = false;
     private volatile int ultimaVersionConsola = -1;
 
+    @SuppressWarnings("this-escape")
     public PanelConsola(GestorConsolaGUI gestorConsola) {
         this.gestorConsola = gestorConsola;
 

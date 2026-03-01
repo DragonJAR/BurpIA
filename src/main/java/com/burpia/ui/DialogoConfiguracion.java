@@ -56,6 +56,7 @@ public class DialogoConfiguracion extends JDialog {
     private static final int TIMEOUT_CONEXION_MODELOS_SEG = 8;
     private static final int TIMEOUT_LECTURA_MODELOS_SEG = 12;
 
+    @SuppressWarnings("this-escape")
     public DialogoConfiguracion(Window padre, ConfiguracionAPI config, GestorConfiguracion gestorConfig, Runnable alGuardar) {
         super(padre, I18nUI.Configuracion.TITULO_DIALOGO(), Dialog.ModalityType.APPLICATION_MODAL);
         this.config = config;

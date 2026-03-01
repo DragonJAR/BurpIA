@@ -921,6 +921,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
         ejecucionesActivas.clear();
         contextosReintento.clear();
+        alertasConfiguracionEmitidas.clear();
         almacenEvidencia.limpiarCacheMemoria();
 
         if (executorService != null && !executorService.isShutdown()) {

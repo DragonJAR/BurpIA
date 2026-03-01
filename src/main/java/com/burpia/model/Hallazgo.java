@@ -274,50 +274,19 @@ public class Hallazgo {
     }
 
     public static String normalizarSeveridad(String severidad) {
-        if (severidad == null || severidad.trim().isEmpty()) {
-            return SEVERIDAD_INFO;
-        }
-
-        String valor = severidad.trim().toLowerCase(Locale.ROOT);
-        if (valor.contains("critical") || valor.contains("critica")) {
-            return SEVERIDAD_CRITICAL;
-        }
-        if (valor.contains("high") || valor.contains("alta") || valor.contains("severa")) {
-            return SEVERIDAD_HIGH;
-        }
-        if (valor.contains("medium") || valor.contains("media") || valor.contains("moderada")) {
-            return SEVERIDAD_MEDIUM;
-        }
-        if (valor.contains("low") || valor.contains("baja")) {
-            return SEVERIDAD_LOW;
-        }
-        return SEVERIDAD_INFO;
-    }
-
-    public static String normalizarConfianza(String confianza) {
-        if (confianza == null || confianza.trim().isEmpty()) {
-            return CONFIANZA_MEDIA;
-        }
-
-        String valor = confianza.trim().toLowerCase(Locale.ROOT);
-        if (valor.contains("high") || valor.contains("alta") || valor.contains("certain")) {
-            return CONFIANZA_ALTA;
-        }
-        if (valor.contains("low") || valor.contains("baja") || valor.contains("tentative")) {
-            return CONFIANZA_BAJA;
-        }
-        if (valor.contains("medium") || valor.contains("media") || valor.contains("firm")) {
-            return CONFIANZA_MEDIA;
-        }
-        return CONFIANZA_MEDIA;
+        return normalizarSeveridadInterno(severidad, SEVERIDAD_INFO);
     }
 
     private static String normalizarSeveridadParaPrioridad(String severidad) {
+        return normalizarSeveridadInterno(severidad, "");
+    }
+
+    private static String normalizarSeveridadInterno(String severidad, String valorPorDefecto) {
         if (severidad == null || severidad.trim().isEmpty()) {
-            return "";
+            return valorPorDefecto;
         }
         String valor = severidad.trim().toLowerCase(Locale.ROOT);
-        if (valor.contains("critical") || valor.contains("crítica") || valor.contains("critica")) {
+        if (valor.contains("critical") || valor.contains("critica")) {
             return SEVERIDAD_CRITICAL;
         }
         if (valor.contains("high") || valor.contains("alta") || valor.contains("severa")) {
@@ -332,12 +301,20 @@ public class Hallazgo {
         if (valor.contains("info") || valor.contains("inform")) {
             return SEVERIDAD_INFO;
         }
-        return "";
+        return valorPorDefecto;
+    }
+
+    public static String normalizarConfianza(String confianza) {
+        return normalizarConfianzaInterno(confianza, CONFIANZA_MEDIA);
     }
 
     private static String normalizarConfianzaParaPrioridad(String confianza) {
+        return normalizarConfianzaInterno(confianza, "");
+    }
+
+    private static String normalizarConfianzaInterno(String confianza, String valorPorDefecto) {
         if (confianza == null || confianza.trim().isEmpty()) {
-            return "";
+            return valorPorDefecto;
         }
         String valor = confianza.trim().toLowerCase(Locale.ROOT);
         if (valor.contains("high") || valor.contains("alta") || valor.contains("certain")) {
@@ -349,6 +326,6 @@ public class Hallazgo {
         if (valor.contains("low") || valor.contains("baja") || valor.contains("tentative")) {
             return CONFIANZA_BAJA;
         }
-        return "";
+        return valorPorDefecto;
     }
 }

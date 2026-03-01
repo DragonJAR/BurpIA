@@ -8,6 +8,16 @@ import java.util.regex.Pattern;
 
 public final class ReparadorJson {
 
+    // Patrones precompilados para mejor rendimiento
+    private static final Pattern MARKDOWN_CODE_BLOCK_JSON_PATTERN = Pattern.compile("(?m)^```json\\s*");
+    private static final Pattern MARKDOWN_CODE_BLOCK_START_PATTERN = Pattern.compile("(?m)^```\\s*");
+    private static final Pattern MARKDOWN_CODE_BLOCK_END_PATTERN = Pattern.compile("(?m)```$");
+    private static final Pattern COMILLA_ESCAPE_PATTERN = Pattern.compile(",\\s*([\\]}])");
+    private static final Pattern DOBLE_COMILLA_PATTERN = Pattern.compile("\"\\s+\"");
+    private static final Pattern PATRON_VALOR_CAMPO = Pattern.compile(": \"(.*?)\"(?=\\s*[,\\}])", Pattern.DOTALL);
+    private static final Pattern PATRON_PAR_STRING = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"([^\"]*)\"");
+    private static final Pattern PATRON_PAR_BOOLEANO_NUMERO = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(true|false|\\d+)");
+
     private ReparadorJson() {
     }
 
@@ -61,10 +71,6 @@ public final class ReparadorJson {
             return false;
         }
     }
-
-    private static final Pattern MARKDOWN_CODE_BLOCK_JSON_PATTERN = Pattern.compile("(?m)^```json\\s*");
-    private static final Pattern MARKDOWN_CODE_BLOCK_START_PATTERN = Pattern.compile("(?m)^```\\s*");
-    private static final Pattern MARKDOWN_CODE_BLOCK_END_PATTERN = Pattern.compile("(?m)```$");
 
     private static String eliminarMarkdownCodeBlocks(String texto) {
         String res = MARKDOWN_CODE_BLOCK_JSON_PATTERN.matcher(texto).replaceAll("");
@@ -139,9 +145,8 @@ public final class ReparadorJson {
 
         String resultado = texto.replace("\\\\\"", "\\\"");
 
-        Pattern patron = Pattern.compile(": \"(.*?)\"(?=\\s*[,\\}])", Pattern.DOTALL);
-        Matcher matcher = patron.matcher(resultado);
-        StringBuffer sb = new StringBuffer();
+        Matcher matcher = PATRON_VALOR_CAMPO.matcher(resultado);
+        StringBuilder sb = new StringBuilder();
 
         while (matcher.find()) {
             String valor = matcher.group(1);
@@ -177,9 +182,6 @@ public final class ReparadorJson {
         return textoLimpio;
     }
 
-    private static final Pattern COMILLA_ESCAPE_PATTERN = Pattern.compile(",\\s*([\\]}])");
-    private static final Pattern DOBLE_COMILLA_PATTERN = Pattern.compile("\"\\s+\"");
-
     private static String repararComas(String texto) {
         String res = COMILLA_ESCAPE_PATTERN.matcher(texto).replaceAll("$1");
         res = DOBLE_COMILLA_PATTERN.matcher(res).replaceAll("\", \"");
@@ -190,8 +192,7 @@ public final class ReparadorJson {
         StringBuilder json = new StringBuilder();
         json.append("{");
 
-        Pattern patron = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"([^\"]*)\"");
-        Matcher matcher = patron.matcher(texto);
+        Matcher matcher = PATRON_PAR_STRING.matcher(texto);
 
         List<String> pares = new ArrayList<>();
         while (matcher.find()) {
@@ -200,8 +201,7 @@ public final class ReparadorJson {
             pares.add("\"" + clave + "\": \"" + valor + "\"");
         }
 
-        Pattern patron2 = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(true|false|\\d+)");
-        Matcher matcher2 = patron2.matcher(texto);
+        Matcher matcher2 = PATRON_PAR_BOOLEANO_NUMERO.matcher(texto);
 
         while (matcher2.find()) {
             String clave = matcher2.group(1);

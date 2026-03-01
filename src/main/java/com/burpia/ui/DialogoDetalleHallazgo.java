@@ -15,6 +15,7 @@ public class DialogoDetalleHallazgo extends JDialog {
     private JComboBox<String> comboSeveridad;
     private JComboBox<String> comboConfianza;
 
+    @SuppressWarnings("this-escape")
     public DialogoDetalleHallazgo(Window padre, Hallazgo hallazgo, Consumer<Hallazgo> alGuardar) {
         super(padre, I18nUI.DetalleHallazgo.TITULO_DIALOGO(), Dialog.ModalityType.APPLICATION_MODAL);
         this.hallazgoOriginal = hallazgo;

@@ -8,6 +8,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
     private String severidadStr = "";
     private boolean isIgnorado = false;
 
+    @SuppressWarnings("this-escape")
     public RenderizadorSeveridad() {
         setHorizontalAlignment(SwingConstants.CENTER);
     }
@@ -74,7 +75,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
 
         if (isIgnorado) {
             colorFondoPildora = isDarkTheme ? new Color(70, 70, 70) : new Color(220, 220, 220);
-            colorTexto = isDarkTheme ? new Color(130, 130, 130) : new Color(150, 150, 150);
+            colorTexto = EstilosUI.colorTextoIgnorado(isDarkTheme);
         }
 
         int textWidth = fm.stringWidth(displayText);

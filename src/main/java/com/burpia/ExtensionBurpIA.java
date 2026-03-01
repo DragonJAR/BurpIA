@@ -494,17 +494,17 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void registrarResumenInicio() {
         registrar(LOG_SEPARADOR);
-        registrar(" BurpIA v1.0.1 - " + I18nUI.tr("Complemento de Seguridad con IA", "AI Security Plugin"));
+        registrar(" BurpIA v1.0.1 - " + I18nUI.General.COMPLEMENTO_SEGURIDAD_IA());
         registrar(LOG_SEPARADOR);
 
-        registrar("[" + I18nUI.tr("Entorno", "Environment") + "]");
+        registrar("[" + I18nUI.General.ENTORNO() + "]");
         registrarLineaInicio("Burp Suite", esProfessional ? "Professional" : "Community Edition");
         String versionBurp = obtenerVersionBurp(api);
         if (versionBurp != null) {
             registrarLineaInicio("Version Burp Suite", versionBurp);
         }
 
-        registrar("[" + I18nUI.tr("Configuracion IA", "AI Configuration") + "]");
+        registrar("[" + I18nUI.General.CONFIGURACION_IA() + "]");
         String proveedor = config.obtenerProveedorAI();
         String modelo = config.obtenerModelo();
         registrarLineaInicio("Proveedor", proveedor);
@@ -512,25 +512,25 @@ public class ExtensionBurpIA implements BurpExtension {
         registrarLineaInicio("Modelo", modelo);
         registrarLineaInicio(
             "Timeout AI (global)",
-            config.obtenerTiempoEsperaAI() + " " + I18nUI.tr("segundos", "seconds")
+            config.obtenerTiempoEsperaAI() + " " + I18nUI.General.SEGUNDOS()
         );
         registrarLineaInicio(
             "Timeout AI (modelo activo)",
-            config.obtenerTiempoEsperaParaModelo(proveedor, modelo) + " " + I18nUI.tr("segundos", "seconds")
+            config.obtenerTiempoEsperaParaModelo(proveedor, modelo) + " " + I18nUI.General.SEGUNDOS()
         );
         registrarLineaInicio(
             "Retraso",
-            config.obtenerRetrasoSegundos() + " " + I18nUI.tr("segundos", "seconds")
+            config.obtenerRetrasoSegundos() + " " + I18nUI.General.SEGUNDOS()
         );
         registrarLineaInicio("Maximo Concurrente", config.obtenerMaximoConcurrente());
         registrarLineaInicio("Maximo Hallazgos en Tabla", config.obtenerMaximoHallazgosTabla());
         registrarLineaInicio(
             "Modo Detallado",
-            config.esDetallado() ? I18nUI.tr("ACTIVADO", "ENABLED") : I18nUI.tr("desactivado", "disabled")
+            config.esDetallado() ? I18nUI.General.ACTIVADO() : I18nUI.General.DESACTIVADO()
         );
         registrarLineaInicio(
             "Agente Activo (" + config.obtenerTipoAgente() + ")",
-            config.agenteHabilitado() ? I18nUI.tr("ACTIVADO", "ENABLED") : I18nUI.tr("desactivado", "disabled")
+            config.agenteHabilitado() ? I18nUI.General.ACTIVADO() : I18nUI.General.DESACTIVADO()
         );
         registrar(LOG_SEPARADOR);
     }

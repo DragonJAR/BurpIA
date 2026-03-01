@@ -62,6 +62,30 @@ public final class I18nUI {
         public static String HALLAZGO_GENERICO() {
             return tr("Hallazgo", "Finding");
         }
+
+        public static String SEGUNDOS() {
+            return tr("segundos", "seconds");
+        }
+
+        public static String ACTIVADO() {
+            return tr("ACTIVADO", "ENABLED");
+        }
+
+        public static String DESACTIVADO() {
+            return tr("desactivado", "disabled");
+        }
+
+        public static String COMPLEMENTO_SEGURIDAD_IA() {
+            return tr("Complemento de Seguridad con IA", "AI Security Plugin");
+        }
+
+        public static String ENTORNO() {
+            return tr("Entorno", "Environment");
+        }
+
+        public static String CONFIGURACION_IA() {
+            return tr("Configuracion IA", "AI Configuration");
+        }
     }
 
     public static final class Estadisticas {

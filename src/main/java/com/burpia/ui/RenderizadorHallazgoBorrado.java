@@ -40,16 +40,8 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
                 if (!isSelected) {
                     Color tableBg = table.getBackground();
                     boolean isDarkTheme = EstilosUI.esTemaOscuro(tableBg);
-
-                    if (isDarkTheme) {
-                        etiqueta.setBackground(new Color(Math.max(0, tableBg.getRed() - 15),
-                                                         Math.max(0, tableBg.getGreen() - 15),
-                                                         Math.max(0, tableBg.getBlue() - 15)));
-                        etiqueta.setForeground(new Color(130, 130, 130));
-                    } else {
-                        etiqueta.setBackground(new Color(245, 245, 245));
-                        etiqueta.setForeground(new Color(150, 150, 150));
-                    }
+                    etiqueta.setBackground(EstilosUI.colorFondoIgnorado(tableBg, isDarkTheme));
+                    etiqueta.setForeground(EstilosUI.colorTextoIgnorado(isDarkTheme));
                 }
 
                 Font base = tabla.getFont();

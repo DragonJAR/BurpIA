@@ -22,9 +22,10 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.logging.Level;
@@ -55,7 +56,22 @@ public class AnalizadorAI implements Runnable {
     private static final int MAX_INTENTOS_RETRY = 5;
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
-    private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = new ConcurrentHashMap<>();
+    private static final int MAX_CLIENTES_HTTP_CACHE = 8;
+    private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = 
+        Collections.synchronizedMap(new LinkedHashMap<String, OkHttpClient>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, OkHttpClient> eldest) {
+                if (size() > MAX_CLIENTES_HTTP_CACHE) {
+                    OkHttpClient cliente = eldest.getValue();
+                    if (cliente != null) {
+                        cliente.dispatcher().executorService().shutdown();
+                        cliente.connectionPool().evictAll();
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
     private static final String[] CAMPOS_TITULO = {"titulo", "title", "name", "nombre"};
     private static final String[] CAMPOS_DESCRIPCION = {"descripcion", "description", "hallazgo", "finding", "detalle", "details"};
     private static final String[] CAMPOS_SEVERIDAD = {"severidad", "severity", "risk", "impacto"};
@@ -481,7 +497,17 @@ public class AnalizadorAI implements Runnable {
         int timeoutNormalizado = normalizarTiempoEsperaSegundos(tiempoEsperaSegundos);
         String clave = timeoutNormalizado + (ignorarSSL ? "_insecure" : "_secure");
 
-        return CLIENTES_HTTP_POR_TIMEOUT.computeIfAbsent(clave, k -> {
+        OkHttpClient existente = CLIENTES_HTTP_POR_TIMEOUT.get(clave);
+        if (existente != null) {
+            return existente;
+        }
+
+        synchronized (CLIENTES_HTTP_POR_TIMEOUT) {
+            existente = CLIENTES_HTTP_POR_TIMEOUT.get(clave);
+            if (existente != null) {
+                return existente;
+            }
+
             OkHttpClient.Builder builder = new OkHttpClient.Builder()
                 .connectTimeout(timeoutNormalizado, TimeUnit.SECONDS)
                 .readTimeout(timeoutNormalizado, TimeUnit.SECONDS)
@@ -491,8 +517,10 @@ public class AnalizadorAI implements Runnable {
                 configurarSslInseguro(builder);
             }
 
-            return builder.build();
-        });
+            OkHttpClient nuevo = builder.build();
+            CLIENTES_HTTP_POR_TIMEOUT.put(clave, nuevo);
+            return nuevo;
+        }
     }
 
     private static void configurarSslInseguro(OkHttpClient.Builder builder) {

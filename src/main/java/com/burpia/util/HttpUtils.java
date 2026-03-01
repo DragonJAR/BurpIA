@@ -17,6 +17,24 @@ public final class HttpUtils {
 
     private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
 
+    public static String convertirDigestHex(byte[] hash) {
+        return convertirDigestHex(hash, hash != null ? hash.length : 0);
+    }
+
+    public static String convertirDigestHex(byte[] hash, int maxBytes) {
+        if (hash == null || hash.length == 0) {
+            return "";
+        }
+        int limite = Math.min(hash.length, Math.max(1, maxBytes));
+        char[] hexChars = new char[limite * 2];
+        for (int j = 0; j < limite; j++) {
+            int v = hash[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
+
     public static final Set<String> EXTENSIONES_ESTATICAS;
 
     static {

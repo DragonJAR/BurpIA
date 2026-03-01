@@ -29,6 +29,7 @@ public class PanelTareas extends JPanel {
 
     private static final int UMBRAL_RESPONSIVE = 800;
 
+    @SuppressWarnings("this-escape")
     public PanelTareas(GestorTareas gestorTareas, ModeloTablaTareas modelo) {
         this.modelo = modelo;
         this.tabla = new JTable(modelo);

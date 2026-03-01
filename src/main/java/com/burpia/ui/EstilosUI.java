@@ -55,4 +55,19 @@ public class EstilosUI {
         if (colorFondo == null) return false;
         return (colorFondo.getRed() + colorFondo.getGreen() + colorFondo.getBlue()) / 3 < 128;
     }
+
+    public static java.awt.Color colorTextoIgnorado(boolean esTemaOscuro) {
+        return esTemaOscuro ? new java.awt.Color(130, 130, 130) : new java.awt.Color(150, 150, 150);
+    }
+
+    public static java.awt.Color colorFondoIgnorado(java.awt.Color colorFondoTabla, boolean esTemaOscuro) {
+        if (esTemaOscuro) {
+            return new java.awt.Color(
+                Math.max(0, colorFondoTabla.getRed() - 15),
+                Math.max(0, colorFondoTabla.getGreen() - 15),
+                Math.max(0, colorFondoTabla.getBlue() - 15)
+            );
+        }
+        return new java.awt.Color(245, 245, 245);
+    }
 }

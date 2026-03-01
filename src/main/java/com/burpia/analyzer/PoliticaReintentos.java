@@ -36,6 +36,11 @@ public final class PoliticaReintentos {
     private PoliticaReintentos() {
     }
 
+    private static String mensajeTimeoutAgotado() {
+        return I18nUI.tr("Tiempo de espera agotado, intenta aumentarlo en los ajustes",
+            "Timeout reached, try increasing it in the settings");
+    }
+
     public static boolean esCodigoNoReintentable(int statusCode, String cuerpoError) {
         if (CODIGOS_NO_REINTENTABLES.contains(statusCode)) {
             String error = cuerpoError != null ? cuerpoError.toLowerCase(Locale.ROOT) : "";
@@ -96,8 +101,7 @@ public final class PoliticaReintentos {
         }
 
         if (actual instanceof SocketTimeoutException) {
-            return I18nUI.tr("Tiempo de espera agotado, intenta aumentarlo en los ajustes",
-                "Timeout reached, try increasing it in the settings");
+            return mensajeTimeoutAgotado();
         }
 
         String msg = actual.getMessage();
@@ -106,8 +110,7 @@ public final class PoliticaReintentos {
         }
 
         if (msg.contains("timeout") || msg.contains("timed out")) {
-            return I18nUI.tr("Tiempo de espera agotado, intenta aumentarlo en los ajustes",
-                "Timeout reached, try increasing it in the settings");
+            return mensajeTimeoutAgotado();
         }
 
         return msg;
