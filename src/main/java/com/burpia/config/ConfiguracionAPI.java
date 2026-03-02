@@ -318,7 +318,13 @@ public class ConfiguracionAPI {
             - **Tier 3**: Header spoofing (`X-Forwarded-For`), Content-Type switching.
             
             ## Step 5: Final Verdict & Tool Execution
-            - **IF CONFIRMED**: You MUST call `create_repeater_tab`.
+            - **IF CONFIRMED**:
+            1. Identify the **best-performing payload** from the Active Probing table
+                (highest impact, deepest injection depth, or most data leaked).
+            2. Re-send that exact payload via `send_http1_request` and record the
+                final response — this becomes the **canonical proof-of-concept**.
+            3. You MUST call `create_repeater_tab` using that best payload as the
+                tab's pre-loaded request.
             - **Tab Name Format**: `[VALIDATED] {VULN_CLASS} - {PATH}`
             - **Example**: `[VALIDATED] Stored XSS - /guestbook.php`
             

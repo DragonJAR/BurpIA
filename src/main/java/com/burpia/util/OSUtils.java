@@ -55,10 +55,8 @@ public final class OSUtils {
                 if (window instanceof JDialog && window.isVisible()) {
                     JDialog dialog = (JDialog) window;
                     String className = dialog.getClass().getSimpleName();
-                    String title = dialog.getTitle();
 
-                    if (className.contains("DialogoConfiguracion") ||
-                        (title != null && title.contains("BurpIA"))) {
+                    if (debeCerrarVentanaAjustes(className)) {
                         SwingUtilities.invokeLater(() -> {
                             dialog.setVisible(false);
                             dialog.dispose();
@@ -71,6 +69,11 @@ public final class OSUtils {
                 LOGGER.log(Level.FINE, I18nLogs.tr("Error cerrando ventanas de ajustes"), e);
             }
         }
+    }
+
+    static boolean debeCerrarVentanaAjustes(String className) {
+        String nombre = className != null ? className.trim() : "";
+        return nombre.contains("DialogoConfiguracion");
     }
 
     public static String expandirRuta(String rutaObj) {

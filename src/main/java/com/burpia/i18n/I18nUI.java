@@ -2,6 +2,8 @@ package com.burpia.i18n;
 
 public final class I18nUI {
     private static volatile IdiomaUI idiomaActual = IdiomaUI.porDefecto();
+    private static final String URL_DRAGONJAR_CONTACTO =
+        "https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica";
 
     private I18nUI() {
     }
@@ -24,6 +26,10 @@ public final class I18nUI {
 
     public static String trf(String esFormato, String enFormato, Object... args) {
         return String.format(tr(esFormato, enFormato), args);
+    }
+
+    private static String trfBloqueUrl(String esEtiqueta, String enEtiqueta, String url) {
+        return trf(esEtiqueta + "%n%s", enEtiqueta + "%n%s", url);
     }
 
     public static final class Pestanias {
@@ -604,6 +610,35 @@ public final class I18nUI {
             return texto + "\n\n" + detalle;
         }
 
+        public static String ETIQUETA_ESTADO_EXITO_ALERTA() {
+            return "[OK]";
+        }
+
+        public static String ETIQUETA_ESTADO_ADVERTENCIA_ALERTA() {
+            return tr("[AVISO]", "[WARN]");
+        }
+
+        public static String ETIQUETA_ESTADO_ERROR_ALERTA() {
+            return tr("[ERROR]", "[ERROR]");
+        }
+
+        public static String LINEA_ESTADO_EXITO_ALERTA(String texto) {
+            return construirLineaEstadoAlerta(ETIQUETA_ESTADO_EXITO_ALERTA(), texto);
+        }
+
+        public static String LINEA_ESTADO_ADVERTENCIA_ALERTA(String texto) {
+            return construirLineaEstadoAlerta(ETIQUETA_ESTADO_ADVERTENCIA_ALERTA(), texto);
+        }
+
+        public static String LINEA_ESTADO_ERROR_ALERTA(String texto) {
+            return construirLineaEstadoAlerta(ETIQUETA_ESTADO_ERROR_ALERTA(), texto);
+        }
+
+        private static String construirLineaEstadoAlerta(String etiqueta, String texto) {
+            String contenido = texto != null ? texto : "";
+            return contenido.isBlank() ? etiqueta : etiqueta + " " + contenido;
+        }
+
         public static String MSG_ACCION_SOLO_IGNORADOS(int total) {
             return trf(
                 "No hay hallazgos operables: los %d seleccionados están marcados como ignorados.",
@@ -656,6 +691,10 @@ public final class I18nUI {
             return tr("Enviar al Agente", "Send to Agent");
         }
 
+        public static String RESUMEN_ACCION_AGENTE(String agente) {
+            return trf("Enviados a %s", "Sent to %s", agente);
+        }
+
         public static String MSG_ENVIADOS_AGENTE(int total, String agente) {
             return trf("Se enviaron %d hallazgo(s) a %s.",
                 "Sent %d finding(s) to %s.",
@@ -670,6 +709,14 @@ public final class I18nUI {
 
         public static String SUFIJO_ENVIADO_SCANNER() {
             return tr("(enviado a Scanner Pro)", "(sent to Scanner Pro)");
+        }
+
+        public static String SUFIJO_ENVIADO_AGENTE(String agente) {
+            return trf("(enviado a %s)", "(sent to %s)", agente);
+        }
+
+        public static String ERROR_ENVIO_AGENTE(String agente) {
+            return trf("No se pudo enviar a %s", "Could not send to %s", agente);
         }
 
         public static String ERROR_SCANNER_SOLO_PRO() {
@@ -849,9 +896,11 @@ public final class I18nUI {
         }
 
         public static String MSG_URL_GUIA_AGENTE(String url) {
-            return trf("No se pudo abrir el navegador. URL de la guía: %s",
-                "Could not open browser. Guide URL: %s",
-                url);
+            return trfBloqueUrl(
+                "No se pudo abrir el navegador.\nURL de la guía:",
+                "Could not open browser.\nGuide URL:",
+                url
+            );
         }
 
         public static String TITULO_PANEL_AGENTE_GENERICO() {
@@ -1265,7 +1314,6 @@ public final class I18nUI {
             "Integración con site map (Issues), Repeater, Intruder y Scanner Pro",
             "Prompt totalmente configurable para análisis a medida",
             "Exportación nativa de reportes de hallazgos a CSV y JSON",
-            "Renderizadores visuales para severidad y confianza",
             "Multiidioma en inglés y español."
         };
 
@@ -1278,7 +1326,6 @@ public final class I18nUI {
             "Integration with site map (Issues), Repeater, Intruder, and Scanner Pro",
             "Fully configurable prompt for tailored analysis",
             "Native findings export to CSV and JSON",
-            "Visual renderers for severity and confidence",
             "Bilingual support in English and Spanish."
         };
 
@@ -1462,8 +1509,16 @@ public final class I18nUI {
             return tr("Enlace", "Link");
         }
 
+        public static String URL_SITIO_WEB() {
+            return URL_DRAGONJAR_CONTACTO;
+        }
+
+        public static String MSG_URL(String url) {
+            return trfBloqueUrl("URL:", "URL:", url);
+        }
+
         public static String MSG_URL() {
-            return "URL: https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica";
+            return MSG_URL(URL_SITIO_WEB());
         }
 
         public static String MSG_ERROR_ABRIR_NAVEGADOR(String detalle) {
@@ -1598,6 +1653,25 @@ public final class I18nUI {
                     "This may take a few seconds depending on AI response time.");
         }
 
+        public static String MSG_ANALISIS_INICIADO_RESULTADO(int iniciadas, int total, int omitidas) {
+            if (total <= 1 && iniciadas > 0 && omitidas == 0) {
+                return MSG_ANALISIS_INICIADO();
+            }
+            if (iniciadas <= 0) {
+                return trf("No se pudo enviar ninguna solicitud para análisis forzado. Seleccionadas: %d.",
+                    "Could not send any requests for forced analysis. Selected: %d.",
+                    total);
+            }
+            if (omitidas > 0) {
+                return trf("Solicitudes enviadas para análisis forzado: %d/%d (omitidas: %d).",
+                    "Requests sent for forced analysis: %d/%d (skipped: %d).",
+                    iniciadas, total, omitidas);
+            }
+            return trf("Solicitudes enviadas para análisis forzado: %d/%d.",
+                "Requests sent for forced analysis: %d/%d.",
+                iniciadas, total);
+        }
+
         public static String TITULO_ANALISIS_INICIADO() {
             return tr("BurpIA - Análisis Iniciado", "BurpIA - Analysis Started");
         }
@@ -1610,6 +1684,25 @@ public final class I18nUI {
             return trf("Solicitud enviada a %s.",
                 "Request sent to %s.",
                 agente);
+        }
+
+        public static String MSG_ENVIO_AGENTE_RESULTADO(String agente, int exitosas, int total, int fallidas) {
+            if (total <= 1 && exitosas > 0 && fallidas == 0) {
+                return MSG_ENVIO_AGENTE(agente);
+            }
+            if (exitosas <= 0) {
+                return trf("No se pudo enviar ninguna solicitud a %s. Seleccionadas: %d.",
+                    "Could not send any requests to %s. Selected: %d.",
+                    agente, total);
+            }
+            if (fallidas > 0) {
+                return trf("Solicitudes enviadas a %s: %d/%d (fallidas: %d).",
+                    "Requests sent to %s: %d/%d (failed: %d).",
+                    agente, exitosas, total, fallidas);
+            }
+            return trf("Solicitudes enviadas a %s: %d/%d.",
+                "Requests sent to %s: %d/%d.",
+                agente, exitosas, total);
         }
     }
 

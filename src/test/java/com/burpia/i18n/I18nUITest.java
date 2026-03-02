@@ -3,6 +3,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -90,14 +91,38 @@ class I18nUITest {
 
         I18nUI.establecerIdioma("es");
         assertEquals(
-            "No se pudo abrir el navegador. URL de la guía: " + url,
+            "No se pudo abrir el navegador.\nURL de la guía:\n" + url,
             I18nUI.Consola.MSG_URL_GUIA_AGENTE(url)
         );
 
         I18nUI.establecerIdioma("en");
         assertEquals(
-            "Could not open browser. Guide URL: " + url,
+            "Could not open browser.\nGuide URL:\n" + url,
             I18nUI.Consola.MSG_URL_GUIA_AGENTE(url)
+        );
+    }
+
+    @Test
+    @DisplayName("Mensaje de URL en acerca de usa bloque y preserva protocolo")
+    void testMensajeUrlAcercaDe() {
+        I18nUI.establecerIdioma("es");
+        assertEquals(
+            "URL:\nhttps://www.dragonjar.org/contactar-empresa-de-seguridad-informatica",
+            I18nUI.Configuracion.MSG_URL()
+        );
+        assertEquals(
+            "https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica",
+            I18nUI.Configuracion.URL_SITIO_WEB()
+        );
+        assertEquals(
+            "URL:\nhttps://example.com/docs",
+            I18nUI.Configuracion.MSG_URL("https://example.com/docs")
+        );
+
+        I18nUI.establecerIdioma("en");
+        assertEquals(
+            "URL:\nhttps://www.dragonjar.org/contactar-empresa-de-seguridad-informatica",
+            I18nUI.Configuracion.MSG_URL()
         );
     }
 
@@ -113,5 +138,68 @@ class I18nUITest {
         I18nUI.establecerIdioma("en");
         assertEquals("Configured command: " + comando,
             I18nUI.Configuracion.Agentes.MSG_COMANDO_CONFIGURADO(comando));
+    }
+
+    @Test
+    @DisplayName("Mensajes de resultados de envío/contexto respetan idioma")
+    void testMensajesResultadosEnvioContextoI18n() {
+        I18nUI.establecerIdioma("es");
+        assertEquals(
+            "Solicitudes enviadas para análisis forzado: 2/3 (omitidas: 1).",
+            I18nUI.Contexto.MSG_ANALISIS_INICIADO_RESULTADO(2, 3, 1)
+        );
+        assertEquals(
+            "Solicitudes enviadas a Claude Code: 1/2 (fallidas: 1).",
+            I18nUI.Contexto.MSG_ENVIO_AGENTE_RESULTADO("Claude Code", 1, 2, 1)
+        );
+
+        I18nUI.establecerIdioma("en");
+        assertEquals(
+            "Requests sent for forced analysis: 2/3 (skipped: 1).",
+            I18nUI.Contexto.MSG_ANALISIS_INICIADO_RESULTADO(2, 3, 1)
+        );
+        assertEquals(
+            "Requests sent to Claude Code: 1/2 (failed: 1).",
+            I18nUI.Contexto.MSG_ENVIO_AGENTE_RESULTADO("Claude Code", 1, 2, 1)
+        );
+
+        I18nUI.establecerIdioma("es");
+    }
+
+    @Test
+    @DisplayName("Líneas de estado de alerta no usan emojis en español")
+    void testLineasEstadoAlertaSinEmojiEs() {
+        I18nUI.establecerIdioma("es");
+        String url = "https://example.com/repeater";
+
+        String ok = I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(url);
+        String aviso = I18nUI.Hallazgos.LINEA_ESTADO_ADVERTENCIA_ALERTA(url + " " + I18nUI.Hallazgos.MSG_SIN_REQUEST());
+        String error = I18nUI.Hallazgos.LINEA_ESTADO_ERROR_ALERTA(url + " (error: fallo)");
+
+        assertEquals("[OK] " + url, ok);
+        assertTrue(aviso.startsWith("[AVISO] "));
+        assertTrue(error.startsWith("[ERROR] "));
+        assertFalse(ok.contains("✅"));
+        assertFalse(aviso.contains("⚠"));
+        assertFalse(error.contains("❌"));
+    }
+
+    @Test
+    @DisplayName("Líneas de estado de alerta no usan emojis en inglés")
+    void testLineasEstadoAlertaSinEmojiEn() {
+        I18nUI.establecerIdioma("en");
+        String url = "https://example.com/intruder";
+
+        String ok = I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(url);
+        String aviso = I18nUI.Hallazgos.LINEA_ESTADO_ADVERTENCIA_ALERTA(url + " " + I18nUI.Hallazgos.MSG_SIN_REQUEST());
+        String error = I18nUI.Hallazgos.LINEA_ESTADO_ERROR_ALERTA(url + " (error: failed)");
+
+        assertEquals("[OK] " + url, ok);
+        assertTrue(aviso.startsWith("[WARN] "));
+        assertTrue(error.startsWith("[ERROR] "));
+        assertFalse(ok.contains("✅"));
+        assertFalse(aviso.contains("⚠"));
+        assertFalse(error.contains("❌"));
+        I18nUI.establecerIdioma("es");
     }
 }

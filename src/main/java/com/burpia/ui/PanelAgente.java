@@ -31,6 +31,7 @@ public class PanelAgente extends JPanel {
     private static final Logger LOGGER = Logger.getLogger(PanelAgente.class.getName());
 
     private static final int DELAY_INICIO_BINARIO_MS = 800;
+    private static final int DELAY_DIFERIDA_POST_ARRANQUE_MS = 180;
     private static final int CHUNK_ESCRITURA_PTY = 128;
     private static final int DELAY_ENTRE_CHUNKS_PTY_MS = 10;
     private static final int INTENTOS_ENVIO_ARRANQUE = 6;
@@ -59,6 +60,7 @@ public class PanelAgente extends JPanel {
     private final AtomicReference<Runnable> manejadorCambioConfiguracion;
     private final AtomicBoolean inicializacionPendiente;
     private final AtomicBoolean promptInicialEnviado;
+    private final AtomicBoolean arranqueAgenteDespachado;
     private final AtomicBoolean consolaArrancando;
     private final AtomicLong contadorInyeccion;
     private final AtomicLong contadorSesiones;
@@ -76,6 +78,7 @@ public class PanelAgente extends JPanel {
         this.config = config;
         this.promptInicialEnviado = new AtomicBoolean(false);
         this.inicializacionPendiente = new AtomicBoolean(false);
+        this.arranqueAgenteDespachado = new AtomicBoolean(false);
         this.consolaArrancando = new AtomicBoolean(false);
         this.contadorInyeccion = new AtomicLong(0);
         this.contadorSesiones = new AtomicLong(0);
@@ -100,9 +103,10 @@ public class PanelAgente extends JPanel {
     public void establecerManejadorFocoPestania(Runnable manejador) {
         manejadorFocoPestania.set(manejador);
 
-        if (inicializacionPendiente.get() && manejador != null) {
-            inicializacionPendiente.set(false);
-            procesarInicializacionDiferida();
+        if (manejador != null && inicializacionPendiente.get() && estaPanelListoParaInyeccion()) {
+            if (inicializacionPendiente.compareAndSet(true, false)) {
+                procesarInicializacionDiferida(0, sesionActivaId);
+            }
         }
     }
 
@@ -467,11 +471,12 @@ public class PanelAgente extends JPanel {
         if (Normalizador.esVacio(url)) {
             return;
         }
-        if (!UIUtils.abrirUrlEnNavegador(url)) {
-            UIUtils.mostrarInfo(this,
-                I18nUI.Consola.TITULO_INFORMACION(),
-                I18nUI.Consola.MSG_URL_GUIA_AGENTE(url));
-        }
+        UIUtils.abrirUrlConFallbackInfo(
+            this,
+            I18nUI.Consola.TITULO_INFORMACION(),
+            url,
+            I18nUI.Consola.MSG_URL_GUIA_AGENTE(url)
+        );
     }
 
     private void actualizarEstadoBotones() {
@@ -540,6 +545,7 @@ public class PanelAgente extends JPanel {
     }
 
     private void cerrarSesionActiva() {
+        arranqueAgenteDespachado.set(false);
         TtyConnector connectorActual = ttyConnector;
         ttyConnector = null;
         if (connectorActual != null) {
@@ -594,6 +600,7 @@ public class PanelAgente extends JPanel {
         if (!consolaArrancando.compareAndSet(false, true)) {
             return;
         }
+        arranqueAgenteDespachado.set(false);
         invalidarSesionActiva();
         cerrarSesionActiva();
         recrearTerminalWidget();
@@ -693,10 +700,6 @@ public class PanelAgente extends JPanel {
                     terminalWidget.setTtyConnector(nuevoConnector);
                     terminalWidget.start();
                     ultimoAgenteIniciado = config.obtenerTipoAgente();
-                    if (inicializacionPendiente.get()) {
-                        inicializacionPendiente.set(false);
-                        procesarInicializacionDiferida();
-                    }
                     programarInyeccionInicial(sesionObjetivo);
                 }
                 consolaArrancando.set(false);
@@ -747,6 +750,13 @@ public class PanelAgente extends JPanel {
                 registrarLog(Level.WARNING, I18nLogs.tr(
                     "No se pudo enviar comando de arranque del agente tras reintentos"));
                 return;
+            }
+
+            arranqueAgenteDespachado.set(true);
+
+            if (inicializacionPendiente.getAndSet(false)) {
+                int delayDiferida = Math.max(0, usuarioDelay) + DELAY_DIFERIDA_POST_ARRANQUE_MS;
+                procesarInicializacionDiferida(delayDiferida, sesionObjetivo);
             }
 
             if (prompt == null || prompt.trim().isEmpty()) {
@@ -802,25 +812,26 @@ public class PanelAgente extends JPanel {
     }
 
     private boolean estaPanelListoParaInyeccion() {
-        return manejadorFocoPestania.get() != null
+        return arranqueAgenteDespachado.get()
+            && manejadorFocoPestania.get() != null
             && terminalWidget != null
             && terminalWidget.getTerminalPanel() != null
             && process != null
             && process.isAlive();
     }
 
-    private void procesarInicializacionDiferida() {
+    private void procesarInicializacionDiferida(int delayMinimoMs, long sesionObjetivo) {
+        if (!arranqueAgenteDespachado.get() || !esSesionVigente(sesionObjetivo)) {
+            return;
+        }
         if (promptPendiente != null) {
             String prompt = promptPendiente;
-            int delay = this.delayPendienteMs;
+            int delay = Math.max(this.delayPendienteMs, Math.max(0, delayMinimoMs));
 
             promptPendiente = null;
             this.delayPendienteMs = 0;
-            long sesionObjetivo = sesionActivaId;
-            
-            SwingUtilities.invokeLater(() -> 
-                inyectarComandoConRetraso(prompt, delay, AgentRuntimeOptions.cargar(config.obtenerTipoAgente()), "API_OR_UI", sesionObjetivo)
-            );
+
+            inyectarComandoConRetraso(prompt, delay, AgentRuntimeOptions.cargar(config.obtenerTipoAgente()), "API_OR_UI", sesionObjetivo);
         }
     }
 

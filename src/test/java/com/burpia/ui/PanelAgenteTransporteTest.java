@@ -13,6 +13,7 @@ import javax.swing.JButton;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -187,6 +189,55 @@ class PanelAgenteTransporteTest {
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains("droid")
                 ));
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Inyeccion diferida se despacha despues del comando de arranque del agente")
+    void testInyeccionDiferidaDespuesDelArranque() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+        config.establecerAgentePreflightPrompt("");
+        config.establecerAgenteDelay(0);
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), "droid-test");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            TtyConnector connector = mock(TtyConnector.class);
+            when(connector.isConnected()).thenReturn(true);
+            inyectarTtyConnector(panel, connector);
+
+            establecerCampoLong(panel, "sesionActivaId", 88L);
+            establecerCampoString(panel, "promptPendiente", "PAYLOAD_DIFERIDO");
+            establecerCampoInt(panel, "delayPendienteMs", 0);
+            establecerBandera(panel, "inicializacionPendiente", true);
+
+            Method method = PanelAgente.class.getDeclaredMethod("programarInyeccionInicial", long.class);
+            method.setAccessible(true);
+            method.invoke(panel, 88L);
+
+            verify(connector, timeout(3500).atLeastOnce())
+                .write(org.mockito.ArgumentMatchers.<String>argThat(
+                    cmd -> cmd != null && cmd.contains("droid-test")
+                ));
+            verify(connector, timeout(3500).atLeastOnce())
+                .write(org.mockito.ArgumentMatchers.<String>argThat(
+                    cmd -> cmd != null && cmd.contains("PAYLOAD_DIFERIDO")
+                ));
+
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            verify(connector, atLeast(1)).write(captor.capture());
+            List<String> escrituras = captor.getAllValues();
+
+            int indiceArranque = buscarPrimeraCoincidencia(escrituras, "droid-test");
+            int indicePayload = buscarPrimeraCoincidencia(escrituras, "PAYLOAD_DIFERIDO");
+
+            assertTrue(indiceArranque >= 0, "Debe enviarse el comando de arranque");
+            assertTrue(indicePayload >= 0, "Debe enviarse el payload diferido");
+            assertTrue(indiceArranque < indicePayload,
+                "El payload diferido debe salir despues del arranque. Escrituras: " + escrituras);
         } finally {
             panel.destruir();
         }
@@ -396,5 +447,37 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField(nombre);
         field.setAccessible(true);
         field.setLong(panel, valor);
+    }
+
+    private void establecerCampoString(PanelAgente panel, String nombre, String valor) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField(nombre);
+        field.setAccessible(true);
+        field.set(panel, valor);
+    }
+
+    private void establecerCampoInt(PanelAgente panel, String nombre, int valor) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField(nombre);
+        field.setAccessible(true);
+        field.setInt(panel, valor);
+    }
+
+    private void establecerBandera(PanelAgente panel, String nombre, boolean valor) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField(nombre);
+        field.setAccessible(true);
+        AtomicBoolean bandera = (AtomicBoolean) field.get(panel);
+        bandera.set(valor);
+    }
+
+    private int buscarPrimeraCoincidencia(List<String> valores, String fragmento) {
+        if (valores == null || fragmento == null) {
+            return -1;
+        }
+        for (int i = 0; i < valores.size(); i++) {
+            String actual = valores.get(i);
+            if (actual != null && actual.contains(fragmento)) {
+                return i;
+            }
+        }
+        return -1;
     }
 }

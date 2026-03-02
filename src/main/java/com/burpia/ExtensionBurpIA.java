@@ -26,6 +26,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ExtensionBurpIA implements BurpExtension {
     private static final String LOG_SEPARADOR = "==================================================";
@@ -202,80 +203,113 @@ public class ExtensionBurpIA implements BurpExtension {
         }
     }
 
-    private void enviarAAgente(HttpRequestResponse solicitudRespuesta) {
+    private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta) {
         if (config == null) {
             registrarError("No se puede usar el Agente: configuracion no inicializada");
-            return;
+            return false;
         }
         if (!config.agenteHabilitado()) {
             registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
-            return;
+            return false;
         }
         if (solicitudRespuesta == null) {
             registrarError("No se puede enviar al Agente: solicitud/respuesta nula");
-            return;
+            return false;
         }
+        try {
+            String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
+            String request = serializarSolicitudSiNecesario(prompt, solicitudRespuesta);
+            String response = serializarRespuestaSiNecesario(prompt, solicitudRespuesta);
+            String inputFinal = aplicarTokensPromptAgente(prompt, request, response, config.obtenerIdiomaUi());
 
-        String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
-        String request = serializarSolicitudSiNecesario(prompt, solicitudRespuesta);
-        String response = serializarRespuestaSiNecesario(prompt, solicitudRespuesta);
-        String inputFinal = aplicarTokensPromptAgente(prompt, request, response, config.obtenerIdiomaUi());
-
-        PanelAgente panelAgente = obtenerPanelAgenteDisponible();
-        if (panelAgente == null) {
-            return;
+            PanelAgente panelAgente = obtenerPanelAgenteDisponible();
+            if (panelAgente == null) {
+                return false;
+            }
+            return enfocarEInyectarEnAgente(panelAgente, inputFinal);
+        } catch (Exception e) {
+            registrarError("No se pudo enviar al Agente: " + e.getMessage());
+            return false;
         }
-        pestaniaPrincipal.seleccionarPestaniaAgente();
-        panelAgente.inyectarComando(inputFinal, 0);
     }
 
-    private void enviarHallazgoAAgente(Hallazgo hallazgo) {
+    private boolean enviarHallazgoAAgente(Hallazgo hallazgo) {
         if (config == null) {
             registrarError("No se puede usar el Agente: configuracion no inicializada");
-            return;
+            return false;
         }
         if (!config.agenteHabilitado()) {
             registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
-            return;
+            return false;
         }
         if (hallazgo == null) {
             registrarError("No se puede enviar al Agente: hallazgo nulo");
-            return;
+            return false;
         }
+        try {
+            String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
 
-        String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
+            HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
+            String request = serializarSolicitudSiNecesario(prompt, evidencia, hallazgo.obtenerUrl());
+            String response = serializarRespuestaSiNecesario(prompt, evidencia);
+            String tituloValor = valorSeguro(hallazgo.obtenerTitulo());
+            String resumenValor = valorSeguro(hallazgo.obtenerHallazgo());
+            String urlContextValor = valorSeguro(hallazgo.obtenerUrl());
+            boolean usaTitulo = contieneToken(prompt, TOKEN_TITLE);
+            boolean usaResumen = contieneAlgunToken(prompt, TOKEN_SUMMARY, TOKEN_DESCRIPTION);
+            boolean usaUrl = contieneToken(prompt, TOKEN_URL);
+            String titulo = usaTitulo && tieneContenido(tituloValor) ? tituloValor : "";
+            String resumen = usaResumen && tieneContenido(resumenValor) ? resumenValor : "";
+            String urlContext = usaUrl && tieneContenido(urlContextValor) ? urlContextValor : "";
+            String lang = config.obtenerIdiomaUi();
 
-        HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
-        String request = serializarSolicitudSiNecesario(prompt, evidencia, hallazgo.obtenerUrl());
-        String response = serializarRespuestaSiNecesario(prompt, evidencia);
-        String tituloValor = valorSeguro(hallazgo.obtenerTitulo());
-        String resumenValor = valorSeguro(hallazgo.obtenerHallazgo());
-        String urlContextValor = valorSeguro(hallazgo.obtenerUrl());
-        boolean usaTitulo = contieneToken(prompt, TOKEN_TITLE);
-        boolean usaResumen = contieneAlgunToken(prompt, TOKEN_SUMMARY, TOKEN_DESCRIPTION);
-        boolean usaUrl = contieneToken(prompt, TOKEN_URL);
-        String titulo = usaTitulo && tieneContenido(tituloValor) ? tituloValor : "";
-        String resumen = usaResumen && tieneContenido(resumenValor) ? resumenValor : "";
-        String urlContext = usaUrl && tieneContenido(urlContextValor) ? urlContextValor : "";
-        String lang = config.obtenerIdiomaUi();
+            StringBuilder inputBuilder = new StringBuilder();
+            agregarLineaSiHayContenido(inputBuilder, !usaTitulo, "Title", tituloValor);
+            agregarLineaSiHayContenido(inputBuilder, !usaResumen, "Summary", resumenValor);
+            agregarLineaSiHayContenido(inputBuilder, !usaUrl, "URL", urlContextValor);
+            if (inputBuilder.length() > 0) {
+                inputBuilder.append("\n");
+            }
 
-        StringBuilder inputBuilder = new StringBuilder();
-        agregarLineaSiHayContenido(inputBuilder, !usaTitulo, "Title", tituloValor);
-        agregarLineaSiHayContenido(inputBuilder, !usaResumen, "Summary", resumenValor);
-        agregarLineaSiHayContenido(inputBuilder, !usaUrl, "URL", urlContextValor);
-        if (inputBuilder.length() > 0) {
-            inputBuilder.append("\n");
+            String inputFinal = inputBuilder.toString() + aplicarTokensPromptAgente(prompt, request, response, lang, titulo, resumen, urlContext);
+
+            PanelAgente panelAgente = obtenerPanelAgenteDisponible();
+            if (panelAgente == null) {
+                return false;
+            }
+            return enfocarEInyectarEnAgente(panelAgente, inputFinal);
+        } catch (Exception e) {
+            registrarError("No se pudo enviar hallazgo al Agente: " + e.getMessage());
+            return false;
         }
+    }
 
-        String inputFinal = inputBuilder.toString() + aplicarTokensPromptAgente(prompt, request, response, lang, titulo, resumen, urlContext);
-
-        PanelAgente panelAgente = obtenerPanelAgenteDisponible();
-        if (panelAgente == null) {
-            return;
+    private boolean enfocarEInyectarEnAgente(PanelAgente panelAgente, String inputFinal) {
+        if (panelAgente == null || pestaniaPrincipal == null) {
+            return false;
         }
-        pestaniaPrincipal.seleccionarPestaniaAgente();
-
-        panelAgente.inyectarComando(inputFinal, 0);
+        if (SwingUtilities.isEventDispatchThread()) {
+            pestaniaPrincipal.seleccionarPestaniaAgente();
+            panelAgente.inyectarComando(inputFinal, 0);
+            return true;
+        }
+        AtomicBoolean enviado = new AtomicBoolean(false);
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                if (pestaniaPrincipal == null) {
+                    return;
+                }
+                pestaniaPrincipal.seleccionarPestaniaAgente();
+                panelAgente.inyectarComando(inputFinal, 0);
+                enviado.set(true);
+            });
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (InvocationTargetException e) {
+            return false;
+        }
+        return enviado.get();
     }
 
     private String aplicarTokensPromptAgente(String prompt, String request, String response, String idioma) {

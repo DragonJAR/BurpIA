@@ -12,13 +12,14 @@ import java.awt.Component;
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final burp.api.montoya.MontoyaApi api;
     private final ConsumerSolicitud manejadorAnalisis;
     private final ConfiguracionAPI config;
-    private final java.util.function.Consumer<HttpRequestResponse> manejadorAgente;
+    private final Predicate<HttpRequestResponse> manejadorAgente;
     private final Runnable manejadorCambioAlertasEnviarA;
     private final AtomicReference<RegistroClic> ultimoClic;
     private static final long VENTANA_DEBOUNCE_MS = 500L;
@@ -30,7 +31,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     public FabricaMenuContextual(MontoyaApi api,
                                  ConsumerSolicitud manejadorAnalisis,
                                  ConfiguracionAPI config,
-                                 java.util.function.Consumer<HttpRequestResponse> manejadorAgente,
+                                 Predicate<HttpRequestResponse> manejadorAgente,
                                  Runnable manejadorCambioAlertasEnviarA) {
         this.api = api;
         this.manejadorAnalisis = manejadorAnalisis;
@@ -43,24 +44,19 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     @Override
     public List<Component> provideMenuItems(ContextMenuEvent evento) {
         List<Component> itemsMenu = new ArrayList<>();
-
         if (evento == null || evento.selectedRequestResponses() == null || evento.selectedRequestResponses().isEmpty()) {
             return itemsMenu;
         }
-
-        final HttpRequestResponse solicitudRespuestaSeleccionada = evento.selectedRequestResponses().get(0);
-        final HttpRequest solicitudCapturada = solicitudRespuestaSeleccionada.request();
+        final List<HttpRequestResponse> seleccion = new ArrayList<>(evento.selectedRequestResponses());
 
         JMenuItem itemAnalizar = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD());
         itemAnalizar.setFont(EstilosUI.FUENTE_ESTANDAR);
         itemAnalizar.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD());
-        itemAnalizar.addActionListener(e -> {
-            manejarClicConDebounce(solicitudCapturada, solicitudRespuestaSeleccionada);
-        });
+        itemAnalizar.addActionListener(e -> manejarAnalisisSeleccion(seleccion));
 
         itemsMenu.add(itemAnalizar);
 
-        if (config.agenteHabilitado()) {
+        if (config != null && config.agenteHabilitado() && manejadorAgente != null) {
             String nombreAgente = AgenteTipo.obtenerNombreVisible(
                 config.obtenerTipoAgente(),
                 I18nUI.General.AGENTE_GENERICO()
@@ -68,16 +64,17 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             JMenuItem itemAgente = new JMenuItem(I18nUI.Contexto.MENU_ENVIAR_AGENTE(nombreAgente));
             itemAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
             itemAgente.setToolTipText(I18nUI.Tooltips.Contexto.ENVIAR_A_AGENTE(nombreAgente));
-            itemAgente.addActionListener(e -> {
-                manejarEnvioAgente(solicitudRespuestaSeleccionada, nombreAgente);
-            });
+            itemAgente.addActionListener(e -> manejarEnvioAgente(seleccion, nombreAgente));
             itemsMenu.add(itemAgente);
         }
 
         return itemsMenu;
     }
 
-    private void manejarClicConDebounce(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
+    private boolean manejarClicConDebounce(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
+        if (solicitud == null || solicitudRespuestaOriginal == null) {
+            return false;
+        }
         String contenido = solicitud != null ? solicitud.toString() : "null";
         String hash = String.valueOf(contenido.hashCode());
         long ahora = System.currentTimeMillis();
@@ -85,7 +82,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         RegistroClic previo = ultimoClic.get();
         if (previo != null && hash.equals(previo.hashSolicitud) && (ahora - previo.timestampMs) < VENTANA_DEBOUNCE_MS) {
             api.logging().logToOutput(I18nUI.Contexto.LOG_DEBOUNCE_IGNORADO());
-            return;
+            return false;
         }
 
         ultimoClic.set(new RegistroClic(hash, ahora));
@@ -93,38 +90,96 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         manejadorAnalisis.analizarSolicitud(solicitud, true, solicitudRespuestaOriginal);
 
         api.logging().logToOutput(I18nUI.Contexto.LOG_ANALISIS_FORZADO());
-
-        SwingUtilities.invokeLater(() -> {
-            if (GraphicsEnvironment.isHeadless()) {
-                return;
-            }
-            UIUtils.mostrarInfoConOptOut(
-                null,
-                I18nUI.Contexto.TITULO_ANALISIS_INICIADO(),
-                I18nUI.Contexto.MSG_ANALISIS_INICIADO(),
-                alertasEnviarAHabilitadas(),
-                this::deshabilitarAlertasEnviarA
-            );
-        });
+        return true;
     }
 
-    private void manejarEnvioAgente(HttpRequestResponse solicitudRespuestaSeleccionada, String nombreAgente) {
-        try {
-            manejadorAgente.accept(solicitudRespuestaSeleccionada);
-        } catch (Exception ex) {
-            api.logging().logToError("[BurpIA] Error enviando solicitud al agente: " + ex.getMessage());
+    private void manejarAnalisisSeleccion(List<HttpRequestResponse> seleccion) {
+        if (seleccion == null || seleccion.isEmpty()) {
             return;
         }
+        int iniciadas = 0;
+        int omitidas = 0;
+        for (HttpRequestResponse rr : seleccion) {
+            if (rr == null) {
+                omitidas++;
+                continue;
+            }
+            HttpRequest solicitud = rr.request();
+            if (manejarClicConDebounce(solicitud, rr)) {
+                iniciadas++;
+            } else {
+                omitidas++;
+            }
+        }
+
         if (GraphicsEnvironment.isHeadless()) {
             return;
         }
-        UIUtils.mostrarInfoConOptOut(
-            null,
-            I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
-            I18nUI.Contexto.MSG_ENVIO_AGENTE(nombreAgente),
-            alertasEnviarAHabilitadas(),
-            this::deshabilitarAlertasEnviarA
-        );
+        String mensaje = I18nUI.Contexto.MSG_ANALISIS_INICIADO_RESULTADO(iniciadas, seleccion.size(), omitidas);
+        if (iniciadas > 0) {
+            UIUtils.mostrarInfoConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_ANALISIS_INICIADO(),
+                mensaje,
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+        } else {
+            UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_ANALISIS_INICIADO(),
+                mensaje,
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+        }
+    }
+
+    private void manejarEnvioAgente(List<HttpRequestResponse> seleccion, String nombreAgente) {
+        if (seleccion == null || seleccion.isEmpty() || manejadorAgente == null) {
+            return;
+        }
+        int exitosas = 0;
+        int fallidas = 0;
+        for (HttpRequestResponse rr : seleccion) {
+            if (rr == null) {
+                fallidas++;
+                continue;
+            }
+            try {
+                boolean enviada = manejadorAgente.test(rr);
+                if (enviada) {
+                    exitosas++;
+                } else {
+                    fallidas++;
+                }
+            } catch (Exception ex) {
+                fallidas++;
+                api.logging().logToError("[BurpIA] Error enviando solicitud al agente: " + ex.getMessage());
+            }
+        }
+
+        if (GraphicsEnvironment.isHeadless()) {
+            return;
+        }
+        String mensaje = I18nUI.Contexto.MSG_ENVIO_AGENTE_RESULTADO(nombreAgente, exitosas, seleccion.size(), fallidas);
+        if (exitosas > 0) {
+            UIUtils.mostrarInfoConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
+                mensaje,
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+        } else {
+            UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
+                mensaje,
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+        }
     }
 
     private boolean alertasEnviarAHabilitadas() {

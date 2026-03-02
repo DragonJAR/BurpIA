@@ -591,10 +591,13 @@ public class DialogoConfiguracion extends JDialog {
         btnSitioWeb.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
         btnSitioWeb.setToolTipText(I18nUI.Tooltips.Configuracion.SITIO_AUTOR());
         btnSitioWeb.addActionListener(e -> {
-            String url = "https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica";
-            if (!UIUtils.abrirUrlEnNavegador(url)) {
-                UIUtils.mostrarInfo(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ENLACE(), I18nUI.Configuracion.MSG_URL());
-            }
+            String url = I18nUI.Configuracion.URL_SITIO_WEB();
+            UIUtils.abrirUrlConFallbackInfo(
+                DialogoConfiguracion.this,
+                I18nUI.Configuracion.TITULO_ENLACE(),
+                url,
+                I18nUI.Configuracion.MSG_URL(url)
+            );
         });
 
         JPanel panelBoton = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));

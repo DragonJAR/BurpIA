@@ -11,6 +11,7 @@ import java.awt.*;
 import java.beans.PropertyChangeListener;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class PestaniaPrincipal extends JPanel {
     private enum DestinoPestania {
@@ -323,7 +324,7 @@ public class PestaniaPrincipal extends JPanel {
         panelTareas.establecerManejadorReintento(manejador);
     }
 
-    public void establecerManejadorEnviarAAgente(java.util.function.Consumer<Hallazgo> manejador) {
+    public void establecerManejadorEnviarAAgente(Predicate<Hallazgo> manejador) {
         panelHallazgos.establecerManejadorEnviarAAgente(manejador);
     }
 

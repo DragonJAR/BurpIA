@@ -4,8 +4,18 @@ import com.burpia.i18n.I18nUI;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import javax.swing.JButton;
+import javax.swing.JPopupMenu;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Insets;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("UIUtils Tests")
@@ -43,6 +53,47 @@ class UIUtilsTest {
     void testDebeMostrarAlertaConOptOut() {
         assertTrue(UIUtils.debeMostrarAlertaConOptOut(true));
         assertFalse(UIUtils.debeMostrarAlertaConOptOut(false));
+    }
+
+    @Test
+    @DisplayName("abrirUrlConFallbackInfo retorna false con URL inválida")
+    void testAbrirUrlConFallbackInfoUrlInvalida() {
+        assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", null, "Mensaje"));
+        assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", "   ", "Mensaje"));
+    }
+
+    @Test
+    @DisplayName("normalizarPadreDialogo usa invocador cuando recibe popup")
+    void testNormalizarPadreDialogoConPopup() {
+        JButton invocador = new JButton("Invocador");
+        JPopupMenu popup = new JPopupMenu();
+        popup.setInvoker(invocador);
+
+        assertEquals(invocador, UIUtils.normalizarPadreDialogo(popup));
+    }
+
+    @Test
+    @DisplayName("envolverContenidoConIcono mantiene contenido y gap horizontal fijo")
+    void testEnvolverContenidoConIcono() {
+        JPanel contenido = new JPanel();
+        JPanel envuelto = UIUtils.envolverContenidoConIcono(contenido, JOptionPane.INFORMATION_MESSAGE);
+
+        BorderLayout layout = (BorderLayout) envuelto.getLayout();
+        assertEquals(12, layout.getHgap());
+        assertEquals(contenido, layout.getLayoutComponent(BorderLayout.CENTER));
+
+        Component icono = layout.getLayoutComponent(BorderLayout.WEST);
+        if (icono != null) {
+            assertNotNull(icono);
+        }
+    }
+
+    @Test
+    @DisplayName("crearAreaMensajeDialogo reserva margen horizontal")
+    void testCrearAreaMensajeDialogoMargenHorizontal() {
+        Insets margen = UIUtils.crearAreaMensajeDialogo("mensaje").getMargin();
+        assertTrue(margen.left >= 2);
+        assertTrue(margen.right >= 2);
     }
 
     @Test
@@ -90,5 +141,24 @@ class UIUtilsTest {
         );
 
         I18nUI.establecerIdioma("es");
+    }
+
+    @Test
+    @DisplayName("normalizarDelayMs evita valores negativos")
+    void testNormalizarDelayMs() {
+        assertEquals(0, UIUtils.normalizarDelayMs(-5));
+        assertEquals(0, UIUtils.normalizarDelayMs(0));
+        assertEquals(140, UIUtils.normalizarDelayMs(140));
+    }
+
+    @Test
+    @DisplayName("alertas de menu contextual respetan opt-out deshabilitado sin lanzar excepcion")
+    void testAlertasMenuContextualConOptOutDeshabilitadoNoLanzanExcepcion() {
+        assertDoesNotThrow(() -> UIUtils.mostrarInfoConOptOutMenuContextual(
+            null, "Titulo", "Mensaje", false, null
+        ));
+        assertDoesNotThrow(() -> UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
+            null, "Titulo", "Mensaje", false, null
+        ));
     }
 }

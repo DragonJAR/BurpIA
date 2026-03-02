@@ -56,4 +56,12 @@ public class OSUtilsTest {
         String esperado = System.getProperty("user.home") + "/.local/bin/claude";
         assertEquals(esperado, OSUtils.resolverEjecutableComando(comando));
     }
+
+    @Test
+    public void testDebeCerrarVentanaAjustesSoloDialogoConfiguracion() {
+        assertTrue(OSUtils.debeCerrarVentanaAjustes("DialogoConfiguracion"));
+        assertTrue(OSUtils.debeCerrarVentanaAjustes("com.burpia.ui.DialogoConfiguracion"));
+        assertFalse(OSUtils.debeCerrarVentanaAjustes("JDialog"));
+        assertFalse(OSUtils.debeCerrarVentanaAjustes("MensajeBurpIA"));
+    }
 }

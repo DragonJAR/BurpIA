@@ -14,11 +14,14 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Cursor;
+import java.awt.Dialog;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
 import java.awt.event.MouseAdapter;
@@ -39,6 +42,7 @@ public class UIUtils {
     private static final int DIALOGO_ALTO_MIN_MENSAJE = 168;
     private static final int DIALOGO_ALTO_MIN_CONFIRMACION = 156;
     private static final int DIALOGO_ALTO_EXTRA_OPT_OUT = 16;
+    private static final int DIALOGO_DELAY_MENU_CONTEXTO_MS = 140;
 
     private UIUtils() {
     }
@@ -114,6 +118,24 @@ public class UIUtils {
                                                    boolean alertasHabilitadas,
                                                    Runnable onDeshabilitar) {
         mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.WARNING_MESSAGE, alertasHabilitadas, onDeshabilitar);
+    }
+
+    public static void mostrarInfoConOptOutMenuContextual(Component parent,
+                                                          String titulo,
+                                                          String mensaje,
+                                                          boolean alertasHabilitadas,
+                                                          Runnable onDeshabilitar) {
+        mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.INFORMATION_MESSAGE,
+            alertasHabilitadas, onDeshabilitar, DIALOGO_DELAY_MENU_CONTEXTO_MS);
+    }
+
+    public static void mostrarAdvertenciaConOptOutMenuContextual(Component parent,
+                                                                 String titulo,
+                                                                 String mensaje,
+                                                                 boolean alertasHabilitadas,
+                                                                 Runnable onDeshabilitar) {
+        mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.WARNING_MESSAGE,
+            alertasHabilitadas, onDeshabilitar, DIALOGO_DELAY_MENU_CONTEXTO_MS);
     }
 
     public static DocumentListener crearDocumentListener(Runnable onChange) {
@@ -237,15 +259,34 @@ public class UIUtils {
     }
 
     public static boolean abrirUrlEnNavegador(String url) {
-        if (url == null || url.trim().isEmpty() || !Desktop.isDesktopSupported()) {
+        if (url == null) {
+            return false;
+        }
+        String urlLimpia = url.trim();
+        if (urlLimpia.isEmpty() || !Desktop.isDesktopSupported()) {
             return false;
         }
         try {
-            Desktop.getDesktop().browse(new URI(url));
+            Desktop desktop = Desktop.getDesktop();
+            if (!desktop.isSupported(Desktop.Action.BROWSE)) {
+                return false;
+            }
+            desktop.browse(new URI(urlLimpia));
             return true;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public static boolean abrirUrlConFallbackInfo(Component parent,
+                                                  String titulo,
+                                                  String url,
+                                                  String mensajeFallback) {
+        boolean abierto = abrirUrlEnNavegador(url);
+        if (!abierto && Normalizador.noEsVacio(mensajeFallback)) {
+            mostrarInfo(parent, titulo, mensajeFallback);
+        }
+        return abierto;
     }
 
     private static void ejecutarEnEDT(Runnable runnable) {
@@ -262,13 +303,23 @@ public class UIUtils {
                                                 int tipoMensaje,
                                                 boolean alertasHabilitadas,
                                                 Runnable onDeshabilitar) {
+        mostrarMensajeConOptOut(parent, titulo, mensaje, tipoMensaje, alertasHabilitadas, onDeshabilitar, 0);
+    }
+
+    private static void mostrarMensajeConOptOut(Component parent,
+                                                String titulo,
+                                                String mensaje,
+                                                int tipoMensaje,
+                                                boolean alertasHabilitadas,
+                                                Runnable onDeshabilitar,
+                                                int delayMs) {
         if (!debeMostrarAlertaConOptOut(alertasHabilitadas)) {
             return;
         }
         if (GraphicsEnvironment.isHeadless()) {
             return;
         }
-        ejecutarEnEDT(() -> {
+        ejecutarEnEDTConRetraso(() -> {
             DialogoContenido contenido = crearContenidoDialogo(mensaje, true);
             mostrarDialogoConContenido(
                 parent,
@@ -281,7 +332,30 @@ public class UIUtils {
             if (contenido.chkNoMostrar != null && contenido.chkNoMostrar.isSelected() && onDeshabilitar != null) {
                 onDeshabilitar.run();
             }
+        }, delayMs);
+    }
+
+    static void ejecutarEnEDTConRetraso(Runnable runnable, int delayMs) {
+        if (runnable == null) {
+            return;
+        }
+        int delaySeguro = normalizarDelayMs(delayMs);
+        ejecutarEnEDT(() -> {
+            if (delaySeguro <= 0) {
+                runnable.run();
+                return;
+            }
+            Timer temporizador = new Timer(delaySeguro, e -> {
+                ((Timer) e.getSource()).stop();
+                runnable.run();
+            });
+            temporizador.setRepeats(false);
+            temporizador.start();
         });
+    }
+
+    static int normalizarDelayMs(int delayMs) {
+        return Math.max(0, delayMs);
     }
 
     static JTextArea crearAreaMensajeDialogo(String mensaje) {
@@ -291,6 +365,7 @@ public class UIUtils {
         areaMensaje.setWrapStyleWord(true);
         areaMensaje.setOpaque(false);
         areaMensaje.setBorder(null);
+        areaMensaje.setMargin(new Insets(0, 2, 0, 2));
         int columnas = calcularColumnasSugeridas(mensaje);
         areaMensaje.setColumns(columnas);
         areaMensaje.setRows(calcularFilasSugeridas(mensaje, columnas));
@@ -359,27 +434,50 @@ public class UIUtils {
     }
 
     private static Component resolverPadreDialogo(Component parent) {
-        if (parent != null) {
-            return parent;
+        Component padre = normalizarPadreDialogo(parent);
+        if (padre != null) {
+            return padre;
         }
         KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-        Component foco = kfm.getFocusOwner();
-        if (foco != null) {
-            Window window = SwingUtilities.getWindowAncestor(foco);
-            if (window != null) {
-                return window;
-            }
-            return foco;
+        padre = normalizarPadreDialogo(kfm.getFocusOwner());
+        if (padre != null) {
+            return padre;
         }
-        Window activa = kfm.getActiveWindow();
-        return activa;
+        return normalizarPadreDialogo(kfm.getActiveWindow());
+    }
+
+    static Component normalizarPadreDialogo(Component candidato) {
+        if (candidato == null) {
+            return null;
+        }
+        Component base = candidato;
+        if (base instanceof JPopupMenu) {
+            base = ((JPopupMenu) base).getInvoker();
+            if (base == null) {
+                return null;
+            }
+        }
+        Window ventana = base instanceof Window ? (Window) base : SwingUtilities.getWindowAncestor(base);
+        Window estable = resolverVentanaDialogoEstable(ventana);
+        return estable != null ? estable : base;
+    }
+
+    static Window resolverVentanaDialogoEstable(Window ventana) {
+        Window actual = ventana;
+        while (actual != null) {
+            if ((actual instanceof Frame || actual instanceof Dialog) && actual.isDisplayable()) {
+                return actual;
+            }
+            actual = actual.getOwner();
+        }
+        return null;
     }
 
     private static DialogoContenido crearContenidoDialogo(String mensaje, boolean incluirOptOut) {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
-        panel.setBorder(BorderFactory.createEmptyBorder(4, 0, 4, 0));
+        panel.setBorder(BorderFactory.createEmptyBorder(4, 2, 4, 2));
         JTextArea areaMensaje = crearAreaMensajeDialogo(mensaje);
         areaMensaje.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(areaMensaje);
@@ -409,7 +507,8 @@ public class UIUtils {
                                                   int tipoMensaje,
                                                   int tipoOpcion) {
         Component padreDialogo = resolverPadreDialogo(parent);
-        JOptionPane optionPane = new JOptionPane(contenido.panel, tipoMensaje, tipoOpcion);
+        Component mensajeConIcono = envolverContenidoConIcono(contenido.panel, tipoMensaje);
+        JOptionPane optionPane = new JOptionPane(mensajeConIcono, JOptionPane.PLAIN_MESSAGE, tipoOpcion);
         JDialog dialogo = optionPane.createDialog(padreDialogo, titulo);
         dialogo.setResizable(false);
         aplicarFuentesDialogo(dialogo);
@@ -423,6 +522,43 @@ public class UIUtils {
             return (Integer) valor;
         }
         return JOptionPane.CLOSED_OPTION;
+    }
+
+    static JPanel envolverContenidoConIcono(Component contenido, int tipoMensaje) {
+        JPanel contenedor = new JPanel(new BorderLayout(12, 0));
+        contenedor.setOpaque(false);
+        JLabel icono = crearEtiquetaIconoDialogo(tipoMensaje);
+        if (icono != null) {
+            contenedor.add(icono, BorderLayout.WEST);
+        }
+        contenedor.add(contenido != null ? contenido : new JPanel(), BorderLayout.CENTER);
+        return contenedor;
+    }
+
+    static JLabel crearEtiquetaIconoDialogo(int tipoMensaje) {
+        Icon icono = resolverIconoDialogo(tipoMensaje);
+        if (icono == null) {
+            return null;
+        }
+        JLabel etiqueta = new JLabel(icono);
+        etiqueta.setVerticalAlignment(SwingConstants.TOP);
+        etiqueta.setBorder(BorderFactory.createEmptyBorder(1, 0, 0, 0));
+        return etiqueta;
+    }
+
+    static Icon resolverIconoDialogo(int tipoMensaje) {
+        switch (tipoMensaje) {
+            case JOptionPane.ERROR_MESSAGE:
+                return UIManager.getIcon("OptionPane.errorIcon");
+            case JOptionPane.WARNING_MESSAGE:
+                return UIManager.getIcon("OptionPane.warningIcon");
+            case JOptionPane.QUESTION_MESSAGE:
+                return UIManager.getIcon("OptionPane.questionIcon");
+            case JOptionPane.INFORMATION_MESSAGE:
+                return UIManager.getIcon("OptionPane.informationIcon");
+            default:
+                return null;
+        }
     }
 
     private static void ajustarTamanoDialogo(JDialog dialogo, int tipoOpcion, boolean incluyeOptOut) {

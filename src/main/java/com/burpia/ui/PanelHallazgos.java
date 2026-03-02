@@ -30,6 +30,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class PanelHallazgos extends JPanel {
     private final ModeloTablaHallazgos modelo;
@@ -55,7 +56,7 @@ public class PanelHallazgos extends JPanel {
     private boolean actualizandoEstadoAutoIssues = false;
 
     private com.burpia.config.ConfiguracionAPI config;
-    private java.util.function.Consumer<Hallazgo> manejadorEnviarAAgente;
+    private Predicate<Hallazgo> manejadorEnviarAAgente;
     private Runnable manejadorCambioAlertasEnviarA;
     private final ExecutorService ejecutorAcciones;
 
@@ -567,22 +568,33 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void enviarAAgente(int[] filas) {
-        if (manejadorEnviarAAgente == null) return;
-        int[] filasModelo = convertirFilasVistaAModelo(filas);
-        int enviados = 0;
-        for (int filaModelo : filasModelo) {
-            Hallazgo h = modelo.obtenerHallazgo(filaModelo);
-            if (h != null) {
-                manejadorEnviarAAgente.accept(h);
-                enviados++;
+        if (manejadorEnviarAAgente == null) {
+            return;
+        }
+        final String nombreAgente = obtenerNombreAgenteVisible();
+        ejecutarAccionBurp(
+            filas,
+            "BurpIA-Agente",
+            I18nUI.Hallazgos.TITULO_ACCION_AGENTE(),
+            I18nUI.Hallazgos.RESUMEN_ACCION_AGENTE(nombreAgente),
+            false,
+            false,
+            (solicitud, hallazgo) -> {
+                if (hallazgo == null) {
+                    throw new IllegalStateException(I18nUI.Hallazgos.ERROR_HALLAZGO_NO_DISPONIBLE());
+                }
+                boolean enviado = manejadorEnviarAAgente.test(hallazgo);
+                if (!enviado) {
+                    throw new IllegalStateException(I18nUI.Hallazgos.ERROR_ENVIO_AGENTE(nombreAgente));
+                }
+                String url = hallazgo.obtenerUrl() != null && !hallazgo.obtenerUrl().isBlank()
+                    ? hallazgo.obtenerUrl()
+                    : I18nUI.Hallazgos.URL_DESCONOCIDA();
+                return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
+                    url + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_AGENTE(nombreAgente)
+                );
             }
-        }
-        if (enviados > 0) {
-            mostrarInfoEnviarA(
-                I18nUI.Hallazgos.TITULO_ACCION_AGENTE(),
-                I18nUI.Hallazgos.MSG_ENVIADOS_AGENTE(enviados, obtenerNombreAgenteVisible())
-            );
-        }
+        );
     }
 
     private void enviarARepeater(int[] filas) {
@@ -596,7 +608,7 @@ public class PanelHallazgos extends JPanel {
             (solicitud, hallazgo) -> {
                 String nombreTab = "BurpIA-" + (hallazgo != null ? hallazgo.obtenerSeveridad() : I18nUI.General.HALLAZGO_GENERICO());
                 api.repeater().sendToRepeater(solicitud, nombreTab);
-                return "✅ " + solicitud.url();
+                return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(solicitud.url());
             }
         );
     }
@@ -611,7 +623,9 @@ public class PanelHallazgos extends JPanel {
             false,
             (solicitud, hallazgo) -> {
                 api.intruder().sendToIntruder(solicitud);
-                return "✅ " + solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_INTRUDER();
+                return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
+                    solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_INTRUDER()
+                );
             }
         );
     }
@@ -640,7 +654,9 @@ public class PanelHallazgos extends JPanel {
                     }
                     auditoriaActiva.addRequest(solicitud);
                     api.logging().logToOutput(I18nUI.Hallazgos.LOG_PETICION_ENVIADA_SCANNER() + solicitud.url());
-                    return "✅ " + solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_SCANNER();
+                    return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
+                        solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_SCANNER()
+                    );
                 }
             }
         );
@@ -674,7 +690,9 @@ public class PanelHallazgos extends JPanel {
                 String url = hallazgo.obtenerUrl() != null && !hallazgo.obtenerUrl().isBlank()
                     ? hallazgo.obtenerUrl()
                     : I18nUI.Hallazgos.URL_DESCONOCIDA();
-                return "✅ " + url + " " + I18nUI.Hallazgos.SUFIJO_ISSUE_GUARDADO();
+                return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
+                    url + " " + I18nUI.Hallazgos.SUFIJO_ISSUE_GUARDADO()
+                );
             }
         );
     }
@@ -705,8 +723,8 @@ public class PanelHallazgos extends JPanel {
 
                 if (requiereRequest && solicitud == null) {
                     sinRequest++;
-                    detalle.append("⚠️ ").append(entrada.urlReferencia)
-                        .append(" ").append(I18nUI.Hallazgos.MSG_SIN_REQUEST()).append("\n");
+                    String advertencia = entrada.urlReferencia + " " + I18nUI.Hallazgos.MSG_SIN_REQUEST();
+                    detalle.append(I18nUI.Hallazgos.LINEA_ESTADO_ADVERTENCIA_ALERTA(advertencia)).append("\n");
                     continue;
                 }
 
@@ -717,10 +735,8 @@ public class PanelHallazgos extends JPanel {
                 } catch (Exception ex) {
                     String mensaje = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
                     String url = solicitud != null ? solicitud.url() : entrada.urlReferencia;
-                    detalle.append("❌ ").append(url)
-                        .append(I18nUI.Hallazgos.SUFIJO_ERROR_INLINE())
-                        .append(mensaje)
-                        .append(")\n");
+                    String detalleError = url + I18nUI.Hallazgos.SUFIJO_ERROR_INLINE() + mensaje + ")";
+                    detalle.append(I18nUI.Hallazgos.LINEA_ESTADO_ERROR_ALERTA(detalleError)).append("\n");
                     if (registrarErroresScanner && api != null) {
                         api.logging().logToError(I18nUI.Hallazgos.LOG_ERROR_ENVIAR_SCANNER() + mensaje);
                     }
@@ -981,7 +997,7 @@ public class PanelHallazgos extends JPanel {
         this.config = config;
     }
 
-    public void establecerManejadorEnviarAAgente(java.util.function.Consumer<Hallazgo> manejador) {
+    public void establecerManejadorEnviarAAgente(Predicate<Hallazgo> manejador) {
         this.manejadorEnviarAAgente = manejador;
     }
 
