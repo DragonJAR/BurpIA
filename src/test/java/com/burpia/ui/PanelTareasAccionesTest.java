@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("PanelTareas Acciones Tests")
@@ -116,6 +117,20 @@ class PanelTareasAccionesTest {
         assertTrue(resultado);
         assertEquals(error.obtenerId(), tareaReintentada.get());
         assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Reintentar sin manejador solo cuenta éxito si el gestor realmente reencola")
+    void testReintentarSinManejadorRetornaEstadoReal() throws Exception {
+        Tarea completada = gestor.crearTarea("A", "https://example.com/done", Tarea.ESTADO_COMPLETADO, "");
+        flushEdt();
+
+        Method reencolar = PanelTareas.class.getDeclaredMethod("reencolarTarea", String.class);
+        reencolar.setAccessible(true);
+        boolean resultado = (boolean) reencolar.invoke(panel, completada.obtenerId());
+
+        assertFalse(resultado);
+        assertEquals(Tarea.ESTADO_COMPLETADO, gestor.obtenerTarea(completada.obtenerId()).obtenerEstado());
     }
 
     @Test

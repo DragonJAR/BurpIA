@@ -20,14 +20,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ModeloTablaTareasTest {
 
     @Test
-    @DisplayName("Normaliza límite inválido y conserva al menos una fila")
+    @DisplayName("Normaliza límite inválido y purga solo finalizadas")
     void testNormalizaLimiteInvalido() throws Exception {
         ModeloTablaTareas modelo = new ModeloTablaTareas(0);
         modelo.agregarTarea(new Tarea("1", "A", "https://example.com/1", Tarea.ESTADO_EN_COLA));
-        modelo.agregarTarea(new Tarea("2", "B", "https://example.com/2", Tarea.ESTADO_EN_COLA));
+        modelo.agregarTarea(new Tarea("2", "B", "https://example.com/2", Tarea.ESTADO_COMPLETADO));
 
         SwingUtilities.invokeAndWait(() -> {});
         assertEquals(1, modelo.getRowCount());
+        assertEquals("1", modelo.obtenerIdTarea(0));
+    }
+
+    @Test
+    @DisplayName("Límite visual no purga tareas activas cuando no hay finalizadas")
+    void testLimiteNoPurgeActivas() throws Exception {
+        ModeloTablaTareas modelo = new ModeloTablaTareas(1);
+        modelo.agregarTarea(new Tarea("1", "A", "https://example.com/1", Tarea.ESTADO_EN_COLA));
+        modelo.agregarTarea(new Tarea("2", "B", "https://example.com/2", Tarea.ESTADO_ANALIZANDO));
+
+        SwingUtilities.invokeAndWait(() -> {});
+        assertEquals(2, modelo.getRowCount());
+        assertEquals(2, modelo.obtenerNumeroTareas());
     }
 
     @Test

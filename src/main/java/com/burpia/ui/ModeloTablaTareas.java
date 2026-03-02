@@ -32,15 +32,20 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public void agregarTarea(Tarea tarea) {
+        agregarTareaYObtenerIdsPurgadas(tarea);
+    }
+
+    public List<String> agregarTareaYObtenerIdsPurgadas(Tarea tarea) {
         if (tarea == null) {
-            return;
+            return new ArrayList<>();
         }
+        List<String> idsPurgadas;
         lock.lock();
         try {
             datos.add(tarea);
             marcarCambio();
-            boolean purgaRealizada = aplicarLimiteFilasEnDatos();
-            if (purgaRealizada) {
+            idsPurgadas = aplicarLimiteFilasEnDatos();
+            if (!idsPurgadas.isEmpty()) {
                 programarSincronizacionTabla();
             } else {
                 SwingUtilities.invokeLater(() -> {
@@ -50,6 +55,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
+        return idsPurgadas;
     }
 
     public void actualizarTarea(Tarea tarea) {
@@ -89,17 +95,22 @@ public class ModeloTablaTareas extends DefaultTableModel {
         }
     }
 
-    private boolean aplicarLimiteFilasEnDatos() {
-        boolean huboPurga = false;
+    private List<String> aplicarLimiteFilasEnDatos() {
+        List<String> idsPurgadas = new ArrayList<>();
         while (datos.size() > limiteFilas) {
             int indice = buscarIndicePurgablePorLimite();
             if (indice < 0 || indice >= datos.size()) {
                 break;
             }
-            datos.remove(indice);
-            huboPurga = true;
+            Tarea tareaPurgada = datos.remove(indice);
+            if (tareaPurgada != null) {
+                String id = tareaPurgada.obtenerId();
+                if (id != null && !id.isEmpty()) {
+                    idsPurgadas.add(id);
+                }
+            }
         }
-        return huboPurga;
+        return idsPurgadas;
     }
 
     private int buscarIndicePurgablePorLimite() {
@@ -109,10 +120,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
                 return i;
             }
         }
-        if (datos.isEmpty()) {
-            return -1;
-        }
-        return 0;
+        return -1;
     }
 
     public void limpiar() {

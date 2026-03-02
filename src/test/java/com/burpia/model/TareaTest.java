@@ -32,6 +32,31 @@ class TareaTest {
     }
 
     @Test
+    @DisplayName("Predicados de transición de estado son consistentes")
+    void testPredicadosTransicionEstado() {
+        assertTrue(Tarea.esEstadoPausable(Tarea.ESTADO_EN_COLA));
+        assertTrue(Tarea.esEstadoPausable(Tarea.ESTADO_ANALIZANDO));
+        assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_PAUSADO));
+
+        assertTrue(Tarea.esEstadoReanudable(Tarea.ESTADO_PAUSADO));
+        assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_ERROR));
+
+        assertTrue(Tarea.esEstadoReintentable(Tarea.ESTADO_ERROR));
+        assertTrue(Tarea.esEstadoReintentable(Tarea.ESTADO_CANCELADO));
+        assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_COMPLETADO));
+
+        assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_EN_COLA));
+        assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_ANALIZANDO));
+        assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_PAUSADO));
+        assertFalse(Tarea.esEstadoCancelable(Tarea.ESTADO_COMPLETADO));
+
+        assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_COMPLETADO));
+        assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_ERROR));
+        assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_CANCELADO));
+        assertFalse(Tarea.esEstadoEliminable(Tarea.ESTADO_EN_COLA));
+    }
+
+    @Test
     @DisplayName("Estados inválidos")
     void testEstadosInvalidos() {
         assertFalse(Tarea.esEstadoValido("Running"));

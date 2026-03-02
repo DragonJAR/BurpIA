@@ -83,6 +83,26 @@ public class Tarea {
                ESTADO_CANCELADO.equals(estado);
     }
 
+    public static boolean esEstadoReintentable(String estado) {
+        return ESTADO_ERROR.equals(estado) || ESTADO_CANCELADO.equals(estado);
+    }
+
+    public static boolean esEstadoPausable(String estado) {
+        return ESTADO_EN_COLA.equals(estado) || ESTADO_ANALIZANDO.equals(estado);
+    }
+
+    public static boolean esEstadoReanudable(String estado) {
+        return ESTADO_PAUSADO.equals(estado);
+    }
+
+    public static boolean esEstadoCancelable(String estado) {
+        return esEstadoPausable(estado) || esEstadoReanudable(estado);
+    }
+
+    public static boolean esEstadoEliminable(String estado) {
+        return esEstadoFinal(estado);
+    }
+
     public String obtenerMensajeInfo() {
         synchronized (candado) {
             return mensajeInfo;
@@ -170,10 +190,7 @@ public class Tarea {
     }
 
     public boolean esActiva() {
-        String estado = obtenerEstado();
-        return ESTADO_EN_COLA.equals(estado) ||
-               ESTADO_ANALIZANDO.equals(estado) ||
-               ESTADO_PAUSADO.equals(estado);
+        return esEstadoCancelable(obtenerEstado());
     }
 
     public boolean esFinalizada() {

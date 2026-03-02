@@ -253,8 +253,9 @@ public class PanelTareas extends JPanel {
             menuItemPausar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_PAUSAR_UNA());
             menuItemPausar.addActionListener(e -> {
                 if (tareaId != null) {
-                    gestorTareas.pausarTarea(tareaId);
-                    actualizarEstadisticas();
+                    if (gestorTareas.pausarTarea(tareaId)) {
+                        actualizarEstadisticas();
+                    }
                 }
             });
             menu.add(menuItemPausar);
@@ -266,8 +267,9 @@ public class PanelTareas extends JPanel {
             menuItemReanudar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_REANUDAR_UNA());
             menuItemReanudar.addActionListener(e -> {
                 if (tareaId != null) {
-                    gestorTareas.reanudarTarea(tareaId);
-                    actualizarEstadisticas();
+                    if (gestorTareas.reanudarTarea(tareaId)) {
+                        actualizarEstadisticas();
+                    }
                 }
             });
             menu.add(menuItemReanudar);
@@ -286,8 +288,9 @@ public class PanelTareas extends JPanel {
                     I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_UNA_TAREA()
                 );
                 if (confirmacion && tareaId != null) {
-                    gestorTareas.cancelarTarea(tareaId);
-                    actualizarEstadisticas();
+                    if (gestorTareas.cancelarTarea(tareaId)) {
+                        actualizarEstadisticas();
+                    }
                 }
             });
             menu.add(menuItemCancelar);
@@ -301,8 +304,9 @@ public class PanelTareas extends JPanel {
             menuItemLimpiar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_ELIMINAR_UNA());
             menuItemLimpiar.addActionListener(e -> {
                 if (tareaId != null) {
-                    gestorTareas.limpiarTarea(tareaId);
-                    actualizarEstadisticas();
+                    if (gestorTareas.limpiarTarea(tareaId)) {
+                        actualizarEstadisticas();
+                    }
                 }
             });
             menu.add(menuItemLimpiar);
@@ -397,30 +401,27 @@ public class PanelTareas extends JPanel {
                 return false;
             }
         }
-        gestorTareas.reanudarTarea(tareaId);
-        return true;
+        return gestorTareas.reanudarTarea(tareaId);
     }
 
     private void pausarTareas(List<TareaSeleccionada> seleccion) {
-        int contador = procesarSeleccion(seleccion, this::esEstadoPausable, tareaId -> {
-            gestorTareas.pausarTarea(tareaId);
-            return true;
-        });
+        int contador = procesarSeleccion(seleccion, this::esEstadoPausable, gestorTareas::pausarTarea);
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_PAUSADAS(contador));
     }
 
     private void reanudarTareas(List<TareaSeleccionada> seleccion) {
-        int contador = procesarSeleccion(seleccion, this::esEstadoReanudable, tareaId -> {
-            gestorTareas.reanudarTarea(tareaId);
-            return true;
-        });
+        int contador = procesarSeleccion(seleccion, this::esEstadoReanudable, gestorTareas::reanudarTarea);
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_REANUDADAS(contador));
     }
 
     private void cancelarTareas(List<TareaSeleccionada> seleccion) {
         int total = contarSeleccion(seleccion, this::esEstadoCancelable);
+        if (total <= 0) {
+            UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
+            return;
+        }
 
         boolean confirmacion = UIUtils.confirmarPregunta(
             this,
@@ -429,19 +430,13 @@ public class PanelTareas extends JPanel {
         );
         if (!confirmacion) return;
 
-        int contador = procesarSeleccion(seleccion, this::esEstadoCancelable, tareaId -> {
-            gestorTareas.cancelarTarea(tareaId);
-            return true;
-        });
+        int contador = procesarSeleccion(seleccion, this::esEstadoCancelable, gestorTareas::cancelarTarea);
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_CANCELADAS(contador));
     }
 
     private void eliminarTareasSeleccionadas(List<TareaSeleccionada> seleccion) {
-        int contador = procesarSeleccion(seleccion, this::esEstadoEliminable, tareaId -> {
-            gestorTareas.limpiarTarea(tareaId);
-            return true;
-        });
+        int contador = procesarSeleccion(seleccion, this::esEstadoEliminable, gestorTareas::limpiarTarea);
 
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_ELIMINADAS(contador));
@@ -482,27 +477,23 @@ public class PanelTareas extends JPanel {
     }
 
     private boolean esEstadoReintentable(String estado) {
-        return Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado);
+        return Tarea.esEstadoReintentable(estado);
     }
 
     private boolean esEstadoPausable(String estado) {
-        return Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado);
+        return Tarea.esEstadoPausable(estado);
     }
 
     private boolean esEstadoReanudable(String estado) {
-        return Tarea.ESTADO_PAUSADO.equals(estado);
+        return Tarea.esEstadoReanudable(estado);
     }
 
     private boolean esEstadoCancelable(String estado) {
-        return Tarea.ESTADO_EN_COLA.equals(estado)
-            || Tarea.ESTADO_ANALIZANDO.equals(estado)
-            || Tarea.ESTADO_PAUSADO.equals(estado);
+        return Tarea.esEstadoCancelable(estado);
     }
 
     private boolean esEstadoEliminable(String estado) {
-        return Tarea.ESTADO_COMPLETADO.equals(estado)
-            || Tarea.ESTADO_ERROR.equals(estado)
-            || Tarea.ESTADO_CANCELADO.equals(estado);
+        return Tarea.esEstadoEliminable(estado);
     }
 
     private List<TareaSeleccionada> capturarSeleccion(int[] filasVista) {

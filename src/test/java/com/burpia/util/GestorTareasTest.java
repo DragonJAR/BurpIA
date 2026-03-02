@@ -64,15 +64,15 @@ class GestorTareasTest {
         Tarea tarea = gestor.crearTarea("Analisis HTTP", "https://example.com/a", Tarea.ESTADO_ANALIZANDO, "run");
         flushEdt();
 
-        gestor.pausarTarea(tarea.obtenerId());
+        assertTrue(gestor.pausarTarea(tarea.obtenerId()));
         flushEdt();
         assertTrue(gestor.estaTareaPausada(tarea.obtenerId()));
 
-        gestor.reanudarTarea(tarea.obtenerId());
+        assertTrue(gestor.reanudarTarea(tarea.obtenerId()));
         flushEdt();
         assertFalse(gestor.estaTareaPausada(tarea.obtenerId()));
 
-        gestor.cancelarTarea(tarea.obtenerId());
+        assertTrue(gestor.cancelarTarea(tarea.obtenerId()));
         flushEdt();
         assertTrue(gestor.estaTareaCancelada(tarea.obtenerId()));
     }
@@ -85,11 +85,30 @@ class GestorTareasTest {
         flushEdt();
         assertEquals(2, modelo.obtenerNumeroTareas());
 
-        gestor.limpiarTarea(t1.obtenerId());
+        assertTrue(gestor.limpiarTarea(t1.obtenerId()));
         flushEdt();
 
         assertEquals(1, modelo.obtenerNumeroTareas());
         assertEquals(t2.obtenerId(), modelo.obtenerIdTarea(0));
+    }
+
+    @Test
+    @DisplayName("Operaciones por id retornan éxito real según transición aplicada")
+    void testOperacionesRetornanResultadoReal() throws Exception {
+        Tarea tarea = gestor.crearTarea("A", "https://example.com/return", Tarea.ESTADO_EN_COLA, "");
+        flushEdt();
+
+        assertTrue(gestor.pausarTarea(tarea.obtenerId()));
+        assertFalse(gestor.pausarTarea(tarea.obtenerId()));
+
+        assertTrue(gestor.reanudarTarea(tarea.obtenerId()));
+        assertFalse(gestor.reanudarTarea(tarea.obtenerId()));
+
+        assertTrue(gestor.cancelarTarea(tarea.obtenerId()));
+        assertFalse(gestor.cancelarTarea(tarea.obtenerId()));
+
+        assertTrue(gestor.limpiarTarea(tarea.obtenerId()));
+        assertFalse(gestor.limpiarTarea(tarea.obtenerId()));
     }
 
     @Test
@@ -195,6 +214,25 @@ class GestorTareasTest {
             assertNotNull(gestorRetencion.obtenerTarea(t3.obtenerId()));
         } finally {
             gestorRetencion.detener();
+        }
+    }
+
+    @Test
+    @DisplayName("Purga visual del modelo mantiene sincronizado el mapa del gestor")
+    void testPurgaModeloSincronizaMapaGestor() throws Exception {
+        ModeloTablaTareas modeloLimitado = new ModeloTablaTareas(1);
+        GestorTareas gestorLimitado = new GestorTareas(modeloLimitado, logs::add);
+        try {
+            Tarea antigua = gestorLimitado.crearTarea("A", "https://example.com/old", Tarea.ESTADO_COMPLETADO, "");
+            Tarea reciente = gestorLimitado.crearTarea("B", "https://example.com/new", Tarea.ESTADO_ERROR, "");
+            flushEdt();
+
+            assertNull(gestorLimitado.obtenerTarea(antigua.obtenerId()));
+            assertNotNull(gestorLimitado.obtenerTarea(reciente.obtenerId()));
+            assertEquals(1, modeloLimitado.obtenerNumeroTareas());
+            assertEquals(reciente.obtenerId(), modeloLimitado.obtenerIdTarea(0));
+        } finally {
+            gestorLimitado.detener();
         }
     }
 

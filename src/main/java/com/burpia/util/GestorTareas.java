@@ -58,7 +58,8 @@ public class GestorTareas {
         candado.lock();
         try {
             tareas.put(id, tarea);
-            modeloTabla.agregarTarea(tarea);
+            List<String> idsPurgadas = modeloTabla.agregarTareaYObtenerIdsPurgadas(tarea);
+            sincronizarTareasConPurgadoModelo(idsPurgadas, id);
             registrar("Tarea creada: " + tipo + " - " + url);
         } finally {
             candado.unlock();
@@ -99,8 +100,7 @@ public class GestorTareas {
 
     public void pausarTodasActivas() {
         int pausadas = actualizarEstadosMasivo(
-            tarea -> Tarea.ESTADO_EN_COLA.equals(tarea.obtenerEstado()) ||
-                Tarea.ESTADO_ANALIZANDO.equals(tarea.obtenerEstado()),
+            tarea -> Tarea.esEstadoPausable(tarea.obtenerEstado()),
             Tarea.ESTADO_PAUSADO
         );
         registrar("Tareas pausadas: " + pausadas);
@@ -108,7 +108,7 @@ public class GestorTareas {
 
     public void reanudarTodasPausadas() {
         int reanudadas = actualizarEstadosMasivo(
-            tarea -> Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado()),
+            tarea -> Tarea.esEstadoReanudable(tarea.obtenerEstado()),
             Tarea.ESTADO_EN_COLA
         );
         registrar("Tareas reanudadas: " + reanudadas);
@@ -136,9 +136,7 @@ public class GestorTareas {
 
             for (Map.Entry<String, Tarea> entry : tareas.entrySet()) {
                 String estado = entry.getValue().obtenerEstado();
-                if (Tarea.ESTADO_COMPLETADO.equals(estado) ||
-                    Tarea.ESTADO_ERROR.equals(estado) ||
-                    Tarea.ESTADO_CANCELADO.equals(estado)) {
+                if (Tarea.esEstadoEliminable(estado)) {
                     idsAEliminar.add(entry.getKey());
                 }
             }
@@ -211,49 +209,52 @@ public class GestorTareas {
         }
     }
 
-    public void pausarTarea(String id) {
+    public boolean pausarTarea(String id) {
+        boolean pausada = false;
+        String url = null;
+        Consumer<String> manejador = null;
         candado.lock();
         try {
             Tarea tarea = tareas.get(id);
-            if (tarea != null) {
-                if (Tarea.ESTADO_EN_COLA.equals(tarea.obtenerEstado()) ||
-                    Tarea.ESTADO_ANALIZANDO.equals(tarea.obtenerEstado())) {
-                    tarea.establecerEstado(Tarea.ESTADO_PAUSADO);
-                    actualizarFilaTabla(tarea);
-                    registrar("Tarea pausada: " + tarea.obtenerUrl());
-
-                    Consumer<String> manejador = this.manejadorPausa;
-                    if (manejador != null) {
-                        manejador.accept(id);
-                    }
-                }
+            if (tarea != null && Tarea.esEstadoPausable(tarea.obtenerEstado())) {
+                tarea.establecerEstado(Tarea.ESTADO_PAUSADO);
+                actualizarFilaTabla(tarea);
+                url = tarea.obtenerUrl();
+                pausada = true;
+                manejador = this.manejadorPausa;
             }
         } finally {
             candado.unlock();
         }
+        if (pausada) {
+            registrar("Tarea pausada: " + url);
+            notificarManejador(manejador, id, "pausa");
+        }
+        return pausada;
     }
 
-    public void reanudarTarea(String id) {
+    public boolean reanudarTarea(String id) {
+        boolean reanudada = false;
+        String url = null;
+        Consumer<String> manejador = null;
         candado.lock();
         try {
             Tarea tarea = tareas.get(id);
-            if (tarea != null) {
-                if (Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado()) ||
-                    Tarea.ESTADO_ERROR.equals(tarea.obtenerEstado()) ||
-                    Tarea.ESTADO_CANCELADO.equals(tarea.obtenerEstado())) {
-                    tarea.establecerEstado(Tarea.ESTADO_EN_COLA);
-                    actualizarFilaTabla(tarea);
-                    registrar("Tarea reanudada: " + tarea.obtenerUrl());
-
-                    Consumer<String> manejador = this.manejadorReanudar;
-                    if (manejador != null) {
-                        manejador.accept(id);
-                    }
-                }
+            if (tarea != null && esEstadoReencolable(tarea.obtenerEstado())) {
+                tarea.establecerEstado(Tarea.ESTADO_EN_COLA);
+                actualizarFilaTabla(tarea);
+                url = tarea.obtenerUrl();
+                reanudada = true;
+                manejador = this.manejadorReanudar;
             }
         } finally {
             candado.unlock();
         }
+        if (reanudada) {
+            registrar("Tarea reanudada: " + url);
+            notificarManejador(manejador, id, "reanudar");
+        }
+        return reanudada;
     }
 
     public boolean marcarTareaAnalizando(String id, String mensajeInfo) {
@@ -284,43 +285,46 @@ public class GestorTareas {
         }
     }
 
-    public void cancelarTarea(String id) {
+    public boolean cancelarTarea(String id) {
         boolean cancelada = false;
+        String url = null;
         candado.lock();
         try {
             Tarea tarea = tareas.get(id);
-            if (tarea != null) {
-                if (Tarea.ESTADO_EN_COLA.equals(tarea.obtenerEstado()) ||
-                    Tarea.ESTADO_ANALIZANDO.equals(tarea.obtenerEstado()) ||
-                    Tarea.ESTADO_PAUSADO.equals(tarea.obtenerEstado())) {
-                    tarea.establecerEstado(Tarea.ESTADO_CANCELADO);
-                    actualizarFilaTabla(tarea);
-                    registrar("Tarea cancelada: " + tarea.obtenerUrl());
-                    cancelada = true;
-                }
+            if (tarea != null && Tarea.esEstadoCancelable(tarea.obtenerEstado())) {
+                tarea.establecerEstado(Tarea.ESTADO_CANCELADO);
+                actualizarFilaTabla(tarea);
+                url = tarea.obtenerUrl();
+                cancelada = true;
             }
         } finally {
             candado.unlock();
         }
         if (cancelada) {
+            registrar("Tarea cancelada: " + url);
             notificarCancelacion(id);
         }
+        return cancelada;
     }
 
-    public void limpiarTarea(String id) {
+    public boolean limpiarTarea(String id) {
+        boolean eliminada = false;
         candado.lock();
         try {
             Tarea tarea = tareas.remove(id);
             if (tarea == null) {
-                return;
+                return false;
             }
+            eliminada = true;
         } finally {
             candado.unlock();
         }
 
-        modeloTabla.eliminarTareaPorId(id);
-
-        registrar("Tarea limpiada: " + id);
+        if (eliminada) {
+            modeloTabla.eliminarTareaPorId(id);
+            registrar("Tarea limpiada: " + id);
+        }
+        return eliminada;
     }
 
     public void detener() {
@@ -411,15 +415,7 @@ public class GestorTareas {
     }
 
     private void notificarCancelacion(String id) {
-        Consumer<String> manejador = this.manejadorCancelacion;
-        if (manejador == null || id == null || id.isEmpty()) {
-            return;
-        }
-        try {
-            manejador.accept(id);
-        } catch (Exception e) {
-            registrar("Error en manejador de cancelacion: " + e.getMessage());
-        }
+        notificarManejador(this.manejadorCancelacion, id, "cancelacion");
     }
 
     private void aplicarRetencionFinalizadas() {
@@ -492,5 +488,32 @@ public class GestorTareas {
             hilo.setDaemon(true);
             return hilo;
         });
+    }
+
+    private void sincronizarTareasConPurgadoModelo(List<String> idsPurgadas, String idActual) {
+        if (idsPurgadas == null || idsPurgadas.isEmpty()) {
+            return;
+        }
+        for (String idPurgado : idsPurgadas) {
+            if (idPurgado == null || idPurgado.isEmpty() || idPurgado.equals(idActual)) {
+                continue;
+            }
+            tareas.remove(idPurgado);
+        }
+    }
+
+    private boolean esEstadoReencolable(String estado) {
+        return Tarea.esEstadoReanudable(estado) || Tarea.esEstadoReintentable(estado);
+    }
+
+    private void notificarManejador(Consumer<String> manejador, String id, String tipoOperacion) {
+        if (manejador == null || id == null || id.isEmpty()) {
+            return;
+        }
+        try {
+            manejador.accept(id);
+        } catch (Exception e) {
+            registrar("Error en manejador de " + tipoOperacion + ": " + e.getMessage());
+        }
     }
 }
