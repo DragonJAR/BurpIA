@@ -25,7 +25,7 @@ class PanelConsolaPreferenciasTest {
     }
 
     @Test
-    @DisplayName("Permite establecer auto-scroll programaticamente")
+    @DisplayName("Permite establecer auto-scroll programáticamente")
     void testSetterProgramaticoAutoScroll() throws Exception {
         PanelConsola panel = crearPanel();
         try {

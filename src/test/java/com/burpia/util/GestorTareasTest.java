@@ -211,7 +211,7 @@ class GestorTareasTest {
     }
 
     @Test
-    @DisplayName("Tareas atascadas se marcan error y disparan cancelacion activa")
+    @DisplayName("Tareas atascadas se marcan error y disparan cancelación activa")
     void testTareasAtascadasDisparanCancelacion() throws Exception {
         List<String> cancelaciones = new ArrayList<>();
         gestor.establecerManejadorCancelacion(cancelaciones::add);

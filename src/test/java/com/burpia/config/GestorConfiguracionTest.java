@@ -31,7 +31,7 @@ class GestorConfiguracionTest {
     }
 
     @Test
-    @DisplayName("Guarda configuracion sin campos legacy de proveedor")
+    @DisplayName("Guarda configuración sin campos legacy de proveedor")
     void testGuardarSinCamposLegacy() throws Exception {
         Path tempDir = Files.createTempDirectory("burpia-config-test");
         userHomeOriginal = System.getProperty("user.home");
@@ -101,6 +101,7 @@ class GestorConfiguracionTest {
         config.establecerEscaneoPasivoHabilitado(false);
         config.establecerAutoGuardadoIssuesHabilitado(false);
         config.establecerAutoScrollConsolaHabilitado(false);
+        config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
 
         assertTrue(gestor.guardarConfiguracion(config));
 
@@ -108,12 +109,14 @@ class GestorConfiguracionTest {
         assertFalse(cargada.escaneoPasivoHabilitado());
         assertFalse(cargada.autoGuardadoIssuesHabilitado());
         assertFalse(cargada.autoScrollConsolaHabilitado());
+        assertFalse(cargada.alertasClickDerechoEnviarAHabilitadas());
 
         Path configPath = tempDir.resolve(".burpia/config.json");
         String json = Files.readString(configPath, StandardCharsets.UTF_8);
         assertTrue(json.contains("\"escaneoPasivoHabilitado\": false"));
         assertTrue(json.contains("\"autoGuardadoIssuesHabilitado\": false"));
         assertTrue(json.contains("\"autoScrollConsolaHabilitado\": false"));
+        assertTrue(json.contains("\"alertasClickDerechoEnviarAHabilitadas\": false"));
     }
 
     @Test
@@ -243,7 +246,7 @@ class GestorConfiguracionTest {
     }
 
     @Test
-    @DisplayName("Logs de configuracion se localizan a ingles cuando idioma UI es EN")
+    @DisplayName("Logs de configuración se localizan a inglés cuando idioma UI es EN")
     void testLogsConfiguracionEnIngles() {
         I18nUI.establecerIdioma("en");
         StringWriter salida = new StringWriter();
@@ -257,7 +260,7 @@ class GestorConfiguracionTest {
     }
 
     @Test
-    @DisplayName("Guardar configuracion nula devuelve error controlado")
+    @DisplayName("Guardar configuración nula devuelve error controlado")
     void testGuardarConfiguracionNula() throws Exception {
         Path tempDir = Files.createTempDirectory("burpia-config-test");
         userHomeOriginal = System.getProperty("user.home");

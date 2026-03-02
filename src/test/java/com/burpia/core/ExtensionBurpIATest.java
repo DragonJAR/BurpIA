@@ -73,7 +73,7 @@ class ExtensionBurpIATest {
     }
 
     @Test
-    @DisplayName("Abrir configuracion es seguro sin dependencias inicializadas")
+    @DisplayName("Abrir configuración es seguro sin dependencias inicializadas")
     void testAbrirConfiguracionSinDependenciasNoFalla() throws Exception {
         ExtensionBurpIA extension = new ExtensionBurpIA();
         Method abrirConfiguracion = ExtensionBurpIA.class.getDeclaredMethod("abrirConfiguracion");
@@ -108,7 +108,7 @@ class ExtensionBurpIATest {
     }
 
     @Test
-    @DisplayName("Enviar al Agente es seguro sin configuracion inicializada")
+    @DisplayName("Enviar al Agente es seguro sin configuración inicializada")
     void testEnviarAAgenteSinConfigNoFalla() throws Exception {
         ExtensionBurpIA extension = new ExtensionBurpIA();
         Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);

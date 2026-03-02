@@ -25,7 +25,7 @@ import com.burpia.config.ConfiguracionAPI;
 class FabricaMenuContextualTest {
 
     @Test
-    @DisplayName("Crea item de menu y dispara analisis forzado")
+    @DisplayName("Crea item de menu y dispara análisis forzado")
     void testMenuYCallback() {
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         ContextMenuEvent evento = mock(ContextMenuEvent.class);
@@ -44,7 +44,7 @@ class FabricaMenuContextualTest {
                 llamadas.incrementAndGet();
                 evidencia.set(solicitudRespuestaOriginal);
             }
-        }, config, (rr2) -> {});
+        }, config, (rr2) -> {}, () -> {});
 
         List<Component> items = fabrica.provideMenuItems(evento);
         assertFalse(items.isEmpty());
@@ -57,7 +57,7 @@ class FabricaMenuContextualTest {
     }
 
     @Test
-    @DisplayName("Debounce evita doble analisis sobre la misma solicitud")
+    @DisplayName("Debounce evita doble análisis sobre la misma solicitud")
     void testDebounceMismaSolicitud() {
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         ContextMenuEvent evento = mock(ContextMenuEvent.class);
@@ -74,7 +74,7 @@ class FabricaMenuContextualTest {
             if (forzar) {
                 llamadas.incrementAndGet();
             }
-        }, config, (rr2) -> {});
+        }, config, (rr2) -> {}, () -> {});
 
         JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
         item.doClick();
@@ -91,9 +91,42 @@ class FabricaMenuContextualTest {
         when(evento.selectedRequestResponses()).thenReturn(null);
 
         ConfiguracionAPI config = mock(ConfiguracionAPI.class);
-        FabricaMenuContextual fabrica = new FabricaMenuContextual(api, (solicitud, forzar, solicitudRespuestaOriginal) -> {}, config, (rr2) -> {});
+        FabricaMenuContextual fabrica = new FabricaMenuContextual(api, (solicitud, forzar, solicitudRespuestaOriginal) -> {}, config, (rr2) -> {}, () -> {});
         List<Component> items = fabrica.provideMenuItems(evento);
 
         assertTrue(items.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Incluye acción enviar a agente cuando está habilitado")
+    void testIncluyeEnviarAgenteYEjecutaCallback() {
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        ContextMenuEvent evento = mock(ContextMenuEvent.class);
+        HttpRequestResponse rr = mock(HttpRequestResponse.class);
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.toString()).thenReturn("GET /agent HTTP/1.1");
+        when(rr.request()).thenReturn(request);
+        when(evento.selectedRequestResponses()).thenReturn(List.of(rr));
+
+        ConfiguracionAPI config = mock(ConfiguracionAPI.class);
+        when(config.agenteHabilitado()).thenReturn(true);
+        when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+        when(config.alertasClickDerechoEnviarAHabilitadas()).thenReturn(false);
+
+        AtomicInteger enviados = new AtomicInteger(0);
+        FabricaMenuContextual fabrica = new FabricaMenuContextual(
+            api,
+            (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+            config,
+            rr2 -> enviados.incrementAndGet(),
+            () -> {}
+        );
+
+        List<Component> items = fabrica.provideMenuItems(evento);
+        assertEquals(2, items.size());
+
+        JMenuItem itemAgente = (JMenuItem) items.get(1);
+        itemAgente.doClick();
+        assertEquals(1, enviados.get());
     }
 }

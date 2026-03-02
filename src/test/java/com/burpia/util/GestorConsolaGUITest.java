@@ -41,7 +41,7 @@ class GestorConsolaGUITest {
     }
 
     @Test
-    @DisplayName("Resumen se localiza a ingles cuando idioma UI es EN")
+    @DisplayName("Resumen se localiza a inglés cuando idioma UI es EN")
     void testGenerarResumenEnIngles() {
         I18nUI.establecerIdioma(IdiomaUI.EN);
         GestorConsolaGUI gestor = new GestorConsolaGUI();

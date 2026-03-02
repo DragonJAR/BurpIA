@@ -68,7 +68,7 @@ class PanelHallazgosIssuesMenuTest {
     }
 
     @Test
-    @DisplayName("Permite establecer autoguardado de Issues programaticamente")
+    @DisplayName("Permite establecer autoguardado de Issues programáticamente")
     void testSetterProgramaticoAutoguardadoIssues() throws Exception {
         PanelHallazgos panel = crearPanel(true);
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);

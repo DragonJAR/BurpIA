@@ -19,7 +19,7 @@ class ReparadorJsonTest {
         }
 
         @Test
-        @DisplayName("Retorna null para cadena vacia")
+        @DisplayName("Retorna null para cadena vacía")
         void retornaNullParaCadenaVacia() {
             assertNull(ReparadorJson.repararJson(""));
             assertNull(ReparadorJson.repararJson("   "));
@@ -36,6 +36,15 @@ class ReparadorJsonTest {
         @DisplayName("Repara JSON con bloques de codigo markdown")
         void reparaJsonConBloquesMarkdown() {
             String conMarkdown = "```json\n{\"hallazgos\": []}\n```";
+            String resultado = ReparadorJson.repararJson(conMarkdown);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+
+        @Test
+        @DisplayName("Repara JSON con bloques de codigo markdown sin lenguaje especificado")
+        void reparaJsonConBloquesMarkdownSinLenguaje() {
+            String conMarkdown = "```\n{\"hallazgos\": []}\n```   ";
             String resultado = ReparadorJson.repararJson(conMarkdown);
             assertNotNull(resultado);
             assertTrue(ReparadorJson.esJsonValido(resultado));
@@ -102,7 +111,7 @@ class ReparadorJsonTest {
         }
 
         @Test
-        @DisplayName("Retorna false para cadena vacia")
+        @DisplayName("Retorna false para cadena vacía")
         void retornaFalseParaCadenaVacia() {
             assertFalse(ReparadorJson.esJsonValido(""));
             assertFalse(ReparadorJson.esJsonValido("   "));

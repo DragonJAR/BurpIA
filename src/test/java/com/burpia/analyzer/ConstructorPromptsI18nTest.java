@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ConstructorPromptsI18nTest {
 
     @Test
-    @DisplayName("Prompt por defecto inyecta idioma de salida en ingles y espanol")
+    @DisplayName("Prompt por defecto inyecta idioma de salida en inglés y español")
     void testPromptPorDefectoInyectaIdiomaSalida() {
         ConfiguracionAPI configEn = new ConfiguracionAPI();
         configEn.establecerIdiomaUi("en");
@@ -48,7 +48,7 @@ class ConstructorPromptsI18nTest {
     }
 
     @Test
-    @DisplayName("Fallback de idioma se localiza al espanol cuando idioma UI es ES")
+    @DisplayName("Fallback de idioma se localiza al español cuando idioma UI es ES")
     void testFallbackIdiomaEnEspanol() {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerIdiomaUi("es");

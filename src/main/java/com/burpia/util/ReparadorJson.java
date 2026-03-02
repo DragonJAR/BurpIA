@@ -8,10 +8,8 @@ import java.util.regex.Pattern;
 
 public final class ReparadorJson {
 
-    // Patrones precompilados para mejor rendimiento
-    private static final Pattern MARKDOWN_CODE_BLOCK_JSON_PATTERN = Pattern.compile("(?m)^```json\\s*");
-    private static final Pattern MARKDOWN_CODE_BLOCK_START_PATTERN = Pattern.compile("(?m)^```\\s*");
-    private static final Pattern MARKDOWN_CODE_BLOCK_END_PATTERN = Pattern.compile("(?m)```$");
+    private static final Pattern MARKDOWN_CODE_BLOCK_START_PATTERN = Pattern.compile("(?m)^```(?:json)?\\s*");
+    private static final Pattern MARKDOWN_CODE_BLOCK_END_PATTERN = Pattern.compile("(?m)```\\s*$");
     private static final Pattern COMILLA_ESCAPE_PATTERN = Pattern.compile(",\\s*([\\]}])");
     private static final Pattern DOBLE_COMILLA_PATTERN = Pattern.compile("\"\\s+\"");
     private static final Pattern PATRON_VALOR_CAMPO = Pattern.compile(": \"(.*?)\"(?=\\s*[,\\}])", Pattern.DOTALL);
@@ -73,8 +71,7 @@ public final class ReparadorJson {
     }
 
     private static String eliminarMarkdownCodeBlocks(String texto) {
-        String res = MARKDOWN_CODE_BLOCK_JSON_PATTERN.matcher(texto).replaceAll("");
-        res = MARKDOWN_CODE_BLOCK_START_PATTERN.matcher(res).replaceAll("");
+        String res = MARKDOWN_CODE_BLOCK_START_PATTERN.matcher(texto).replaceAll("");
         res = MARKDOWN_CODE_BLOCK_END_PATTERN.matcher(res).replaceAll("");
         return res.trim();
     }

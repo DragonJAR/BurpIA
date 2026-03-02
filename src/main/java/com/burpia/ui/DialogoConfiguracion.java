@@ -682,15 +682,13 @@ public class DialogoConfiguracion extends JDialog {
     }
 
     private void restaurarPromptPorDefecto() {
-        int confirmacion = JOptionPane.showConfirmDialog(
+        boolean confirmacion = UIUtils.confirmarAdvertencia(
             this,
-            I18nUI.Configuracion.MSG_CONFIRMAR_RESTAURAR_PROMPT(),
             I18nUI.Configuracion.TITULO_CONFIRMAR_RESTAURACION(),
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE
+            I18nUI.Configuracion.MSG_CONFIRMAR_RESTAURAR_PROMPT()
         );
 
-        if (confirmacion == JOptionPane.YES_OPTION) {
+        if (confirmacion) {
             txtPrompt.setText(ConfiguracionAPI.obtenerPromptPorDefecto());
             actualizarContador();
         }

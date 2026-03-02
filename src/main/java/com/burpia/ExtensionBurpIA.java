@@ -191,7 +191,13 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void registrarMenuContextual() {
         if (fabricaMenuContextual == null) {
-            fabricaMenuContextual = new FabricaMenuContextual(api, this::analizarSolicitudManual, config, this::enviarAAgente);
+            fabricaMenuContextual = new FabricaMenuContextual(
+                api,
+                this::analizarSolicitudManual,
+                config,
+                this::enviarAAgente,
+                () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto")
+            );
             api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
         }
     }
@@ -624,6 +630,7 @@ public class ExtensionBurpIA implements BurpExtension {
             config.establecerAutoScrollConsolaHabilitado(activo);
             guardarConfiguracionSilenciosa("auto-scroll");
         });
+        pestaniaPrincipal.establecerManejadorAlertasEnviarA(() -> guardarConfiguracionSilenciosa("alertas-enviar-a"));
 
         PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
         if (panelAgente != null) {

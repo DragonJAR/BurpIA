@@ -23,7 +23,7 @@ class ModeloTablaHallazgosTest {
     }
 
     @Test
-    @DisplayName("Permite actualizar limite de filas en runtime")
+    @DisplayName("Permite actualizar límite de filas en runtime")
     void testActualizarLimiteFilas() throws Exception {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
 
@@ -46,7 +46,7 @@ class ModeloTablaHallazgosTest {
     }
 
     @Test
-    @DisplayName("Ignorar y eliminar con indice invalido no rompe la tabla")
+    @DisplayName("Ignorar y eliminar con índice inválido no rompe la tabla")
     void testOperacionesIndiceInvalido() throws Exception {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
         modelo.agregarHallazgo(new Hallazgo("https://example.com/x", "T", "Hallazgo X", "Low", "Low"));
@@ -92,7 +92,7 @@ class ModeloTablaHallazgosTest {
     }
 
     @Test
-    @DisplayName("Actualiza por referencia para evitar indice desfasado")
+    @DisplayName("Actualiza por referencia para evitar índice desfasado")
     void testActualizarHallazgoPorReferencia() throws Exception {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
         Hallazgo primero = new Hallazgo("https://example.com/a", "TA", "Hallazgo A", "Low", "Low");

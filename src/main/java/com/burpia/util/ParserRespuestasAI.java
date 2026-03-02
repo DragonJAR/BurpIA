@@ -15,23 +15,23 @@ public class ParserRespuestasAI {
     private static final Logger LOGGER = Logger.getLogger(ParserRespuestasAI.class.getName());
 
     private static final java.util.regex.Pattern PATRON_CAMPO_TITULO_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:titulo|title|name|nombre)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        "\"(?:titulo|title|name|nombre)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
     private static final java.util.regex.Pattern PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:descripcion|description|hallazgo|finding|details|detalle)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        "\"(?:descripcion|description|hallazgo|finding|details|detalle)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
     private static final java.util.regex.Pattern PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:severidad|severity|risk|impacto)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        "\"(?:severidad|severity|risk|impacto)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
     private static final java.util.regex.Pattern PATRON_CAMPO_CONFIANZA_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:confianza|confidence|certainty|certeza)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        "\"(?:confianza|confidence|certainty|certeza)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
     private static final java.util.regex.Pattern PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:evidencia|evidence|proof|indicator)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"|\\}))",
+        "\"(?:evidencia|evidence|proof|indicator)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
         java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
     );
 

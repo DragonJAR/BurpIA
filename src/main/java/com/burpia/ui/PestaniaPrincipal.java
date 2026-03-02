@@ -327,6 +327,10 @@ public class PestaniaPrincipal extends JPanel {
         panelHallazgos.establecerManejadorEnviarAAgente(manejador);
     }
 
+    public void establecerManejadorAlertasEnviarA(Runnable manejador) {
+        panelHallazgos.establecerManejadorCambioAlertasEnviarA(manejador);
+    }
+
     public void aplicarIdioma() {
         panelEstadisticas.aplicarIdioma();
         panelTareas.aplicarIdioma();

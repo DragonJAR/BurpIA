@@ -74,7 +74,7 @@ class ProveedorAITest {
         }
 
         @Test
-        @DisplayName("Custom devuelve URL en ingles cuando idioma es en")
+        @DisplayName("Custom devuelve URL en inglés cuando idioma es en")
         void customDevuelveUrlIngles() {
             String url = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM, "en");
             assertEquals(ProveedorAI.URL_CUSTOM_EN, url);
@@ -124,7 +124,7 @@ class ProveedorAITest {
         }
 
         @Test
-        @DisplayName("Proveedor inexistente retorna lista vacia")
+        @DisplayName("Proveedor inexistente retorna lista vacía")
         void proveedorInexistenteRetornaListaVacia() {
             List<String> modelos = ProveedorAI.obtenerModelosDisponibles("NoExiste");
             assertTrue(modelos.isEmpty());

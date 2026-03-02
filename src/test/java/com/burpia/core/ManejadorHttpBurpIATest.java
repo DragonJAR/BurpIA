@@ -97,7 +97,7 @@ class ManejadorHttpBurpIATest {
     }
 
     @Test
-    @DisplayName("Inicializa captura segun escaneoPasivoHabilitado en configuracion")
+    @DisplayName("Inicializa captura según escaneoPasivoHabilitado en configuración")
     void testEstadoInicialCapturaDesdeConfiguracion() {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerEscaneoPasivoHabilitado(false);
@@ -107,7 +107,7 @@ class ManejadorHttpBurpIATest {
     }
 
     @Test
-    @DisplayName("Avisa con accion cuando analisis manual se bloquea por configuracion LLM invalida")
+    @DisplayName("Avisa con acción cuando análisis manual se bloquea por configuración LLM invalida")
     void testAnalisisManualBloqueadoPorConfigInvalidaMuestraAccion() {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("OpenAI");
@@ -127,13 +127,14 @@ class ManejadorHttpBurpIATest {
         salida.manejador.analizarSolicitudForzada(solicitud);
         String error = salida.stderr.toString();
 
-        assertTrue(error.contains("ANALISIS BLOQUEADO"));
+        assertTrue(error.contains("ANÁLISIS BLOQUEADO") || error.contains("ANALISIS BLOQUEADO"));
         assertTrue(error.contains("Config") || error.contains("config"));
-        assertTrue(error.contains("Probar Conexion") || error.contains("Test Connection"));
+        assertTrue(error.contains("Probar Conexión") || error.contains("Probar Conexion")
+            || error.contains("Test Connection"));
     }
 
     @Test
-    @DisplayName("Rate-limit evita spam cuando configuracion LLM sigue invalida")
+    @DisplayName("Rate-limit evita spam cuando configuración LLM sigue invalida")
     void testRateLimitAlertaConfiguracion() {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("OpenAI");
@@ -154,7 +155,8 @@ class ManejadorHttpBurpIATest {
         salida.manejador.analizarSolicitudForzada(solicitud);
 
         String error = salida.stderr.toString();
-        int ocurrencias = contarCoincidencias(error, "ANALISIS BLOQUEADO");
+        int ocurrencias = contarCoincidencias(error, "ANÁLISIS BLOQUEADO")
+            + contarCoincidencias(error, "ANALISIS BLOQUEADO");
         assertTrue(ocurrencias <= 1);
     }
 
@@ -167,14 +169,15 @@ class ManejadorHttpBurpIATest {
     }
 
     @Test
-    @DisplayName("Desde configuracion limpia informa que LLM no esta listo al iniciar")
+    @DisplayName("Desde configuración limpia informa que LLM no esta listo al iniciar")
     void testEstadoInicialLlMNoListoConConfiguracionLimpia() {
         SalidaManejador salida = crearManejadorConSalida(null, new ConfiguracionAPI());
         String error = salida.stderr.toString();
         String info = salida.stdout.toString();
 
         assertTrue(error.contains("Estado LLM al inicio") || error.contains("LLM startup status"));
-        assertTrue(info.contains("Probar Conexion") || info.contains("Test Connection"));
+        assertTrue(info.contains("Probar Conexión") || info.contains("Probar Conexion")
+            || info.contains("Test Connection"));
     }
 
     private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {

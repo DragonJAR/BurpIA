@@ -56,6 +56,7 @@ public class PanelHallazgos extends JPanel {
 
     private com.burpia.config.ConfiguracionAPI config;
     private java.util.function.Consumer<Hallazgo> manejadorEnviarAAgente;
+    private Runnable manejadorCambioAlertasEnviarA;
     private final ExecutorService ejecutorAcciones;
 
     @SuppressWarnings("this-escape")
@@ -188,14 +189,12 @@ public class PanelHallazgos extends JPanel {
                 return;
             }
 
-            int confirmacion = JOptionPane.showConfirmDialog(
+            boolean confirmacion = UIUtils.confirmarAdvertencia(
                 this,
-                I18nUI.Hallazgos.MSG_CONFIRMAR_LIMPIEZA(total),
                 I18nUI.Hallazgos.TITULO_CONFIRMAR_LIMPIEZA(),
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
+                I18nUI.Hallazgos.MSG_CONFIRMAR_LIMPIEZA(total)
             );
-            if (confirmacion == JOptionPane.YES_OPTION) {
+            if (confirmacion) {
                 modelo.limpiar();
             }
         });
@@ -262,18 +261,16 @@ public class PanelHallazgos extends JPanel {
                     archivo.getName(),
                     ignorados
                 );
-                JOptionPane.showMessageDialog(
+                UIUtils.mostrarInfo(
                     this,
-                    mensaje,
                     I18nUI.Hallazgos.TITULO_EXPORTACION_EXITOSA(),
-                    JOptionPane.INFORMATION_MESSAGE
+                    mensaje
                 );
 
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this,
-                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(e.getMessage()),
+                UIUtils.mostrarError(this,
                     I18nUI.Hallazgos.TITULO_ERROR_EXPORTACION(),
-                    JOptionPane.ERROR_MESSAGE);
+                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(e.getMessage()));
             }
         }
     }
@@ -312,18 +309,16 @@ public class PanelHallazgos extends JPanel {
                     archivo.getName(),
                     ignorados
                 );
-                JOptionPane.showMessageDialog(
+                UIUtils.mostrarInfo(
                     this,
-                    mensaje,
                     I18nUI.Hallazgos.TITULO_EXPORTACION_EXITOSA(),
-                    JOptionPane.INFORMATION_MESSAGE
+                    mensaje
                 );
 
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this,
-                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(e.getMessage()),
+                UIUtils.mostrarError(this,
                     I18nUI.Hallazgos.TITULO_ERROR_EXPORTACION(),
-                    JOptionPane.ERROR_MESSAGE);
+                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(e.getMessage()));
             }
         }
     }
@@ -490,10 +485,7 @@ public class PanelHallazgos extends JPanel {
             ));
         }
         if (config != null && config.agenteHabilitado() && manejadorEnviarAAgente != null) {
-            String nombreAgente = AgenteTipo.obtenerNombreVisible(
-                config.obtenerTipoAgente(),
-                I18nUI.General.AGENTE_GENERICO()
-            );
+            String nombreAgente = obtenerNombreAgenteVisible();
             menu.add(crearMenuItemContextual(
                 I18nUI.Hallazgos.MENU_ENVIAR_AGENTE_ROCKET(nombreAgente),
                 I18nUI.Tooltips.Hallazgos.ENVIAR_AGENTE(nombreAgente),
@@ -515,7 +507,7 @@ public class PanelHallazgos extends JPanel {
             e -> confirmarYEjecutar(
                 I18nUI.Hallazgos.MSG_CONFIRMAR_IGNORAR(tabla.getSelectedRowCount()),
                 I18nUI.Hallazgos.TITULO_CONFIRMAR_IGNORAR(),
-                JOptionPane.QUESTION_MESSAGE,
+                false,
                 () -> ignorarHallazgos(tabla.getSelectedRows())
             )
         ));
@@ -525,18 +517,18 @@ public class PanelHallazgos extends JPanel {
             e -> confirmarYEjecutar(
                 I18nUI.Hallazgos.MSG_CONFIRMAR_BORRAR(tabla.getSelectedRowCount()),
                 I18nUI.Hallazgos.TITULO_CONFIRMAR_BORRAR(),
-                JOptionPane.WARNING_MESSAGE,
+                true,
                 () -> borrarHallazgosDeTabla(tabla.getSelectedRows())
             )
         ));
         return menu;
     }
 
-    private void confirmarYEjecutar(String mensaje, String titulo, int tipoMensaje, Runnable accion) {
-        int confirmacion = JOptionPane.showConfirmDialog(
-            this, mensaje, titulo, JOptionPane.YES_NO_OPTION, tipoMensaje
-        );
-        if (confirmacion == JOptionPane.YES_OPTION) {
+    private void confirmarYEjecutar(String mensaje, String titulo, boolean esAdvertencia, Runnable accion) {
+        boolean confirmacion = esAdvertencia
+            ? UIUtils.confirmarAdvertencia(this, titulo, mensaje)
+            : UIUtils.confirmarPregunta(this, titulo, mensaje);
+        if (confirmacion) {
             accion.run();
         }
     }
@@ -577,11 +569,19 @@ public class PanelHallazgos extends JPanel {
     private void enviarAAgente(int[] filas) {
         if (manejadorEnviarAAgente == null) return;
         int[] filasModelo = convertirFilasVistaAModelo(filas);
+        int enviados = 0;
         for (int filaModelo : filasModelo) {
             Hallazgo h = modelo.obtenerHallazgo(filaModelo);
             if (h != null) {
                 manejadorEnviarAAgente.accept(h);
+                enviados++;
             }
+        }
+        if (enviados > 0) {
+            mostrarInfoEnviarA(
+                I18nUI.Hallazgos.TITULO_ACCION_AGENTE(),
+                I18nUI.Hallazgos.MSG_ENVIADOS_AGENTE(enviados, obtenerNombreAgenteVisible())
+            );
         }
     }
 
@@ -648,7 +648,7 @@ public class PanelHallazgos extends JPanel {
 
     private void enviarAIssues(int[] filas) {
         if (!integracionIssuesDisponible) {
-            UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ISSUES_SOLO_PRO());
+            mostrarInfoEnviarA(I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ISSUES_SOLO_PRO());
             return;
         }
         ejecutarAccionBurp(
@@ -690,7 +690,7 @@ public class PanelHallazgos extends JPanel {
         List<EntradaAccion> entradas = captura.entradas;
         if (entradas.isEmpty()) {
             if (captura.totalIgnorados > 0) {
-                UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ACCION_SOLO_IGNORADOS(captura.totalIgnorados));
+                mostrarInfoEnviarA(I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ACCION_SOLO_IGNORADOS(captura.totalIgnorados));
             }
             return;
         }
@@ -743,9 +743,9 @@ public class PanelHallazgos extends JPanel {
                     detalleFinal
                 );
                 if (totalExitosos > 0) {
-                    UIUtils.mostrarInfo(PanelHallazgos.this, titulo, mensajeFinal);
+                    mostrarInfoEnviarA(titulo, mensajeFinal);
                 } else {
-                    UIUtils.mostrarAdvertencia(PanelHallazgos.this, titulo, mensajeFinal);
+                    mostrarAdvertenciaEnviarA(titulo, mensajeFinal);
                 }
             });
         };
@@ -756,7 +756,7 @@ public class PanelHallazgos extends JPanel {
                 tarea.run();
             });
         } catch (RejectedExecutionException ex) {
-            UIUtils.mostrarAdvertencia(PanelHallazgos.this, titulo, I18nUI.Hallazgos.ERROR_PANEL_CERRANDO());
+            mostrarAdvertenciaEnviarA(titulo, I18nUI.Hallazgos.ERROR_PANEL_CERRANDO());
         }
     }
 
@@ -985,6 +985,10 @@ public class PanelHallazgos extends JPanel {
         this.manejadorEnviarAAgente = manejador;
     }
 
+    public void establecerManejadorCambioAlertasEnviarA(Runnable manejador) {
+        this.manejadorCambioAlertasEnviarA = manejador;
+    }
+
     public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {
         aplicarEstadoGuardadoAutomaticoIssues(activo, false);
     }
@@ -1021,5 +1025,49 @@ public class PanelHallazgos extends JPanel {
             thread.setDaemon(true);
             return thread;
         });
+    }
+
+    private String obtenerNombreAgenteVisible() {
+        if (config == null) {
+            return I18nUI.General.AGENTE_GENERICO();
+        }
+        return AgenteTipo.obtenerNombreVisible(
+            config.obtenerTipoAgente(),
+            I18nUI.General.AGENTE_GENERICO()
+        );
+    }
+
+    private void mostrarInfoEnviarA(String titulo, String mensaje) {
+        UIUtils.mostrarInfoConOptOut(
+            this,
+            titulo,
+            mensaje,
+            alertasEnviarAHabilitadas(),
+            this::deshabilitarAlertasEnviarA
+        );
+    }
+
+    private void mostrarAdvertenciaEnviarA(String titulo, String mensaje) {
+        UIUtils.mostrarAdvertenciaConOptOut(
+            this,
+            titulo,
+            mensaje,
+            alertasEnviarAHabilitadas(),
+            this::deshabilitarAlertasEnviarA
+        );
+    }
+
+    private boolean alertasEnviarAHabilitadas() {
+        return config == null || config.alertasClickDerechoEnviarAHabilitadas();
+    }
+
+    private void deshabilitarAlertasEnviarA() {
+        if (config == null || !config.alertasClickDerechoEnviarAHabilitadas()) {
+            return;
+        }
+        config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
+        if (manejadorCambioAlertasEnviarA != null) {
+            manejadorCambioAlertasEnviarA.run();
+        }
     }
 }

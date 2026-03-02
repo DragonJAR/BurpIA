@@ -128,7 +128,7 @@ class ParserRespuestasAITest {
     }
 
     @Test
-    @DisplayName("Extractor no estricto acepta alias en ingles")
+    @DisplayName("Extractor no estricto acepta alias en inglés")
     void testExtraerCampoNoEstrictoAliasIngles() {
         String contenido = "{\"title\":\"SQLi\",\"description\":\"detalle\",\"severity\":\"High\",\"confidence\":\"Low\",\"evidence\":\"id=1\"}";
         assertEquals("SQLi", ParserRespuestasAI.extraerCampoNoEstricto("title", contenido));
@@ -136,5 +136,21 @@ class ParserRespuestasAITest {
         assertEquals("High", ParserRespuestasAI.extraerCampoNoEstricto("severity", contenido));
         assertEquals("Low", ParserRespuestasAI.extraerCampoNoEstricto("confidence", contenido));
         assertEquals("id=1", ParserRespuestasAI.extraerCampoNoEstricto("evidence", contenido));
+    }
+
+    @Test
+    @DisplayName("Extractor no estricto maneja comillas internas y mal escapadas")
+    void testExtraerCampoNoEstrictoComillasInternas() {
+        String contenidoEstructurado = "{\n" +
+            "  \"title\": \"SQL Injection 'or 1=1--\",\n" +
+            "  \"description\": \"Encontramos un error: \\\"syntax error\\\" o \"Error 500\". Esto es grave.\",\n" +
+            "  \"severity\": \"High\",\n" +
+            "  \"confidence\": \"Medium\",\n" +
+            "  \"evidence\": \"payload: \\\"test\\\"\"\n" +
+            "}";
+        
+        assertEquals("SQL Injection 'or 1=1--", ParserRespuestasAI.extraerCampoNoEstricto("title", contenidoEstructurado));
+        assertEquals("Encontramos un error: \"syntax error\" o \"Error 500\". Esto es grave.", ParserRespuestasAI.extraerCampoNoEstricto("description", contenidoEstructurado));
+        assertEquals("High", ParserRespuestasAI.extraerCampoNoEstricto("severity", contenidoEstructurado));
     }
 }

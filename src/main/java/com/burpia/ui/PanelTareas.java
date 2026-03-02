@@ -126,14 +126,12 @@ public class PanelTareas extends JPanel {
                 return;
             }
 
-            int confirmacion = JOptionPane.showConfirmDialog(
+            boolean confirmacion = UIUtils.confirmarAdvertencia(
                 this,
-                I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(activas),
                 I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE
+                I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(activas)
             );
-            if (confirmacion == JOptionPane.YES_OPTION) {
+            if (confirmacion) {
                 gestorTareas.cancelarTodas();
                 actualizarEstadisticas();
             }
@@ -148,14 +146,12 @@ public class PanelTareas extends JPanel {
                 return;
             }
 
-            int confirmacion = JOptionPane.showConfirmDialog(
+            boolean confirmacion = UIUtils.confirmarPregunta(
                 this,
-                I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(completadas),
                 I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
+                I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(completadas)
             );
-            if (confirmacion == JOptionPane.YES_OPTION) {
+            if (confirmacion) {
                 gestorTareas.limpiarCompletadas();
                 actualizarEstadisticas();
             }
@@ -284,14 +280,12 @@ public class PanelTareas extends JPanel {
             menuItemCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
             menuItemCancelar.setToolTipText(I18nUI.Tooltips.Tareas.MENU_CANCELAR_UNA());
             menuItemCancelar.addActionListener(e -> {
-                int confirmacion = JOptionPane.showConfirmDialog(
+                boolean confirmacion = UIUtils.confirmarPregunta(
                     PanelTareas.this,
-                    I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_UNA_TAREA(),
                     I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
+                    I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_UNA_TAREA()
                 );
-                if (confirmacion == JOptionPane.YES_OPTION && tareaId != null) {
+                if (confirmacion && tareaId != null) {
                     gestorTareas.cancelarTarea(tareaId);
                     actualizarEstadisticas();
                 }
@@ -428,14 +422,12 @@ public class PanelTareas extends JPanel {
     private void cancelarTareas(List<TareaSeleccionada> seleccion) {
         int total = contarSeleccion(seleccion, this::esEstadoCancelable);
 
-        int confirmacion = JOptionPane.showConfirmDialog(
+        boolean confirmacion = UIUtils.confirmarPregunta(
             this,
-            I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(total),
             I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE
+            I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(total)
         );
-        if (confirmacion != JOptionPane.YES_OPTION) return;
+        if (!confirmacion) return;
 
         int contador = procesarSeleccion(seleccion, this::esEstadoCancelable, tareaId -> {
             gestorTareas.cancelarTarea(tareaId);

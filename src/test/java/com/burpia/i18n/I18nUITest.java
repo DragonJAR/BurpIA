@@ -17,7 +17,7 @@ class I18nUITest {
     }
 
     @Test
-    @DisplayName("Usa espanol por defecto y cambia a ingles")
+    @DisplayName("Usa español por defecto y cambia a inglés")
     void testIdiomaActual() {
         I18nUI.establecerIdioma("es");
         assertEquals("📋 TAREAS", I18nUI.Pestanias.TAREAS());
@@ -27,14 +27,14 @@ class I18nUITest {
     }
 
     @Test
-    @DisplayName("Idioma invalido cae en espanol")
+    @DisplayName("Idioma inválido cae en español")
     void testIdiomaInvalido() {
         I18nUI.establecerIdioma("fr");
         assertEquals(IdiomaUI.ES, I18nUI.obtenerIdioma());
     }
 
     @Test
-    @DisplayName("Logs se mantienen en espanol cuando idioma es espanol")
+    @DisplayName("Logs se mantienen en español cuando idioma es español")
     void testLogsEspanol() {
         I18nUI.establecerIdioma("es");
         String mensaje = "Analisis completado: https://target";
@@ -46,7 +46,7 @@ class I18nUITest {
     }
 
     @Test
-    @DisplayName("Logs se traducen a ingles cuando idioma es ingles")
+    @DisplayName("Logs se traducen a inglés cuando idioma es inglés")
     void testLogsIngles() {
         I18nUI.establecerIdioma("en");
         String traducido = I18nLogs.tr("Analisis completado: https://target");

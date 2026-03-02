@@ -32,7 +32,7 @@ class TareaTest {
     }
 
     @Test
-    @DisplayName("Estados invalidos")
+    @DisplayName("Estados inválidos")
     void testEstadosInvalidos() {
         assertFalse(Tarea.esEstadoValido("Running"));
         assertFalse(Tarea.esEstadoValido("Paused"));

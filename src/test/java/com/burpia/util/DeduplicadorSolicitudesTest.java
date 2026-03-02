@@ -91,7 +91,7 @@ class DeduplicadorSolicitudesTest {
     }
 
     @Test
-    @DisplayName("Respeta limite maximo de hashes con eviction LRU")
+    @DisplayName("Respeta límite maximo de hashes con eviction LRU")
     void testLimiteMaximo() {
         DeduplicadorSolicitudes deduplicadorLocal = new DeduplicadorSolicitudes(3, 60000);
         deduplicadorLocal.esDuplicadoYAgregar("h1");

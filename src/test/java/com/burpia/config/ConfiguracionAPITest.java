@@ -29,6 +29,7 @@ class ConfiguracionAPITest {
         assertFalse(config.esDetallado());
         assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla());
         assertEquals(ConfiguracionAPI.AGENTE_DELAY_DEFECTO_MS, config.obtenerAgenteDelay());
+        assertTrue(config.alertasClickDerechoEnviarAHabilitadas());
     }
 
     @Test
@@ -85,7 +86,7 @@ class ConfiguracionAPITest {
     }
 
     @Test
-    @DisplayName("Estado de configuracion se determina con validar()")
+    @DisplayName("Estado de configuración se determina con validar()")
     void testEstadoConfiguracionConValidar() {
         ConfiguracionAPI valida = new ConfiguracionAPI();
         valida.establecerProveedorAI("OpenAI");
@@ -247,7 +248,7 @@ class ConfiguracionAPITest {
     }
 
     @Test
-    @DisplayName("Snapshot de configuracion no se contamina por cambios posteriores")
+    @DisplayName("Snapshot de configuración no se contamina por cambios posteriores")
     void testSnapshotInmutablePorCopia() {
         config.establecerProveedorAI("Ollama");
         config.establecerIdiomaUi("en");
@@ -276,17 +277,20 @@ class ConfiguracionAPITest {
         origen.establecerEscaneoPasivoHabilitado(false);
         origen.establecerAutoGuardadoIssuesHabilitado(false);
         origen.establecerAutoScrollConsolaHabilitado(false);
+        origen.establecerAlertasClickDerechoEnviarAHabilitadas(false);
 
         ConfiguracionAPI snapshot = origen.crearSnapshot();
         assertFalse(snapshot.escaneoPasivoHabilitado());
         assertFalse(snapshot.autoGuardadoIssuesHabilitado());
         assertFalse(snapshot.autoScrollConsolaHabilitado());
+        assertFalse(snapshot.alertasClickDerechoEnviarAHabilitadas());
 
         ConfiguracionAPI destino = new ConfiguracionAPI();
         destino.aplicarDesde(origen);
         assertFalse(destino.escaneoPasivoHabilitado());
         assertFalse(destino.autoGuardadoIssuesHabilitado());
         assertFalse(destino.autoScrollConsolaHabilitado());
+        assertFalse(destino.alertasClickDerechoEnviarAHabilitadas());
     }
 
     @Test
@@ -319,7 +323,7 @@ class ConfiguracionAPITest {
     }
 
     @Test
-    @DisplayName("Idioma UI invalido vuelve a espanol")
+    @DisplayName("Idioma UI inválido vuelve a español")
     void testIdiomaInvalidoVuelveAEspanol() {
         config.establecerIdiomaUi("fr");
         assertEquals("es", config.obtenerIdiomaUi());
@@ -347,7 +351,7 @@ class ConfiguracionAPITest {
     }
 
     @Test
-    @DisplayName("AplicarDesde actualiza configuracion con copia profunda")
+    @DisplayName("AplicarDesde actualiza configuración con copia profunda")
     void testAplicarDesdeCopiaProfunda() {
         ConfiguracionAPI origen = new ConfiguracionAPI();
         origen.establecerProveedorAI("OpenAI");
@@ -372,7 +376,7 @@ class ConfiguracionAPITest {
     }
 
     @Test
-    @DisplayName("Max tokens por proveedor normaliza valores invalidos")
+    @DisplayName("Max tokens por proveedor normaliza valores inválidos")
     void testMaxTokensPorProveedorNormalizaInvalidos() {
         config.establecerProveedorAI("OpenAI");
         int defectoOpenAi = ProveedorAI.obtenerProveedor("OpenAI").obtenerMaxTokensPorDefecto();

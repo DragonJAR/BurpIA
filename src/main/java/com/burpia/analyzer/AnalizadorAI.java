@@ -974,7 +974,7 @@ public class AnalizadorAI implements Runnable {
                     return texto;
                 }
             }
-            return gson.toJson(objeto);
+            return ""; 
         }
         return "";
     }
@@ -1067,7 +1067,12 @@ public class AnalizadorAI implements Runnable {
                         descripcion.setLength(0);
                     }
                     descripcion.append(PATRON_ETIQUETA_DESCRIPCION.matcher(lineaNormalizada).replaceAll("").trim());
-                } else if (!lineaNormalizada.isEmpty() && !lineaNormalizada.startsWith("{") && !lineaNormalizada.startsWith("}")) {
+                } else if (!lineaNormalizada.isEmpty() 
+                           && !lineaNormalizada.startsWith("{") 
+                           && !lineaNormalizada.startsWith("}")
+                           && !lineaNormalizada.startsWith("[")
+                           && !lineaNormalizada.startsWith("]")
+                           && !lineaNormalizada.matches("^\"[^\"]+\"\\s*:.*")) { // Ignorar lineas de clave-valor JSON
                     descripcion.append(" ").append(lineaNormalizada);
                 }
             }

@@ -36,6 +36,7 @@ public class ConfiguracionAPI {
     private boolean escaneoPasivoHabilitado;
     private boolean autoGuardadoIssuesHabilitado;
     private boolean autoScrollConsolaHabilitado;
+    private boolean alertasClickDerechoEnviarAHabilitadas;
     private String promptConfigurable;
     private boolean ignorarErroresSSL;
     private boolean soloProxy;
@@ -66,6 +67,7 @@ public class ConfiguracionAPI {
         this.escaneoPasivoHabilitado = true;
         this.autoGuardadoIssuesHabilitado = true;
         this.autoScrollConsolaHabilitado = true;
+        this.alertasClickDerechoEnviarAHabilitadas = true;
         this.promptModificado = false;
         this.ignorarErroresSSL = false;
         this.soloProxy = true;
@@ -171,6 +173,11 @@ public class ConfiguracionAPI {
     public boolean autoScrollConsolaHabilitado() { return autoScrollConsolaHabilitado; }
     public void establecerAutoScrollConsolaHabilitado(boolean autoScrollConsolaHabilitado) {
         this.autoScrollConsolaHabilitado = autoScrollConsolaHabilitado;
+    }
+
+    public boolean alertasClickDerechoEnviarAHabilitadas() { return alertasClickDerechoEnviarAHabilitadas; }
+    public void establecerAlertasClickDerechoEnviarAHabilitadas(boolean habilitadas) {
+        this.alertasClickDerechoEnviarAHabilitadas = habilitadas;
     }
 
     public boolean esPromptModificado() { return promptModificado; }
@@ -988,6 +995,7 @@ public class ConfiguracionAPI {
         snapshot.escaneoPasivoHabilitado = this.escaneoPasivoHabilitado;
         snapshot.autoGuardadoIssuesHabilitado = this.autoGuardadoIssuesHabilitado;
         snapshot.autoScrollConsolaHabilitado = this.autoScrollConsolaHabilitado;
+        snapshot.alertasClickDerechoEnviarAHabilitadas = this.alertasClickDerechoEnviarAHabilitadas;
         snapshot.promptConfigurable = this.promptConfigurable;
         snapshot.promptModificado = this.promptModificado;
         snapshot.ignorarErroresSSL = this.ignorarErroresSSL;
@@ -1027,6 +1035,7 @@ public class ConfiguracionAPI {
         this.escaneoPasivoHabilitado = origen.escaneoPasivoHabilitado;
         this.autoGuardadoIssuesHabilitado = origen.autoGuardadoIssuesHabilitado;
         this.autoScrollConsolaHabilitado = origen.autoScrollConsolaHabilitado;
+        this.alertasClickDerechoEnviarAHabilitadas = origen.alertasClickDerechoEnviarAHabilitadas;
         this.promptConfigurable = origen.promptConfigurable;
         this.promptModificado = origen.promptModificado;
         this.ignorarErroresSSL = origen.ignorarErroresSSL;

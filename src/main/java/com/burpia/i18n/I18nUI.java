@@ -84,7 +84,15 @@ public final class I18nUI {
         }
 
         public static String CONFIGURACION_IA() {
-            return tr("Configuracion IA", "AI Configuration");
+            return tr("Configuración IA", "AI Configuration");
+        }
+
+        public static String CHECK_NO_VOLVER_MOSTRAR_ALERTA() {
+            return tr("No volver a mostrar este mensaje", "Do not show this message again");
+        }
+
+        public static String TOOLTIP_NO_VOLVER_MOSTRAR_ALERTA() {
+            return tr("Desactiva futuros avisos de esta acción.", "Disable future notices for this action.");
         }
     }
 
@@ -644,6 +652,16 @@ public final class I18nUI {
             return trf("🚀 Enviar a %s", "🚀 Send to %s", agente);
         }
 
+        public static String TITULO_ACCION_AGENTE() {
+            return tr("Enviar al Agente", "Send to Agent");
+        }
+
+        public static String MSG_ENVIADOS_AGENTE(int total, String agente) {
+            return trf("Se enviaron %d hallazgo(s) a %s.",
+                "Sent %d finding(s) to %s.",
+                total, agente);
+        }
+
 
 
         public static String SUFIJO_ENVIADO_INTRUDER() {
@@ -675,7 +693,7 @@ public final class I18nUI {
         }
 
         public static String ERROR_PANEL_CERRANDO() {
-            return tr("No se pudo ejecutar la acción: el panel se esta cerrando.", "Action could not be executed: the panel is shutting down.");
+            return tr("No se pudo ejecutar la acción: el panel se está cerrando.", "Action could not be executed: the panel is shutting down.");
         }
 
         public static String TITULO_OPERACION_LOTE() {
@@ -694,25 +712,25 @@ public final class I18nUI {
         public static String TITULO_ERROR_PTY() { return tr("Error de PTY", "PTY Error"); }
         public static String NOTA_SCOPE_ANALISIS() {
             return tr(
-                "NOTA: BurpIA solo analiza trafico DENTRO del Scope de Burp Suite.",
+                "NOTA: BurpIA solo analiza tráfico DENTRO del Scope de Burp Suite.",
                 "NOTE: BurpIA only analyzes traffic INSIDE Burp Suite Scope."
             );
         }
         public static String NOTA_SCOPE_ANALISIS_ACCION() {
             return tr(
-                "ACCION: Si no ves analisis, agrega el objetivo en Target > Scope.",
+                "ACCIÓN: Si no ves análisis, agrega el objetivo en Target > Scope.",
                 "ACTION: If you do not see analysis, add the target in Target > Scope."
             );
         }
         public static String ANALISIS_BLOQUEADO_CONFIG(String razon, String origen, String url) {
             return trf(
-                "ANALISIS BLOQUEADO: %s. ACCION: abre BurpIA > Configuracion, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexion. Origen=%s, URL=%s",
+                "ANÁLISIS BLOQUEADO: %s. ACCIÓN: abre BurpIA > Configuración, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexión. Origen=%s, URL=%s",
                 "ANALYSIS BLOCKED: %s. ACTION: open BurpIA > Settings, complete Provider/URL/Model/API Key, save, and run Test Connection. Origin=%s, URL=%s",
                 razon, origen, url
             );
         }
         public static String TAREA_BLOQUEADA_CONFIG_LLM() {
-            return tr("Bloqueada por configuracion LLM", "Blocked by LLM configuration");
+            return tr("Bloqueada por configuración LLM", "Blocked by LLM configuration");
         }
 
         public static String ESTADO_INICIAL_LLM_LISTO(String proveedor, String modelo) {
@@ -725,7 +743,7 @@ public final class I18nUI {
 
         public static String ESTADO_INICIAL_LLM_BLOQUEADO(String razon) {
             return trf(
-                "Estado LLM al inicio: no listo (%s). ACCION: abre BurpIA > Configuracion, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexion.",
+                "Estado LLM al inicio: no listo (%s). ACCIÓN: abre BurpIA > Configuración, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexión.",
                 "LLM startup status: not ready (%s). ACTION: open BurpIA > Settings, complete Provider/URL/Model/API Key, save, and run Test Connection.",
                 razon
             );
@@ -739,7 +757,7 @@ public final class I18nUI {
         }
         public static String ESTADO_INICIAL_LLM_BLOQUEADO_ACCION() {
             return tr(
-                "ACCION: abre BurpIA > Configuracion, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexion.",
+                "ACCIÓN: abre BurpIA > Configuración, completa Proveedor/URL/Modelo/API Key, guarda y ejecuta Probar Conexión.",
                 "ACTION: open BurpIA > Settings, complete Provider/URL/Model/API Key, save, and run Test Connection."
             );
         }
@@ -865,7 +883,7 @@ public final class I18nUI {
         public static String RESPUESTA_RECIBIDA() { return tr("❌ Respuesta recibida:\n", "❌ Received response:\n"); }
         public static String RESPUESTA_FORMATO_INCORRECTO() { return tr("\n\n⚠️ El modelo respondió pero no cumple el formato esperado.", "\n\n⚠️ Model responded but did not match the expected format."); }
         public static String ERROR_EXTRAER_CONTENIDO() { return tr("⚠️ No se pudo extraer el contenido de la respuesta\n", "⚠️ Could not extract response content\n"); }
-        public static String EXITO_FORMATO_INCORRECTO() { return tr("   La conexión fue exitosa pero el formato de respuesta no es el esperado.\n", "   Connection succeeded but response format is not expected.\n"); }
+        public static String EXITO_FORMATO_INCORRECTO() { return tr("   La conexión fue exitosa pero el formato de respuesta no es el esperado.\n", "   Connection succeeded but response format is not as expected.\n"); }
         public static String RESPUESTA_CRUDA() { return tr("   Respuesta cruda (primeros 200 caracteres):\n", "   Raw response (first 200 characters):\n"); }
     }
 
@@ -1222,29 +1240,64 @@ public final class I18nUI {
             return tr("RESUMEN", "SUMMARY");
         }
 
+        private static final String INTRO_DESCRIPCION_ES =
+            "BurpIA es una extensión profesional para Burp Suite que aprovecha diferentes " +
+                "modelos de Inteligencia Artificial para analizar tráfico HTTP e identificar " +
+                "vulnerabilidades de seguridad de forma automatizada con validación manual asistida por agentes.";
+
+        private static final String INTRO_DESCRIPCION_EN =
+            "BurpIA is a professional Burp Suite extension that leverages different " +
+                "Artificial Intelligence models to analyze HTTP traffic and identify " +
+                "security vulnerabilities automatically with agentic manual validation.";
+
+        private static final String[] CARACTERISTICAS_APP_ES = {
+            "Detección de forma pasiva de problemas de seguridad con IA Generativa",
+            "IA basada en agentes integrada en la interfaz del plugin",
+            "Compatibilidad con OpenAI, Claude, Gemini, Z.ai, Minimax y Ollama",
+            "De-duplicación inteligente de peticiones para optimizar la cuota de API",
+            "Gestión asíncrona mediante colas de tareas paralelizables",
+            "Integración con site map (Issues), Repeater, Intruder y Scanner Pro",
+            "Prompt totalmente configurable para análisis a medida",
+            "Exportación nativa de reportes de hallazgos a CSV y JSON",
+            "Renderizadores visuales para severidad y confianza",
+            "Multiidioma en inglés y español."
+        };
+
+        private static final String[] CARACTERISTICAS_APP_EN = {
+            "Passive detection of security issues with Generative AI",
+            "Agentic AI integrated into the plugin interface",
+            "Compatibility with OpenAI, Claude, Gemini, Z.ai, Minimax, and Ollama",
+            "Smart request deduplication to optimize API quota",
+            "Asynchronous task management through parallel queues",
+            "Integration with site map (Issues), Repeater, Intruder, and Scanner Pro",
+            "Fully configurable prompt for tailored analysis",
+            "Native findings export to CSV and JSON",
+            "Visual renderers for severity and confidence",
+            "Bilingual support in English and Spanish."
+        };
+
         public static String DESCRIPCION_APP() {
             return tr(
-                "BurpIA es una extension profesional para Burp Suite que aprovecha multiples " +
-                    "modelos de Inteligencia Artificial para analizar tráfico HTTP e identificar " +
-                    "vulnerabilidades de seguridad de forma automatizada.\n\n" +
-                    "Características principales:\n" +
-                    "• Compatibilidad con OpenAI, Claude, Gemini, Z.ai, Minimax y Ollama\n" +
-                    "• De-duplicacion inteligente de peticiones para optimizar la cuota de API\n" +
-                    "• Gestion asíncrona mediante colas de tareas paralelizables\n" +
-                    "• Integración con site map (Issues), Repeater, Intruder y Scanner Pro\n" +
-                    "• Prompt totalmente configurable para análisis a medida\n" +
-                    "• Exportación nativa de reportes de hallazgos a CSV y JSON",
-                "BurpIA is a professional Burp Suite extension that uses multiple " +
-                    "Artificial Intelligence models to analyze HTTP traffic and identify " +
-                    "security vulnerabilities automatically.\n\n" +
-                    "Key features:\n" +
-                    "• Compatibility with OpenAI, Claude, Gemini, Z.ai, Minimax, and Ollama\n" +
-                    "• Smart request deduplication to optimize API usage\n" +
-                    "• Asynchronous task queue with parallel processing\n" +
-                    "• Integration with site map (Issues), Repeater, Intruder, and Scanner Pro\n" +
-                    "• Fully configurable prompt for custom analysis\n" +
-                    "• Native findings export to CSV and JSON"
+                construirDescripcionApp(INTRO_DESCRIPCION_ES, "Características principales", CARACTERISTICAS_APP_ES),
+                construirDescripcionApp(INTRO_DESCRIPCION_EN, "Key features", CARACTERISTICAS_APP_EN)
             );
+        }
+
+        private static String construirDescripcionApp(String introduccion, String titulo, String[] caracteristicas) {
+            StringBuilder descripcion = new StringBuilder();
+            descripcion.append(introduccion).append("\n\n").append(titulo).append(":\n");
+            if (caracteristicas != null) {
+                for (String caracteristica : caracteristicas) {
+                    if (caracteristica == null || caracteristica.trim().isEmpty()) {
+                        continue;
+                    }
+                    descripcion.append("• ").append(caracteristica).append('\n');
+                }
+            }
+            if (descripcion.length() > 0 && descripcion.charAt(descripcion.length() - 1) == '\n') {
+                descripcion.setLength(descripcion.length() - 1);
+            }
+            return descripcion.toString();
         }
 
         public static final class Agentes {
@@ -1442,7 +1495,7 @@ public final class I18nUI {
         }
 
         public static String MSG_ERROR_FORMATO_NUMERO() {
-            return tr("Formato de número invalido en ajustes de usuario",
+            return tr("Formato de número inválido en ajustes de usuario",
                 "Invalid number format in user settings");
         }
 
@@ -1536,6 +1589,16 @@ public final class I18nUI {
         public static String TITULO_ANALISIS_INICIADO() {
             return tr("BurpIA - Análisis Iniciado", "BurpIA - Analysis Started");
         }
+
+        public static String TITULO_ENVIO_AGENTE() {
+            return tr("BurpIA - Envío al Agente", "BurpIA - Sent to Agent");
+        }
+
+        public static String MSG_ENVIO_AGENTE(String agente) {
+            return trf("Solicitud enviada a %s.",
+                "Request sent to %s.",
+                agente);
+        }
     }
 
     public static final class Tablas {
@@ -1615,7 +1678,7 @@ public final class I18nUI {
         }
 
         public static String CONFIGURACION() {
-            return I18nUI.tr("Abre configuración de proveedor, prompt y limites.",
+            return I18nUI.tr("Abre configuración de proveedor, prompt y límites.",
                 "Open provider, prompt and limits settings.");
         }
 
@@ -2057,7 +2120,7 @@ public final class I18nUI {
         }
 
         public static String DESCRIPCION() {
-            return I18nUI.tr("Descripción tecnica del hallazgo para análisis manual.",
+            return I18nUI.tr("Descripción técnica del hallazgo para análisis manual.",
                 "Technical finding description for manual analysis.");
         }
 
@@ -2079,6 +2142,12 @@ public final class I18nUI {
         public static String ANALIZAR_SOLICITUD() {
             return I18nUI.tr("Lanza análisis inmediato de la request seleccionada.",
                 "Launch immediate analysis for selected request.");
+        }
+
+        public static String ENVIAR_A_AGENTE(String agente) {
+            return I18nUI.trf("Envía la solicitud seleccionada a %s.",
+                "Send selected request to %s.",
+                agente);
         }
     }
     }

@@ -120,7 +120,7 @@ class PanelHallazgosFiltrosTest {
     }
 
     @Test
-    @DisplayName("Eliminar hallazgo actualiza indices de ignorados")
+    @DisplayName("Eliminar hallazgo actualiza índices de ignorados")
     void testEliminarActualizaIgnorados() throws Exception {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
 

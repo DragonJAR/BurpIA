@@ -229,6 +229,9 @@ public class GestorConfiguracion {
         if (archivo.autoScrollConsolaHabilitado != null) {
             config.establecerAutoScrollConsolaHabilitado(archivo.autoScrollConsolaHabilitado);
         }
+        if (archivo.alertasClickDerechoEnviarAHabilitadas != null) {
+            config.establecerAlertasClickDerechoEnviarAHabilitadas(archivo.alertasClickDerechoEnviarAHabilitadas);
+        }
         boolean promptModificado = Boolean.TRUE.equals(archivo.promptModificado);
         config.establecerPromptModificado(promptModificado);
         if (promptModificado && archivo.promptConfigurable != null) {
@@ -301,6 +304,7 @@ public class GestorConfiguracion {
         archivo.escaneoPasivoHabilitado = config.escaneoPasivoHabilitado();
         archivo.autoGuardadoIssuesHabilitado = config.autoGuardadoIssuesHabilitado();
         archivo.autoScrollConsolaHabilitado = config.autoScrollConsolaHabilitado();
+        archivo.alertasClickDerechoEnviarAHabilitadas = config.alertasClickDerechoEnviarAHabilitadas();
         archivo.promptConfigurable = config.obtenerPromptConfigurable();
         archivo.promptModificado = config.esPromptModificado();
         archivo.ignorarErroresSSL = config.ignorarErroresSSL();
@@ -374,6 +378,7 @@ public class GestorConfiguracion {
         private Boolean escaneoPasivoHabilitado;
         private Boolean autoGuardadoIssuesHabilitado;
         private Boolean autoScrollConsolaHabilitado;
+        private Boolean alertasClickDerechoEnviarAHabilitadas;
         private String promptConfigurable;
         private Boolean promptModificado;
         private Boolean ignorarErroresSSL;

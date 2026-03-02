@@ -75,7 +75,7 @@ class PanelTareasAccionesTest {
     }
 
     @Test
-    @DisplayName("Captura de seleccion ignora indices invalidos y duplicados")
+    @DisplayName("Captura de seleccion ignora índices inválidos y duplicados")
     void testCapturarSeleccionRobusta() throws Exception {
         Tarea enCola = gestor.crearTarea("A", "https://example.com/cola", Tarea.ESTADO_EN_COLA, "");
         flushEdt();

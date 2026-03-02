@@ -38,7 +38,7 @@ class ParserModelosOllamaTest {
     }
 
     @Test
-    @DisplayName("Filtra vacios y dos puntos invalidos")
+    @DisplayName("Filtra vacíos y dos puntos inválidos")
     void testFiltraInvalidos() {
         String json = "{\"models\":[{\"name\":\" : \"},{\"name\":\"\"},{\"name\":\"ok:latest\"},{\"name\":\":\"}]}";
         List<String> modelos = ParserModelosOllama.extraerModelosDesdeTags(json);
@@ -47,7 +47,7 @@ class ParserModelosOllamaTest {
     }
 
     @Test
-    @DisplayName("JSON invalido retorna lista vacia sin lanzar excepcion")
+    @DisplayName("JSON inválido retorna lista vacía sin lanzar excepcion")
     void testJsonInvalidoNoRompe() {
         List<String> modelos = ParserModelosOllama.extraerModelosDesdeTags("{invalid-json");
         assertTrue(modelos.isEmpty());

@@ -19,6 +19,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final ConsumerSolicitud manejadorAnalisis;
     private final ConfiguracionAPI config;
     private final java.util.function.Consumer<HttpRequestResponse> manejadorAgente;
+    private final Runnable manejadorCambioAlertasEnviarA;
     private final AtomicReference<RegistroClic> ultimoClic;
     private static final long VENTANA_DEBOUNCE_MS = 500L;
 
@@ -26,11 +27,16 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal);
     }
 
-    public FabricaMenuContextual(MontoyaApi api, ConsumerSolicitud manejadorAnalisis, ConfiguracionAPI config, java.util.function.Consumer<HttpRequestResponse> manejadorAgente) {
+    public FabricaMenuContextual(MontoyaApi api,
+                                 ConsumerSolicitud manejadorAnalisis,
+                                 ConfiguracionAPI config,
+                                 java.util.function.Consumer<HttpRequestResponse> manejadorAgente,
+                                 Runnable manejadorCambioAlertasEnviarA) {
         this.api = api;
         this.manejadorAnalisis = manejadorAnalisis;
         this.config = config;
         this.manejadorAgente = manejadorAgente;
+        this.manejadorCambioAlertasEnviarA = manejadorCambioAlertasEnviarA;
         this.ultimoClic = new AtomicReference<>();
     }
 
@@ -46,6 +52,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         final HttpRequest solicitudCapturada = solicitudRespuestaSeleccionada.request();
 
         JMenuItem itemAnalizar = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD());
+        itemAnalizar.setFont(EstilosUI.FUENTE_ESTANDAR);
         itemAnalizar.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD());
         itemAnalizar.addActionListener(e -> {
             manejarClicConDebounce(solicitudCapturada, solicitudRespuestaSeleccionada);
@@ -59,8 +66,10 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 I18nUI.General.AGENTE_GENERICO()
             );
             JMenuItem itemAgente = new JMenuItem(I18nUI.Contexto.MENU_ENVIAR_AGENTE(nombreAgente));
+            itemAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
+            itemAgente.setToolTipText(I18nUI.Tooltips.Contexto.ENVIAR_A_AGENTE(nombreAgente));
             itemAgente.addActionListener(e -> {
-                manejadorAgente.accept(solicitudRespuestaSeleccionada);
+                manejarEnvioAgente(solicitudRespuestaSeleccionada, nombreAgente);
             });
             itemsMenu.add(itemAgente);
         }
@@ -91,6 +100,39 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             }
             UIUtils.mostrarInfo(null, I18nUI.Contexto.TITULO_ANALISIS_INICIADO(), I18nUI.Contexto.MSG_ANALISIS_INICIADO());
         });
+    }
+
+    private void manejarEnvioAgente(HttpRequestResponse solicitudRespuestaSeleccionada, String nombreAgente) {
+        try {
+            manejadorAgente.accept(solicitudRespuestaSeleccionada);
+        } catch (Exception ex) {
+            api.logging().logToError("[BurpIA] Error enviando solicitud al agente: " + ex.getMessage());
+            return;
+        }
+        if (GraphicsEnvironment.isHeadless()) {
+            return;
+        }
+        UIUtils.mostrarInfoConOptOut(
+            null,
+            I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
+            I18nUI.Contexto.MSG_ENVIO_AGENTE(nombreAgente),
+            alertasEnviarAHabilitadas(),
+            this::deshabilitarAlertasEnviarA
+        );
+    }
+
+    private boolean alertasEnviarAHabilitadas() {
+        return config == null || config.alertasClickDerechoEnviarAHabilitadas();
+    }
+
+    private void deshabilitarAlertasEnviarA() {
+        if (config == null || !config.alertasClickDerechoEnviarAHabilitadas()) {
+            return;
+        }
+        config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
+        if (manejadorCambioAlertasEnviarA != null) {
+            manejadorCambioAlertasEnviarA.run();
+        }
     }
 
     private static final class RegistroClic {

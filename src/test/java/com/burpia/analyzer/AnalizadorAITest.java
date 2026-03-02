@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class AnalizadorAITest {
 
     @Test
-    @DisplayName("Parseo de hallazgos tolera elementos JSON invalidos sin romper")
+    @DisplayName("Parseo de hallazgos tolera elementos JSON inválidos sin romper")
     void testParseoHallazgosInvalidosNoRompe() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("Z.ai");
@@ -152,7 +152,7 @@ class AnalizadorAITest {
     }
 
     @Test
-    @DisplayName("Fallback no estricto soporta clave findings con campos en ingles")
+    @DisplayName("Fallback no estricto soporta clave findings con campos en inglés")
     void testParseoNoEstrictoConFindingsEnIngles() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("OpenAI");

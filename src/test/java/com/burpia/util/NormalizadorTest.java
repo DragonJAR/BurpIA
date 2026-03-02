@@ -13,7 +13,7 @@ class NormalizadorTest {
     @DisplayName("normalizarTexto")
     class NormalizarTexto {
         @Test
-        @DisplayName("Retorna cadena vacia para null")
+        @DisplayName("Retorna cadena vacía para null")
         void retornaVacioParaNull() {
             assertEquals("", Normalizador.normalizarTexto(null));
         }
@@ -44,7 +44,7 @@ class NormalizadorTest {
         }
 
         @Test
-        @DisplayName("Retorna cadena vacia para null")
+        @DisplayName("Retorna cadena vacía para null")
         void retornaVacioParaNull() {
             assertEquals("", Normalizador.normalizarTextoConControlesEnEspacio(null));
         }
@@ -54,7 +54,7 @@ class NormalizadorTest {
     @DisplayName("sanitizarApiKey")
     class SanitizarApiKey {
         @Test
-        @DisplayName("Retorna indicador para null o vacia")
+        @DisplayName("Retorna indicador para null o vacía")
         void retornaIndicadorParaNullOVacia() {
             assertEquals("[NO CONFIGURADA]", Normalizador.sanitizarApiKey(null));
             assertEquals("[NO CONFIGURADA]", Normalizador.sanitizarApiKey(""));

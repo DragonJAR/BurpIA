@@ -76,14 +76,12 @@ public class PanelConsola extends JPanel {
                 return;
             }
 
-            int confirmacion = JOptionPane.showConfirmDialog(
+            boolean confirmacion = UIUtils.confirmarPregunta(
                 this,
-                I18nUI.Consola.MSG_CONFIRMAR_LIMPIEZA(total),
                 I18nUI.Consola.TITULO_CONFIRMAR_LIMPIEZA(),
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
+                I18nUI.Consola.MSG_CONFIRMAR_LIMPIEZA(total)
             );
-            if (confirmacion == JOptionPane.YES_OPTION) {
+            if (confirmacion) {
                 gestorConsola.limpiarConsola();
             }
         });

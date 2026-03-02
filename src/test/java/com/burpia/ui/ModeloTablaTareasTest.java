@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ModeloTablaTareasTest {
 
     @Test
-    @DisplayName("Normaliza limite invalido y conserva al menos una fila")
+    @DisplayName("Normaliza límite inválido y conserva al menos una fila")
     void testNormalizaLimiteInvalido() throws Exception {
         ModeloTablaTareas modelo = new ModeloTablaTareas(0);
         modelo.agregarTarea(new Tarea("1", "A", "https://example.com/1", Tarea.ESTADO_EN_COLA));
@@ -31,7 +31,7 @@ class ModeloTablaTareasTest {
     }
 
     @Test
-    @DisplayName("Eliminar con indice invalido no lanza excepcion ni modifica filas")
+    @DisplayName("Eliminar con índice inválido no lanza excepcion ni modifica filas")
     void testEliminarIndiceInvalido() throws Exception {
         ModeloTablaTareas modelo = new ModeloTablaTareas(10);
         modelo.agregarTarea(new Tarea("1", "A", "https://example.com/1", Tarea.ESTADO_EN_COLA));
