@@ -56,4 +56,39 @@ class UIUtilsTest {
 
         I18nUI.establecerIdioma("es");
     }
+
+    @Test
+    @DisplayName("mensaje de binario inexistente incluye comando completo cuando hay flags")
+    void testConstruirMensajeBinarioInexistenteConFlags() {
+        I18nUI.establecerIdioma("es");
+
+        String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(
+            "Claude Code",
+            "/opt/claude/bin/claude --dangerously-skip-permissions"
+        );
+
+        assertEquals(
+            "El binario de Claude Code no existe en la ruta actual: /opt/claude/bin/claude\n"
+                + "Comando configurado: /opt/claude/bin/claude --dangerously-skip-permissions",
+            mensaje
+        );
+    }
+
+    @Test
+    @DisplayName("mensaje de binario inexistente en ingles sin flags no agrega linea extra")
+    void testConstruirMensajeBinarioInexistenteSinFlags() {
+        I18nUI.establecerIdioma("en");
+
+        String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(
+            "Factory Droid",
+            "/tmp/droid"
+        );
+
+        assertEquals(
+            "The Factory Droid binary does not exist at the current path: /tmp/droid",
+            mensaje
+        );
+
+        I18nUI.establecerIdioma("es");
+    }
 }

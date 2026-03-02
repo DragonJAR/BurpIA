@@ -66,4 +66,52 @@ class I18nUITest {
         assertEquals("Configuration saved successfully to: /tmp/.burpia/config.json",
             I18nLogs.tr("Configuracion guardada exitosamente en: /tmp/.burpia/config.json"));
     }
+
+    @Test
+    @DisplayName("Tooltip de ayuda del agente respeta idioma")
+    void testTooltipAyudaAgenteI18n() {
+        I18nUI.establecerIdioma("es");
+        assertEquals(
+            "Abrir guía de instalación/configuración de Claude Code según idioma actual.",
+            I18nUI.Tooltips.Agente.GUIA_AGENTE("Claude Code")
+        );
+
+        I18nUI.establecerIdioma("en");
+        assertEquals(
+            "Open Claude Code installation/setup guide using current language.",
+            I18nUI.Tooltips.Agente.GUIA_AGENTE("Claude Code")
+        );
+    }
+
+    @Test
+    @DisplayName("Mensaje fallback de URL de guía respeta idioma")
+    void testMensajeUrlGuiaAgenteI18n() {
+        String url = "https://example.com/guide";
+
+        I18nUI.establecerIdioma("es");
+        assertEquals(
+            "No se pudo abrir el navegador. URL de la guía: " + url,
+            I18nUI.Consola.MSG_URL_GUIA_AGENTE(url)
+        );
+
+        I18nUI.establecerIdioma("en");
+        assertEquals(
+            "Could not open browser. Guide URL: " + url,
+            I18nUI.Consola.MSG_URL_GUIA_AGENTE(url)
+        );
+    }
+
+    @Test
+    @DisplayName("Mensaje de comando configurado para binario respeta idioma")
+    void testMensajeComandoConfiguradoI18n() {
+        String comando = "claude --dangerously-skip-permissions";
+
+        I18nUI.establecerIdioma("es");
+        assertEquals("Comando configurado: " + comando,
+            I18nUI.Configuracion.Agentes.MSG_COMANDO_CONFIGURADO(comando));
+
+        I18nUI.establecerIdioma("en");
+        assertEquals("Configured command: " + comando,
+            I18nUI.Configuracion.Agentes.MSG_COMANDO_CONFIGURADO(comando));
+    }
 }

@@ -37,4 +37,23 @@ public class OSUtilsTest {
         assertEquals("\n", eol);
         assertFalse(OSUtils.esWindows());
     }
+
+    @Test
+    public void testExtraerEjecutableComandoClaudeConFlags() {
+        assertEquals("claude",
+            OSUtils.extraerEjecutableComando("claude --dangerously-skip-permissions"));
+    }
+
+    @Test
+    public void testExtraerEjecutableComandoConRutaEntreComillasYFlags() {
+        assertEquals("/opt/claude/bin/claude",
+            OSUtils.extraerEjecutableComando("\"/opt/claude/bin/claude\" --dangerously-skip-permissions"));
+    }
+
+    @Test
+    public void testResolverEjecutableComandoExpandeRuta() {
+        String comando = "~/.local/bin/claude --dangerously-skip-permissions";
+        String esperado = System.getProperty("user.home") + "/.local/bin/claude";
+        assertEquals(esperado, OSUtils.resolverEjecutableComando(comando));
+    }
 }

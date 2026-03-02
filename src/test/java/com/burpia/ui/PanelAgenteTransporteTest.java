@@ -2,12 +2,14 @@ package com.burpia.ui;
 
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.util.OSUtils;
 import com.jediterm.terminal.TtyConnector;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import javax.swing.JButton;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -16,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -228,6 +231,89 @@ class PanelAgenteTransporteTest {
         }
     }
 
+    @Test
+    @DisplayName("Controles incluyen boton de ayuda con emoji")
+    void testControlesIncluyenBotonAyuda() throws Exception {
+        PanelAgente panel = crearPanelSinConsola();
+        try {
+            JButton botonAyuda = obtenerBotonAyuda(panel);
+            assertNotNull(botonAyuda);
+            assertEquals("❓", botonAyuda.getText());
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("URL de guía se resuelve por agente e idioma con fallback")
+    void testResolverUrlGuiaPorAgenteEIdioma() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+            config.establecerIdiomaUi("es");
+            assertEquals(
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-DROID-ES.md",
+                invocarResolverUrlGuia(panel)
+            );
+
+            config.establecerIdiomaUi("en");
+            assertEquals(
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-DROID-EN.md",
+                invocarResolverUrlGuia(panel)
+            );
+
+            config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+            config.establecerIdiomaUi("es");
+            assertEquals(
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-CLAUDE-ES.md",
+                invocarResolverUrlGuia(panel)
+            );
+
+            config.establecerIdiomaUi("en");
+            assertEquals(
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-CLAUDE-EN.md",
+                invocarResolverUrlGuia(panel)
+            );
+
+            config.establecerTipoAgente("INVALIDO");
+            config.establecerIdiomaUi("en");
+            assertEquals(
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-DROID-EN.md",
+                invocarResolverUrlGuia(panel)
+            );
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("aplicarIdioma refresca tooltip del botón ayuda según idioma y agente")
+    void testAplicarIdiomaRefrescaTooltipBotonAyuda() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        config.establecerIdiomaUi("en");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            JButton botonAyuda = obtenerBotonAyuda(panel);
+
+            I18nUI.establecerIdioma("en");
+            SwingUtilities.invokeAndWait(panel::aplicarIdioma);
+            assertTrue(botonAyuda.getToolTipText().contains("Claude Code"));
+            assertTrue(botonAyuda.getToolTipText().contains("installation/setup guide"));
+
+            I18nUI.establecerIdioma("es");
+            config.establecerIdiomaUi("es");
+            SwingUtilities.invokeAndWait(panel::aplicarIdioma);
+            assertTrue(botonAyuda.getToolTipText().contains("Claude Code"));
+            assertTrue(botonAyuda.getToolTipText().contains("guía de instalación/configuración"));
+        } finally {
+            panel.destruir();
+            I18nUI.establecerIdioma("es");
+        }
+    }
+
     private PanelAgente crearPanelSinConsola() throws Exception {
         return crearPanelSinConsola(new ConfiguracionAPI());
     }
@@ -242,6 +328,12 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField("ttyConnector");
         field.setAccessible(true);
         field.set(panel, connector);
+    }
+
+    private JButton obtenerBotonAyuda(PanelAgente panel) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("btnAyudaAgente");
+        field.setAccessible(true);
+        return (JButton) field.get(panel);
     }
 
     private void invocarCambiarAgenteRapido(PanelAgente panel) throws Exception {
@@ -272,6 +364,12 @@ class PanelAgenteTransporteTest {
         Method method = PanelAgente.class.getDeclaredMethod("escribirTextoViaTtyConnector", String.class);
         method.setAccessible(true);
         return (boolean) method.invoke(panel, payload);
+    }
+
+    private String invocarResolverUrlGuia(PanelAgente panel) throws Exception {
+        Method method = PanelAgente.class.getDeclaredMethod("resolverUrlGuiaAgenteActual");
+        method.setAccessible(true);
+        return (String) method.invoke(panel);
     }
 
     private void marcarConsolaArrancando(PanelAgente panel, boolean valor) throws Exception {

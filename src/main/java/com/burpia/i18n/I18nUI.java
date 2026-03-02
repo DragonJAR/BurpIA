@@ -848,6 +848,12 @@ public final class I18nUI {
             return tr("Cambiar Agente", "Switch Agent");
         }
 
+        public static String MSG_URL_GUIA_AGENTE(String url) {
+            return trf("No se pudo abrir el navegador. URL de la guía: %s",
+                "Could not open browser. Guide URL: %s",
+                url);
+        }
+
         public static String TITULO_PANEL_AGENTE_GENERICO() {
             return tr("🖥️ CONSOLA DEL AGENTE", "🖥️ AGENT CONSOLE");
         }
@@ -1367,6 +1373,12 @@ public final class I18nUI {
                     nombreAgente, rutaBinario);
             }
 
+            public static String MSG_COMANDO_CONFIGURADO(String comando) {
+                return trf("Comando configurado: %s",
+                    "Configured command: %s",
+                    comando);
+            }
+
             public static String MSG_BINARIO_NO_EXISTE_SIMPLE(String rutaBinario) {
                 return trf("El binario del agente no existe en la ruta: %s",
                     "The agent binary does not exist at path: %s",
@@ -1442,7 +1454,7 @@ public final class I18nUI {
         }
 
         public static String MSG_VERSION_REMOTA_VACIA() {
-            return tr("El archivo remoto VERSION.txt esta vacio o no es valido.",
+            return tr("El archivo remoto VERSION.txt está vacío o no es válido.",
                 "The remote VERSION.txt file is empty or invalid.");
         }
 
@@ -1936,7 +1948,7 @@ public final class I18nUI {
         }
 
         public static String MAXIMO_CONCURRENTE() {
-            return I18nUI.tr("Número máximo de análisis simultaneos.",
+            return I18nUI.tr("Número máximo de análisis simultáneos.",
                 "Maximum simultaneous analyses.");
         }
 
@@ -2048,8 +2060,10 @@ public final class I18nUI {
         }
 
         public static String BINARIO_AGENTE() {
-            return I18nUI.tr("Ruta al ejecutable del agente (ej. droid).",
-                "Path to the agent binary (e.g. droid).");
+            return I18nUI.tr(
+                "Ruta o comando del agente (ej. droid o claude --dangerously-skip-permissions).",
+                "Agent path or command (e.g. droid or claude --dangerously-skip-permissions)."
+            );
         }
 
         public static String PROMPT_AGENTE() {
@@ -2097,6 +2111,14 @@ public final class I18nUI {
         public static String CAMBIAR_AGENTE_RAPIDO() {
             return I18nUI.tr("Cambia rápidamente entre agentes disponibles.",
                 "Quickly switch between available agents.");
+        }
+
+        public static String GUIA_AGENTE(String nombreAgente) {
+            return I18nUI.trf(
+                "Abrir guía de instalación/configuración de %s según idioma actual.",
+                "Open %s installation/setup guide using current language.",
+                nombreAgente
+            );
         }
     }
 

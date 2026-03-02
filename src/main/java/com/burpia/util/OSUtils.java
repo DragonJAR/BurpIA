@@ -99,12 +99,11 @@ public final class OSUtils {
             return false;
         }
 
-        String ejecutable = extraerEjecutableComando(ruta);
-        if (ejecutable == null || ejecutable.trim().isEmpty()) {
+        String rutaExpandida = resolverEjecutableComando(ruta);
+        if (rutaExpandida == null || rutaExpandida.trim().isEmpty()) {
             return false;
         }
 
-        String rutaExpandida = expandirRuta(ejecutable.trim());
         File binario = new File(rutaExpandida);
         if (binario.isFile()) {
             return true;
@@ -115,6 +114,22 @@ public final class OSUtils {
         }
 
         return existeEnPath(rutaExpandida);
+    }
+
+    /**
+     * Resuelve el ejecutable real de un comando que puede incluir argumentos.
+     * Ejemplos válidos: "claude --dangerously-skip-permissions" o "\"/path/claude\" --flag".
+     */
+    public static String resolverEjecutableComando(String comando) {
+        String ejecutable = extraerEjecutableComando(comando);
+        if (ejecutable == null) {
+            return null;
+        }
+        String limpio = ejecutable.trim();
+        if (limpio.isEmpty()) {
+            return "";
+        }
+        return expandirRuta(limpio);
     }
 
     public static String extraerEjecutableComando(String comando) {

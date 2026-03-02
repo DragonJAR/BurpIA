@@ -1,5 +1,7 @@
 package com.burpia.ui;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.Normalizador;
+import com.burpia.util.OSUtils;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -190,6 +192,19 @@ public class UIUtils {
                 JOptionPane.DEFAULT_OPTION
             );
         });
+    }
+
+    public static String construirMensajeBinarioAgenteNoEncontrado(String nombreAgente, String comandoConfigurado) {
+        String ejecutableDetectado = OSUtils.resolverEjecutableComando(comandoConfigurado);
+        String rutaMensaje = Normalizador.esVacio(ejecutableDetectado) ? comandoConfigurado : ejecutableDetectado;
+        String mensaje = I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE(nombreAgente, rutaMensaje);
+
+        if (!Normalizador.esVacio(comandoConfigurado)
+            && !Normalizador.esVacio(rutaMensaje)
+            && !comandoConfigurado.trim().equals(rutaMensaje)) {
+            mensaje = mensaje + "\n" + I18nUI.Configuracion.Agentes.MSG_COMANDO_CONFIGURADO(comandoConfigurado);
+        }
+        return mensaje;
     }
 
     static String extraerTextoVisibleEnlace(String textoEnlace) {

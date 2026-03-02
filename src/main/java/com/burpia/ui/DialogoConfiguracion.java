@@ -783,10 +783,14 @@ public class DialogoConfiguracion extends JDialog {
                     ? idiomaSeleccionado.codigo()
                     : configTemporal.obtenerIdiomaUi();
                 String labelLink = enumSeleccionado.getUrlDocPorIdioma(codigoIdioma);
+                String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(
+                    enumSeleccionado.getNombreVisible(),
+                    binarioActual
+                );
                 UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
                     this,
                     I18nUI.Configuracion.Agentes.TITULO_VALIDACION_AGENTE(),
-                    I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE_SIMPLE(binarioActual),
+                    mensaje,
                     I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(enumSeleccionado.getNombreVisible()),
                     labelLink
                 );

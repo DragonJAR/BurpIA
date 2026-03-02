@@ -50,6 +50,7 @@ public class PanelAgente extends JPanel {
     private JLabel lblDelay;
     private JSpinner spinnerDelay;
     private JButton btnCambiarAgente;
+    private JButton btnAyudaAgente;
 
     private PtyProcess process;
     private TtyConnector ttyConnector;
@@ -295,6 +296,10 @@ public class PanelAgente extends JPanel {
             btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
             btnCambiarAgente.setToolTipText(I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO());
         }
+        if (btnAyudaAgente != null) {
+            btnAyudaAgente.setText("❓");
+            btnAyudaAgente.setToolTipText(resolverTooltipAyudaAgente());
+        }
         if (lblDelay != null) {
             lblDelay.setText(I18nUI.Consola.ETIQUETA_DELAY());
             lblDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
@@ -365,11 +370,15 @@ public class PanelAgente extends JPanel {
         btnCambiarAgente = crearBoton("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO(),
             I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO(), e -> cambiarAgenteRapido());
 
+        btnAyudaAgente = crearBoton("❓",
+            resolverTooltipAyudaAgente(), e -> abrirGuiaAgenteActual());
+
         panel.add(btnReiniciar);
         panel.add(btnCtrlC);
         panel.add(btnInyectarPayload);
         panel.add(new JSeparator(SwingConstants.VERTICAL));
         panel.add(btnCambiarAgente);
+        panel.add(btnAyudaAgente);
 
         lblDelay = new JLabel(I18nUI.Consola.ETIQUETA_DELAY());
         lblDelay.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -408,10 +417,11 @@ public class PanelAgente extends JPanel {
 
             String rutaBinario = resolverRutaBinario(destino);
             if (!OSUtils.existeBinario(rutaBinario)) {
+                String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(destino.getNombreVisible(), rutaBinario);
                 UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
                     this,
                     destino.getNombreVisible(),
-                    I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE_SIMPLE(rutaBinario),
+                    mensaje,
                     I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(destino.getNombreVisible()),
                     destino.getUrlDocPorIdioma(config.obtenerIdiomaUi())
                 );
@@ -439,10 +449,40 @@ public class PanelAgente extends JPanel {
         return ultimoAgenteIniciado;
     }
 
+    private AgenteTipo obtenerAgenteActualSeguro() {
+        return AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
+    }
+
+    private String resolverTooltipAyudaAgente() {
+        AgenteTipo agenteActual = obtenerAgenteActualSeguro();
+        return I18nUI.Tooltips.Agente.GUIA_AGENTE(agenteActual.getNombreVisible());
+    }
+
+    private String resolverUrlGuiaAgenteActual() {
+        return obtenerAgenteActualSeguro().getUrlDocPorIdioma(config.obtenerIdiomaUi());
+    }
+
+    private void abrirGuiaAgenteActual() {
+        String url = resolverUrlGuiaAgenteActual();
+        if (Normalizador.esVacio(url)) {
+            return;
+        }
+        if (!UIUtils.abrirUrlEnNavegador(url)) {
+            UIUtils.mostrarInfo(this,
+                I18nUI.Consola.TITULO_INFORMACION(),
+                I18nUI.Consola.MSG_URL_GUIA_AGENTE(url));
+        }
+    }
+
     private void actualizarEstadoBotones() {
         if (btnCambiarAgente != null) {
             btnCambiarAgente.setEnabled(true);
             btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
+        }
+        if (btnAyudaAgente != null) {
+            btnAyudaAgente.setEnabled(true);
+            btnAyudaAgente.setText("❓");
+            btnAyudaAgente.setToolTipText(resolverTooltipAyudaAgente());
         }
     }
 
