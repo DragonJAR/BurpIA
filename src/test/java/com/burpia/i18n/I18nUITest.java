@@ -72,13 +72,13 @@ class I18nUITest {
     void testTooltipAyudaAgenteI18n() {
         I18nUI.establecerIdioma("es");
         assertEquals(
-            "Abrir guía de instalación/configuración de Claude Code según idioma actual.",
+            "Abrir guía de instalación/configuración de Claude Code.",
             I18nUI.Tooltips.Agente.GUIA_AGENTE("Claude Code")
         );
 
         I18nUI.establecerIdioma("en");
         assertEquals(
-            "Open Claude Code installation/setup guide using current language.",
+            "Open Claude Code installation/setup guide.",
             I18nUI.Tooltips.Agente.GUIA_AGENTE("Claude Code")
         );
     }

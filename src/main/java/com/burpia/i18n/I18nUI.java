@@ -2115,8 +2115,8 @@ public final class I18nUI {
 
         public static String GUIA_AGENTE(String nombreAgente) {
             return I18nUI.trf(
-                "Abrir guía de instalación/configuración de %s según idioma actual.",
-                "Open %s installation/setup guide using current language.",
+                "Abrir guía de instalación/configuración de %s.",
+                "Open %s installation/setup guide.",
                 nombreAgente
             );
         }

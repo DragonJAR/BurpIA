@@ -98,7 +98,13 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             if (GraphicsEnvironment.isHeadless()) {
                 return;
             }
-            UIUtils.mostrarInfo(null, I18nUI.Contexto.TITULO_ANALISIS_INICIADO(), I18nUI.Contexto.MSG_ANALISIS_INICIADO());
+            UIUtils.mostrarInfoConOptOut(
+                null,
+                I18nUI.Contexto.TITULO_ANALISIS_INICIADO(),
+                I18nUI.Contexto.MSG_ANALISIS_INICIADO(),
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
         });
     }
 

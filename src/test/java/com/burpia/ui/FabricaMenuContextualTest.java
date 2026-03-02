@@ -14,6 +14,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import com.burpia.config.ConfiguracionAPI;
 
@@ -128,5 +130,42 @@ class FabricaMenuContextualTest {
         JMenuItem itemAgente = (JMenuItem) items.get(1);
         itemAgente.doClick();
         assertEquals(1, enviados.get());
+    }
+
+    @Test
+    @DisplayName("Analisis forzado funciona cuando alertas de contexto estan deshabilitadas")
+    void testAnalisisForzadoConAlertasDeshabilitadas() {
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        ContextMenuEvent evento = mock(ContextMenuEvent.class);
+        HttpRequestResponse rr = mock(HttpRequestResponse.class);
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.toString()).thenReturn("GET /force HTTP/1.1");
+        when(rr.request()).thenReturn(request);
+        when(evento.selectedRequestResponses()).thenReturn(List.of(rr));
+
+        ConfiguracionAPI config = mock(ConfiguracionAPI.class);
+        when(config.agenteHabilitado()).thenReturn(false);
+        when(config.alertasClickDerechoEnviarAHabilitadas()).thenReturn(false);
+
+        AtomicInteger analisis = new AtomicInteger(0);
+        AtomicInteger guardados = new AtomicInteger(0);
+        FabricaMenuContextual fabrica = new FabricaMenuContextual(
+            api,
+            (solicitud, forzar, solicitudRespuestaOriginal) -> {
+                if (forzar && solicitud != null && solicitudRespuestaOriginal != null) {
+                    analisis.incrementAndGet();
+                }
+            },
+            config,
+            rr2 -> {},
+            guardados::incrementAndGet
+        );
+
+        JMenuItem itemAnalizar = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
+        itemAnalizar.doClick();
+
+        assertEquals(1, analisis.get());
+        assertEquals(0, guardados.get());
+        verify(config, never()).establecerAlertasClickDerechoEnviarAHabilitadas(false);
     }
 }
