@@ -47,6 +47,51 @@ public class UIUtils {
     private UIUtils() {
     }
 
+    /**
+     * Ejecuta una acción en el EDT (Event Dispatch Thread) esperando a que termine.
+     * Si ya estamos en el EDT, ejecuta la acción directamente.
+     * Si no, usa invokeAndWait para ejecutarla de forma síncrona.
+     *
+     * @param accion La acción a ejecutar. Si es null, no hace nada.
+     * @throws IllegalStateException si el hilo es interrumpido o hay un error en la ejecución
+     */
+    public static void ejecutarEnEdtYEsperar(Runnable accion) {
+        if (accion == null) {
+            return;
+        }
+        if (SwingUtilities.isEventDispatchThread()) {
+            accion.run();
+            return;
+        }
+        try {
+            SwingUtilities.invokeAndWait(accion);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupción esperando operación de UI", e);
+        } catch (InvocationTargetException e) {
+            Throwable causa = e.getCause() != null ? e.getCause() : e;
+            throw new IllegalStateException("Error ejecutando operación de UI", causa);
+        }
+    }
+
+    /**
+     * Ejecuta una acción en el EDT de forma asíncrona.
+     * Si ya estamos en el EDT, ejecuta la acción directamente.
+     * Si no, usa invokeLater para programar la ejecución.
+     *
+     * @param accion La acción a ejecutar. Si es null, no hace nada.
+     */
+    public static void ejecutarEnEdt(Runnable accion) {
+        if (accion == null) {
+            return;
+        }
+        if (SwingUtilities.isEventDispatchThread()) {
+            accion.run();
+        } else {
+            SwingUtilities.invokeLater(accion);
+        }
+    }
+
     public static void actualizarTituloPanel(JPanel panel, String titulo) {
         Border borde = panel.getBorder();
         if (borde instanceof CompoundBorder) {
@@ -59,10 +104,7 @@ public class UIUtils {
     }
 
     public static Border crearBordeTitulado(String titulo, int pV, int pH) {
-        Color fondoBase = UIManager.getColor("Panel.background");
-        if (fondoBase == null) {
-            fondoBase = EstilosUI.COLOR_FONDO_PANEL;
-        }
+        Color fondoBase = EstilosUI.obtenerFondoPanel();
         Color colorBorde = EstilosUI.colorSeparador(fondoBase);
         return BorderFactory.createCompoundBorder(
             BorderFactory.createTitledBorder(
@@ -175,10 +217,7 @@ public class UIUtils {
                 enlace.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 Color fondoReferencia = panel.getBackground();
                 if (fondoReferencia == null) {
-                    fondoReferencia = UIManager.getColor("Panel.background");
-                }
-                if (fondoReferencia == null) {
-                    fondoReferencia = EstilosUI.COLOR_FONDO_PANEL;
+                    fondoReferencia = EstilosUI.obtenerFondoPanel();
                 }
                 enlace.setForeground(EstilosUI.colorEnlaceAccesible(fondoReferencia));
                 enlace.setBorderPainted(false);

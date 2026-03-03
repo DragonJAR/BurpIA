@@ -10,12 +10,12 @@ final class AgentRuntimeOptions {
     }
 
     static EnterOptions cargar(String codigoAgente) {
-        AgenteTipo tipoAgente = AgenteTipo.desdeCodigo(codigoAgente, AgenteTipo.FACTORY_DROID);
+        AgenteTipo tipoAgente = AgenteTipo.desdeCodigo(codigoAgente, AgenteTipo.porDefecto());
         return cargar(tipoAgente);
     }
 
     static EnterOptions cargar(AgenteTipo tipoAgente) {
-        AgenteTipo agenteSeguro = tipoAgente != null ? tipoAgente : AgenteTipo.FACTORY_DROID;
+        AgenteTipo agenteSeguro = tipoAgente != null ? tipoAgente : AgenteTipo.porDefecto();
         return new EnterOptions(agenteSeguro, DELAY_SUBMIT_POST_PASTE_MS_POR_DEFECTO);
     }
 

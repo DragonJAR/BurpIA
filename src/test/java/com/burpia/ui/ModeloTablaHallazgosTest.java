@@ -5,6 +5,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.SwingUtilities;
+import javax.swing.event.TableModelEvent;
+import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -119,5 +121,34 @@ class ModeloTablaHallazgosTest {
 
         Hallazgo noExistente = new Hallazgo("https://example.com/c", "TC", "Hallazgo C", "Low", "Low");
         assertFalse(modelo.actualizarHallazgo(noExistente, editado));
+    }
+
+    @Test
+    @DisplayName("Reducir límite notifica a la tabla cuando se purgan filas")
+    void testReducirLimiteNotificaTabla() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
+        for (int i = 0; i < 5; i++) {
+            modelo.agregarHallazgo(new Hallazgo(
+                "https://example.com/" + i,
+                "Titulo " + i,
+                "Hallazgo " + i,
+                "Low",
+                "Low"
+            ));
+        }
+        SwingUtilities.invokeAndWait(() -> {});
+
+        AtomicInteger eventos = new AtomicInteger(0);
+        modelo.addTableModelListener(evento -> {
+            if (evento != null && evento.getType() == TableModelEvent.UPDATE) {
+                eventos.incrementAndGet();
+            }
+        });
+
+        modelo.establecerLimiteFilas(3);
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(3, modelo.getRowCount());
+        assertTrue(eventos.get() > 0);
     }
 }

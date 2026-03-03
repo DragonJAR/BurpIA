@@ -167,6 +167,30 @@ class GestorConsolaGUITest {
         assertTrue(consola.getText().contains("trace posterior"));
     }
 
+    @Test
+    @DisplayName("Limpiar consola reinicia contadores y avanza versión de cambios")
+    void testLimpiarConsolaActualizaVersionYContadores() throws Exception {
+        GestorConsolaGUI gestor = new GestorConsolaGUI();
+        JTextPane consola = new JTextPane();
+        SwingUtilities.invokeAndWait(() -> gestor.establecerConsola(consola));
+        SwingUtilities.invokeAndWait(() -> gestor.registrarInfo("evento previo"));
+        SwingUtilities.invokeAndWait(() -> {
+        });
+
+        int versionAntes = gestor.obtenerVersion();
+        assertTrue(gestor.obtenerTotalLogs() > 0);
+
+        SwingUtilities.invokeAndWait(gestor::limpiarConsola);
+        SwingUtilities.invokeAndWait(() -> {
+        });
+
+        assertEquals(0, gestor.obtenerTotalLogs());
+        assertEquals(0, gestor.obtenerContadorInfo());
+        assertEquals(0, gestor.obtenerContadorVerbose());
+        assertEquals(0, gestor.obtenerContadorError());
+        assertTrue(gestor.obtenerVersion() > versionAntes);
+    }
+
     private boolean estaEnNegrilla(JTextPane consola, String texto, String etiqueta) {
         int idx = texto.indexOf(etiqueta);
         if (idx < 0) {

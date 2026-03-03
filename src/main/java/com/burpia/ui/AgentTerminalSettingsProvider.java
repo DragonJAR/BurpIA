@@ -22,7 +22,7 @@ final class AgentTerminalSettingsProvider extends DefaultSettingsProvider {
     AgentTerminalSettingsProvider() {
         Color fondoBase = UIManager.getColor("TextPane.background");
         if (fondoBase == null) {
-            fondoBase = UIManager.getColor("Panel.background");
+            fondoBase = EstilosUI.obtenerFondoPanel();
         }
         if (fondoBase == null) {
             fondoBase = new Color(36, 37, 41);

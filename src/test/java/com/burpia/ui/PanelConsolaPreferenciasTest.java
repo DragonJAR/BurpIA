@@ -9,6 +9,8 @@ import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
 import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicReference;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -51,7 +53,7 @@ class PanelConsolaPreferenciasTest {
         try {
             JLabel etiquetaResumen = obtenerEtiquetaResumen(panel);
             flushEdt();
-            assertTrue(etiquetaResumen.getText().contains("Total LOGs"));
+            assertTrue(etiquetaResumen.getText().contains("Total:"));
 
             SwingUtilities.invokeAndWait(() -> {
                 I18nUI.establecerIdioma("en");
@@ -59,7 +61,7 @@ class PanelConsolaPreferenciasTest {
             });
             flushEdt();
 
-            assertTrue(etiquetaResumen.getText().contains("Total Logs"));
+            assertTrue(etiquetaResumen.getText().contains("Total:"));
         } finally {
             panel.destruir();
         }
@@ -79,6 +81,50 @@ class PanelConsolaPreferenciasTest {
             Color fondoPanel = panel.getBackground();
             assertTrue(EstilosUI.ratioContraste(etiquetaResumen.getForeground(), fondoPanel) >= EstilosUI.CONTRASTE_AA_NORMAL);
             assertTrue(EstilosUI.ratioContraste(consola.getForeground(), consola.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Limpiar consola refleja resumen en cero sin esperar nuevos logs")
+    void testLimpiarConsolaActualizaResumenCero() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            JLabel etiquetaResumen = obtenerEtiquetaResumen(panel);
+            GestorConsolaGUI gestor = panel.obtenerGestorConsola();
+
+            SwingUtilities.invokeAndWait(() -> gestor.limpiarConsola());
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(panel::aplicarIdioma);
+            flushEdt();
+
+            assertTrue(etiquetaResumen.getText().contains("Total: 0"));
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Setter de auto-scroll es seguro fuera del EDT")
+    void testSetterAutoScrollFueraDelEdt() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            AtomicReference<Throwable> error = new AtomicReference<>();
+            Thread hilo = new Thread(() -> {
+                try {
+                    panel.establecerAutoScrollActivo(false);
+                } catch (Throwable t) {
+                    error.set(t);
+                }
+            }, "PanelConsola-AutoScroll-Test");
+            hilo.start();
+            hilo.join(2000);
+            flushEdt();
+
+            assertNull(error.get());
+            assertFalse(panel.isAutoScrollActivo());
         } finally {
             panel.destruir();
         }

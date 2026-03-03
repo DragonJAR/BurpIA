@@ -1,4 +1,5 @@
 package com.burpia.config;
+
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.RutasBurpIA;
@@ -75,7 +76,8 @@ public class GestorConfiguracion {
             logError("[Configuracion] Error de E/S al cargar: " + e.getMessage());
             return new ConfiguracionAPI();
         } catch (Exception e) {
-            logError("[Configuracion] Error inesperado al cargar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            logError("[Configuracion] Error inesperado al cargar: " + e.getClass().getSimpleName() + " - "
+                    + e.getMessage());
             return new ConfiguracionAPI();
         }
     }
@@ -104,7 +106,7 @@ public class GestorConfiguracion {
                     logError("[Configuracion] Directorio padre no existe: " + directorioPadre);
                     if (mensajeError != null) {
                         mensajeError.append(I18nUI.Configuracion.MSG_DIRECTORIO_NO_EXISTE())
-                            .append(directorioPadre);
+                                .append(directorioPadre);
                     }
                     return false;
                 }
@@ -114,7 +116,7 @@ public class GestorConfiguracion {
                 logError("[Configuracion] Directorio no es escribible: " + directorioPadre);
                 if (mensajeError != null) {
                     mensajeError.append(I18nUI.Configuracion.MSG_DIRECTORIO_NO_ESCRIBIBLE())
-                        .append(directorioPadre);
+                            .append(directorioPadre);
                 }
                 return false;
             }
@@ -128,7 +130,8 @@ public class GestorConfiguracion {
             asegurarPermisosPrivados(tempPath);
 
             try {
-                Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+                Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
             } catch (java.nio.file.AtomicMoveNotSupportedException ex) {
                 Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             }
@@ -138,13 +141,15 @@ public class GestorConfiguracion {
             return true;
 
         } catch (IOException e) {
-            logError("[Configuracion] Error de E/S al guardar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            logError("[Configuracion] Error de E/S al guardar: " + e.getClass().getSimpleName() + " - "
+                    + e.getMessage());
             if (mensajeError != null) {
                 mensajeError.append(I18nUI.Configuracion.MSG_ERROR_IO()).append(e.getMessage());
             }
             return false;
         } catch (Exception e) {
-            logError("[Configuracion] Error inesperado al guardar: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            logError("[Configuracion] Error inesperado al guardar: " + e.getClass().getSimpleName() + " - "
+                    + e.getMessage());
             if (mensajeError != null) {
                 mensajeError.append(I18nUI.Configuracion.MSG_ERROR_INESPERADO()).append(e.getMessage());
             }
@@ -175,9 +180,8 @@ public class GestorConfiguracion {
                 return;
             }
             Set<PosixFilePermission> permisos = Set.of(
-                PosixFilePermission.OWNER_READ,
-                PosixFilePermission.OWNER_WRITE
-            );
+                    PosixFilePermission.OWNER_READ,
+                    PosixFilePermission.OWNER_WRITE);
             Files.setPosixFilePermissions(path, permisos);
         } catch (Exception e) {
             logError("[Configuracion] No se pudieron ajustar permisos privados del archivo: " + e.getMessage());
@@ -229,6 +233,9 @@ public class GestorConfiguracion {
         if (archivo.autoScrollConsolaHabilitado != null) {
             config.establecerAutoScrollConsolaHabilitado(archivo.autoScrollConsolaHabilitado);
         }
+        if (archivo.alertasHabilitadas != null) {
+            config.establecerAlertasHabilitadas(archivo.alertasHabilitadas);
+        }
         if (archivo.alertasClickDerechoEnviarAHabilitadas != null) {
             config.establecerAlertasClickDerechoEnviarAHabilitadas(archivo.alertasClickDerechoEnviarAHabilitadas);
         }
@@ -263,7 +270,7 @@ public class GestorConfiguracion {
         } else if (archivo.agenteFactoryDroidBinario != null) {
             config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), archivo.agenteFactoryDroidBinario);
         }
-        
+
         if (archivo.agentePrompt != null) {
             config.establecerAgentePrompt(archivo.agentePrompt);
         } else if (archivo.agenteFactoryDroidPrompt != null) {
@@ -281,6 +288,15 @@ public class GestorConfiguracion {
         }
 
         config.establecerDetallado(Boolean.TRUE.equals(archivo.detallado));
+
+        if (archivo.nombreFuenteEstandar != null)
+            config.establecerNombreFuenteEstandar(archivo.nombreFuenteEstandar);
+        if (archivo.tamanioFuenteEstandar != null)
+            config.establecerTamanioFuenteEstandar(archivo.tamanioFuenteEstandar);
+        if (archivo.nombreFuenteMono != null)
+            config.establecerNombreFuenteMono(archivo.nombreFuenteMono);
+        if (archivo.tamanioFuenteMono != null)
+            config.establecerTamanioFuenteMono(archivo.tamanioFuenteMono);
 
         config.establecerApiKeysPorProveedor(sanitizarMapaString(archivo.apiKeysPorProveedor));
         config.establecerUrlsBasePorProveedor(sanitizarMapaString(archivo.urlsBasePorProveedor));
@@ -304,6 +320,7 @@ public class GestorConfiguracion {
         archivo.escaneoPasivoHabilitado = config.escaneoPasivoHabilitado();
         archivo.autoGuardadoIssuesHabilitado = config.autoGuardadoIssuesHabilitado();
         archivo.autoScrollConsolaHabilitado = config.autoScrollConsolaHabilitado();
+        archivo.alertasHabilitadas = config.alertasHabilitadas();
         archivo.alertasClickDerechoEnviarAHabilitadas = config.alertasClickDerechoEnviarAHabilitadas();
         archivo.promptConfigurable = config.obtenerPromptConfigurable();
         archivo.promptModificado = config.esPromptModificado();
@@ -314,6 +331,10 @@ public class GestorConfiguracion {
         archivo.agentePreflightPrompt = config.obtenerAgentePreflightPrompt();
         archivo.agentePrompt = config.obtenerAgentePrompt();
         archivo.agenteDelay = config.obtenerAgenteDelay();
+        archivo.nombreFuenteEstandar = config.obtenerNombreFuenteEstandar();
+        archivo.tamanioFuenteEstandar = config.obtenerTamanioFuenteEstandar();
+        archivo.nombreFuenteMono = config.obtenerNombreFuenteMono();
+        archivo.tamanioFuenteMono = config.obtenerTamanioFuenteMono();
         archivo.rutasBinarioPorAgente = new HashMap<>(config.obtenerTodasLasRutasBinario());
         archivo.apiKeysPorProveedor = new HashMap<>(config.obtenerApiKeysPorProveedor());
         archivo.urlsBasePorProveedor = new HashMap<>(config.obtenerUrlsBasePorProveedor());
@@ -378,6 +399,7 @@ public class GestorConfiguracion {
         private Boolean escaneoPasivoHabilitado;
         private Boolean autoGuardadoIssuesHabilitado;
         private Boolean autoScrollConsolaHabilitado;
+        private Boolean alertasHabilitadas;
         private Boolean alertasClickDerechoEnviarAHabilitadas;
         private String promptConfigurable;
         private Boolean promptModificado;
@@ -387,7 +409,7 @@ public class GestorConfiguracion {
         private String agenteFactoryDroidBinario;
         private String agenteFactoryDroidPrompt;
         private Integer agenteFactoryDroidDelay;
-        
+
         private Boolean agenteHabilitado;
         private String tipoAgente;
         private String agentePreflightPrompt;
@@ -399,5 +421,10 @@ public class GestorConfiguracion {
         private Map<String, String> modelosPorProveedor;
         private Map<String, Integer> maxTokensPorProveedor;
         private Map<String, Integer> tiempoEsperaPorModelo;
+
+        private String nombreFuenteEstandar;
+        private Integer tamanioFuenteEstandar;
+        private String nombreFuenteMono;
+        private Integer tamanioFuenteMono;
     }
 }

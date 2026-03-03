@@ -13,7 +13,7 @@ final class SubmitSequenceFactory {
     }
 
     static SubmitSequence construir(AgenteTipo tipoAgente, Plataforma plataforma) {
-        AgenteTipo agente = tipoAgente != null ? tipoAgente : AgenteTipo.FACTORY_DROID;
+        AgenteTipo agente = tipoAgente != null ? tipoAgente : AgenteTipo.porDefecto();
         Plataforma p = plataforma != null ? plataforma : Plataforma.LINUX;
         if (agente == AgenteTipo.CLAUDE_CODE) {
             String submit = (p == Plataforma.WINDOWS) ? "\r\n" : "\r";

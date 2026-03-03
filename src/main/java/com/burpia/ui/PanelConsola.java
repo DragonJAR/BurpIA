@@ -5,6 +5,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
 
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
+
 public class PanelConsola extends JPanel {
     private final JTextPane consola;
     private final JCheckBox checkboxAutoScroll;
@@ -117,15 +119,15 @@ public class PanelConsola extends JPanel {
         if (SwingUtilities.isEventDispatchThread()) {
             actualizarUi.run();
         } else {
-            SwingUtilities.invokeLater(actualizarUi);
+            ejecutarEnEdt(actualizarUi);
         }
     }
 
     public void aplicarIdioma() {
         checkboxAutoScroll.setText(I18nUI.Consola.CHECK_AUTO_SCROLL());
         botonLimpiar.setText(I18nUI.Consola.BOTON_LIMPIAR());
-        actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
-        actualizarTituloPanel(panelConsolaWrapper, I18nUI.Consola.TITULO_LOGS());
+        UIUtils.actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
+        UIUtils.actualizarTituloPanel(panelConsolaWrapper, I18nUI.Consola.TITULO_LOGS());
         checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
         botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
         etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
@@ -138,10 +140,7 @@ public class PanelConsola extends JPanel {
 
     public void aplicarTema() {
         Runnable aplicar = () -> {
-            Color fondoPanel = UIManager.getColor("Panel.background");
-            if (fondoPanel == null) {
-                fondoPanel = EstilosUI.COLOR_FONDO_PANEL;
-            }
+            Color fondoPanel = EstilosUI.obtenerFondoPanel();
             Color fondoConsola = UIManager.getColor("TextPane.background");
             if (fondoConsola == null) {
                 fondoConsola = EstilosUI.colorFondoSecundario(fondoPanel);
@@ -169,12 +168,8 @@ public class PanelConsola extends JPanel {
         if (SwingUtilities.isEventDispatchThread()) {
             aplicar.run();
         } else {
-            SwingUtilities.invokeLater(aplicar);
+            ejecutarEnEdt(aplicar);
         }
-    }
-
-    private void actualizarTituloPanel(JPanel panel, String titulo) {
-        UIUtils.actualizarTituloPanel(panel, titulo);
     }
 
     public void destruir() {
@@ -190,7 +185,7 @@ public class PanelConsola extends JPanel {
     }
 
     public void establecerAutoScrollActivo(boolean activo) {
-        aplicarAutoScroll(activo, false);
+        UIUtils.ejecutarEnEdtYEsperar(() -> aplicarAutoScrollEnEdt(activo, false));
     }
 
     public boolean isAutoScrollActivo() {
@@ -198,6 +193,14 @@ public class PanelConsola extends JPanel {
     }
 
     private void aplicarAutoScroll(boolean activo, boolean notificarCambio) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            ejecutarEnEdt(() -> aplicarAutoScroll(activo, notificarCambio));
+            return;
+        }
+        aplicarAutoScrollEnEdt(activo, notificarCambio);
+    }
+
+    private void aplicarAutoScrollEnEdt(boolean activo, boolean notificarCambio) {
         if (checkboxAutoScroll.isSelected() != activo) {
             actualizandoAutoScroll = true;
             try {
@@ -211,4 +214,5 @@ public class PanelConsola extends JPanel {
             manejadorCambioAutoScroll.accept(activo);
         }
     }
+
 }

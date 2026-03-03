@@ -1,4 +1,5 @@
 package com.burpia;
+
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
@@ -14,6 +15,7 @@ import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
 import com.burpia.ui.PanelAgente;
 import com.burpia.ui.PestaniaPrincipal;
+import com.burpia.ui.EstilosUI;
 import com.burpia.ui.DialogoConfiguracion;
 import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.util.GestorConsolaGUI;
@@ -27,6 +29,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class ExtensionBurpIA implements BurpExtension {
     private static final String LOG_SEPARADOR = "==================================================";
@@ -68,6 +72,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
         this.stdout = new PrintWriter(new OutputStream() {
             private final StringBuilder buffer = new StringBuilder();
+
             @Override
             public void write(int b) {
                 if (b == '\n') {
@@ -76,6 +81,7 @@ public class ExtensionBurpIA implements BurpExtension {
                     buffer.append((char) b);
                 }
             }
+
             @Override
             public void write(byte[] b, int off, int len) {
                 String s = new String(b, off, len, StandardCharsets.UTF_8);
@@ -86,12 +92,14 @@ public class ExtensionBurpIA implements BurpExtension {
                     buffer.append(s);
                 }
             }
+
             private void flushBuffer() {
                 if (buffer.length() > 0) {
                     api.logging().logToOutput(buffer.toString());
                     buffer.setLength(0);
                 }
             }
+
             @Override
             public void flush() {
                 flushBuffer();
@@ -99,6 +107,7 @@ public class ExtensionBurpIA implements BurpExtension {
         }, true);
         this.stderr = new PrintWriter(new OutputStream() {
             private final StringBuilder buffer = new StringBuilder();
+
             @Override
             public void write(int b) {
                 if (b == '\n') {
@@ -107,6 +116,7 @@ public class ExtensionBurpIA implements BurpExtension {
                     buffer.append((char) b);
                 }
             }
+
             @Override
             public void write(byte[] b, int off, int len) {
                 String s = new String(b, off, len, StandardCharsets.UTF_8);
@@ -117,12 +127,14 @@ public class ExtensionBurpIA implements BurpExtension {
                     buffer.append(s);
                 }
             }
+
             private void flushBuffer() {
                 if (buffer.length() > 0) {
                     api.logging().logToError(buffer.toString());
                     buffer.setLength(0);
                 }
             }
+
             @Override
             public void flush() {
                 flushBuffer();
@@ -131,6 +143,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
         gestorConfig = new GestorConfiguracion(stdout, stderr);
         config = gestorConfig.cargarConfiguracion();
+        EstilosUI.actualizarFuentes(config);
         I18nUI.establecerIdioma(config.obtenerIdiomaUi());
         gestorConsola = new GestorConsolaGUI();
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
@@ -144,27 +157,25 @@ public class ExtensionBurpIA implements BurpExtension {
         modeloTablaHallazgos = new ModeloTablaHallazgos(config.obtenerMaximoHallazgosTabla());
 
         gestorTareas = new GestorTareas(modeloTablaTareas,
-            mensaje -> {
-                if (gestorConsola != null) {
-                    gestorConsola.registrarInfo("GestorTareas", mensaje);
-                    return;
-                }
-                if (stdout != null) {
-                    stdout.println("[GestorTareas] " + I18nLogs.tr(mensaje));
-                    stdout.flush();
-                }
-            });
+                mensaje -> {
+                    if (gestorConsola != null) {
+                        gestorConsola.registrarInfo("GestorTareas", mensaje);
+                        return;
+                    }
+                    if (stdout != null) {
+                        stdout.println("[GestorTareas] " + I18nLogs.tr(mensaje));
+                        stdout.flush();
+                    }
+                });
 
         crearYRegistrarPestaniaPrincipal();
         inicializarPreferenciasUsuarioEnUI();
 
-
         inicializarAgenteSiHabilitado();
 
         manejadorHttp = new ManejadorHttpBurpIA(
-            api, config, pestaniaPrincipal, stdout, stderr, limitador,
-            estadisticas, gestorTareas, gestorConsola, modeloTablaHallazgos
-        );
+                api, config, pestaniaPrincipal, stdout, stderr, limitador,
+                estadisticas, gestorTareas, gestorConsola, modeloTablaHallazgos);
         if (gestorTareas != null) {
             gestorTareas.establecerManejadorCancelacion(manejadorHttp::cancelarEjecucionActiva);
             gestorTareas.establecerManejadorPausa(manejadorHttp::cancelarEjecucionActiva);
@@ -184,7 +195,8 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar("Inicialización de BurpIA completada exitosamente");
     }
 
-    private void analizarSolicitudManual(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal) {
+    private void analizarSolicitudManual(HttpRequest solicitud, boolean forzarAnalisis,
+            HttpRequestResponse solicitudRespuestaOriginal) {
         if (forzarAnalisis && manejadorHttp != null) {
             manejadorHttp.analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal);
         }
@@ -193,12 +205,11 @@ public class ExtensionBurpIA implements BurpExtension {
     private void registrarMenuContextual() {
         if (fabricaMenuContextual == null) {
             fabricaMenuContextual = new FabricaMenuContextual(
-                api,
-                this::analizarSolicitudManual,
-                config,
-                this::enviarAAgente,
-                () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto")
-            );
+                    api,
+                    this::analizarSolicitudManual,
+                    config,
+                    this::enviarAAgente,
+                    () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto"));
             api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
         }
     }
@@ -271,7 +282,8 @@ public class ExtensionBurpIA implements BurpExtension {
                 inputBuilder.append("\n");
             }
 
-            String inputFinal = inputBuilder.toString() + aplicarTokensPromptAgente(prompt, request, response, lang, titulo, resumen, urlContext);
+            String inputFinal = inputBuilder.toString()
+                    + aplicarTokensPromptAgente(prompt, request, response, lang, titulo, resumen, urlContext);
 
             PanelAgente panelAgente = obtenerPanelAgenteDisponible();
             if (panelAgente == null) {
@@ -316,19 +328,22 @@ public class ExtensionBurpIA implements BurpExtension {
         return aplicarTokensPromptAgente(prompt, request, response, idioma, null, null, null);
     }
 
-    private String aplicarTokensPromptAgente(String prompt, String request, String response, String idioma, 
-                                            String titulo, String resumen, String url) {
+    private String aplicarTokensPromptAgente(String prompt, String request, String response, String idioma,
+            String titulo, String resumen, String url) {
         String resultado = prompt != null ? prompt : "";
         resultado = resultado.replace(TOKEN_REQUEST, request != null ? request : "");
         resultado = resultado.replace(TOKEN_RESPONSE, response != null ? response : "");
-        resultado = resultado.replace("{OUTPUT_LANGUAGE}", (idioma != null && !idioma.trim().isEmpty()) ? idioma : "es");
-        
-        if (titulo != null) resultado = resultado.replace(TOKEN_TITLE, titulo);
+        resultado = resultado.replace("{OUTPUT_LANGUAGE}",
+                (idioma != null && !idioma.trim().isEmpty()) ? idioma : "es");
+
+        if (titulo != null)
+            resultado = resultado.replace(TOKEN_TITLE, titulo);
         if (resumen != null) {
             resultado = resultado.replace(TOKEN_SUMMARY, resumen);
             resultado = resultado.replace(TOKEN_DESCRIPTION, resumen);
         }
-        if (url != null) resultado = resultado.replace(TOKEN_URL, url);
+        if (url != null)
+            resultado = resultado.replace(TOKEN_URL, url);
 
         return resultado;
     }
@@ -387,10 +402,10 @@ public class ExtensionBurpIA implements BurpExtension {
             hostHeader = host + ":" + port;
         }
         return "GET " + objetivo + " HTTP/1.1\r\n"
-            + "Host: " + hostHeader + "\r\n"
-            + "User-Agent: BurpIA/" + VersionBurpIA.obtenerVersionActual() + "\r\n"
-            + "Accept: */*\r\n"
-            + "Connection: close\r\n\r\n";
+                + "Host: " + hostHeader + "\r\n"
+                + "User-Agent: BurpIA/" + VersionBurpIA.obtenerVersionActual() + "\r\n"
+                + "Accept: */*\r\n"
+                + "Connection: close\r\n\r\n";
     }
 
     private String serializarRespuestaSiNecesario(String prompt, HttpRequestResponse evidencia) {
@@ -452,7 +467,7 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
 
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             PestaniaPrincipal pestaniaActual = pestaniaPrincipal;
             ConfiguracionAPI configActual = config;
             GestorConfiguracion gestorConfigActual = gestorConfig;
@@ -486,18 +501,18 @@ public class ExtensionBurpIA implements BurpExtension {
                         registrar("Configuracion actualizada: detallado=" + configActual.esDetallado() +
                                 ", maximoConcurrente=" + configActual.obtenerMaximoConcurrente() +
                                 ", retraso=" + configActual.obtenerRetrasoSegundos() + "s" +
-                        ", maximoHallazgos=" + configActual.obtenerMaximoHallazgosTabla());
+                                ", maximoHallazgos=" + configActual.obtenerMaximoHallazgosTabla());
 
                         pestaniaPrincipal.actualizarVisibilidadAgentes();
-                    }
-            );
+                    });
             dialogo.setVisible(true);
         });
     }
 
     private void crearYRegistrarPestaniaPrincipal() {
         Runnable crearUi = () -> {
-            pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas, modeloTablaHallazgos, esProfessional, config);
+            pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas,
+                    modeloTablaHallazgos, esProfessional, config);
             pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
             pestaniaPrincipal.establecerManejadorEnviarAAgente(this::enviarHallazgoAAgente);
             pestaniaPrincipal.establecerManejadorCambioAgente(() -> {
@@ -536,7 +551,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private void registrarResumenInicio() {
         registrar(LOG_SEPARADOR);
         registrar(" BurpIA v" + VersionBurpIA.obtenerVersionActual() + " - "
-            + I18nUI.General.COMPLEMENTO_SEGURIDAD_IA());
+                + I18nUI.General.COMPLEMENTO_SEGURIDAD_IA());
         registrar(LOG_SEPARADOR);
 
         registrar("[" + I18nUI.General.ENTORNO() + "]");
@@ -553,27 +568,22 @@ public class ExtensionBurpIA implements BurpExtension {
         registrarLineaInicio("URL de API", config.obtenerUrlApi());
         registrarLineaInicio("Modelo", modelo);
         registrarLineaInicio(
-            "Timeout AI (global)",
-            config.obtenerTiempoEsperaAI() + " " + I18nUI.General.SEGUNDOS()
-        );
+                "Timeout AI (global)",
+                config.obtenerTiempoEsperaAI() + " " + I18nUI.General.SEGUNDOS());
         registrarLineaInicio(
-            "Timeout AI (modelo activo)",
-            config.obtenerTiempoEsperaParaModelo(proveedor, modelo) + " " + I18nUI.General.SEGUNDOS()
-        );
+                "Timeout AI (modelo activo)",
+                config.obtenerTiempoEsperaParaModelo(proveedor, modelo) + " " + I18nUI.General.SEGUNDOS());
         registrarLineaInicio(
-            "Retraso",
-            config.obtenerRetrasoSegundos() + " " + I18nUI.General.SEGUNDOS()
-        );
+                "Retraso",
+                config.obtenerRetrasoSegundos() + " " + I18nUI.General.SEGUNDOS());
         registrarLineaInicio("Maximo Concurrente", config.obtenerMaximoConcurrente());
         registrarLineaInicio("Maximo Hallazgos en Tabla", config.obtenerMaximoHallazgosTabla());
         registrarLineaInicio(
-            "Modo Detallado",
-            config.esDetallado() ? I18nUI.General.ACTIVADO() : I18nUI.General.DESACTIVADO()
-        );
+                "Modo Detallado",
+                config.esDetallado() ? I18nUI.General.ACTIVADO() : I18nUI.General.DESACTIVADO());
         registrarLineaInicio(
-            "Agente Activo (" + config.obtenerTipoAgente() + ")",
-            config.agenteHabilitado() ? I18nUI.General.ACTIVADO() : I18nUI.General.DESACTIVADO()
-        );
+                "Agente Activo (" + config.obtenerTipoAgente() + ")",
+                config.agenteHabilitado() ? I18nUI.General.ACTIVADO() : I18nUI.General.DESACTIVADO());
         registrar(LOG_SEPARADOR);
     }
 
@@ -746,33 +756,35 @@ public class ExtensionBurpIA implements BurpExtension {
             return null;
         }
 
-        burp.api.montoya.scanner.audit.issues.AuditIssueSeverity severity = convertirSeveridad(hallazgo.obtenerSeveridad());
-        burp.api.montoya.scanner.audit.issues.AuditIssueConfidence confidence = convertirConfianza(hallazgo.obtenerConfianza());
+        burp.api.montoya.scanner.audit.issues.AuditIssueSeverity severity = convertirSeveridad(
+                hallazgo.obtenerSeveridad());
+        burp.api.montoya.scanner.audit.issues.AuditIssueConfidence confidence = convertirConfianza(
+                hallazgo.obtenerConfianza());
 
         HttpRequestResponse evidenciaFinal = resolverEvidenciaIssue(hallazgo, solicitudRespuestaEvidencia);
 
         HttpRequestResponse[] evidencias = evidenciaFinal != null
-            ? new HttpRequestResponse[] { evidenciaFinal }
-            : new HttpRequestResponse[0];
+                ? new HttpRequestResponse[] { evidenciaFinal }
+                : new HttpRequestResponse[0];
 
         String detalleIssue = I18nUI.Hallazgos.DETALLE_ISSUE();
         String remediation = I18nUI.Hallazgos.REMEDIACION_ISSUE();
 
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
-            hallazgo.obtenerTitulo(),
-            hallazgo.obtenerHallazgo() + "\n\nURL: " + hallazgo.obtenerUrl(),
-            detalleIssue,
-            hallazgo.obtenerUrl(),
-            severity,
-            confidence,
-            null,
-            remediation,
-            null,
-            evidencias
-        );
+                hallazgo.obtenerTitulo(),
+                hallazgo.obtenerHallazgo() + "\n\nURL: " + hallazgo.obtenerUrl(),
+                detalleIssue,
+                hallazgo.obtenerUrl(),
+                severity,
+                confidence,
+                null,
+                remediation,
+                null,
+                evidencias);
     }
 
-    static HttpRequestResponse resolverEvidenciaIssue(Hallazgo hallazgo, HttpRequestResponse solicitudRespuestaEvidencia) {
+    static HttpRequestResponse resolverEvidenciaIssue(Hallazgo hallazgo,
+            HttpRequestResponse solicitudRespuestaEvidencia) {
         if (solicitudRespuestaEvidencia != null) {
             return solicitudRespuestaEvidencia;
         }
@@ -786,8 +798,8 @@ public class ExtensionBurpIA implements BurpExtension {
         if (!esBurpProfessional(api) || api == null || api.siteMap() == null) {
             return false;
         }
-        burp.api.montoya.scanner.audit.issues.AuditIssue issue =
-            crearAuditIssueDesdeHallazgo(hallazgo, solicitudRespuestaEvidencia);
+        burp.api.montoya.scanner.audit.issues.AuditIssue issue = crearAuditIssueDesdeHallazgo(hallazgo,
+                solicitudRespuestaEvidencia);
         if (issue == null) {
             return false;
         }

@@ -1,8 +1,12 @@
 # BurpIA
 
+<p align="center">
+  <img src="src/assets/logo.png" alt="BurpIA Logo" width="200"/>
+</p>
+
 BurpIA is a Burp Suite extension that analyzes HTTP traffic with LLMs to help you detect potential security findings in less time.
 
-**Current version:** `1.0.1`
+**Current version:** `1.0.2`
 
 Spanish version: [README.md](README.md)
 
@@ -44,16 +48,23 @@ Spanish version: [README.md](README.md)
 
 ---
 
-## Current status (v1.0.1)
+## Current status (v1.0.2)
 
-BurpIA is updated to `v1.0.1`.
+BurpIA is updated to `v1.0.2`.
 See the change summary in **Version history**.
 
 ---
 
 ## Version history
 
-### v1.0.1 (current)
+### v1.0.2 (current)
+
+- Update validation system.
+- User experience improvements.
+- Interface customization improvements.
+- Performance improvements.
+
+### v1.0.1
 
 - Now with dynamic agentic manual testing using Factory Droid, Claude Code, and the Burp Suite MCP.
 - New LLM provider: Moonshot.
@@ -69,10 +80,10 @@ See the change summary in **Version history**.
 
 ## Quick Start (3 minutes)
 
-1. Download the `BurpIA-1.0.1.jar` file.
+1. Download the `BurpIA-1.0.2.jar` file.
 2. Load the extension in Burp Suite:
    - Go to the `Extensions` tab -> `Add`.
-   - Select the `BurpIA-1.0.1.jar` file.
+   - Select the `BurpIA-1.0.2.jar` file.
 3. Configure BurpIA in the plugin tab:
    - Select your **LLM Provider**.
    - Enter the **API Key** (if applicable).

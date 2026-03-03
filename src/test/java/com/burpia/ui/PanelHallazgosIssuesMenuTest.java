@@ -8,8 +8,10 @@ import javax.swing.JCheckBox;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -119,6 +121,30 @@ class PanelHallazgosIssuesMenuTest {
 
         String etiquetaIngles = checkAutoIssues.getText();
         assertTrue(etiquetaIngles.contains("Issues") || etiquetaIngles.contains("automatically"));
+    }
+
+    @Test
+    @DisplayName("Setter de autoguardado es seguro fuera del EDT")
+    void testSetterAutoguardadoSeguroFueraDelEdt() throws Exception {
+        PanelHallazgos panel = crearPanel(true);
+        JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
+        AtomicReference<Throwable> error = new AtomicReference<>();
+
+        Thread hilo = new Thread(() -> {
+            try {
+                panel.establecerGuardadoAutomaticoIssuesActivo(false);
+            } catch (Throwable t) {
+                error.set(t);
+            }
+        });
+        hilo.start();
+        hilo.join(1000);
+        flushEdt();
+
+        assertFalse(hilo.isAlive());
+        assertNull(error.get());
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo());
+        assertFalse(checkAutoIssues.isSelected());
     }
 
     private PanelHallazgos crearPanel(boolean esBurpProfessional) throws Exception {

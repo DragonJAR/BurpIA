@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -152,6 +153,35 @@ class PanelHallazgosSendTest {
 
             assertTrue(latch.await(1, TimeUnit.SECONDS));
             assertEquals(1, enviados.get());
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Captura no reconstruye request cuando falta evidencia original")
+    void testCapturaNoReconstruyeRequestSinEvidenciaOriginal() throws Exception {
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        PanelHallazgos panel = crearPanel(api, true);
+        try {
+            panel.obtenerModelo().agregarHallazgo(
+                new Hallazgo("https://example.com/sin-request", "Titulo", "Descripcion", "Low", "Low")
+            );
+            esperarFilas(panel, 1);
+
+            Method metodoCaptura = PanelHallazgos.class.getDeclaredMethod("capturarEntradasAccion", int[].class);
+            metodoCaptura.setAccessible(true);
+            Object captura = metodoCaptura.invoke(panel, (Object) new int[] {0});
+
+            java.lang.reflect.Field campoEntradas = captura.getClass().getDeclaredField("entradas");
+            campoEntradas.setAccessible(true);
+            java.util.List<?> entradas = (java.util.List<?>) campoEntradas.get(captura);
+            assertEquals(1, entradas.size());
+
+            Object entrada = entradas.get(0);
+            java.lang.reflect.Field campoSolicitud = entrada.getClass().getDeclaredField("solicitud");
+            campoSolicitud.setAccessible(true);
+            assertNull(campoSolicitud.get(entrada));
         } finally {
             panel.destruir();
         }

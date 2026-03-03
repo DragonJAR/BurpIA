@@ -45,50 +45,6 @@ public class DeduplicadorSolicitudes {
         }
     }
 
-    public void limpiar() {
-        synchronized (lock) {
-            hashesProcesados.clear();
-            ultimoBarridoMillis = System.currentTimeMillis();
-        }
-    }
-
-    public int obtenerNumeroHashes() {
-        synchronized (lock) {
-            barrerExpiradosSiCorresponde(System.currentTimeMillis());
-            return hashesProcesados.size();
-        }
-    }
-
-    public boolean contieneHash(String hash) {
-        if (hash == null || hash.isEmpty()) {
-            return false;
-        }
-        long ahora = System.currentTimeMillis();
-        synchronized (lock) {
-            barrerExpiradosSiCorresponde(ahora);
-            Long timestamp = hashesProcesados.get(hash);
-            if (timestamp == null) {
-                return false;
-            }
-            if (ahora - timestamp > ttlMillis) {
-                hashesProcesados.remove(hash);
-                return false;
-            }
-            return true;
-        }
-    }
-
-    public void agregarHash(String hash) {
-        if (hash == null || hash.isEmpty()) {
-            return;
-        }
-        long ahora = System.currentTimeMillis();
-        synchronized (lock) {
-            barrerExpiradosSiCorresponde(ahora);
-            hashesProcesados.put(hash, ahora);
-        }
-    }
-
     private void barrerExpiradosSiCorresponde(long ahora) {
         if (ahora - ultimoBarridoMillis < INTERVALO_LIMPIEZA_MILLIS) {
             return;

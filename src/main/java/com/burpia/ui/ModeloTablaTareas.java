@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
+
 public class ModeloTablaTareas extends DefaultTableModel {
     private static final int TOTAL_COLUMNAS = 4;
     private final List<Tarea> datos;
@@ -48,7 +50,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
             if (!idsPurgadas.isEmpty()) {
                 programarSincronizacionTabla();
             } else {
-                SwingUtilities.invokeLater(() -> {
+                ejecutarEnEdt(() -> {
                     addRow(tarea.aFilaTabla());
                 });
             }
@@ -85,7 +87,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (indiceEnDatos != -1) {
             final int filaUI = indiceEnDatos;
             final Object[] nuevosValores = tarea.aFilaTabla();
-            SwingUtilities.invokeLater(() -> {
+            ejecutarEnEdt(() -> {
                 if (filaUI < getRowCount()) {
                     for (int col = 0; col < TOTAL_COLUMNAS; col++) {
                         setValueAt(nuevosValores[col], filaUI, col);
@@ -131,7 +133,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             setRowCount(0);
         });
     }
@@ -170,7 +172,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         }
         marcarCambio();
         final int filaAEliminar = indiceFila;
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             if (filaAEliminar < getRowCount()) {
                 removeRow(filaAEliminar);
             }
@@ -268,7 +270,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public void refrescarColumnasIdioma() {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_TAREAS());
             sincronizarTablaDesdeDatosEnEdt();
         });
@@ -280,7 +282,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     private void programarSincronizacionTabla() {
-        SwingUtilities.invokeLater(this::sincronizarTablaDesdeDatosEnEdt);
+        ejecutarEnEdt(this::sincronizarTablaDesdeDatosEnEdt);
     }
 
     public int obtenerVersion() { return versionCambios.get(); }

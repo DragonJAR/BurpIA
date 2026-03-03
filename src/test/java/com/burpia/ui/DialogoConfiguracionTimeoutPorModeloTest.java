@@ -115,9 +115,8 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                     throw new RuntimeException(e);
                 }
             });
-            flushEdt();
-
-            assertTrue(guardadoCallback.get());
+            esperarAlGuardado(guardadoCallback);
+            assertTrue(guardadoCallback.get(), "El callback de guardado debería haberse ejecutado");
             assertEquals(210, config.obtenerTiempoEsperaParaModelo("Z.ai", "glm-5"));
 
             Path configPath = tempDir.resolve(".burpia/config.json");
@@ -180,9 +179,8 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                     throw new RuntimeException(e);
                 }
             });
-            flushEdt();
-
-            assertTrue(guardadoCallback.get());
+            esperarAlGuardado(guardadoCallback);
+            assertTrue(guardadoCallback.get(), "El callback de guardado debería haberse ejecutado");
             assertEquals("PRE_FLIGHT_EDITADO", config.obtenerAgentePreflightPrompt());
             assertEquals("PROMPT_VALIDACION_EDITADO", config.obtenerAgentePrompt());
         } finally {
@@ -208,6 +206,55 @@ class DialogoConfiguracionTimeoutPorModeloTest {
     @SuppressWarnings("unchecked")
     private JComboBox<String> obtenerComboString(Object target, String nombreCampo) throws Exception {
         return (JComboBox<String>) obtenerCampo(target, nombreCampo, JComboBox.class);
+    }
+
+    @Test
+    @DisplayName("Los cambios no guardados se mantienen como borrador al cambiar de proveedor")
+    void testBorradorPersisteAlCambiarProveedor() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-borrador-test");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com");
+        
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JTextField txtUrl = obtenerCampo(dialogo, "txtUrl", JTextField.class);
+
+            // 1. Modificar OpenAI
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("OpenAI");
+                txtUrl.setText("https://mi-proxy.com");
+            });
+            flushEdt();
+
+            // 2. Cambiar a Gemini (debería disparar el guardado del borrador de OpenAI)
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("Gemini"));
+            flushEdt();
+
+            // 3. Volver a OpenAI
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("OpenAI"));
+            flushEdt();
+
+            // 4. Verificar que se mantuvo el cambio
+            assertEquals("https://mi-proxy.com", txtUrl.getText(), "El URL modificado de OpenAI debería persistir como borrador");
+
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    private void esperarAlGuardado(AtomicBoolean guardadoCallback) throws Exception {
+        long inicio = System.currentTimeMillis();
+        while (!guardadoCallback.get() && (System.currentTimeMillis() - inicio) < 5000) {
+            Thread.sleep(50);
+            flushEdt();
+        }
     }
 
     private void destruirDialogo(DialogoConfiguracion dialogo) throws Exception {

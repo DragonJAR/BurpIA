@@ -10,6 +10,8 @@ import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
+
 public final class OSUtils {
 
     private static final Logger LOGGER = Logger.getLogger(OSUtils.class.getName());
@@ -57,7 +59,7 @@ public final class OSUtils {
                     String className = dialog.getClass().getSimpleName();
 
                     if (debeCerrarVentanaAjustes(className)) {
-                        SwingUtilities.invokeLater(() -> {
+                        ejecutarEnEdt(() -> {
                             dialog.setVisible(false);
                             dialog.dispose();
                         });
@@ -108,7 +110,7 @@ public final class OSUtils {
         }
 
         File binario = new File(rutaExpandida);
-        if (binario.isFile()) {
+        if (esArchivoEjecutable(binario)) {
             return true;
         }
 
@@ -191,12 +193,22 @@ public final class OSUtils {
                     continue;
                 }
                 File candidato = new File(base, nombre);
-                if (candidato.isFile()) {
+                if (esArchivoEjecutable(candidato)) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private static boolean esArchivoEjecutable(File archivo) {
+        if (archivo == null || !archivo.isFile()) {
+            return false;
+        }
+        if (esWindows()) {
+            return true;
+        }
+        return archivo.canExecute();
     }
 
     private static List<String> construirNombresCandidatos(String ejecutable) {

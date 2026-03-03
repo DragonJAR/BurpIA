@@ -14,6 +14,7 @@ import javax.swing.*;
 import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -29,11 +30,12 @@ class PestaniaPrincipalTest {
     @Mock private ConfiguracionAPI configuracionAPI;
 
     private PestaniaPrincipal pestaniaPrincipal;
+    private final AtomicBoolean agenteHabilitado = new AtomicBoolean(true);
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        when(configuracionAPI.agenteHabilitado()).thenReturn(true);
+        when(configuracionAPI.agenteHabilitado()).thenAnswer(invocation -> agenteHabilitado.get());
         when(configuracionAPI.obtenerAgenteDelay()).thenReturn(1500);
 
         when(modeloTablaHallazgos.getColumnCount()).thenReturn(5);
@@ -66,6 +68,26 @@ class PestaniaPrincipalTest {
         assertNotNull(panelAgente, "El panel de Agente no debe ser nulo");
         assertEquals(panelAgente, obtenerTabbedPane(pestaniaPrincipal).getSelectedComponent(),
             "La pestaña de agente debe quedar seleccionada al solicitar foco");
+    }
+
+    @Test
+    void testAlternarVisibilidadAgenteNoRompeFlujoBasico() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            JTabbedPane tabs = obtenerTabbedPane(pestaniaPrincipal);
+            PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
+            assertNotNull(panelAgente);
+            assertTrue(tabs.indexOfComponent(panelAgente) >= 0);
+
+            agenteHabilitado.set(false);
+            pestaniaPrincipal.actualizarVisibilidadAgentes();
+            assertEquals(-1, tabs.indexOfComponent(panelAgente));
+
+            agenteHabilitado.set(true);
+            pestaniaPrincipal.actualizarVisibilidadAgentes();
+            assertTrue(tabs.indexOfComponent(panelAgente) >= 0);
+
+            assertDoesNotThrow(() -> panelAgente.escribirComandoCrudo("echo lifecycle"));
+        });
     }
 
     private JTabbedPane obtenerTabbedPane(PestaniaPrincipal pestania) {

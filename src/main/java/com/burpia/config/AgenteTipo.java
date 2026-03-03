@@ -1,6 +1,7 @@
 package com.burpia.config;
 
 import com.burpia.util.OSUtils;
+import java.util.Arrays;
 
 public enum AgenteTipo {
     FACTORY_DROID(
@@ -50,6 +51,30 @@ public enum AgenteTipo {
 
     public String getUrlDocPorIdioma(String codigoIdioma) {
         return "en".equalsIgnoreCase(codigoIdioma) ? urlDocEN : urlDocES;
+    }
+
+    public static AgenteTipo porDefecto() {
+        return FACTORY_DROID;
+    }
+
+    public static String[] codigosDisponibles() {
+        return Arrays.stream(values())
+            .map(AgenteTipo::name)
+            .toArray(String[]::new);
+    }
+
+    public static AgenteTipo siguienteCircular(AgenteTipo actual) {
+        AgenteTipo[] tipos = values();
+        if (tipos.length == 0) {
+            return porDefecto();
+        }
+        AgenteTipo base = actual != null ? actual : porDefecto();
+        for (int i = 0; i < tipos.length; i++) {
+            if (tipos[i] == base) {
+                return tipos[(i + 1) % tipos.length];
+            }
+        }
+        return tipos[0];
     }
 
     public static AgenteTipo desdeCodigo(String codigo, AgenteTipo porDefecto) {

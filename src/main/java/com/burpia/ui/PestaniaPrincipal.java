@@ -13,6 +13,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
+
 public class PestaniaPrincipal extends JPanel {
     private enum DestinoPestania {
         TAREAS,
@@ -72,7 +74,7 @@ public class PestaniaPrincipal extends JPanel {
 
         listenerLookAndFeel = evt -> {
             if ("lookAndFeel".equals(evt.getPropertyName())) {
-                SwingUtilities.invokeLater(this::aplicarTema);
+                ejecutarEnEdt(this::aplicarTema);
             }
         };
         UIManager.addPropertyChangeListener(listenerLookAndFeel);
@@ -170,7 +172,7 @@ public class PestaniaPrincipal extends JPanel {
             return;
         }
 
-        SwingUtilities.invokeLater(() -> enfocarComponenteSeleccionado(componente, traerVentanaAlFrente));
+        ejecutarEnEdt(() -> enfocarComponenteSeleccionado(componente, traerVentanaAlFrente));
     }
 
     private DestinoPestania obtenerDestinoSeleccionado() {
@@ -267,7 +269,7 @@ public class PestaniaPrincipal extends JPanel {
 
         timerFocoAgente = new Timer(150, e -> {
             ((Timer) e.getSource()).stop();
-            SwingUtilities.invokeLater(() -> {
+            ejecutarEnEdt(() -> {
                 if (tabbedPane.getSelectedComponent() != panelAgente) {
                     return;
                 }

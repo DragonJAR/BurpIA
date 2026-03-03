@@ -32,6 +32,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
+
 public class PanelHallazgos extends JPanel {
     private final ModeloTablaHallazgos modelo;
     private final JTable tabla;
@@ -235,93 +237,87 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void exportarCSV() {
-        JFileChooser selectorArchivos = new JFileChooser();
-        selectorArchivos.setDialogTitle(I18nUI.Hallazgos.DIALOGO_EXPORTAR_CSV());
-        String nombreArchivo = "burpia_hallazgos_" +
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) +
-            ".csv";
-        selectorArchivos.setSelectedFile(new File(nombreArchivo));
-
-        int resultado = selectorArchivos.showSaveDialog(this);
-        if (resultado == JFileChooser.APPROVE_OPTION) {
-            File archivo = selectorArchivos.getSelectedFile();
-            try (BufferedWriter writer = Files.newBufferedWriter(archivo.toPath(), StandardCharsets.UTF_8)) {
-                writer.write(I18nUI.Hallazgos.CSV_HEADER() + "\n");
-
-                List<Hallazgo> hallazgosExportar = modelo.obtenerHallazgosNoIgnorados();
-                int totalEnTabla = modelo.getRowCount();
-                int ignorados = totalEnTabla - hallazgosExportar.size();
-
-                for (Hallazgo h : hallazgosExportar) {
-                    writer.write(construirLineaCsv(h));
-                    writer.newLine();
-                }
-
-                String mensaje = I18nUI.Hallazgos.MSG_EXPORTACION_EXITOSA(
-                    hallazgosExportar.size(),
-                    archivo.getName(),
-                    ignorados
-                );
-                UIUtils.mostrarInfo(
-                    this,
-                    I18nUI.Hallazgos.TITULO_EXPORTACION_EXITOSA(),
-                    mensaje
-                );
-
-            } catch (Exception e) {
-                UIUtils.mostrarError(this,
-                    I18nUI.Hallazgos.TITULO_ERROR_EXPORTACION(),
-                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(e.getMessage()));
-            }
-        }
+        exportarHallazgos("csv", I18nUI.Hallazgos.DIALOGO_EXPORTAR_CSV(), this::escribirCsv);
     }
 
     private void exportarJSON() {
+        exportarHallazgos("json", I18nUI.Hallazgos.DIALOGO_EXPORTAR_JSON(), this::escribirJson);
+    }
+
+    private void exportarHallazgos(String extension,
+                                   String tituloDialogo,
+                                   EscritorExportacion escritor) {
         JFileChooser selectorArchivos = new JFileChooser();
-        selectorArchivos.setDialogTitle(I18nUI.Hallazgos.DIALOGO_EXPORTAR_JSON());
+        selectorArchivos.setDialogTitle(tituloDialogo);
         String nombreArchivo = "burpia_hallazgos_" +
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")) +
-            ".json";
+            "." + extension;
         selectorArchivos.setSelectedFile(new File(nombreArchivo));
 
         int resultado = selectorArchivos.showSaveDialog(this);
-        if (resultado == JFileChooser.APPROVE_OPTION) {
-            File archivo = selectorArchivos.getSelectedFile();
+        if (resultado != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File archivo = selectorArchivos.getSelectedFile();
+        List<Hallazgo> hallazgosExportar = new ArrayList<>(modelo.obtenerHallazgosNoIgnorados());
+        int totalEnTabla = modelo.getRowCount();
+        int ignorados = Math.max(0, totalEnTabla - hallazgosExportar.size());
+
+        Runnable tareaExportacion = () -> {
             try (BufferedWriter writer = Files.newBufferedWriter(archivo.toPath(), StandardCharsets.UTF_8)) {
-                writer.write("{\n  \"hallazgos\": [\n");
-
-                List<Hallazgo> hallazgosExportar = modelo.obtenerHallazgosNoIgnorados();
-                int totalEnTabla = modelo.getRowCount();
-                int ignorados = totalEnTabla - hallazgosExportar.size();
-
-                for (int i = 0; i < hallazgosExportar.size(); i++) {
-                    Hallazgo h = hallazgosExportar.get(i);
-                    writer.write(construirObjetoJson(h));
-                    if (i < hallazgosExportar.size() - 1) {
-                        writer.write(",");
-                    }
-                    writer.write("\n");
-                }
-
-                writer.write("  ]\n}\n");
-
+                escritor.escribir(writer, hallazgosExportar);
                 String mensaje = I18nUI.Hallazgos.MSG_EXPORTACION_EXITOSA(
                     hallazgosExportar.size(),
                     archivo.getName(),
                     ignorados
                 );
-                UIUtils.mostrarInfo(
+                ejecutarEnEdt(() -> UIUtils.mostrarInfo(
                     this,
                     I18nUI.Hallazgos.TITULO_EXPORTACION_EXITOSA(),
                     mensaje
-                );
-
+                ));
             } catch (Exception e) {
-                UIUtils.mostrarError(this,
+                String detalle = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+                ejecutarEnEdt(() -> UIUtils.mostrarError(
+                    this,
                     I18nUI.Hallazgos.TITULO_ERROR_EXPORTACION(),
-                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(e.getMessage()));
+                    I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(detalle)
+                ));
             }
+        };
+
+        try {
+            ejecutorAcciones.execute(tareaExportacion);
+        } catch (RejectedExecutionException ex) {
+            UIUtils.mostrarError(
+                this,
+                I18nUI.Hallazgos.TITULO_ERROR_EXPORTACION(),
+                I18nUI.Hallazgos.MSG_ERROR_EXPORTAR(I18nUI.Hallazgos.ERROR_PANEL_CERRANDO())
+            );
         }
+    }
+
+    private void escribirCsv(BufferedWriter writer, List<Hallazgo> hallazgos) throws Exception {
+        writer.write(I18nUI.Hallazgos.CSV_HEADER());
+        writer.newLine();
+        for (Hallazgo h : hallazgos) {
+            writer.write(construirLineaCsv(h));
+            writer.newLine();
+        }
+    }
+
+    private void escribirJson(BufferedWriter writer, List<Hallazgo> hallazgos) throws Exception {
+        writer.write("{\n  \"hallazgos\": [\n");
+        for (int i = 0; i < hallazgos.size(); i++) {
+            Hallazgo h = hallazgos.get(i);
+            writer.write(construirObjetoJson(h));
+            if (i < hallazgos.size() - 1) {
+                writer.write(",");
+            }
+            writer.newLine();
+        }
+        writer.write("  ]\n}\n");
     }
 
     private String construirLineaCsv(Hallazgo hallazgo) {
@@ -385,7 +381,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     public void limpiar() {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             modelo.limpiar();
         });
     }
@@ -443,15 +439,24 @@ public class PanelHallazgos extends JPanel {
             return;
         }
         int fila = tabla.rowAtPoint(e.getPoint());
-        if (fila >= 0 && !tabla.isRowSelected(fila)) {
-            if (!e.isControlDown()) {
-                tabla.setRowSelectionInterval(fila, fila);
-            } else {
-                tabla.addRowSelectionInterval(fila, fila);
-            }
-        }
+        ajustarSeleccionParaMenuContextual(fila, e.isControlDown());
         JPopupMenu menu = construirMenuContextualDinamico();
         menu.show(tabla, e.getX(), e.getY());
+    }
+
+    private void ajustarSeleccionParaMenuContextual(int fila, boolean controlPresionado) {
+        if (fila < 0) {
+            tabla.clearSelection();
+            return;
+        }
+        if (tabla.isRowSelected(fila)) {
+            return;
+        }
+        if (!controlPresionado) {
+            tabla.setRowSelectionInterval(fila, fila);
+        } else {
+            tabla.addRowSelectionInterval(fila, fila);
+        }
     }
 
     private JPopupMenu construirMenuContextualDinamico() {
@@ -587,9 +592,7 @@ public class PanelHallazgos extends JPanel {
                 if (!enviado) {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_ENVIO_AGENTE(nombreAgente));
                 }
-                String url = hallazgo.obtenerUrl() != null && !hallazgo.obtenerUrl().isBlank()
-                    ? hallazgo.obtenerUrl()
-                    : I18nUI.Hallazgos.URL_DESCONOCIDA();
+                String url = resolverUrlReferencia(hallazgo);
                 return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
                     url + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_AGENTE(nombreAgente)
                 );
@@ -687,9 +690,7 @@ public class PanelHallazgos extends JPanel {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE());
                 }
 
-                String url = hallazgo.obtenerUrl() != null && !hallazgo.obtenerUrl().isBlank()
-                    ? hallazgo.obtenerUrl()
-                    : I18nUI.Hallazgos.URL_DESCONOCIDA();
+                String url = resolverUrlReferencia(hallazgo);
                 return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
                     url + " " + I18nUI.Hallazgos.SUFIJO_ISSUE_GUARDADO()
                 );
@@ -734,7 +735,7 @@ public class PanelHallazgos extends JPanel {
                     detalle.append(resultado).append("\n");
                 } catch (Exception ex) {
                     String mensaje = ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName();
-                    String url = solicitud != null ? solicitud.url() : entrada.urlReferencia;
+                    String url = normalizarUrlTexto(solicitud != null ? solicitud.url() : entrada.urlReferencia);
                     String detalleError = url + I18nUI.Hallazgos.SUFIJO_ERROR_INLINE() + mensaje + ")";
                     detalle.append(I18nUI.Hallazgos.LINEA_ESTADO_ERROR_ALERTA(detalleError)).append("\n");
                     if (registrarErroresScanner && api != null) {
@@ -749,7 +750,7 @@ public class PanelHallazgos extends JPanel {
             final int totalIgnorados = captura.totalIgnorados;
             final String detalleFinal = detalle.toString();
 
-            SwingUtilities.invokeLater(() -> {
+            ejecutarEnEdt(() -> {
                 final String mensajeFinal = I18nUI.Hallazgos.MSG_RESULTADO_ACCION(
                     resumen,
                     totalExitosos,
@@ -848,19 +849,7 @@ public class PanelHallazgos extends JPanel {
             }
             Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
             HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
-            if (solicitud == null && hallazgo != null) {
-                String url = hallazgo.obtenerUrl();
-                if (url != null && !url.isBlank()) {
-                    try {
-                        solicitud = HttpRequest.httpRequestFromUrl(url);
-                    } catch (Exception ignored) {
-                        solicitud = null;
-                    }
-                }
-            }
-            String urlReferencia = hallazgo != null
-                ? hallazgo.obtenerUrl()
-                : I18nUI.Hallazgos.URL_DESCONOCIDA();
+            String urlReferencia = resolverUrlReferencia(hallazgo);
             entradas.add(new EntradaAccion(solicitud, hallazgo, urlReferencia));
         }
         return new ResultadoCapturaAccion(entradas, filasModelo.length, ignorados);
@@ -910,13 +899,13 @@ public class PanelHallazgos extends JPanel {
         tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
 
 
-        actualizarTituloPanel(panelFiltros, I18nUI.Hallazgos.TITULO_FILTROS());
-        actualizarTituloPanel(panelGuardarProyecto, I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO());
-        actualizarTituloPanel(panelTablaWrapper, I18nUI.Hallazgos.TITULO_TABLA());
+        UIUtils.actualizarTituloPanel(panelFiltros, I18nUI.Hallazgos.TITULO_FILTROS());
+        UIUtils.actualizarTituloPanel(panelGuardarProyecto, I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO());
+        UIUtils.actualizarTituloPanel(panelTablaWrapper, I18nUI.Hallazgos.TITULO_TABLA());
         actualizarEstadoControlesIssuesPorEdicion();
 
         modelo.refrescarColumnasIdioma();
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             sorter = new TableRowSorter<>(modelo);
             configurarSorters();
             configurarColumnasTabla();
@@ -981,10 +970,6 @@ public class PanelHallazgos extends JPanel {
         tabla.getColumnModel().getColumn(4).setPreferredWidth(100);
     }
 
-    private void actualizarTituloPanel(JPanel panel, String titulo) {
-        UIUtils.actualizarTituloPanel(panel, titulo);
-    }
-
     public ModeloTablaHallazgos obtenerModelo() {
         return modelo;
     }
@@ -1006,7 +991,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {
-        aplicarEstadoGuardadoAutomaticoIssues(activo, false);
+        UIUtils.ejecutarEnEdtYEsperar(() -> aplicarEstadoGuardadoAutomaticoIssues(activo, false));
     }
 
     public boolean isGuardadoAutomaticoIssuesActivo() {
@@ -1032,6 +1017,19 @@ public class PanelHallazgos extends JPanel {
 
     public void destruir() {
         ejecutorAcciones.shutdownNow();
+    }
+
+    private String resolverUrlReferencia(Hallazgo hallazgo) {
+        return normalizarUrlTexto(hallazgo != null ? hallazgo.obtenerUrl() : null);
+    }
+
+    private String normalizarUrlTexto(String url) {
+        return (url == null || url.isBlank()) ? I18nUI.Hallazgos.URL_DESCONOCIDA() : url;
+    }
+
+    @FunctionalInterface
+    private interface EscritorExportacion {
+        void escribir(BufferedWriter writer, List<Hallazgo> hallazgos) throws Exception;
     }
 
     private ExecutorService crearEjecutorAcciones() {

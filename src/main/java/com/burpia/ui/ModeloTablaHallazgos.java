@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
+
 public class ModeloTablaHallazgos extends DefaultTableModel {
     private static final int TOTAL_COLUMNAS = 5;
     private final List<Hallazgo> datos;
@@ -38,7 +40,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         if (hallazgo == null) {
             return;
         }
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             lock.lock();
             try {
                 datos.add(hallazgo);
@@ -58,7 +60,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             return;
         }
 
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             lock.lock();
             try {
                 boolean huboCambios = false;
@@ -106,7 +108,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public void limpiar() {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             lock.lock();
             try {
                 datos.clear();
@@ -154,7 +156,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         if (!filaValida) {
             return;
         }
-        SwingUtilities.invokeLater(() -> fireTableRowsUpdated(fila, fila));
+        ejecutarEnEdt(() -> fireTableRowsUpdated(fila, fila));
     }
 
     public boolean estaIgnorado(int fila) {
@@ -228,7 +230,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         if (!eliminado) {
             return;
         }
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             if (indiceFila >= 0 && indiceFila < getRowCount()) {
                 removeRow(indiceFila);
             }
@@ -246,11 +248,13 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
 
     public void establecerLimiteFilas(int nuevoLimite) {
         int limiteNormalizado = Math.max(1, nuevoLimite);
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             lock.lock();
             try {
                 limiteFilas = limiteNormalizado;
-                aplicarLimiteFilas();
+                if (aplicarLimiteFilas()) {
+                    fireTableDataChanged();
+                }
             } finally {
                 lock.unlock();
             }
@@ -272,7 +276,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             lock.unlock();
         }
 
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             if (indiceFila < getRowCount()) {
                 Object[] filaValores = nuevoHallazgo.aFilaTabla();
                 for (int i = 0; i < TOTAL_COLUMNAS; i++) {
@@ -307,7 +311,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         }
 
         final int indiceActualizado = indiceFila;
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             if (indiceActualizado < getRowCount()) {
                 Object[] filaValores = nuevoHallazgo.aFilaTabla();
                 for (int i = 0; i < TOTAL_COLUMNAS; i++) {
@@ -320,7 +324,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public void refrescarColumnasIdioma() {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             List<Object[]> snapshot = new ArrayList<>();
             lock.lock();
             try {

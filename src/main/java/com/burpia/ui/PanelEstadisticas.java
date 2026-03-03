@@ -1,4 +1,5 @@
 package com.burpia.ui;
+
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import javax.swing.*;
@@ -7,6 +8,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.util.function.IntSupplier;
+
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PanelEstadisticas extends JPanel {
     private final JLabel etiquetaResumenPrincipal;
@@ -123,7 +126,7 @@ public class PanelEstadisticas extends JPanel {
         aplicarIdioma();
         aplicarTema();
         actualizar();
-        SwingUtilities.invokeLater(this::ajustarDimensionBotones);
+        ejecutarEnEdt(this::ajustarDimensionBotones);
     }
 
     private JPanel crearPanelHallazgos() {
@@ -178,7 +181,7 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private void configurarBotones() {
-        botonCaptura.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
+        botonCaptura.setFont(EstilosUI.FUENTE_ICONO_GRANDE);
         botonCaptura.setFocusable(false);
         botonCaptura.setMargin(new Insets(0, 0, 0, 0));
         botonCaptura.putClientProperty("JButton.buttonType", "square");
@@ -190,7 +193,7 @@ public class PanelEstadisticas extends JPanel {
         actualizarEstadoCapturaUI();
 
         botonConfiguracion.setText("⚙️");
-        botonConfiguracion.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
+        botonConfiguracion.setFont(EstilosUI.FUENTE_ICONO_GRANDE);
         botonConfiguracion.setToolTipText(I18nUI.Tooltips.Estadisticas.CONFIGURACION());
         botonConfiguracion.setFocusable(false);
         botonConfiguracion.setMargin(new Insets(0, 0, 0, 0));
@@ -232,11 +235,11 @@ public class PanelEstadisticas extends JPanel {
             return new Rectangle(0, 0, 0, 0);
         }
         Point origenEnPanelLateral = SwingUtilities.convertPoint(
-            lineaReferencia.getParent(),
-            lineaReferencia.getLocation(),
-            panelLateral
-        );
-        return new Rectangle(origenEnPanelLateral.x, origenEnPanelLateral.y, lineaReferencia.getWidth(), lineaReferencia.getHeight());
+                lineaReferencia.getParent(),
+                lineaReferencia.getLocation(),
+                panelLateral);
+        return new Rectangle(origenEnPanelLateral.x, origenEnPanelLateral.y, lineaReferencia.getWidth(),
+                lineaReferencia.getHeight());
     }
 
     private int calcularOffsetSuperiorBotones(Rectangle franjaBotones) {
@@ -259,7 +262,7 @@ public class PanelEstadisticas extends JPanel {
 
     private void actualizarTamanoIcono(int ladoBoton) {
         int tamanioFuente = Math.max(18, (int) Math.round(ladoBoton * 0.45));
-        Font fuenteIcono = new Font(Font.SANS_SERIF, Font.PLAIN, tamanioFuente);
+        Font fuenteIcono = EstilosUI.FUENTE_ICONO_GRANDE.deriveFont((float) tamanioFuente);
         botonCaptura.setFont(fuenteIcono);
         botonConfiguracion.setFont(fuenteIcono);
     }
@@ -282,8 +285,7 @@ public class PanelEstadisticas extends JPanel {
                     estadisticas.obtenerHallazgosHigh(),
                     estadisticas.obtenerHallazgosMedium(),
                     estadisticas.obtenerHallazgosLow(),
-                    estadisticas.obtenerHallazgosInfo()
-            ));
+                    estadisticas.obtenerHallazgosInfo()));
 
             etiquetaLimiteHallazgos.setText(I18nUI.Estadisticas.LIMITE_HALLAZGOS(proveedorLimiteHallazgos.getAsInt()));
 
@@ -291,13 +293,12 @@ public class PanelEstadisticas extends JPanel {
                     estadisticas.obtenerTotalSolicitudes(),
                     estadisticas.obtenerAnalizados(),
                     estadisticas.obtenerTotalOmitidos(),
-                    estadisticas.obtenerErrores()
-            ));
+                    estadisticas.obtenerErrores()));
         };
         if (SwingUtilities.isEventDispatchThread()) {
             actualizarUi.run();
         } else {
-            SwingUtilities.invokeLater(actualizarUi);
+            ejecutarEnEdt(actualizarUi);
         }
     }
 
@@ -314,7 +315,7 @@ public class PanelEstadisticas extends JPanel {
         if (SwingUtilities.isEventDispatchThread()) {
             actualizarUi.run();
         } else {
-            SwingUtilities.invokeLater(actualizarUi);
+            ejecutarEnEdt(actualizarUi);
         }
     }
 
@@ -345,10 +346,7 @@ public class PanelEstadisticas extends JPanel {
 
     public void aplicarTema() {
         Runnable aplicar = () -> {
-            Color fondoPanel = UIManager.getColor("Panel.background");
-            if (fondoPanel == null) {
-                fondoPanel = EstilosUI.COLOR_FONDO_PANEL;
-            }
+            Color fondoPanel = EstilosUI.obtenerFondoPanel();
 
             setBackground(fondoPanel);
             if (panelHallazgos != null) {
@@ -380,7 +378,7 @@ public class PanelEstadisticas extends JPanel {
         if (SwingUtilities.isEventDispatchThread()) {
             aplicar.run();
         } else {
-            SwingUtilities.invokeLater(aplicar);
+            ejecutarEnEdt(aplicar);
         }
     }
 

@@ -13,6 +13,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
+
 public class PanelTareas extends JPanel {
     private final ModeloTablaTareas modelo;
     private final JTable tabla;
@@ -560,7 +562,7 @@ public class PanelTareas extends JPanel {
         if (SwingUtilities.isEventDispatchThread()) {
             actualizarUi.run();
         } else {
-            SwingUtilities.invokeLater(actualizarUi);
+            ejecutarEnEdt(actualizarUi);
         }
     }
 
@@ -572,10 +574,10 @@ public class PanelTareas extends JPanel {
         botonLimpiarCompletadas.setToolTipText(I18nUI.Tooltips.Tareas.LIMPIAR());
         etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
         tabla.setToolTipText(I18nUI.Tooltips.Tareas.TABLA());
-        actualizarTituloPanel(panelControles, I18nUI.Tareas.TITULO_CONTROLES());
-        actualizarTituloPanel(panelTablaWrapper, I18nUI.Tareas.TITULO_LISTA());
+        UIUtils.actualizarTituloPanel(panelControles, I18nUI.Tareas.TITULO_CONTROLES());
+        UIUtils.actualizarTituloPanel(panelTablaWrapper, I18nUI.Tareas.TITULO_LISTA());
         modelo.refrescarColumnasIdioma();
-        SwingUtilities.invokeLater(this::configurarColumnasTabla);
+        ejecutarEnEdt(this::configurarColumnasTabla);
         actualizarEstadisticas(true);
         revalidate();
         repaint();
@@ -594,19 +596,15 @@ public class PanelTareas extends JPanel {
         tabla.getColumnModel().getColumn(3).setPreferredWidth(100);
     }
 
-    private void actualizarTituloPanel(JPanel panel, String titulo) {
-        UIUtils.actualizarTituloPanel(panel, titulo);
-    }
-
     public void agregarTarea(Tarea tarea) {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             modelo.agregarTarea(tarea);
             actualizarEstadisticas();
         });
     }
 
     public void actualizarTarea(Tarea tarea) {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             modelo.actualizarTarea(tarea);
             actualizarEstadisticas();
         });

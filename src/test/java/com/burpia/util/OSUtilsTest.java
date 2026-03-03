@@ -1,8 +1,11 @@
 package com.burpia.util;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
+
+import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,5 +66,16 @@ public class OSUtilsTest {
         assertTrue(OSUtils.debeCerrarVentanaAjustes("com.burpia.ui.DialogoConfiguracion"));
         assertFalse(OSUtils.debeCerrarVentanaAjustes("JDialog"));
         assertFalse(OSUtils.debeCerrarVentanaAjustes("MensajeBurpIA"));
+    }
+
+    @Test
+    @EnabledOnOs({OS.LINUX, OS.MAC})
+    public void testExisteBinarioRutaNoEjecutableEnUnix() throws Exception {
+        File temporal = File.createTempFile("burpia-binario", ".tmp");
+        temporal.deleteOnExit();
+        temporal.setExecutable(false, false);
+        Assumptions.assumeFalse(temporal.canExecute(),
+            "No fue posible remover permiso de ejecución en este entorno");
+        assertFalse(OSUtils.existeBinario(temporal.getAbsolutePath()));
     }
 }

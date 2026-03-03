@@ -14,12 +14,14 @@ import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -296,6 +298,29 @@ class PanelAgenteTransporteTest {
     }
 
     @Test
+    @DisplayName("Destruir reinicia el inyector PTY para permitir reutilización segura")
+    void testDestruirReiniciaInyectorPty() throws Exception {
+        PanelAgente panel = crearPanelSinConsola();
+        try {
+            ExecutorService inyectorInicial = obtenerInyectorPty(panel);
+            assertNotNull(inyectorInicial);
+
+            panel.destruir();
+
+            ExecutorService inyectorPostDestruir = obtenerInyectorPty(panel);
+            assertNotNull(inyectorPostDestruir);
+            assertNotSame(inyectorInicial, inyectorPostDestruir);
+            assertFalse(inyectorPostDestruir.isShutdown());
+
+            panel.escribirComandoCrudo("echo test");
+            ExecutorService inyectorPostEscritura = obtenerInyectorPty(panel);
+            assertFalse(inyectorPostEscritura.isShutdown());
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
     @DisplayName("URL de guía se resuelve por agente e idioma con fallback")
     void testResolverUrlGuiaPorAgenteEIdioma() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -365,6 +390,32 @@ class PanelAgenteTransporteTest {
         }
     }
 
+    @Test
+    @DisplayName("aplicarIdioma refresca textos de botones principales del agente")
+    void testAplicarIdiomaRefrescaTextosBotonesPrincipales() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            JButton botonReiniciar = obtenerBotonPorNombre(panel, "btnReiniciar");
+            JButton botonCtrlC = obtenerBotonPorNombre(panel, "btnCtrlC");
+            JButton botonPayload = obtenerBotonPorNombre(panel, "btnInyectarPayload");
+
+            I18nUI.establecerIdioma("en");
+            SwingUtilities.invokeAndWait(panel::aplicarIdioma);
+            assertTrue(botonReiniciar.getText().contains("Restart"));
+            assertTrue(botonCtrlC.getText().contains("Ctrl+C"));
+            assertTrue(botonPayload.getText().contains("Inject Payload"));
+
+            I18nUI.establecerIdioma("es");
+            SwingUtilities.invokeAndWait(panel::aplicarIdioma);
+            assertTrue(botonReiniciar.getText().contains("Reiniciar"));
+            assertTrue(botonPayload.getText().contains("Inyectar Payload"));
+        } finally {
+            panel.destruir();
+            I18nUI.establecerIdioma("es");
+        }
+    }
+
     private PanelAgente crearPanelSinConsola() throws Exception {
         return crearPanelSinConsola(new ConfiguracionAPI());
     }
@@ -385,6 +436,18 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField("btnAyudaAgente");
         field.setAccessible(true);
         return (JButton) field.get(panel);
+    }
+
+    private JButton obtenerBotonPorNombre(PanelAgente panel, String nombreCampo) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField(nombreCampo);
+        field.setAccessible(true);
+        return (JButton) field.get(panel);
+    }
+
+    private ExecutorService obtenerInyectorPty(PanelAgente panel) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("inyectorPty");
+        field.setAccessible(true);
+        return (ExecutorService) field.get(panel);
     }
 
     private void invocarCambiarAgenteRapido(PanelAgente panel) throws Exception {

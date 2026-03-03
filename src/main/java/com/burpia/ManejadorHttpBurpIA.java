@@ -39,6 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
+
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
@@ -471,7 +473,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return;
         }
 
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             if (pestaniaPrincipal != null) {
                 pestaniaPrincipal.registrar("Iniciando análisis (continuar/reintentar) para: " + url);
             }
@@ -1003,7 +1005,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             String sevMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
             registrar("Analisis completado: " + url + " (severidad maxima: " + sevMax + ")");
 
-            SwingUtilities.invokeLater(() -> {
+            ejecutarEnEdt(() -> {
                 if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
             });
         }
@@ -1022,7 +1024,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error: " + (error != null ? error : "Error desconocido"));
             }
             registrarError("Analisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
-            SwingUtilities.invokeLater(() -> {
+            ejecutarEnEdt(() -> {
                 if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
             });
         }

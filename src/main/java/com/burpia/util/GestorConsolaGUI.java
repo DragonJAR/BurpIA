@@ -16,6 +16,8 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
+
 public class GestorConsolaGUI {
     private static final Logger LOGGER = Logger.getLogger(GestorConsolaGUI.class.getName());
     public enum TipoLog {
@@ -91,7 +93,7 @@ public class GestorConsolaGUI {
                 fondo = UIManager.getColor("TextPane.background");
             }
             if (fondo == null) {
-                fondo = UIManager.getColor("Panel.background");
+                fondo = EstilosUI.obtenerFondoPanel();
             }
             if (fondo == null) {
                 fondo = Color.WHITE;
@@ -150,7 +152,7 @@ public class GestorConsolaGUI {
         if (SwingUtilities.isEventDispatchThread()) {
             aplicar.run();
         } else {
-            SwingUtilities.invokeLater(aplicar);
+            ejecutarEnEdt(aplicar);
         }
     }
 
@@ -220,7 +222,7 @@ public class GestorConsolaGUI {
     }
 
     public void limpiarConsola() {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             try {
                 if (documento != null) {
                     documento.remove(0, documento.getLength());
@@ -230,6 +232,7 @@ public class GestorConsolaGUI {
                 contadorInfo.set(0);
                 contadorVerbose.set(0);
                 contadorError.set(0);
+                marcarCambioVersion();
             } catch (BadLocationException e) {
                 registrarErrorInterno("No se pudo limpiar consola: " + e.getMessage());
             }
@@ -320,7 +323,7 @@ public class GestorConsolaGUI {
             return;
         }
         if (flushProgramado.compareAndSet(false, true)) {
-            SwingUtilities.invokeLater(this::flushPendientesEnEdt);
+            ejecutarEnEdt(this::flushPendientesEnEdt);
         }
     }
 
@@ -395,7 +398,7 @@ public class GestorConsolaGUI {
                 contadorInfo.incrementAndGet();
                 break;
         }
-        versionCambios.incrementAndGet();
+        marcarCambioVersion();
     }
 
     public int obtenerVersion() { return versionCambios.get(); }
@@ -416,12 +419,11 @@ public class GestorConsolaGUI {
                 return;
             }
             logsPendientes.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
-            switch (eliminado.tipo) {
-                case VERBOSE: contadorVerbose.updateAndGet(v -> v > 0 ? v - 1 : 0); break;
-                case ERROR: contadorError.updateAndGet(v -> v > 0 ? v - 1 : 0); break;
-                default: contadorInfo.updateAndGet(v -> v > 0 ? v - 1 : 0); break;
-            }
         }
+    }
+
+    private void marcarCambioVersion() {
+        versionCambios.incrementAndGet();
     }
 
     private String normalizarOrigen(String origen) {

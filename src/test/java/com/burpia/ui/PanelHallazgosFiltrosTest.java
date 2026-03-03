@@ -189,6 +189,41 @@ class PanelHallazgosFiltrosTest {
         assertDoesNotThrow(() -> metodo.invoke(panel, (Object) new int[]{0}));
     }
 
+    @Test
+    @DisplayName("Popup fuera de filas limpia selección previa para evitar acciones residuales")
+    void testPopupFueraFilasLimpiaSeleccionPrevia() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        modelo.agregarHallazgos(List.of(
+            new Hallazgo("https://example.com/a", "TA", "Hallazgo A", "High", "High"),
+            new Hallazgo("https://example.com/b", "TB", "Hallazgo B", "Low", "Medium")
+        ));
+        flushEdt();
+
+        JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
+        SwingUtilities.invokeAndWait(() -> tabla.setRowSelectionInterval(0, 0));
+        assertEquals(1, tabla.getSelectedRowCount());
+
+        Method ajustarSeleccion = PanelHallazgos.class.getDeclaredMethod(
+            "ajustarSeleccionParaMenuContextual", int.class, boolean.class
+        );
+        ajustarSeleccion.setAccessible(true);
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                ajustarSeleccion.invoke(panel, -1, false);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        flushEdt();
+
+        assertEquals(0, tabla.getSelectedRowCount());
+    }
+
     @SuppressWarnings("unchecked")
     private <T> T obtenerCampo(Object target, String nombre, Class<T> tipo) throws Exception {
         Field field = target.getClass().getDeclaredField(nombre);

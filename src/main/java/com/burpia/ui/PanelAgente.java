@@ -14,17 +14,21 @@ import com.pty4j.PtyProcessBuilder;
 
 import javax.swing.*;
 import java.awt.*;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PanelAgente extends JPanel {
 
@@ -38,11 +42,8 @@ public class PanelAgente extends JPanel {
     private static final int DELAY_REINTENTO_ARRANQUE_MS = 200;
     private static final int DELAY_REINTENTO_FOCO_TERMINAL_MS = 120;
 
-    private final ExecutorService inyectorPty = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "BurpIA-PTY-Injector");
-        t.setDaemon(true);
-        return t;
-    });
+    private final Object lockInyectorPty = new Object();
+    private ExecutorService inyectorPty;
 
     private JPanel panelControles;
     private JPanel panelResultadosWrapper;
@@ -50,6 +51,9 @@ public class PanelAgente extends JPanel {
     private JediTermWidget terminalWidget;
     private JLabel lblDelay;
     private JSpinner spinnerDelay;
+    private JButton btnReiniciar;
+    private JButton btnCtrlC;
+    private JButton btnInyectarPayload;
     private JButton btnCambiarAgente;
     private JButton btnAyudaAgente;
 
@@ -76,6 +80,7 @@ public class PanelAgente extends JPanel {
     @SuppressWarnings("this-escape")
     public PanelAgente(ConfiguracionAPI config, boolean iniciarConsola) {
         this.config = config;
+        this.inyectorPty = crearInyectorPty();
         this.promptInicialEnviado = new AtomicBoolean(false);
         this.inicializacionPendiente = new AtomicBoolean(false);
         this.arranqueAgenteDespachado = new AtomicBoolean(false);
@@ -114,6 +119,50 @@ public class PanelAgente extends JPanel {
         manejadorCambioConfiguracion.set(manejador);
     }
 
+    private ExecutorService crearInyectorPty() {
+        return Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "BurpIA-PTY-Injector");
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    private ExecutorService obtenerInyectorPty() {
+        synchronized (lockInyectorPty) {
+            if (inyectorPty == null || inyectorPty.isShutdown() || inyectorPty.isTerminated()) {
+                inyectorPty = crearInyectorPty();
+            }
+            return inyectorPty;
+        }
+    }
+
+    private void ejecutarEnInyectorPty(Runnable tarea) {
+        if (tarea == null) {
+            return;
+        }
+        try {
+            obtenerInyectorPty().execute(tarea);
+        } catch (RejectedExecutionException ex) {
+            synchronized (lockInyectorPty) {
+                inyectorPty = crearInyectorPty();
+            }
+            try {
+                obtenerInyectorPty().execute(tarea);
+            } catch (RejectedExecutionException retryEx) {
+                registrarLog(Level.WARNING, I18nLogs.tr("No se pudo encolar tarea en inyector PTY"), retryEx);
+            }
+        }
+    }
+
+    private void reiniciarInyectorPty() {
+        synchronized (lockInyectorPty) {
+            if (inyectorPty != null) {
+                inyectorPty.shutdownNow();
+            }
+            inyectorPty = crearInyectorPty();
+        }
+    }
+
     public void escribirComando(String comando) {
         if (comando == null || comando.trim().isEmpty()) {
             return;
@@ -126,7 +175,7 @@ public class PanelAgente extends JPanel {
             return;
         }
         long sesionObjetivo = sesionActivaId;
-        inyectorPty.execute(() -> escribirComandoCrudoSeguro(comando, sesionObjetivo));
+        ejecutarEnInyectorPty(() -> escribirComandoCrudoSeguro(comando, sesionObjetivo));
     }
 
     private boolean escribirComandoCrudoSeguro(String comando) {
@@ -285,25 +334,29 @@ public class PanelAgente extends JPanel {
 
     public void destruir() {
         invalidarSesionActiva();
-        inyectorPty.shutdownNow();
         cerrarSesionActiva();
-        cerrarTerminalWidget();
-        terminalWidget = null;
+        reiniciarInyectorPty();
+        UIUtils.ejecutarEnEdtYEsperar(() -> {
+            cerrarTerminalWidget();
+            terminalWidget = null;
+            if (panelResultadosWrapper != null) {
+                panelResultadosWrapper.removeAll();
+                panelResultadosWrapper.revalidate();
+                panelResultadosWrapper.repaint();
+            }
+        });
         consolaArrancando.set(false);
     }
 
     public void aplicarIdioma() {
-        actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
-        actualizarTituloPanel(panelResultadosWrapper, I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO());
+        UIUtils.ejecutarEnEdtYEsperar(this::aplicarIdiomaEnEdt);
+    }
 
-        if (btnCambiarAgente != null) {
-            btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
-            btnCambiarAgente.setToolTipText(I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO());
-        }
-        if (btnAyudaAgente != null) {
-            btnAyudaAgente.setText("❓");
-            btnAyudaAgente.setToolTipText(resolverTooltipAyudaAgente());
-        }
+    private void aplicarIdiomaEnEdt() {
+        UIUtils.actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
+        UIUtils.actualizarTituloPanel(panelResultadosWrapper, I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO());
+
+        refrescarTextosBotones();
         if (lblDelay != null) {
             lblDelay.setText(I18nUI.Consola.ETIQUETA_DELAY());
             lblDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
@@ -319,10 +372,7 @@ public class PanelAgente extends JPanel {
 
     public void aplicarTema() {
         Runnable aplicar = () -> {
-            Color fondoPanel = UIManager.getColor("Panel.background");
-            if (fondoPanel == null) {
-                fondoPanel = EstilosUI.COLOR_FONDO_PANEL;
-            }
+            Color fondoPanel = EstilosUI.obtenerFondoPanel();
 
             setBackground(fondoPanel);
             if (panelControles != null) {
@@ -346,7 +396,7 @@ public class PanelAgente extends JPanel {
         if (SwingUtilities.isEventDispatchThread()) {
             aplicar.run();
         } else {
-            SwingUtilities.invokeLater(aplicar);
+            ejecutarEnEdt(aplicar);
         }
     }
     
@@ -362,13 +412,13 @@ public class PanelAgente extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, EstilosUI.ESPACIADO_COMPONENTES, 4));
         panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
 
-        JButton btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(),
+        btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(),
             I18nUI.Tooltips.Agente.REINICIAR(), e -> reiniciarYSolicitarFoco());
 
-        JButton btnCtrlC = crearBoton("⚡ " + I18nUI.Consola.BOTON_CTRL_C(),
+        btnCtrlC = crearBoton("⚡ " + I18nUI.Consola.BOTON_CTRL_C(),
             I18nUI.Tooltips.Agente.CTRL_C(), e -> escribirComandoCrudo("\u0003"));
 
-        JButton btnInyectarPayload = crearBoton("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD(),
+        btnInyectarPayload = crearBoton("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD(),
             I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD(), e -> inyectarPayloadInicialManual());
 
         btnCambiarAgente = crearBoton("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO(),
@@ -414,10 +464,8 @@ public class PanelAgente extends JPanel {
     
     private void cambiarAgenteRapido() {
         try {
-            AgenteTipo actual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
-            AgenteTipo destino = (actual == AgenteTipo.FACTORY_DROID)
-                ? AgenteTipo.CLAUDE_CODE
-                : AgenteTipo.FACTORY_DROID;
+            AgenteTipo actual = obtenerAgenteActualSeguro();
+            AgenteTipo destino = AgenteTipo.siguienteCircular(actual);
 
             String rutaBinario = resolverRutaBinario(destino);
             if (!OSUtils.existeBinario(rutaBinario)) {
@@ -433,14 +481,13 @@ public class PanelAgente extends JPanel {
             }
 
             config.establecerTipoAgente(destino.name());
-
+            
             Runnable handler = manejadorCambioConfiguracion.get();
             if (handler != null) {
                 handler.run();
             }
-
+            
             reiniciarYSolicitarFoco();
-
             actualizarEstadoBotones();
             aplicarIdioma();
 
@@ -454,7 +501,7 @@ public class PanelAgente extends JPanel {
     }
 
     private AgenteTipo obtenerAgenteActualSeguro() {
-        return AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
+        return AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.porDefecto());
     }
 
     private String resolverTooltipAyudaAgente() {
@@ -480,12 +527,42 @@ public class PanelAgente extends JPanel {
     }
 
     private void actualizarEstadoBotones() {
+        if (btnReiniciar != null) {
+            btnReiniciar.setEnabled(true);
+        }
+        if (btnCtrlC != null) {
+            btnCtrlC.setEnabled(true);
+        }
+        if (btnInyectarPayload != null) {
+            btnInyectarPayload.setEnabled(true);
+        }
         if (btnCambiarAgente != null) {
             btnCambiarAgente.setEnabled(true);
-            btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
         }
         if (btnAyudaAgente != null) {
             btnAyudaAgente.setEnabled(true);
+        }
+        refrescarTextosBotones();
+    }
+
+    private void refrescarTextosBotones() {
+        if (btnReiniciar != null) {
+            btnReiniciar.setText("🔄 " + I18nUI.Consola.BOTON_REINICIAR());
+            btnReiniciar.setToolTipText(I18nUI.Tooltips.Agente.REINICIAR());
+        }
+        if (btnCtrlC != null) {
+            btnCtrlC.setText("⚡ " + I18nUI.Consola.BOTON_CTRL_C());
+            btnCtrlC.setToolTipText(I18nUI.Tooltips.Agente.CTRL_C());
+        }
+        if (btnInyectarPayload != null) {
+            btnInyectarPayload.setText("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD());
+            btnInyectarPayload.setToolTipText(I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD());
+        }
+        if (btnCambiarAgente != null) {
+            btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
+            btnCambiarAgente.setToolTipText(I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO());
+        }
+        if (btnAyudaAgente != null) {
             btnAyudaAgente.setText("❓");
             btnAyudaAgente.setToolTipText(resolverTooltipAyudaAgente());
         }
@@ -603,7 +680,13 @@ public class PanelAgente extends JPanel {
         arranqueAgenteDespachado.set(false);
         invalidarSesionActiva();
         cerrarSesionActiva();
-        recrearTerminalWidget();
+        try {
+            UIUtils.ejecutarEnEdtYEsperar(this::recrearTerminalWidget);
+        } catch (RuntimeException e) {
+            consolaArrancando.set(false);
+            manejarErrorPty(e);
+            return;
+        }
 
         long sesion = activarNuevaSesion();
         Thread arrancador = new Thread(() -> iniciarProcesoPty(sesion), "BurpIA-PTY-Starter-" + sesion);
@@ -612,13 +695,13 @@ public class PanelAgente extends JPanel {
     }
 
     public void enfocarTerminal() {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             if (solicitarFocoTerminal()) {
                 return;
             }
             Timer reintento = new Timer(DELAY_REINTENTO_FOCO_TERMINAL_MS, e -> {
                 ((Timer) e.getSource()).stop();
-                SwingUtilities.invokeLater(this::solicitarFocoTerminal);
+                ejecutarEnEdt(this::solicitarFocoTerminal);
             });
             reintento.setRepeats(false);
             reintento.start();
@@ -695,7 +778,7 @@ public class PanelAgente extends JPanel {
             process = nuevoProceso;
             ttyConnector = nuevoConnector;
 
-            SwingUtilities.invokeLater(() -> {
+            ejecutarEnEdt(() -> {
                 if (esSesionVigente(sesionObjetivo) && terminalWidget != null) {
                     terminalWidget.setTtyConnector(nuevoConnector);
                     terminalWidget.start();
@@ -724,7 +807,7 @@ public class PanelAgente extends JPanel {
     }
 
     private void programarInyeccionInicial(long sesionObjetivo) {
-        AgenteTipo tipoActual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.FACTORY_DROID);
+        AgenteTipo tipoActual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.porDefecto());
         String prompt = obtenerPromptPreflightFijo();
         int usuarioDelay = config.obtenerAgenteDelay();
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
@@ -732,7 +815,7 @@ public class PanelAgente extends JPanel {
 
         registrarLog(Level.INFO, I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
 
-        inyectorPty.execute(() -> {
+        ejecutarEnInyectorPty(() -> {
             if (!esSesionVigente(sesionObjetivo)) {
                 return;
             }
@@ -805,7 +888,7 @@ public class PanelAgente extends JPanel {
         String binarioConfig = config.obtenerRutaBinarioAgente(tipo != null ? tipo.name() : config.obtenerTipoAgente());
         
         if (Normalizador.esVacio(binarioConfig)) {
-            return tipo != null ? tipo.getRutaPorDefecto() : "droid";
+            return tipo != null ? tipo.getRutaPorDefecto() : AgenteTipo.porDefecto().getRutaPorDefecto();
         }
 
         return OSUtils.expandirRuta(binarioConfig.trim());
@@ -847,7 +930,7 @@ public class PanelAgente extends JPanel {
         String origen,
         long sesionObjetivo
     ) {
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             if (!esSesionVigente(sesionObjetivo)) {
                 return;
             }
@@ -879,7 +962,7 @@ public class PanelAgente extends JPanel {
         long injectionId = contadorInyeccion.incrementAndGet();
         SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(opciones.tipoAgente());
 
-        inyectorPty.execute(() -> {
+        ejecutarEnInyectorPty(() -> {
             if (!esSesionVigente(sesionObjetivo)) {
                 return;
             }
@@ -1004,13 +1087,9 @@ public class PanelAgente extends JPanel {
     private void manejarErrorPty(Throwable t) {
         registrarLog(Level.SEVERE, I18nLogs.tr("Error nativo iniciando Consola PTY"), t);
         String mensaje = t.getMessage() != null ? t.getMessage() : I18nLogs.tr("Error desconocido PTY");
-        SwingUtilities.invokeLater(() -> {
+        ejecutarEnEdt(() -> {
             UIUtils.mostrarError(PanelAgente.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje);
         });
-    }
-
-    private void actualizarTituloPanel(JPanel panel, String titulo) {
-        UIUtils.actualizarTituloPanel(panel, titulo);
     }
 
     private void solicitarFocoPestaniaAgente() {

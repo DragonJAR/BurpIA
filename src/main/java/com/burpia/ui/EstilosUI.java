@@ -5,18 +5,48 @@ import java.awt.Color;
 import java.awt.Font;
 
 public class EstilosUI {
-    private EstilosUI() {}
+    private EstilosUI() {
+    }
 
-    public static final Font FUENTE_ESTANDAR = new Font(Font.MONOSPACED, Font.PLAIN, 11);
-    public static final Font FUENTE_NEGRITA = new Font(Font.MONOSPACED, Font.BOLD, 11);
-    public static final Font FUENTE_TABLA = new Font(Font.MONOSPACED, Font.PLAIN, 11);
-    public static final Font FUENTE_MONO = new Font(Font.MONOSPACED, Font.PLAIN, 12);
-    public static final Font FUENTE_MONO_NEGRITA = new Font(Font.MONOSPACED, Font.BOLD, 12);
-    public static final Font FUENTE_BOTON_PRINCIPAL = new Font(Font.MONOSPACED, Font.BOLD, 12);
-    public static final Font FUENTE_CAMPO_TEXTO = new Font(Font.MONOSPACED, Font.PLAIN, 11);
+    // Fuentes base - todas derivan de estas dos
+    public static Font FUENTE_ESTANDAR = new Font(Font.MONOSPACED, Font.PLAIN, 11);
+    public static Font FUENTE_NEGRITA = new Font(Font.MONOSPACED, Font.BOLD, 11);
+    public static Font FUENTE_MONO = new Font(Font.MONOSPACED, Font.PLAIN, 12);
+    public static Font FUENTE_MONO_NEGRITA = new Font(Font.MONOSPACED, Font.BOLD, 12);
+    
+    // Aliases para semántica - referencian las bases
+    public static Font FUENTE_TABLA = FUENTE_ESTANDAR;
+    public static Font FUENTE_CAMPO_TEXTO = FUENTE_ESTANDAR;
+    public static Font FUENTE_BOTON_PRINCIPAL = FUENTE_MONO_NEGRITA;
+    public static Font FUENTE_TITULO_BANNER = new Font(Font.MONOSPACED, Font.BOLD, 26);
+    public static Font FUENTE_ICONO_GRANDE = new Font(Font.MONOSPACED, Font.PLAIN, 18);
+
+    public static void actualizarFuentes(com.burpia.config.ConfiguracionAPI config) {
+        if (config == null)
+            return;
+
+        String nombreEstandar = config.obtenerNombreFuenteEstandar();
+        int tamanioEstandar = config.obtenerTamanioFuenteEstandar();
+        String nombreMono = config.obtenerNombreFuenteMono();
+        int tamanioMono = config.obtenerTamanioFuenteMono();
+
+        // Fuentes base
+        FUENTE_ESTANDAR = new Font(nombreEstandar, Font.PLAIN, tamanioEstandar);
+        FUENTE_NEGRITA = new Font(nombreEstandar, Font.BOLD, tamanioEstandar);
+        FUENTE_MONO = new Font(nombreMono, Font.PLAIN, tamanioMono);
+        FUENTE_MONO_NEGRITA = new Font(nombreMono, Font.BOLD, tamanioMono);
+        
+        // Aliases - referencian las bases actualizadas
+        FUENTE_TABLA = FUENTE_ESTANDAR;
+        FUENTE_CAMPO_TEXTO = FUENTE_ESTANDAR;
+        FUENTE_BOTON_PRINCIPAL = FUENTE_MONO_NEGRITA;
+        
+        // Fuentes especiales con tamaño proporcional
+        FUENTE_TITULO_BANNER = new Font(nombreEstandar, Font.BOLD, (int) (tamanioEstandar * 2.36));
+        FUENTE_ICONO_GRANDE = new Font(nombreEstandar, Font.PLAIN, (int) (tamanioEstandar * 1.63));
+    }
 
     public static final Color COLOR_FONDO_PANEL = new Color(245, 245, 245);
-    public static final Color COLOR_BORDE_PANEL = new Color(200, 200, 200);
     public static final Color COLOR_TEXTO_NORMAL = Color.BLACK;
     public static final Color COLOR_TEXTO_DESHABILITADO = new Color(150, 150, 150);
 
@@ -149,8 +179,8 @@ public class EstilosUI {
     public static Color colorFondoIgnorado(Color colorFondoTabla) {
         Color fondoTabla = normalizarColor(colorFondoTabla, obtenerColorFondoBase());
         return esTemaOscuro(fondoTabla)
-            ? mezclar(fondoTabla, Color.BLACK, 0.18d)
-            : mezclar(fondoTabla, Color.BLACK, 0.06d);
+                ? mezclar(fondoTabla, Color.BLACK, 0.18d)
+                : mezclar(fondoTabla, Color.BLACK, 0.06d);
     }
 
     public static Color colorFondoIgnorado(Color colorFondoTabla, boolean esTemaOscuro) {
@@ -165,9 +195,17 @@ public class EstilosUI {
         return color != null ? color : fallback;
     }
 
-    private static Color obtenerColorFondoBase() {
+    /**
+     * Obtiene el color de fondo del panel desde UIManager, con fallback a COLOR_FONDO_PANEL.
+     * Método centralizado para evitar duplicación de este patrón en todo el código.
+     */
+    public static Color obtenerFondoPanel() {
         Color panel = UIManager.getColor("Panel.background");
         return panel != null ? panel : COLOR_FONDO_PANEL;
+    }
+
+    private static Color obtenerColorFondoBase() {
+        return obtenerFondoPanel();
     }
 
     private static double luminanciaRelativa(Color color) {

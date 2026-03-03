@@ -51,8 +51,6 @@ public class AnalizadorAI implements Runnable {
     private final ControlBackpressureGlobal controlBackpressure;
     private final Object logLock;
     private static final int MAX_CHARS_LOG_DETALLADO = 4000;
-    private static final int TIEMPO_ESPERA_MIN_SEGUNDOS = 10;
-    private static final int TIEMPO_ESPERA_MAX_SEGUNDOS = 300;
     private static final int MAX_INTENTOS_RETRY = 5;
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
@@ -494,7 +492,7 @@ public class AnalizadorAI implements Runnable {
     }
 
     private static OkHttpClient obtenerClienteHttp(int tiempoEsperaSegundos, boolean ignorarSSL) {
-        int timeoutNormalizado = normalizarTiempoEsperaSegundos(tiempoEsperaSegundos);
+        int timeoutNormalizado = ConfiguracionAPI.normalizarTiempoEspera(tiempoEsperaSegundos);
         String clave = timeoutNormalizado + (ignorarSSL ? "_insecure" : "_secure");
 
         OkHttpClient existente = CLIENTES_HTTP_POR_TIMEOUT.get(clave);
@@ -555,16 +553,6 @@ public class AnalizadorAI implements Runnable {
                 LOGGER.log(Level.SEVERE, I18nLogs.tr("Error al configurar SSL inseguro"), e);
             }
         }
-    }
-
-    private static int normalizarTiempoEsperaSegundos(int valor) {
-        if (valor < TIEMPO_ESPERA_MIN_SEGUNDOS) {
-            return TIEMPO_ESPERA_MIN_SEGUNDOS;
-        }
-        if (valor > TIEMPO_ESPERA_MAX_SEGUNDOS) {
-            return TIEMPO_ESPERA_MAX_SEGUNDOS;
-        }
-        return valor;
     }
 
     private static final class NonRetryableApiException extends IOException {

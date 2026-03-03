@@ -202,4 +202,28 @@ class I18nUITest {
         assertFalse(error.contains("❌"));
         I18nUI.establecerIdioma("es");
     }
+
+    @Test
+    @DisplayName("Resumen de consola usa base unificada en ambos formatos")
+    void testResumenConsolaUnificado() {
+        I18nUI.establecerIdioma("es");
+        assertEquals(
+            "Total: 3 | Info: 1 | Verbose: 1 | Errores: 1",
+            I18nUI.Consola.RESUMEN_LOGS(3, 1, 1, 1)
+        );
+        assertEquals(
+            "📊 Total: 3 | Info: 1 | Verbose: 1 | Errores: 1",
+            I18nUI.Consola.RESUMEN(3, 1, 1, 1)
+        );
+
+        I18nUI.establecerIdioma("en");
+        assertEquals(
+            "Total: 3 | Info: 1 | Verbose: 1 | Errors: 1",
+            I18nUI.Consola.RESUMEN_LOGS(3, 1, 1, 1)
+        );
+        assertEquals(
+            "📊 Total: 3 | Info: 1 | Verbose: 1 | Errors: 1",
+            I18nUI.Consola.RESUMEN(3, 1, 1, 1)
+        );
+    }
 }
