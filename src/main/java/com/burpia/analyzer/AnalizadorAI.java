@@ -191,7 +191,7 @@ public class AnalizadorAI implements Runnable {
             esperarSiPausada();
             notificarInicioAnalisis();
             String alertaConfiguracion = validarConfiguracionAntesDeConsulta();
-            if (!alertaConfiguracion.isEmpty()) {
+            if (Normalizador.noEsVacio(alertaConfiguracion)) {
                 registrarError(alertaConfiguracion);
                 callback.alErrorAnalisis(alertaConfiguracion);
                 return;
@@ -327,7 +327,7 @@ public class AnalizadorAI implements Runnable {
             ConstructorSolicitudesProveedor.construirSolicitud(config, prompt, clienteHttp);
         Request solicitudHttp = preparada.request;
         registrar("Llamando a API: " + preparada.endpoint + " con modelo: " + preparada.modeloUsado);
-        if (preparada.advertencia != null && !preparada.advertencia.isEmpty()) {
+        if (Normalizador.noEsVacio(preparada.advertencia)) {
             registrar(preparada.advertencia);
         }
         if (registrarDetalleSolicitud) {
@@ -688,33 +688,33 @@ public class AnalizadorAI implements Runnable {
         }
 
         String bloqueHallazgos = extraerBloqueArrayHallazgos(contenido);
-        if (bloqueHallazgos.isEmpty()) {
+        if (Normalizador.esVacio(bloqueHallazgos)) {
             return hallazgos;
         }
 
         for (String objeto : extraerObjetosNoEstrictos(bloqueHallazgos)) {
             String bloqueHallazgo = normalizarObjetoNoEstricto(objeto);
-            if (bloqueHallazgo.isEmpty()) {
+            if (Normalizador.esVacio(bloqueHallazgo)) {
                 continue;
             }
             String titulo = ParserRespuestasAI.extraerCampoNoEstricto("titulo", bloqueHallazgo);
-            if (titulo.isEmpty()) {
+            if (Normalizador.esVacio(titulo)) {
                 titulo = ParserRespuestasAI.extraerCampoNoEstricto("title", bloqueHallazgo);
             }
             String descripcion = ParserRespuestasAI.extraerCampoNoEstricto("descripcion", bloqueHallazgo);
-            if (descripcion.isEmpty()) {
+            if (Normalizador.esVacio(descripcion)) {
                 descripcion = ParserRespuestasAI.extraerCampoNoEstricto("description", bloqueHallazgo);
             }
             String severidad = ParserRespuestasAI.extraerCampoNoEstricto("severidad", bloqueHallazgo);
-            if (severidad.isEmpty()) {
+            if (Normalizador.esVacio(severidad)) {
                 severidad = ParserRespuestasAI.extraerCampoNoEstricto("severity", bloqueHallazgo);
             }
             String confianza = ParserRespuestasAI.extraerCampoNoEstricto("confianza", bloqueHallazgo);
-            if (confianza.isEmpty()) {
+            if (Normalizador.esVacio(confianza)) {
                 confianza = ParserRespuestasAI.extraerCampoNoEstricto("confidence", bloqueHallazgo);
             }
             String evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidencia", bloqueHallazgo);
-            if (evidencia.isEmpty()) {
+            if (Normalizador.esVacio(evidencia)) {
                 evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidence", bloqueHallazgo);
             }
             agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
@@ -775,7 +775,7 @@ public class AnalizadorAI implements Runnable {
             return "";
         }
         String bloque = objeto.trim();
-        if (bloque.isEmpty()) {
+        if (Normalizador.esVacio(bloque)) {
             return "";
         }
         if (!bloque.startsWith("{")) {
@@ -909,8 +909,8 @@ public class AnalizadorAI implements Runnable {
         if (objeto == null) {
             return false;
         }
-        return !extraerCampoFlexible(objeto, CAMPOS_DESCRIPCION).isEmpty()
-            || !extraerCampoFlexible(objeto, CAMPOS_EVIDENCIA).isEmpty();
+        return Normalizador.noEsVacio(extraerCampoFlexible(objeto, CAMPOS_DESCRIPCION))
+            || Normalizador.noEsVacio(extraerCampoFlexible(objeto, CAMPOS_EVIDENCIA));
     }
 
     private String extraerCampoFlexible(JsonObject objeto, String[] campos) {
@@ -922,7 +922,7 @@ public class AnalizadorAI implements Runnable {
                 continue;
             }
             String valor = extraerCampoComoTexto(objeto.get(campo), 0);
-            if (!valor.isEmpty()) {
+            if (Normalizador.noEsVacio(valor)) {
                 return valor;
             }
         }
@@ -952,17 +952,17 @@ public class AnalizadorAI implements Runnable {
             JsonObject objeto = elemento.getAsJsonObject();
             for (String campoTexto : CAMPOS_TEXTO) {
                 String texto = extraerCampoComoTexto(objeto.get(campoTexto), profundidad + 1);
-                if (!texto.isEmpty()) {
+                if (Normalizador.noEsVacio(texto)) {
                     return texto;
                 }
             }
             for (Map.Entry<String, JsonElement> entry : objeto.entrySet()) {
                 String texto = extraerCampoComoTexto(entry.getValue(), profundidad + 1);
-                if (!texto.isEmpty()) {
+                if (Normalizador.noEsVacio(texto)) {
                     return texto;
                 }
             }
-            return ""; 
+            return "";
         }
         return "";
     }
@@ -989,12 +989,12 @@ public class AnalizadorAI implements Runnable {
         String titulo = normalizarTextoSimple(tituloRaw, tituloPorDefecto());
         String descripcion = normalizarTextoSimple(descripcionRaw, "");
         String evidencia = normalizarTextoSimple(evidenciaRaw, "");
-        if (descripcion.isEmpty()) {
+        if (Normalizador.esVacio(descripcion)) {
             descripcion = evidencia;
-        } else if (!evidencia.isEmpty() && !descripcion.contains(evidencia)) {
+        } else if (Normalizador.noEsVacio(evidencia) && !descripcion.contains(evidencia)) {
             descripcion = descripcion + "\n" + etiquetaEvidencia() + ": " + evidencia;
         }
-        if (descripcion.isEmpty()) {
+        if (Normalizador.esVacio(descripcion)) {
             descripcion = descripcionPorDefecto();
         }
         String severidad = Hallazgo.normalizarSeveridad(normalizarTextoSimple(severidadRaw, Hallazgo.SEVERIDAD_INFO));
