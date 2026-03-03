@@ -911,7 +911,7 @@ public class DialogoConfiguracion extends JDialog {
         cPanel.setOpaque(false);
         cPanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
 
-        if (contenido != null && !contenido.isEmpty()) {
+        if (Normalizador.noEsVacio(contenido)) {
             JTextArea txt = new JTextArea(contenido);
             txt.setEditable(false);
             txt.setLineWrap(true);
@@ -975,7 +975,7 @@ public class DialogoConfiguracion extends JDialog {
         chkPersistirSeveridad.setSelected(config.persistirFiltroSeveridadHallazgos());
 
         String tipoAgente = config.obtenerTipoAgente();
-        if (tipoAgente != null && !tipoAgente.isEmpty()) {
+        if (Normalizador.noEsVacio(tipoAgente)) {
             boolean existeOpcion = false;
             for (int i = 0; i < comboAgente.getItemCount(); i++) {
                 if (comboAgente.getItemAt(i).equals(tipoAgente)) {
