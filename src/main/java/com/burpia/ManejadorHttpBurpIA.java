@@ -384,7 +384,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public boolean reencolarTarea(String tareaId) {
-        if (tareaId == null || tareaId.isEmpty()) {
+        if (Normalizador.esVacio(tareaId)) {
             return false;
         }
         depurarContextosHuerfanos();
@@ -409,7 +409,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void cancelarEjecucionActiva(String tareaId) {
-        if (tareaId == null || tareaId.isEmpty()) {
+        if (Normalizador.esVacio(tareaId)) {
             return;
         }
         Future<?> future = ejecucionesActivas.remove(tareaId);
@@ -606,7 +606,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void finalizarEjecucionActiva(String tareaId) {
-        if (tareaId == null || tareaId.isEmpty()) {
+        if (Normalizador.esVacio(tareaId)) {
             return;
         }
         ejecucionesActivas.remove(tareaId);
@@ -736,7 +736,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         try {
             String url = solicitud.url();
-            if (url == null || url.isEmpty()) {
+            if (Normalizador.esVacio(url)) {
                 return false;
             }
 
@@ -753,7 +753,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private boolean esRecursoEstatico(String url) {
-        if (url == null || url.isEmpty()) {
+        if (Normalizador.esVacio(url)) {
             return false;
         }
 
@@ -910,7 +910,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private String abreviarHash(String hashSolicitud) {
-        if (hashSolicitud == null || hashSolicitud.isEmpty()) {
+        if (Normalizador.esVacio(hashSolicitud)) {
             return "";
         }
         return hashSolicitud.substring(0, Math.min(8, hashSolicitud.length()));
