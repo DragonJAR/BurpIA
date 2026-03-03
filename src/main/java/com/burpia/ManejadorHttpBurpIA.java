@@ -983,25 +983,63 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             this.evidenciaId = evidenciaId;
         }
 
+        /**
+         * Verifica si el resultado debe descartarse porque la tarea está cancelada o finalizada.
+         * Obtiene la tarea una sola vez (eficiencia) y centraliza la lógica de validación.
+         *
+         * @return true si el resultado debe descartarse, false si debe procesarse
+         */
+        private boolean debeDescartarResultado(String id) {
+            if (gestorTareas == null || Normalizador.esVacio(id)) {
+                return false;
+            }
+
+            Tarea tarea = gestorTareas.obtenerTarea(id);
+            if (tarea == null) {
+                return false;
+            }
+
+            if (Tarea.ESTADO_CANCELADO.equals(tarea.obtenerEstado())) {
+                registrar("Resultado descartado: tarea cancelada: " + url);
+                return true;
+            }
+
+            if (tarea.esFinalizada()) {
+                registrar("Tarea ya finalizada (" + tarea.obtenerEstado() + "), descartando resultado: " + url);
+                return true;
+            }
+
+            return false;
+        }
+
+        /**
+         * Limpia los recursos asociados a una tarea de forma centralizada.
+         * Elimina duplicación de código en bloques finally.
+         */
+        private void limpiarRecursosTarea(String id) {
+            finalizarEjecucionActiva(id);
+            contextosReintento.remove(id);
+        }
+
+        /**
+         * Actualiza las estadísticas en el EDT de forma centralizada.
+         * Elimina duplicación de código en callbacks.
+         */
+        private void actualizarEstadisticasEnEdt() {
+            ejecutarEnEdt(() -> {
+                if (pestaniaPrincipal != null) {
+                    pestaniaPrincipal.actualizarEstadisticas();
+                }
+            });
+        }
+
         @Override
         public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
             final String id = tareaIdRef.get();
 
             try {
-                // Verificar estado ANTES de procesar resultado
-                boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
-                if (cancelada) {
-                    registrar("Resultado descartado porque la tarea fue cancelada: " + url);
+                if (debeDescartarResultado(id)) {
                     return;
-                }
-
-                // Verificar si la tarea ya fue marcada como finalizada (evitar sobrescritura)
-                if (gestorTareas != null && id != null) {
-                    Tarea tarea = gestorTareas.obtenerTarea(id);
-                    if (tarea != null && tarea.esFinalizada()) {
-                        registrar("Tarea ya finalizada (" + tarea.obtenerEstado() + "), descartando resultado: " + url);
-                        return;
-                    }
                 }
 
                 if (estadisticas != null) estadisticas.incrementarAnalizados();
@@ -1031,13 +1069,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 String sevMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
                 registrar("Analisis completado: " + url + " (severidad maxima: " + sevMax + ")");
 
-                ejecutarEnEdt(() -> {
-                    if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
-                });
+                actualizarEstadisticasEnEdt();
             } finally {
-                // SIEMPRE limpiar recursos, sin importar el resultado
-                finalizarEjecucionActiva(id);
-                contextosReintento.remove(id);
+                limpiarRecursosTarea(id);
             }
         }
 
@@ -1046,26 +1080,18 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             final String id = tareaIdRef.get();
 
             try {
-                // Verificar estado ANTES de procesar error
-                boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
-                if (cancelada) {
-                    registrar("Analisis detenido por cancelación: " + url);
+                if (debeDescartarResultado(id)) {
                     return;
                 }
 
-                // No verificar si está finalizada aquí, porque si hubo error, queremos marcarla
                 if (estadisticas != null) estadisticas.incrementarErrores();
                 if (gestorTareas != null && id != null) {
                     gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error: " + (error != null ? error : "Error desconocido"));
                 }
                 registrarError("Analisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
-                ejecutarEnEdt(() -> {
-                    if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
-                });
+                actualizarEstadisticasEnEdt();
             } finally {
-                // SIEMPRE limpiar recursos, sin importar el resultado
-                finalizarEjecucionActiva(id);
-                contextosReintento.remove(id);
+                limpiarRecursosTarea(id);
             }
         }
 
@@ -1079,9 +1105,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 }
                 registrar("Analisis cancelado: " + url);
             } finally {
-                // SIEMPRE limpiar recursos, sin importar el resultado
-                finalizarEjecucionActiva(id);
-                contextosReintento.remove(id);
+                limpiarRecursosTarea(id);
             }
         }
     }
