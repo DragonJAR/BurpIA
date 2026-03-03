@@ -504,4 +504,121 @@ public class ParserRespuestasAI {
 
         return -1;
     }
+
+    /**
+     * Intenta extraer un array JSON aplicando múltiples estrategias de forma secuencial.
+     * Este método es genérico y reutilizable para cualquier tipo de respuesta JSON.
+     *
+     * Estrategias aplicadas en orden:
+     * 1. Parseo directo como JSON completo
+     * 2. Extracción de JSON de texto libre (busca [{...}] en medio del texto)
+     * 3. Búsqueda de arrays dentro de objetos JSON (hallazgos, findings, issues, etc.)
+     *
+     * @param contenido Contenido que puede contener JSON
+     * @param gson Instancia de Gson para parseo
+     * @return JsonArray si alguna estrategia tiene éxito, null en caso contrario
+     */
+    public static JsonArray extraerArrayConMultiplesEstrategias(String contenido, com.google.gson.Gson gson) {
+        if (Normalizador.esVacio(contenido)) {
+            return null;
+        }
+
+        // Estrategia 1: Parseo directo como JSON completo
+        JsonArray resultado = intentarParseoDirecto(contenido, gson);
+        if (resultado != null) {
+            return resultado;
+        }
+
+        // Estrategia 2: Extraer JSON de texto libre (para modelos con thinking process)
+        resultado = extraerJsonDeTextoLibre(contenido);
+        if (resultado != null) {
+            return resultado;
+        }
+
+        // Estrategia 3: Buscar arrays dentro de objetos con claves comunes
+        resultado = extraerArrayDeObjetoConClavesComunes(contenido, gson);
+        if (resultado != null) {
+            return resultado;
+        }
+
+        return null;
+    }
+
+    /**
+     * Estrategia 1: Intenta parsear el contenido directamente como JSON.
+     * Retorna un array si el contenido es un array JSON o si contiene un array como raíz.
+     */
+    private static JsonArray intentarParseoDirecto(String contenido, com.google.gson.Gson gson) {
+        try {
+            String limpio = limpiarBloquesPensamiento(contenido);
+            JsonElement elemento = gson.fromJson(limpio, JsonElement.class);
+
+            if (elemento == null) {
+                return null;
+            }
+
+            // Si es directamente un array
+            if (elemento.isJsonArray()) {
+                return elemento.getAsJsonArray();
+            }
+
+            // Si es un objeto, buscar el primer array dentro
+            if (elemento.isJsonObject()) {
+                return buscarPrimerArrayEnObjeto(elemento.getAsJsonObject());
+            }
+        } catch (Exception e) {
+            // No es JSON válido, retornar null
+        }
+        return null;
+    }
+
+    /**
+     * Busca recursivamente el primer array dentro de un objeto JSON.
+     */
+    private static JsonArray buscarPrimerArrayEnObjeto(JsonObject objeto) {
+        for (String key : objeto.keySet()) {
+            JsonElement elemento = objeto.get(key);
+            if (elemento != null && elemento.isJsonArray()) {
+                return elemento.getAsJsonArray();
+            }
+            if (elemento != null && elemento.isJsonObject()) {
+                JsonArray resultado = buscarPrimerArrayEnObjeto(elemento.getAsJsonObject());
+                if (resultado != null) {
+                    return resultado;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Estrategia 3: Busca arrays dentro de objetos con claves comunes de hallazgos.
+     */
+    private static JsonArray extraerArrayDeObjetoConClavesComunes(String contenido, com.google.gson.Gson gson) {
+        String[] clavesComunes = {"\"hallazgos\"", "\"findings\"", "\"issues\"", "\"vulnerabilidades\"",
+                                   "\"results\"", "\"data\"", "\"items\"", "\"objects\""};
+
+        for (String clave : clavesComunes) {
+            int indice = contenido.indexOf(clave);
+            if (indice >= 0) {
+                // Buscar el array después de la clave
+                int inicioArray = contenido.indexOf('[', indice);
+                if (inicioArray >= 0) {
+                    int finArray = encontrarCierreJson(contenido, inicioArray);
+                    if (finArray >= 0) {
+                        String arrayStr = contenido.substring(inicioArray, finArray + 1);
+                        try {
+                            JsonElement elemento = gson.fromJson(arrayStr, JsonElement.class);
+                            if (elemento != null && elemento.isJsonArray()) {
+                                return elemento.getAsJsonArray();
+                            }
+                        } catch (Exception e) {
+                            // Continuar con siguiente clave
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
 }
