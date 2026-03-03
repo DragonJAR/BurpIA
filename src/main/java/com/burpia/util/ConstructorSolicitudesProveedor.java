@@ -199,7 +199,7 @@ public final class ConstructorSolicitudesProveedor {
     }
 
     private static String huellaApiKey(String apiKey) {
-        if (apiKey == null || apiKey.isEmpty()) {
+        if (Normalizador.esVacio(apiKey)) {
             return "sin_clave";
         }
         String hash = HttpUtils.generarHash(apiKey.getBytes(StandardCharsets.UTF_8));

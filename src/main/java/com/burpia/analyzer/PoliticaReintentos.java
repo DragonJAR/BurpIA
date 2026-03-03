@@ -1,5 +1,6 @@
 package com.burpia.analyzer;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.Normalizador;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.time.Duration;
@@ -105,7 +106,7 @@ public final class PoliticaReintentos {
         }
 
         String msg = actual.getMessage();
-        if (msg == null || msg.isEmpty()) {
+        if (Normalizador.esVacio(msg)) {
             return actual.getClass().getSimpleName();
         }
 
@@ -136,7 +137,7 @@ public final class PoliticaReintentos {
             return 0L;
         }
         String valor = retryAfterHeader.trim();
-        if (valor.isEmpty()) {
+        if (Normalizador.esVacio(valor)) {
             return 0L;
         }
 

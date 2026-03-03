@@ -360,7 +360,7 @@ public class PestaniaPrincipal extends JPanel {
         panelEstadisticas.aplicarTema();
         panelConsola.aplicarTema();
         panelAgente.aplicarTema();
-        panelTareas.repaint();
+        panelTareas.aplicarTema();
         panelHallazgos.repaint();
         tabbedPane.repaint();
         repaint();

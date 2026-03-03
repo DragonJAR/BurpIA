@@ -583,6 +583,35 @@ public class PanelTareas extends JPanel {
         repaint();
     }
 
+    /**
+     * Aplica el tema (claro/oscuro) al panel de tareas.
+     * Actualiza colores de fondo, bordes y componentes UI.
+     */
+    public void aplicarTema() {
+        Runnable aplicar = () -> {
+            Color fondoPanel = EstilosUI.obtenerFondoPanel();
+
+            setBackground(fondoPanel);
+            panelControles.setBackground(fondoPanel);
+            panelTablaWrapper.setBackground(fondoPanel);
+
+            UIUtils.actualizarTituloPanel(panelControles, I18nUI.Tareas.TITULO_CONTROLES());
+            UIUtils.actualizarTituloPanel(panelTablaWrapper, I18nUI.Tareas.TITULO_LISTA());
+
+            Color colorTexto = EstilosUI.colorTextoPrimario(fondoPanel);
+            etiquetaEstadisticas.setForeground(colorTexto);
+
+            revalidate();
+            repaint();
+        };
+
+        if (SwingUtilities.isEventDispatchThread()) {
+            aplicar.run();
+        } else {
+            ejecutarEnEdt(aplicar);
+        }
+    }
+
     private void configurarColumnasTabla() {
         if (tabla.getColumnModel().getColumnCount() < 4) {
             return;

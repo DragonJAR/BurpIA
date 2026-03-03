@@ -36,7 +36,7 @@ public class ParserRespuestasAI {
     );
 
     public static String extraerCampoNoEstricto(String campo, String contenido) {
-        if (contenido == null || contenido.isEmpty()) {
+        if (Normalizador.esVacio(contenido)) {
             return "";
         }
         java.util.regex.Pattern patron;
@@ -139,7 +139,7 @@ public class ParserRespuestasAI {
                     break;
             }
 
-            if (contenido != null && !contenido.isEmpty()) {
+            if (Normalizador.noEsVacio(contenido)) {
                 contenido = normalizarContenidoExtraido(contenido);
             }
 
@@ -309,7 +309,7 @@ public class ParserRespuestasAI {
     }
 
     private static String limpiarBloquesPensamiento(String texto) {
-        if (texto == null || texto.isEmpty()) {
+        if (Normalizador.esVacio(texto)) {
             return "";
         }
         String limpio = PATRON_BLOQUES_PENSAMIENTO.matcher(texto).replaceAll(" ");
@@ -404,7 +404,7 @@ public class ParserRespuestasAI {
     }
 
     private static void anexarTexto(StringBuilder destino, String texto) {
-        if (destino == null || texto == null || texto.isEmpty()) {
+        if (destino == null || Normalizador.esVacio(texto)) {
             return;
         }
         destino.append(texto);
