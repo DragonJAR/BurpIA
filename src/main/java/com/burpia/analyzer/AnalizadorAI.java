@@ -28,12 +28,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 public class AnalizadorAI implements Runnable {
-    private static final Logger LOGGER = Logger.getLogger(AnalizadorAI.class.getName());
     private static final String ORIGEN_LOG = "AnalizadorAI";
     private final SolicitudAnalisis solicitud;
     private final ConfiguracionAPI config;
@@ -522,12 +519,6 @@ public class AnalizadorAI implements Runnable {
     }
 
     private static void configurarSslInseguro(OkHttpClient.Builder builder) {
-        String advertencia = "ADVERTENCIA DE SEGURIDAD: Verificación SSL deshabilitada. " +
-            "Esto expone a ataques Man-in-the-Middle. Solo usar en desarrollo.";
-        if (LOGGER.isLoggable(Level.WARNING)) {
-            LOGGER.log(Level.WARNING, advertencia);
-        }
-
         try {
             final javax.net.ssl.TrustManager[] trustAllCerts = new javax.net.ssl.TrustManager[]{
                 new javax.net.ssl.X509TrustManager() {
@@ -549,9 +540,7 @@ public class AnalizadorAI implements Runnable {
             builder.sslSocketFactory(sslSocketFactory, (javax.net.ssl.X509TrustManager) trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.SEVERE)) {
-                LOGGER.log(Level.SEVERE, I18nLogs.tr("Error al configurar SSL inseguro"), e);
-            }
+            // SSL inseguro no se pudo configurar, se usará configuración por defecto
         }
     }
 
