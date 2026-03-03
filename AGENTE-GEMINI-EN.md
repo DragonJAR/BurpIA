@@ -112,7 +112,8 @@ In BurpIA:
 2. `Select Agent`: `GEMINI_CLI`.
 3. Enable `Enable Agent`.
 4. Configure `Binary Path`:
-   - macOS/Linux: `~/.local/bin/gemini --yolo`
+   - macOS: `/opt/homebrew/bin/gemini --yolo`
+   - Linux: `~/.local/bin/gemini --yolo`
    - Windows: `%USERPROFILE%\\bin\\gemini.exe --yolo`
 5. Adjust `MCP Wait (ms)` based on your machine.
 6. Save settings.
