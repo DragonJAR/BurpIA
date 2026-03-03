@@ -389,20 +389,29 @@ public class GestorTareas {
     }
 
     private List<String> actualizarEstadosMasivoConIds(java.util.function.Predicate<Tarea> filtro, String nuevoEstado) {
+        List<Tarea> tareasAActualizar = new ArrayList<>();
         List<String> idsActualizadas = new ArrayList<>();
+
+        // FASE 1: Recoger datos con candado (operación rápida)
         candado.lock();
         try {
             for (Tarea tarea : tareas.values()) {
                 if (filtro.test(tarea)) {
                     tarea.establecerEstado(nuevoEstado);
-                    actualizarFilaTabla(tarea);
                     idsActualizadas.add(tarea.obtenerId());
+                    tareasAActualizar.add(tarea);
                 }
             }
-            return idsActualizadas;
         } finally {
             candado.unlock();
         }
+
+        // FASE 2: Actualizar UI sin candado (operación lenta pero no bloquea)
+        for (Tarea tarea : tareasAActualizar) {
+            actualizarFilaTabla(tarea);
+        }
+
+        return idsActualizadas;
     }
 
     private void notificarCancelaciones(List<String> idsCanceladas) {

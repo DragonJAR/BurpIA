@@ -489,12 +489,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             new ManejadorResultadoAI(tareaIdRef, url, evidenciaId),
             () -> {
                 final String id = tareaIdRef.get();
-                if (gestorTareas == null || id == null) {
-                    return;
-                }
-                boolean marcada = gestorTareas.marcarTareaAnalizando(id, "Analizando");
-                if (!marcada) {
-                    rastrear("No se pudo marcar tarea como analizando (estado no valido): " + id);
+                if (gestorTareas != null && id != null) {
+                    boolean marcada = gestorTareas.marcarTareaAnalizando(id, "Analizando");
+                    if (!marcada) {
+                        rastrear("No se pudo marcar tarea como analizando (estado no valido): " + id);
+                    }
                 }
             },
             gestorConsola,
@@ -509,17 +508,21 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             controlBackpressure
         );
 
+        Future<?> future = null;
+        String id = tareaIdRef.get();
+
         try {
-            Future<?> future = executorService.submit(analizador);
-            String id = tareaIdRef.get();
+            future = executorService.submit(analizador);
             if (id != null) {
                 ejecucionesActivas.put(id, future);
             }
             registrar("Hilo de analisis iniciado para: " + url + " (ID: " + id + ")");
             rastrearEstadoCola();
         } catch (RejectedExecutionException ex) {
-            String id = tareaIdRef.get();
-            finalizarEjecucionActiva(id);
+            // La cola está saturada, marcar error y limpiar recursos
+            if (id != null) {
+                finalizarEjecucionActiva(id);
+            }
             contextosReintento.remove(id);
             eliminarEvidenciaSiDisponible(evidenciaId);
             if (gestorTareas != null && id != null) {
@@ -529,7 +532,19 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 estadisticas.incrementarErrores();
             }
             registrarError("Cola de análisis saturada, solicitud descartada: " + url);
+        } catch (Exception ex) {
+            // Cualquier otra excepción durante el submit
+            if (id != null) {
+                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error al iniciar análisis: " + ex.getMessage());
+            }
+            finalizarEjecucionActiva(id);
+            contextosReintento.remove(id);
+            eliminarEvidenciaSiDisponible(evidenciaId);
+            registrarError("Error al iniciar análisis para " + url + ": " + ex.getMessage());
         }
+
+        // Importante: La Future ya fue agregada a ejecucionesActivas (si se creó exitosamente)
+        // No hay limpieza aquí porque la Future se limpia en finalizarEjecucionActiva()
     }
 
     private HttpRequestResponse construirEvidenciaHttp(HttpRequest solicitud, burp.api.montoya.http.message.responses.HttpResponse respuesta) {
@@ -971,73 +986,103 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         @Override
         public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
             final String id = tareaIdRef.get();
-            finalizarEjecucionActiva(id);
-            contextosReintento.remove(id);
-            boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
-            if (cancelada) {
-                registrar("Resultado descartado porque la tarea fue cancelada: " + url);
-                return;
-            }
 
-            if (estadisticas != null) estadisticas.incrementarAnalizados();
+            try {
+                // Verificar estado ANTES de procesar resultado
+                boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
+                if (cancelada) {
+                    registrar("Resultado descartado porque la tarea fue cancelada: " + url);
+                    return;
+                }
 
-            if (gestorTareas != null && id != null) {
-                gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
-                    "Completado: " + (resultado != null ? resultado.obtenerNumeroHallazgos() : 0) + " hallazgos");
-            }
-
-            if (resultado != null && resultado.obtenerHallazgos() != null) {
-                List<Hallazgo> hallazgosValidos = new ArrayList<>();
-                for (Hallazgo hallazgo : resultado.obtenerHallazgos()) {
-                    if (hallazgo == null) continue;
-                    Hallazgo hConEvidencia = adjuntarEvidenciaSiDisponible(hallazgo, evidenciaId);
-                    hallazgosValidos.add(hConEvidencia);
-                    if (estadisticas != null) {
-                        String sev = hConEvidencia.obtenerSeveridad();
-                        if (sev != null) estadisticas.incrementarHallazgoSeveridad(sev);
+                // Verificar si la tarea ya fue marcada como finalizada (evitar sobrescritura)
+                if (gestorTareas != null && id != null) {
+                    Tarea tarea = gestorTareas.obtenerTarea(id);
+                    if (tarea != null && tarea.esFinalizada()) {
+                        registrar("Tarea ya finalizada (" + tarea.obtenerEstado() + "), descartando resultado: " + url);
+                        return;
                     }
-                    guardarHallazgoEnIssuesSiAplica(hConEvidencia, evidenciaId);
                 }
-                if (modeloTablaHallazgos != null && !hallazgosValidos.isEmpty()) {
-                    modeloTablaHallazgos.agregarHallazgos(hallazgosValidos);
+
+                if (estadisticas != null) estadisticas.incrementarAnalizados();
+
+                if (gestorTareas != null && id != null) {
+                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
+                        "Completado: " + (resultado != null ? resultado.obtenerNumeroHallazgos() : 0) + " hallazgos");
                 }
+
+                if (resultado != null && resultado.obtenerHallazgos() != null) {
+                    List<Hallazgo> hallazgosValidos = new ArrayList<>();
+                    for (Hallazgo hallazgo : resultado.obtenerHallazgos()) {
+                        if (hallazgo == null) continue;
+                        Hallazgo hConEvidencia = adjuntarEvidenciaSiDisponible(hallazgo, evidenciaId);
+                        hallazgosValidos.add(hConEvidencia);
+                        if (estadisticas != null) {
+                            String sev = hConEvidencia.obtenerSeveridad();
+                            if (sev != null) estadisticas.incrementarHallazgoSeveridad(sev);
+                        }
+                        guardarHallazgoEnIssuesSiAplica(hConEvidencia, evidenciaId);
+                    }
+                    if (modeloTablaHallazgos != null && !hallazgosValidos.isEmpty()) {
+                        modeloTablaHallazgos.agregarHallazgos(hallazgosValidos);
+                    }
+                }
+
+                String sevMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
+                registrar("Analisis completado: " + url + " (severidad maxima: " + sevMax + ")");
+
+                ejecutarEnEdt(() -> {
+                    if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
+                });
+            } finally {
+                // SIEMPRE limpiar recursos, sin importar el resultado
+                finalizarEjecucionActiva(id);
+                contextosReintento.remove(id);
             }
-
-            String sevMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
-            registrar("Analisis completado: " + url + " (severidad maxima: " + sevMax + ")");
-
-            ejecutarEnEdt(() -> {
-                if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
-            });
         }
 
         @Override
         public void alErrorAnalisis(String error) {
             final String id = tareaIdRef.get();
-            finalizarEjecucionActiva(id);
-            boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
-            if (cancelada) {
-                registrar("Analisis detenido por cancelacion: " + url);
-                return;
+
+            try {
+                // Verificar estado ANTES de procesar error
+                boolean cancelada = gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
+                if (cancelada) {
+                    registrar("Analisis detenido por cancelación: " + url);
+                    return;
+                }
+
+                // No verificar si está finalizada aquí, porque si hubo error, queremos marcarla
+                if (estadisticas != null) estadisticas.incrementarErrores();
+                if (gestorTareas != null && id != null) {
+                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error: " + (error != null ? error : "Error desconocido"));
+                }
+                registrarError("Analisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
+                ejecutarEnEdt(() -> {
+                    if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
+                });
+            } finally {
+                // SIEMPRE limpiar recursos, sin importar el resultado
+                finalizarEjecucionActiva(id);
+                contextosReintento.remove(id);
             }
-            if (estadisticas != null) estadisticas.incrementarErrores();
-            if (gestorTareas != null && id != null) {
-                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error: " + (error != null ? error : "Error desconocido"));
-            }
-            registrarError("Analisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
-            ejecutarEnEdt(() -> {
-                if (pestaniaPrincipal != null) pestaniaPrincipal.actualizarEstadisticas();
-            });
         }
 
         @Override
         public void alCanceladoAnalisis() {
             final String id = tareaIdRef.get();
-            finalizarEjecucionActiva(id);
-            if (gestorTareas != null && id != null) {
-                gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
+
+            try {
+                if (gestorTareas != null && id != null) {
+                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
+                }
+                registrar("Analisis cancelado: " + url);
+            } finally {
+                // SIEMPRE limpiar recursos, sin importar el resultado
+                finalizarEjecucionActiva(id);
+                contextosReintento.remove(id);
             }
-            registrar("Analisis cancelado: " + url);
         }
     }
 }
