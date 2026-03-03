@@ -6,13 +6,10 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonArray;
 import java.util.Locale;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class ParserRespuestasAI {
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
         java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
-    private static final Logger LOGGER = Logger.getLogger(ParserRespuestasAI.class.getName());
 
     private static final java.util.regex.Pattern PATRON_CAMPO_TITULO_NO_ESTRICTO = java.util.regex.Pattern.compile(
         "\"(?:titulo|title|name|nombre)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
@@ -146,9 +143,7 @@ public class ParserRespuestasAI {
             return limpiarBloquesPensamiento(contenido != null ? contenido : "");
 
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.FINE, I18nLogs.tr("No se pudo parsear la respuesta JSON del proveedor"), e);
-            }
+            // Error de parseo no crítico, se intenta con texto plano
             return limpiarBloquesPensamiento(respuestaJson.trim());
         }
     }
@@ -361,9 +356,7 @@ public class ParserRespuestasAI {
             String valor = elemento.getAsString();
             return valor != null ? valor : "";
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINEST)) {
-                LOGGER.log(Level.FINEST, I18nLogs.tr("No se pudo extraer texto desde elemento JSON"), e);
-            }
+            // Error al extraer texto, se retorna vacío
             return "";
         }
     }
