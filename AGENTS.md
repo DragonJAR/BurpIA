@@ -21,6 +21,39 @@
 11. [Build y Deploy](#build-y-deploy)
 12. [Estado Actual y Cambios Recientes](#estado-actual-y-cambios-recientes)
 13. [Conventions y Standards](#conventions-y-standards)
+14. [Documentación Relacionada](#documentación-relacionada)
+
+---
+
+## 📚 Documentación Relacionada
+
+Para información más detallada sobre temas específicos, consultar:
+
+### Documentación de UI
+- **[COMPONENTES_UI.md](docs/COMPONENTES_UI.md)** - Documentación detallada de componentes de interfaz
+  - Descripción completa de cada panel UI
+  - Métodos y propiedades expuestas
+  - Ejemplos de uso
+
+### Documentación de Funciones API
+- **[FUNCIONES.md](docs/FUNCIONES.md)** - API completa de funciones y métodos
+  - Firmas de métodos generadas desde código fuente
+  - Parámetros y retornos
+  - Organización por módulos (Configuración, Modelos, Utilidades, UI, etc.)
+
+### Documentación de Internacionalización
+- **[I18N.md](docs/I18N.md)** - Claves de internacionalización
+  - Traducciones de interfaz de usuario
+  - Traducciones de mensajes de log
+  - Idiomas soportados (español, inglés)
+
+### Documentación de Plugins Burp
+- **[PLUGINS-BURP.md](docs/PLUGINS-BURP.md)** - Integración con Burp Suite
+  - Extensión Burp Suite
+  - Montoya API
+  - Handlers HTTP
+
+---
 
 ---
 
@@ -510,6 +543,10 @@ aplicarFiltrosGuardados()        // Restaurar filtros
 
 ---
 
+**📖 Ver también:** [Documentación completa de UI](docs/COMPONENTES_UI.md) para detalles exhaustivos de todos los componentes visuales.
+
+---
+
 ## Utilidades y Helpers
 
 ### Normalizador
@@ -590,6 +627,10 @@ separador()
 
 ---
 
+**📖 Ver también:** [Documentación completa de funciones API](docs/FUNCIONES.md) para firmas detalladas de todos los métodos y utilidades.
+
+---
+
 ## Sistema de Internacionalización
 
 ### I18nUI
@@ -625,6 +666,10 @@ I18nUI.Estadisticas.RESUMEN_TOTAL(total, visibles)
 - Advertencias
 - Información
 - Rastreo (debug)
+
+---
+
+**📖 Ver también:** [Documentación completa de internacionalización](docs/I18N.md) para todas las claves de traducción disponibles.
 
 ---
 
