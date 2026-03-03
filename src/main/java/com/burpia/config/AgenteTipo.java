@@ -18,6 +18,13 @@ public enum AgenteTipo {
             "%USERPROFILE%\\.local\\bin\\claude.exe --dangerously-skip-permissions",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-CLAUDE-ES.md",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-CLAUDE-EN.md"
+    ),
+    GEMINI_CLI(
+            "Gemini CLI",
+            "~/.local/bin/gemini --yolo",
+            "%USERPROFILE%\\bin\\gemini.exe --yolo",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-ES.md",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-EN.md"
     );
 
     private final String nombreVisible;
