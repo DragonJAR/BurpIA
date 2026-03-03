@@ -984,8 +984,22 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         /**
-         * Verifica si el resultado debe descartarse porque la tarea está cancelada o finalizada.
-         * Obtiene la tarea una sola vez (eficiencia) y centraliza la lógica de validación.
+         * Verifica si la tarea está cancelada (sin verificar finalización).
+         * Usado en alErrorAnalisis donde queremos marcar errores incluso si está finalizada.
+         *
+         * @return true si la tarea está cancelada, false en caso contrario
+         */
+        private boolean estaTareaCancelada(String id) {
+            if (gestorTareas == null || Normalizador.esVacio(id)) {
+                return false;
+            }
+            return gestorTareas.estaTareaCancelada(id);
+        }
+
+        /**
+         * Verifica si el resultado debe descartarse (cancelado O finalizado).
+         * Obtiene la tarea UNA sola vez (eficiencia - solo una adquisición de candado).
+         * Usado en alCompletarAnalisis donde no queremos sobrescribir estados finales.
          *
          * @return true si el resultado debe descartarse, false si debe procesarse
          */
@@ -994,16 +1008,19 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 return false;
             }
 
+            // Obtener tarea UNA vez para evitar múltiples adquisiciones de candado
             Tarea tarea = gestorTareas.obtenerTarea(id);
             if (tarea == null) {
                 return false;
             }
 
+            // Verificar cancelación primero
             if (Tarea.ESTADO_CANCELADO.equals(tarea.obtenerEstado())) {
                 registrar("Resultado descartado: tarea cancelada: " + url);
                 return true;
             }
 
+            // Verificar finalización (solo para alCompletarAnalisis)
             if (tarea.esFinalizada()) {
                 registrar("Tarea ya finalizada (" + tarea.obtenerEstado() + "), descartando resultado: " + url);
                 return true;
@@ -1080,7 +1097,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             final String id = tareaIdRef.get();
 
             try {
-                if (debeDescartarResultado(id)) {
+                // Solo verificar cancelación, NO finalización (queremos marcar errores de tareas finalizadas)
+                if (estaTareaCancelada(id)) {
+                    registrar("Analisis detenido por cancelación: " + url);
                     return;
                 }
 
