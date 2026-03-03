@@ -1152,15 +1152,42 @@ Cuando trabajes en este proyecto, sigue este flujo:
 
 ### 5. 🧪 COMPILAR y Probar
 
-**Después de cambios significativos:**
+**⚠️ OBLIGATORIO: Después de CADA implementación, SIEMPRE ejecuta:**
+
 ```bash
-./gradlew jar --quiet
+./build-jar.sh
 ```
 
+Este script:
+1. Limpia el build anterior
+2. Compila todo el proyecto
+3. Genera el JAR final
+4. Valida que no haya errores de compilación
+5. Muestra el resultado del build
+
+**Si el build es exitoso:**
+- ✅ Verás "BUILD SUCCESSFUL"
+- ✅ El JAR estará en `build/libs/BurpIA-1.0-SNAPSHOT.jar`
+- ✅ Puedes proceder a commit
+
 **Si hay errores de compilación:**
-- Revisa imports faltantes
-- Verifica tipos de datos
-- Confirma que los métodos existen
+- ❌ Verás "BUILD FAILED"
+- ❌ Revisa los errores mostrados
+- ❌ Corrige:
+  - Imports faltantes
+  - Tipos de datos incorrectos
+  - Métodos que no existen
+  - Errores de sintaxis
+- ❌ Vuelve a ejecutar `./build-jar.sh`
+
+**📌 REGLA DE ORO:**
+> **NO hagas commit si `./build-jar.sh` no muestra "BUILD SUCCESSFUL"**
+
+El build debe pasar **siempre** antes de commit. Esto asegura que:
+- El código compila correctamente
+- No hay errores obvios
+- El JAR es funcional
+- Los cambios son listos para producción
 
 ### 6. 📝 COMMIT con Mensaje Claro
 
@@ -1240,20 +1267,22 @@ EOF
 ### Comandos de Build
 
 ```bash
-# Compilar JAR
-./gradlew jar
+# ⭐ COMPILACIÓN PRINCIPAL (USA ESTE SIEMPRE)
+./build-jar.sh              # Limpia + compila + genera JAR + valida
 
-# Compilar sin output
-./gradlew jar --quiet
-
-# Limpiar build
-./gradlew clean
+# Comandos individuales (solo si los necesitas específicamente)
+./gradlew jar               # Solo compilar JAR
+./gradlew jar --quiet       # Compilar sin output
+./gradlew clean             # Limpiar build
+./gradlew clean build       # Limpiar y compilar
 
 # Generar documentación
-./gradlew generarDocsFunciones
-./gradlew generarDocsUI
-./gradlew generarDocsI18n
+./gradlew generarDocsFunciones  # Documentación de funciones
+./gradlew generarDocsUI         # Documentación de UI
+./gradlew generarDocsI18n       # Documentación de i18n
 ```
+
+> **⚠️ IMPORTANTE:** Usa `./build-jar.sh` después de cada implementación. Es la forma más confiable de validar que todo compila correctamente.
 
 ### Rutas Importantes
 
