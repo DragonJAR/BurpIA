@@ -46,4 +46,20 @@ class SubmitSequenceFactoryTest {
         assertNotNull(secuencia.getFallback().getFallback());
         assertEquals("\r\n", secuencia.getFallback().getFallback().payload());
     }
+
+    @Test
+    @DisplayName("AUTO para Gemini CLI usa SMART_FALLBACK (como Droid)")
+    void autoGeminiCliUsaSmartFallback() {
+        SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
+            AgenteTipo.GEMINI_CLI,
+            SubmitSequenceFactory.Plataforma.LINUX
+        );
+        assertEquals("\r", secuencia.payload());
+        assertEquals(1, secuencia.repeticiones());
+
+        assertNotNull(secuencia.getFallback());
+        assertEquals("\n", secuencia.getFallback().payload());
+        assertNotNull(secuencia.getFallback().getFallback());
+        assertEquals("\r\n", secuencia.getFallback().getFallback().payload());
+    }
 }

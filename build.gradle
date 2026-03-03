@@ -110,3 +110,215 @@ tasks.register('fatJar') {
 build {
     dependsOn 'jar'
 }
+
+// ============================================================================
+// Tarea para generar documentacion desde codigo fuente (DRY)
+// ============================================================================
+
+def docsDir = file('docs')
+
+// Funciones auxiliares definidas como closures en ext
+ext.generarSeccion = { StringBuilder sb, FileCollection archivos ->
+    archivos.sort { it.name }.each { archivo ->
+        def nombreClase = archivo.name.replace('.java', '')
+        def metodos = extraerMetodosPublicos(archivo)
+        if (metodos) {
+            sb.append("### ${nombreClase}\n\n")
+            sb.append("| Metodo | Parametros | Retorno | Descripcion |\n")
+            sb.append("|--------|------------|---------|-------------|\n")
+            metodos.each { metodo ->
+                sb.append("| ${metodo.nombre} | ${metodo.parametros} | ${metodo.retorno} | ${metodo.descripcion} |\n")
+            }
+            sb.append("\n")
+        }
+    }
+}
+
+ext.extraerMetodosPublicos = { File archivo ->
+    def contenido = archivo.getText('UTF-8')
+    def metodos = []
+    def patron = ~/(?m)^\s*public\s+(?:static\s+)?(?:final\s+)?(\w+(?:<[^>]+>)?)\s+(\w+)\s*\(([^)]*)\)/
+    contenido.eachMatch(patron) { match ->
+        def retorno = match[1]
+        def nombre = match[2]
+        def params = match[3]?.trim() ?: "-"
+        if (nombre != archivo.name.replace('.java', '') &&
+            !['equals', 'hashCode', 'toString', 'clone', 'getClass'].contains(nombre)) {
+            params = simplificarTipo(params)
+            retorno = simplificarTipo(retorno)
+            metodos << [nombre: nombre, parametros: params.empty ? "-" : params, retorno: retorno, descripcion: "-"]
+        }
+    }
+    return metodos.unique { it.nombre }
+}
+
+ext.simplificarTipo = { String tipo ->
+    tipo = tipo?.trim() ?: ""
+    tipo = tipo.replaceAll(/java\.(?:lang|util)\.(\w+)/, '$1')
+    tipo = tipo.replaceAll(/Map<[^>]+,[^>]+>/, 'Map')
+    tipo = tipo.replaceAll(/List<[^>]+>/, 'List')
+    tipo = tipo.replaceAll(/Consumer<[^>]+>/, 'Consumer')
+    tipo = tipo.replaceAll(/Predicate<[^>]+>/, 'Predicate')
+    return tipo
+}
+
+ext.extraerComponentesUI = { File archivo ->
+    def contenido = archivo.getText('UTF-8')
+    def sb = new StringBuilder()
+    sb.append("| Componente | Tipo | Proposito |\n")
+    sb.append("|------------|------|----------|\n")
+    def patron = ~/(?m)^\s*(?:private|protected)\s+(?:final\s+)?(J\w+|JediTermWidget)\s+(\w+)/
+    contenido.eachMatch(patron) { match ->
+        sb.append("| ${match[2]} | ${match[1]} | - |\n")
+    }
+    sb.append("\n")
+    return sb.toString()
+}
+
+ext.extraerClavesI18n = { File archivo ->
+    def contenido = archivo.getText('UTF-8')
+    def sb = new StringBuilder()
+    sb.append("| Clave | Uso |\n")
+    sb.append("|-------|-----|\n")
+    def patron = ~/(?m)(\w+)\.(\w+)\(\)/
+    def claves = contenido.findAll(patron).collect { "${it[1]}.${it[2]}()" }.toSet().sort()
+    claves.each { clave ->
+        if (!clave.contains('class') && !clave.contains('return')) {
+            sb.append("| ${clave} | - |\n")
+        }
+    }
+    sb.append("\n")
+    return sb.toString()
+}
+
+tasks.register('generarDocsFunciones') {
+    group = 'documentation'
+    description = 'Genera docs/FUNCIONES.md desde el codigo fuente Java'
+    def archivosConfig = fileTree('src/main/java/com/burpia/config').include('**/*.java')
+    def archivosModel = fileTree('src/main/java/com/burpia/model').include('**/*.java')
+    def archivosUtil = fileTree('src/main/java/com/burpia/util').include('**/*.java')
+    def archivosUI = fileTree('src/main/java/com/burpia/ui').include('**/*.java').exclude('**/EstilosUI.java')
+    def archivosI18n = fileTree('src/main/java/com/burpia/i18n').include('**/*.java')
+    def archivosAnalyzer = fileTree('src/main/java/com/burpia/analyzer').include('**/*.java')
+    inputs.files(archivosConfig, archivosModel, archivosUtil, archivosUI, archivosI18n, archivosAnalyzer)
+    outputs.file("$docsDir/FUNCIONES.md")
+    doLast {
+        def fecha = new Date().format('yyyy-MM-dd')
+        def sb = new StringBuilder()
+        sb.append("# Funciones de BurpIA\n\n")
+        sb.append("> **Documentacion generada automaticamente** - Fecha: ${fecha}\n\n")
+        sb.append("## Tabla de Contenidos\n\n")
+        sb.append("- [Configuracion](#configuracion)\n")
+        sb.append("- [Modelos](#modelos)\n")
+        sb.append("- [Utilidades](#utilidades)\n")
+        sb.append("- [UI - Paneles](#ui---paneles)\n")
+        sb.append("- [UI - Componentes](#ui---componentes)\n")
+        sb.append("- [Analizador](#analizador)\n")
+        sb.append("- [I18n](#i18n)\n\n")
+        sb.append("## Codigo Fuente\n\n")
+        sb.append("| Modulo | Ruta |\n")
+        sb.append("|--------|------|\n")
+        sb.append("| Configuracion | src/main/java/com/burpia/config/ |\n")
+        sb.append("| Modelos | src/main/java/com/burpia/model/ |\n")
+        sb.append("| Utilidades | src/main/java/com/burpia/util/ |\n")
+        sb.append("| UI | src/main/java/com/burpia/ui/ |\n")
+        sb.append("| I18n | src/main/java/com/burpia/i18n/ |\n\n")
+        sb.append("---\n\n")
+        sb.append("## Configuracion\n\n")
+        generarSeccion(sb, archivosConfig)
+        sb.append("## Modelos\n\n")
+        generarSeccion(sb, archivosModel)
+        sb.append("## Utilidades\n\n")
+        generarSeccion(sb, archivosUtil)
+        sb.append("## UI - Paneles\n\n")
+        generarSeccion(sb, archivosUI.findAll { it.name.startsWith('Panel') || it.name.startsWith('Pestania') })
+        sb.append("## UI - Componentes\n\n")
+        generarSeccion(sb, archivosUI.findAll { it.name.startsWith('Modelo') || it.name.startsWith('Dialogo') })
+        sb.append("## Analizador\n\n")
+        generarSeccion(sb, archivosAnalyzer)
+        sb.append("## I18n\n\n")
+        generarSeccion(sb, archivosI18n)
+        def archivo = file("$docsDir/FUNCIONES.md")
+        archivo.text = sb.toString()
+        println "Generado: ${archivo}"
+    }
+}
+
+tasks.register('generarDocsUI') {
+    group = 'documentation'
+    description = 'Genera docs/COMPONENTES_UI.md desde el codigo fuente Java'
+    def archivosUI = fileTree('src/main/java/com/burpia/ui').include('**/*.java')
+    inputs.files(archivosUI)
+    outputs.file("$docsDir/COMPONENTES_UI.md")
+    doLast {
+        def fecha = new Date().format('yyyy-MM-dd')
+        def sb = new StringBuilder()
+        sb.append("# Componentes UI de BurpIA\n\n")
+        sb.append("> **Documentacion de componentes de interfaz** - Fecha: ${fecha}\n\n")
+        sb.append("## Codigo Fuente\n\n")
+        sb.append("| Componente | Archivo |\n")
+        sb.append("|------------|---------|\n")
+        sb.append("| DialogoConfiguracion | src/main/java/com/burpia/ui/DialogoConfiguracion.java |\n")
+        sb.append("| PanelEstadisticas | src/main/java/com/burpia/ui/PanelEstadisticas.java |\n")
+        sb.append("| PanelHallazgos | src/main/java/com/burpia/ui/PanelHallazgos.java |\n")
+        sb.append("| PanelTareas | src/main/java/com/burpia/ui/PanelTareas.java |\n")
+        sb.append("| PanelAgente | src/main/java/com/burpia/ui/PanelAgente.java |\n")
+        sb.append("| PanelConsola | src/main/java/com/burpia/ui/PanelConsola.java |\n")
+        sb.append("| PestaniaPrincipal | src/main/java/com/burpia/ui/PestaniaPrincipal.java |\n")
+        sb.append("| FabricaMenuContextual | src/main/java/com/burpia/ui/FabricaMenuContextual.java |\n\n")
+        sb.append("---\n\n")
+        def dialogoConfig = archivosUI.find { it.name == 'DialogoConfiguracion.java' }
+        if (dialogoConfig) {
+            sb.append("## DialogoConfiguracion\n\n")
+            sb.append(extraerComponentesUI(dialogoConfig))
+        }
+        ['PanelEstadisticas', 'PanelHallazgos', 'PanelTareas', 'PanelAgente', 'PanelConsola', 'PestaniaPrincipal'].each { nombre ->
+            def archivo = archivosUI.find { it.name == "${nombre}.java" }
+            if (archivo) {
+                sb.append("## ${nombre}\n\n")
+                sb.append(extraerComponentesUI(archivo))
+            }
+        }
+        def archivo = file("$docsDir/COMPONENTES_UI.md")
+        archivo.text = sb.toString()
+        println "Generado: ${archivo}"
+    }
+}
+
+tasks.register('generarDocsI18n') {
+    group = 'documentation'
+    description = 'Genera docs/I18N.md desde el codigo fuente Java'
+    def archivosI18n = fileTree('src/main/java/com/burpia/i18n').include('**/*.java')
+    inputs.files(archivosI18n)
+    outputs.file("$docsDir/I18N.md")
+    doLast {
+        def fecha = new Date().format('yyyy-MM-dd')
+        def sb = new StringBuilder()
+        sb.append("# Internacionalizacion BurpIA (I18N)\n\n")
+        sb.append("> **Documentacion de claves de internacionalizacion** - Fecha: ${fecha}\n\n")
+        sb.append("## Codigo Fuente\n\n")
+        sb.append("| Archivo | Descripcion |\n")
+        sb.append("|---------|-------------|\n")
+        sb.append("| I18nUI.java | Traducciones de interfaz de usuario |\n")
+        sb.append("| I18nLogs.java | Traducciones de mensajes de log |\n")
+        sb.append("| IdiomaUI.java | Enum de idiomas soportados |\n\n")
+        sb.append("---\n\n")
+        def i18nUI = archivosI18n.find { it.name == 'I18nUI.java' }
+        if (i18nUI) {
+            sb.append("## Claves I18nUI\n\n")
+            sb.append(extraerClavesI18n(i18nUI))
+        }
+        def archivo = file("$docsDir/I18N.md")
+        archivo.text = sb.toString()
+        println "Generado: ${archivo}"
+    }
+}
+
+tasks.register('generarDocs') {
+    group = 'documentation'
+    description = 'Genera todos los archivos de documentacion desde el codigo fuente'
+    dependsOn 'generarDocsFunciones', 'generarDocsUI', 'generarDocsI18n'
+    doLast {
+        println "\nDocumentacion generada exitosamente en ${docsDir}"
+    }
+}

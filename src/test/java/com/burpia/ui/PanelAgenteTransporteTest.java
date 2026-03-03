@@ -352,6 +352,19 @@ class PanelAgenteTransporteTest {
                 invocarResolverUrlGuia(panel)
             );
 
+            config.establecerTipoAgente(AgenteTipo.GEMINI_CLI.name());
+            config.establecerIdiomaUi("es");
+            assertEquals(
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-ES.md",
+                invocarResolverUrlGuia(panel)
+            );
+
+            config.establecerIdiomaUi("en");
+            assertEquals(
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-EN.md",
+                invocarResolverUrlGuia(panel)
+            );
+
             config.establecerTipoAgente("INVALIDO");
             config.establecerIdiomaUi("en");
             assertEquals(

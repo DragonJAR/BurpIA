@@ -554,7 +554,11 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void registrar(String mensaje) {
-        gestorLogging.info(mensaje);
+        if (gestorLogging != null) {
+            gestorLogging.info(mensaje);
+        } else if (stdout != null) {
+            stdout.println(mensaje);
+        }
     }
 
     private void registrarResumenInicio() {
@@ -603,7 +607,11 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void registrarError(String mensaje) {
-        gestorLogging.error(mensaje);
+        if (gestorLogging != null) {
+            gestorLogging.error(mensaje);
+        } else if (stderr != null) {
+            stderr.println(mensaje);
+        }
     }
 
     private void alternarCapturaDesdeUI() {

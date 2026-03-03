@@ -21,3 +21,6 @@ replay_pid*
 .burpia.json
 BurpIA.zip
 /docs
+/.vscode
+/src/test/java/com/burpia/config
+src/test/java/com/burpia/ui/CLAUDE.md
