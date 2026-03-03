@@ -2,6 +2,7 @@ package com.burpia.config;
 
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
+import com.burpia.util.Normalizador;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -310,7 +311,7 @@ public class ConfiguracionAPI {
         if (agente == null)
             return null;
         String ruta = rutasBinarioPorAgente.get(agente);
-        if (ruta == null || ruta.trim().isEmpty()) {
+        if (Normalizador.esVacio(ruta)) {
             AgenteTipo tipoEnum = AgenteTipo.desdeCodigo(agente, null);
             return tipoEnum != null ? tipoEnum.getRutaPorDefecto() : "";
         }
@@ -575,7 +576,7 @@ public class ConfiguracionAPI {
     public static String construirUrlApiProveedor(String proveedor, String urlBase, String modelo) {
         String baseNormalizada = normalizarUrlBase(urlBase);
         String proveedorNormalizado = proveedor != null ? proveedor : "";
-        String modeloNormalizado = (modelo != null && !modelo.trim().isEmpty()) ? modelo.trim() : "gemini-1.5-pro-002";
+        String modeloNormalizado = Normalizador.noEsVacio(modelo) ? modelo.trim() : "gemini-1.5-pro-002";
 
         switch (proveedorNormalizado) {
             case "Claude":
@@ -637,7 +638,7 @@ public class ConfiguracionAPI {
 
     public String obtenerApiKeyParaProveedor(String proveedor) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return "";
         }
         String key = apiKeysPorProveedor.get(proveedor);
@@ -646,7 +647,7 @@ public class ConfiguracionAPI {
 
     public void establecerApiKeyParaProveedor(String proveedor, String apiKey) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return;
         }
         apiKeysPorProveedor.put(proveedor, apiKey);
@@ -654,12 +655,12 @@ public class ConfiguracionAPI {
 
     public String obtenerUrlBaseParaProveedor(String proveedor) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return "";
         }
         if (urlsBasePorProveedor.containsKey(proveedor)) {
             String urlGuardada = urlsBasePorProveedor.get(proveedor);
-            if (urlGuardada != null && !urlGuardada.trim().isEmpty()) {
+            if (Normalizador.noEsVacio(urlGuardada)) {
                 return urlGuardada;
             }
         }
@@ -669,7 +670,7 @@ public class ConfiguracionAPI {
 
     public void establecerUrlBaseParaProveedor(String proveedor, String urlBase) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return;
         }
         urlsBasePorProveedor.put(proveedor, urlBase);
@@ -677,7 +678,7 @@ public class ConfiguracionAPI {
 
     public String obtenerModeloParaProveedor(String proveedor) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return "";
         }
         if (modelosPorProveedor.containsKey(proveedor)) {
@@ -690,7 +691,7 @@ public class ConfiguracionAPI {
 
     public void establecerModeloParaProveedor(String proveedor, String modelo) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return;
         }
         modelosPorProveedor.put(proveedor, modelo != null ? modelo : "");
@@ -698,7 +699,7 @@ public class ConfiguracionAPI {
 
     public String obtenerUrlBaseGuardadaParaProveedor(String proveedor) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return null;
         }
         return urlsBasePorProveedor.get(proveedor);
@@ -706,7 +707,7 @@ public class ConfiguracionAPI {
 
     public Integer obtenerMaxTokensConfiguradoParaProveedor(String proveedor) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return null;
         }
         return maxTokensPorProveedor.get(proveedor);
@@ -714,7 +715,7 @@ public class ConfiguracionAPI {
 
     public int obtenerMaxTokensParaProveedor(String proveedor) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return 4096;
         }
         if (maxTokensPorProveedor.containsKey(proveedor)) {
@@ -728,7 +729,7 @@ public class ConfiguracionAPI {
 
     public void establecerMaxTokensParaProveedor(String proveedor, int maxTokens) {
         asegurarMapas();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             return;
         }
         int valorNormalizado = maxTokens > 0 ? maxTokens : obtenerMaxTokensPorDefectoProveedor(proveedor);
@@ -772,7 +773,7 @@ public class ConfiguracionAPI {
     public Map<String, String> validar() {
         Map<String, String> errores = new HashMap<>();
 
-        if (proveedorAI == null || proveedorAI.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedorAI)) {
             errores.put("proveedorAI", I18nUI.Configuracion.ERROR_PROVEEDOR_REQUERIDO());
         } else if (!ProveedorAI.existeProveedor(proveedorAI)) {
             errores.put(
@@ -783,14 +784,14 @@ public class ConfiguracionAPI {
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedorAI);
         if (config != null && config.requiereClaveApi()) {
             String key = obtenerApiKeyParaProveedor(proveedorAI);
-            if (key == null || key.trim().isEmpty()) {
+            if (Normalizador.esVacio(key)) {
                 errores.put(
                         "claveApi",
                         I18nUI.Configuracion.ALERTA_CLAVE_REQUERIDA(proveedorAI));
             }
         }
 
-        if (obtenerModelo().trim().isEmpty()) {
+        if (Normalizador.esVacio(obtenerModelo())) {
             errores.put("modelo", I18nUI.Configuracion.ERROR_MODELO_REQUERIDO());
         }
 
@@ -823,7 +824,7 @@ public class ConfiguracionAPI {
             errores.put("tema", I18nUI.Configuracion.ERROR_TEMA_INVALIDO());
         }
 
-        if (promptConfigurable == null || promptConfigurable.trim().isEmpty()) {
+        if (Normalizador.esVacio(promptConfigurable)) {
             errores.put(
                     "promptConfigurable",
                     I18nUI.Configuracion.ERROR_PROMPT_REQUERIDO());
@@ -975,7 +976,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerPromptConfigurable(String promptConfigurable) {
-        if (promptConfigurable == null || promptConfigurable.trim().isEmpty()) {
+        if (Normalizador.esVacio(promptConfigurable)) {
             this.promptConfigurable = obtenerPromptPorDefecto();
         } else {
             this.promptConfigurable = promptConfigurable;
@@ -984,7 +985,7 @@ public class ConfiguracionAPI {
 
     public boolean tieneApiKey() {
         String apiKey = obtenerClaveApi();
-        return apiKey != null && !apiKey.trim().isEmpty();
+        return Normalizador.noEsVacio(apiKey);
     }
 
     public String validarParaConsultaModelo() {
@@ -1014,17 +1015,17 @@ public class ConfiguracionAPI {
         asegurarMapas();
 
         String proveedor = obtenerProveedorAI();
-        if (proveedor == null || proveedor.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
+        if (Normalizador.esVacio(proveedor) || !ProveedorAI.existeProveedor(proveedor)) {
             return CodigoValidacionConsulta.PROVEEDOR_INVALIDO;
         }
 
         String urlApi = obtenerUrlApi();
-        if (urlApi == null || urlApi.trim().isEmpty()) {
+        if (Normalizador.esVacio(urlApi)) {
             return CodigoValidacionConsulta.URL_API_VACIA;
         }
 
         String modelo = obtenerModelo();
-        if (modelo == null || modelo.trim().isEmpty()) {
+        if (Normalizador.esVacio(modelo)) {
             return CodigoValidacionConsulta.MODELO_NO_CONFIGURADO;
         }
 
@@ -1097,7 +1098,7 @@ public class ConfiguracionAPI {
             maxTokensPorProveedor = new HashMap<>();
         }
         tiempoEsperaPorModelo = normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo);
-        if (proveedorAI == null || proveedorAI.trim().isEmpty() || !ProveedorAI.existeProveedor(proveedorAI)) {
+        if (Normalizador.esVacio(proveedorAI) || !ProveedorAI.existeProveedor(proveedorAI)) {
             proveedorAI = "Z.ai";
         }
         idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo();
@@ -1176,14 +1177,14 @@ public class ConfiguracionAPI {
     }
 
     private static String normalizarPromptAgente(String prompt) {
-        if (prompt == null || prompt.trim().isEmpty()) {
+        if (Normalizador.esVacio(prompt)) {
             return obtenerAgentePromptPorDefecto();
         }
         return prompt;
     }
 
     private static String normalizarPromptAgentePreflight(String prompt) {
-        if (prompt == null || prompt.trim().isEmpty()) {
+        if (Normalizador.esVacio(prompt)) {
             return obtenerAgentePreflightPromptPorDefecto();
         }
         return prompt;

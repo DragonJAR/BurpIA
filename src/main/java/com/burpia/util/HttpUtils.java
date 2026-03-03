@@ -195,7 +195,7 @@ public final class HttpUtils {
                    .append(respuesta.statusCode());
 
         String reason = respuesta.reasonPhrase();
-        if (reason != null && !reason.trim().isEmpty()) {
+        if (Normalizador.noEsVacio(reason)) {
             encabezados.append(" ").append(reason.trim());
         }
         encabezados.append("\n");

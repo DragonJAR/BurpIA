@@ -3,6 +3,7 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstilosUI;
+import com.burpia.util.Normalizador;
 import java.awt.Color;
 import java.util.Locale;
 import java.time.LocalDateTime;
@@ -138,7 +139,7 @@ public class Hallazgo {
         }
         String id = evidenciaId;
         ResolutorEvidencia resolutor = resolutorEvidencia;
-        if (id == null || id.trim().isEmpty() || resolutor == null) {
+        if (Normalizador.esVacio(id) || resolutor == null) {
             return null;
         }
         try {
@@ -172,7 +173,7 @@ public class Hallazgo {
     }
 
     public Hallazgo conEvidenciaId(String nuevoEvidenciaId) {
-        if (nuevoEvidenciaId == null || nuevoEvidenciaId.trim().isEmpty()) {
+        if (Normalizador.esVacio(nuevoEvidenciaId)) {
             return this;
         }
         if (nuevoEvidenciaId.equals(this.evidenciaId)) {
@@ -282,7 +283,7 @@ public class Hallazgo {
     }
 
     private static String normalizarSeveridadInterno(String severidad, String valorPorDefecto) {
-        if (severidad == null || severidad.trim().isEmpty()) {
+        if (Normalizador.esVacio(severidad)) {
             return valorPorDefecto;
         }
         String valor = severidad.trim().toLowerCase(Locale.ROOT);
@@ -313,7 +314,7 @@ public class Hallazgo {
     }
 
     private static String normalizarConfianzaInterno(String confianza, String valorPorDefecto) {
-        if (confianza == null || confianza.trim().isEmpty()) {
+        if (Normalizador.esVacio(confianza)) {
             return valorPorDefecto;
         }
         String valor = confianza.trim().toLowerCase(Locale.ROOT);

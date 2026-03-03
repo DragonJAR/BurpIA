@@ -13,7 +13,6 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Collections;
@@ -34,7 +33,7 @@ public final class ConstructorSolicitudesProveedor {
                                                         String prompt,
                                                         OkHttpClient clienteHttp) throws IOException {
         String proveedor = config.obtenerProveedorAI();
-        if (proveedor == null || proveedor.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedor)) {
             proveedor = "OpenAI";
         }
 
@@ -153,7 +152,7 @@ public final class ConstructorSolicitudesProveedor {
                                                    String apiKey,
                                                    OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
-        if (base == null || base.trim().isEmpty()) {
+        if (Normalizador.esVacio(base)) {
             throw new IOException("URL base de Gemini vacia o invalida");
         }
         long ahora = System.currentTimeMillis();
@@ -170,7 +169,7 @@ public final class ConstructorSolicitudesProveedor {
             throw new IOException("URL base de Gemini invalida: " + base);
         }
         HttpUrl.Builder urlBuilder = urlModelos.newBuilder();
-        if (apiKey != null && !apiKey.trim().isEmpty()) {
+        if (Normalizador.noEsVacio(apiKey)) {
             urlBuilder.addQueryParameter("key", apiKey);
         }
 
@@ -203,13 +202,8 @@ public final class ConstructorSolicitudesProveedor {
         if (apiKey == null || apiKey.isEmpty()) {
             return "sin_clave";
         }
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(apiKey.getBytes(StandardCharsets.UTF_8));
-            return HttpUtils.convertirDigestHex(hash, 12);
-        } catch (Exception e) {
-            return Integer.toHexString(apiKey.hashCode());
-        }
+        String hash = HttpUtils.generarHash(apiKey.getBytes(StandardCharsets.UTF_8));
+        return hash.length() >= 12 ? hash.substring(0, 12) : hash;
     }
 
     private static void depurarCacheGemini(long ahoraMs) {
@@ -241,7 +235,7 @@ public final class ConstructorSolicitudesProveedor {
 
     public static List<String> listarModelosOllama(String urlBase, OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
-        if (base == null || base.trim().isEmpty()) {
+        if (Normalizador.esVacio(base)) {
             throw new IOException("URL base de Ollama vacia o invalida");
         }
 
@@ -267,7 +261,7 @@ public final class ConstructorSolicitudesProveedor {
 
     public static List<String> listarModelosOpenAI(String urlBase, String apiKey, OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
-        if (base == null || base.trim().isEmpty()) {
+        if (Normalizador.esVacio(base)) {
             throw new IOException("URL base vacia o invalida");
         }
 
@@ -276,7 +270,7 @@ public final class ConstructorSolicitudesProveedor {
             .url(endpoint)
             .addHeader("Accept", "application/json");
 
-        if (apiKey != null && !apiKey.trim().isEmpty()) {
+        if (Normalizador.noEsVacio(apiKey)) {
             builder.addHeader("Authorization", "Bearer " + apiKey.trim());
         }
 

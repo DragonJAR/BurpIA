@@ -15,7 +15,7 @@ public final class ParserModelosOllama {
 
     public static List<String> extraerModelosDesdeTags(String json) {
         List<String> resultado = new ArrayList<>();
-        if (json == null || json.trim().isEmpty()) {
+        if (Normalizador.esVacio(json)) {
             return resultado;
         }
 

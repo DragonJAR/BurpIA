@@ -2,6 +2,7 @@ package com.burpia.config;
 
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.Normalizador;
 import com.burpia.util.RutasBurpIA;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -54,7 +55,7 @@ public class GestorConfiguracion {
 
             String json = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
 
-            if (json == null || json.trim().isEmpty()) {
+            if (Normalizador.esVacio(json)) {
                 logInfo("[Configuracion] Archivo vacio, usando configuracion por defecto");
                 return new ConfiguracionAPI();
             }

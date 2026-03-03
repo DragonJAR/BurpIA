@@ -82,7 +82,7 @@ public class AlmacenEvidenciaHttp {
     }
 
     public HttpRequestResponse obtener(String evidenciaId) {
-        if (evidenciaId == null || evidenciaId.trim().isEmpty()) {
+        if (Normalizador.esVacio(evidenciaId)) {
             return null;
         }
 
@@ -116,7 +116,7 @@ public class AlmacenEvidenciaHttp {
     }
 
     public void eliminar(String evidenciaId) {
-        if (evidenciaId == null || evidenciaId.trim().isEmpty()) {
+        if (Normalizador.esVacio(evidenciaId)) {
             return;
         }
         lock.lock();

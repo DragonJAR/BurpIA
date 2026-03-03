@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import com.burpia.config.AgenteTipo;
+import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
 
 final class SubmitSequenceFactory {
@@ -35,7 +36,7 @@ final class SubmitSequenceFactory {
             this.payload = payload;
             this.repeticiones = Math.max(1, repeticiones);
             this.delayEntreEnviosMs = Math.max(0, delayEntreEnviosMs);
-            this.estrategia = estrategia != null && !estrategia.trim().isEmpty()
+            this.estrategia = Normalizador.noEsVacio(estrategia)
                 ? estrategia
                 : "AUTO";
         }

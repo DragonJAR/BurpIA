@@ -1,5 +1,7 @@
 package com.burpia.i18n;
 
+import com.burpia.util.Normalizador;
+
 public final class I18nUI {
     private static volatile IdiomaUI idiomaActual = IdiomaUI.porDefecto();
     private static final String URL_DRAGONJAR_CONTACTO = "https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica";
@@ -1524,7 +1526,7 @@ public final class I18nUI {
             descripcion.append(introduccion).append("\n\n").append(titulo).append(":\n");
             if (caracteristicas != null) {
                 for (String caracteristica : caracteristicas) {
-                    if (caracteristica == null || caracteristica.trim().isEmpty()) {
+                    if (Normalizador.esVacio(caracteristica)) {
                         continue;
                     }
                     descripcion.append("• ").append(caracteristica).append('\n');

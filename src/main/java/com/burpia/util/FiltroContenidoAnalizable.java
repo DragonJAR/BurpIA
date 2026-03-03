@@ -19,7 +19,7 @@ public final class FiltroContenidoAnalizable {
         if (metodo != null && "HEAD".equalsIgnoreCase(metodo)) {
             return false;
         }
-        if (contentType == null || contentType.trim().isEmpty()) {
+        if (Normalizador.esVacio(contentType)) {
             return true;
         }
 

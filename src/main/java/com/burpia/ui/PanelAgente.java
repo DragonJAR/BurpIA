@@ -164,7 +164,7 @@ public class PanelAgente extends JPanel {
     }
 
     public void escribirComando(String comando) {
-        if (comando == null || comando.trim().isEmpty()) {
+        if (Normalizador.esVacio(comando)) {
             return;
         }
         escribirComandoCrudo(OSUtils.prepararComando(comando));
@@ -284,7 +284,7 @@ public class PanelAgente extends JPanel {
 
 
     public void inyectarComando(String texto, int delayMs) {
-        if (texto == null || texto.trim().isEmpty()) {
+        if (Normalizador.esVacio(texto)) {
             return;
         }
 
@@ -842,7 +842,7 @@ public class PanelAgente extends JPanel {
                 procesarInicializacionDiferida(delayDiferida, sesionObjetivo);
             }
 
-            if (prompt == null || prompt.trim().isEmpty()) {
+            if (Normalizador.esVacio(prompt)) {
                 return;
             }
             if (!promptInicialEnviado.compareAndSet(false, true)) {

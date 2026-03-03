@@ -482,7 +482,7 @@ public class AnalizadorAI implements Runnable {
         if (error instanceof ApiHttpException) {
             ApiHttpException apiError = (ApiHttpException) error;
             String cuerpoError = apiError.obtenerCuerpoError();
-            if (cuerpoError != null && !cuerpoError.trim().isEmpty()) {
+            if (Normalizador.noEsVacio(cuerpoError)) {
                 registrarErrorTecnico("Cuerpo de respuesta de error de API: " + cuerpoError);
             }
         }
@@ -601,7 +601,7 @@ public class AnalizadorAI implements Runnable {
 
             String proveedor = config.obtenerProveedorAI() != null ? config.obtenerProveedorAI() : "";
             String contenido = ParserRespuestasAI.extraerContenido(respuestaProcesada, proveedor);
-            if (contenido == null || contenido.trim().isEmpty()) {
+            if (Normalizador.esVacio(contenido)) {
                 contenido = respuestaProcesada;
             }
 
@@ -643,7 +643,7 @@ public class AnalizadorAI implements Runnable {
 
             if (!respuestaProcesada.equals(respuestaOriginal)) {
                 String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedor);
-                if (contenidoOriginal == null || contenidoOriginal.trim().isEmpty()) {
+                if (Normalizador.esVacio(contenidoOriginal)) {
                     contenidoOriginal = respuestaOriginal;
                 }
 
@@ -683,7 +683,7 @@ public class AnalizadorAI implements Runnable {
 
     private List<Hallazgo> parsearHallazgosJsonNoEstricto(String contenido) {
         List<Hallazgo> hallazgos = new ArrayList<>();
-        if (contenido == null || contenido.trim().isEmpty()) {
+        if (Normalizador.esVacio(contenido)) {
             return hallazgos;
         }
 
@@ -789,7 +789,7 @@ public class AnalizadorAI implements Runnable {
 
     private List<String> extraerObjetosNoEstrictos(String bloqueHallazgos) {
         List<String> objetos = new ArrayList<>();
-        if (bloqueHallazgos == null || bloqueHallazgos.trim().isEmpty()) {
+        if (Normalizador.esVacio(bloqueHallazgos)) {
             return objetos;
         }
         int inicioObjeto = -1;
@@ -829,7 +829,7 @@ public class AnalizadorAI implements Runnable {
         if (objetos.isEmpty()) {
             String[] partes = bloqueHallazgos.split("\\}\\s*,\\s*\\{");
             for (String parte : partes) {
-                if (parte != null && !parte.trim().isEmpty()) {
+                if (Normalizador.noEsVacio(parte)) {
                     objetos.add(parte);
                 }
             }
@@ -894,7 +894,7 @@ public class AnalizadorAI implements Runnable {
             return null;
         }
         for (String campo : campos) {
-            if (campo == null || campo.trim().isEmpty()) {
+            if (Normalizador.esVacio(campo)) {
                 continue;
             }
             JsonElement valor = objeto.get(campo);
@@ -918,7 +918,7 @@ public class AnalizadorAI implements Runnable {
             return "";
         }
         for (String campo : campos) {
-            if (campo == null || campo.trim().isEmpty()) {
+            if (Normalizador.esVacio(campo)) {
                 continue;
             }
             String valor = extraerCampoComoTexto(objeto.get(campo), 0);
@@ -968,7 +968,7 @@ public class AnalizadorAI implements Runnable {
     }
 
     private void anexarTexto(StringBuilder destino, String texto) {
-        if (destino == null || texto == null || texto.trim().isEmpty()) {
+        if (destino == null || texto == null || Normalizador.esVacio(texto)) {
             return;
         }
         if (destino.length() > 0) {
@@ -1023,7 +1023,7 @@ public class AnalizadorAI implements Runnable {
 
     private List<Hallazgo> parsearTextoPlano(String contenido) {
         List<Hallazgo> hallazgos = new ArrayList<>();
-        if (contenido == null || contenido.trim().isEmpty()) {
+        if (Normalizador.esVacio(contenido)) {
             return hallazgos;
         }
 

@@ -7,6 +7,7 @@ import com.burpia.config.ProveedorAI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
+import com.burpia.util.Normalizador;
 import com.burpia.util.ProbadorConexionAI;
 import com.burpia.util.OSUtils;
 import com.burpia.util.VersionBurpIA;
@@ -765,7 +766,7 @@ public class DialogoConfiguracion extends JDialog {
         JPanel seccion = new JPanel(new BorderLayout(0, 6));
         seccion.setBorder(UIUtils.crearBordeTitulado(titulo, 8, 10));
 
-        if (descripcion != null && !descripcion.trim().isEmpty()) {
+        if (Normalizador.noEsVacio(descripcion)) {
             JLabel lblDescripcion = new JLabel(descripcion);
             lblDescripcion.setFont(EstilosUI.FUENTE_ESTANDAR);
             lblDescripcion.setForeground(EstilosUI.colorTextoSecundario(EstilosUI.obtenerFondoPanel()));
@@ -1021,7 +1022,7 @@ public class DialogoConfiguracion extends JDialog {
         }
 
         String proveedorSeleccionado = (String) comboProveedor.getSelectedItem();
-        if (proveedorSeleccionado == null || proveedorSeleccionado.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedorSeleccionado)) {
             UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
                     I18nUI.Configuracion.MSG_SELECCIONA_PROVEEDOR());
             return;
@@ -1167,7 +1168,7 @@ public class DialogoConfiguracion extends JDialog {
 
     private EstadoProveedorUI extraerEstadoActual() {
         String modelo = obtenerModeloSeleccionado();
-        if (modelo == null || modelo.trim().isEmpty()) {
+        if (Normalizador.esVacio(modelo)) {
             UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
                     I18nUI.Configuracion.MSG_SELECCIONA_MODELO());
             return null;
@@ -1214,7 +1215,7 @@ public class DialogoConfiguracion extends JDialog {
             return "";
         }
         String rutaTemporal = rutasBinarioAgenteTemporal.get(agenteSeleccionado);
-        if (rutaTemporal != null && !rutaTemporal.trim().isEmpty()) {
+        if (Normalizador.noEsVacio(rutaTemporal)) {
             return rutaTemporal;
         }
         String rutaGuardada = config.obtenerRutaBinarioAgente(agenteSeleccionado);
@@ -1234,7 +1235,7 @@ public class DialogoConfiguracion extends JDialog {
                         I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE(enumAgente.getNombreVisible()));
 
                 String rutaSeleccionada = resolverRutaBinarioAgente(agenteSeleccionado);
-                if (rutaSeleccionada != null && !rutaSeleccionada.trim().isEmpty()) {
+                if (Normalizador.noEsVacio(rutaSeleccionada)) {
                     txtAgenteBinario.setText(rutaSeleccionada);
                 } else {
                     txtAgenteBinario.setText(enumAgente.getRutaPorDefecto());
@@ -1299,7 +1300,7 @@ public class DialogoConfiguracion extends JDialog {
             txtTimeoutModelo.setText(String.valueOf(borrador.getTimeout()));
         } else {
             String urlGuardada = config.obtenerUrlBaseGuardadaParaProveedor(proveedor);
-            boolean tieneUrlGuardada = urlGuardada != null && !urlGuardada.trim().isEmpty();
+            boolean tieneUrlGuardada = Normalizador.noEsVacio(urlGuardada);
             if (!tieneUrlGuardada && ProveedorAI.PROVEEDOR_CUSTOM.equals(proveedor)) {
                 IdiomaUI idioma = (IdiomaUI) comboIdioma.getSelectedItem();
                 String codigo = idioma != null ? idioma.codigo() : config.obtenerIdiomaUi();
@@ -1317,7 +1318,7 @@ public class DialogoConfiguracion extends JDialog {
                     String.valueOf(maxTokens != null ? maxTokens : configProveedor.obtenerMaxTokensPorDefecto()));
 
             String modelo = config.obtenerModeloParaProveedor(proveedor);
-            if (modelo == null || modelo.trim().isEmpty())
+            if (Normalizador.esVacio(modelo))
                 modelo = configProveedor.obtenerModeloPorDefecto();
             cargarModelosEnCombo(configProveedor.obtenerModelosDisponibles(), modelo);
 
@@ -1428,13 +1429,13 @@ public class DialogoConfiguracion extends JDialog {
             return;
         }
         String proveedorSeleccionado = (String) comboProveedor.getSelectedItem();
-        if (proveedorSeleccionado == null || proveedorSeleccionado.trim().isEmpty()) {
+        if (Normalizador.esVacio(proveedorSeleccionado)) {
             txtTimeoutModelo.setText(String.valueOf(config.obtenerTiempoEsperaAI()));
             return;
         }
 
         String modelo = obtenerModeloSeleccionado();
-        if (modelo == null || modelo.trim().isEmpty()) {
+        if (Normalizador.esVacio(modelo)) {
             ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedorSeleccionado);
             if (configProveedor != null) {
                 modelo = configProveedor.obtenerModeloPorDefecto();
@@ -1518,7 +1519,7 @@ public class DialogoConfiguracion extends JDialog {
             causa = error.getCause();
         }
         String mensaje = causa != null ? causa.getMessage() : null;
-        if (mensaje == null || mensaje.trim().isEmpty()) {
+        if (Normalizador.esVacio(mensaje)) {
             return I18nUI.Configuracion.SIN_DETALLE_ERROR();
         }
         return mensaje.trim();

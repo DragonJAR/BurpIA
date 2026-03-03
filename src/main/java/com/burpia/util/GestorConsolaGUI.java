@@ -427,7 +427,7 @@ public class GestorConsolaGUI {
     }
 
     private String normalizarOrigen(String origen) {
-        if (origen == null || origen.trim().isEmpty()) {
+        if (Normalizador.esVacio(origen)) {
             return "BurpIA";
         }
         return origen.trim();

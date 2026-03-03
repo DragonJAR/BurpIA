@@ -23,6 +23,7 @@ import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.HttpUtils;
+import com.burpia.util.Normalizador;
 import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.DeduplicadorSolicitudes;
@@ -259,7 +260,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosBajaConfianza();
             }
-            String contentTypeLog = (contentTypeRespuesta == null || contentTypeRespuesta.trim().isEmpty())
+            String contentTypeLog = Normalizador.esVacio(contentTypeRespuesta)
                 ? "desconocido"
                 : contentTypeRespuesta.trim();
             rastrear(() -> "Omitiendo contenido no analizable: " + url + " (Content-Type: " + contentTypeLog + ")");
@@ -582,7 +583,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private HttpRequestResponse resolverEvidenciaHttp(String evidenciaId) {
-        if (evidenciaId == null || evidenciaId.trim().isEmpty()) {
+        if (Normalizador.esVacio(evidenciaId)) {
             return null;
         }
         try {
@@ -594,7 +595,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void eliminarEvidenciaSiDisponible(String evidenciaId) {
-        if (evidenciaId == null || evidenciaId.trim().isEmpty()) {
+        if (Normalizador.esVacio(evidenciaId)) {
             return;
         }
         try {
@@ -722,7 +723,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         if (hallazgo.obtenerEvidenciaId() != null || hallazgo.obtenerEvidenciaHttp() != null) {
             return hallazgo;
         }
-        if (evidenciaId == null || evidenciaId.trim().isEmpty()) {
+        if (Normalizador.esVacio(evidenciaId)) {
             return hallazgo;
         }
         return hallazgo.conEvidenciaId(evidenciaId);
@@ -816,8 +817,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         String razon = config != null ? config.validarParaConsultaModelo() : I18nUI.Configuracion.MSG_CONFIGURACION_NULA();
-        String origenSeguro = (origen != null && !origen.trim().isEmpty()) ? origen : "desconocido";
-        String urlSegura = (url != null && !url.trim().isEmpty()) ? url : "[URL NULL]";
+        String origenSeguro = Normalizador.noEsVacio(origen) ? origen : "desconocido";
+        String urlSegura = Normalizador.noEsVacio(url) ? url : "[URL NULL]";
         registrarError(I18nUI.Consola.ANALISIS_BLOQUEADO_CONFIG(razon, origenSeguro, urlSegura));
     }
 

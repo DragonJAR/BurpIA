@@ -98,7 +98,7 @@ public class ParserRespuestasAI {
     }
 
     public static String extraerContenido(String respuestaJson, String proveedor) {
-        if (respuestaJson == null || respuestaJson.trim().isEmpty()) {
+        if (Normalizador.esVacio(respuestaJson)) {
             return "";
         }
 
@@ -296,7 +296,7 @@ public class ParserRespuestasAI {
     }
 
     public static boolean validarRespuestaPrueba(String contenido) {
-        if (contenido == null || contenido.trim().isEmpty()) {
+        if (Normalizador.esVacio(contenido)) {
             return false;
         }
 
@@ -305,7 +305,7 @@ public class ParserRespuestasAI {
     }
 
     public static boolean validarRespuestaConexion(String contenido) {
-        return contenido != null && !contenido.trim().isEmpty();
+        return Normalizador.noEsVacio(contenido);
     }
 
     private static String limpiarBloquesPensamiento(String texto) {

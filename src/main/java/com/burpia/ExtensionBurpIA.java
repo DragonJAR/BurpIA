@@ -21,6 +21,7 @@ import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
+import com.burpia.util.Normalizador;
 import com.burpia.util.VersionBurpIA;
 import javax.swing.*;
 import java.io.OutputStream;
@@ -338,7 +339,7 @@ public class ExtensionBurpIA implements BurpExtension {
         resultado = resultado.replace(TOKEN_REQUEST, request != null ? request : "");
         resultado = resultado.replace(TOKEN_RESPONSE, response != null ? response : "");
         resultado = resultado.replace("{OUTPUT_LANGUAGE}",
-                (idioma != null && !idioma.trim().isEmpty()) ? idioma : "es");
+                Normalizador.noEsVacio(idioma) ? idioma : "es");
 
         if (titulo != null)
             resultado = resultado.replace(TOKEN_TITLE, titulo);
@@ -443,7 +444,7 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private boolean tieneContenido(String texto) {
-        return texto != null && !texto.trim().isEmpty();
+        return Normalizador.noEsVacio(texto);
     }
 
     private String valorSeguro(String texto) {
@@ -865,7 +866,7 @@ public class ExtensionBurpIA implements BurpExtension {
         try {
             if (api != null && api.burpSuite() != null && api.burpSuite().version() != null) {
                 String version = api.burpSuite().version().toString();
-                if (version != null && !version.trim().isEmpty()) {
+                if (Normalizador.noEsVacio(version)) {
                     return version;
                 }
             }

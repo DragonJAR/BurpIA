@@ -209,8 +209,8 @@ public class UIUtils {
             JPanel panel = new JPanel(new BorderLayout(0, 6));
             panel.setOpaque(false);
             panel.add(crearAreaMensajeDialogo(mensajePrincipal), BorderLayout.NORTH);
-            if (urlEnlace != null && !urlEnlace.trim().isEmpty()
-                && textoEnlace != null && !textoEnlace.trim().isEmpty()) {
+            if (Normalizador.noEsVacio(urlEnlace)
+                && Normalizador.noEsVacio(textoEnlace)) {
                 String textoVisible = extraerTextoVisibleEnlace(textoEnlace);
                 JButton enlace = new JButton(textoVisible);
                 enlace.setFont(resolverFuenteUI("Label.font", EstilosUI.FUENTE_ESTANDAR));

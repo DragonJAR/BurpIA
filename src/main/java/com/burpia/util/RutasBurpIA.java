@@ -25,7 +25,7 @@ public final class RutasBurpIA {
 
     private static String obtenerHomeSeguro() {
         String userHome = System.getProperty("user.home");
-        if (userHome == null || userHome.trim().isEmpty()) {
+        if (Normalizador.esVacio(userHome)) {
             userHome = System.getProperty("user.dir", ".");
         }
         return userHome;

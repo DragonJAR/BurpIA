@@ -100,12 +100,12 @@ public final class OSUtils {
     }
 
     public static boolean existeBinario(String ruta) {
-        if (ruta == null || ruta.trim().isEmpty()) {
+        if (Normalizador.esVacio(ruta)) {
             return false;
         }
 
         String rutaExpandida = resolverEjecutableComando(ruta);
-        if (rutaExpandida == null || rutaExpandida.trim().isEmpty()) {
+        if (Normalizador.esVacio(rutaExpandida)) {
             return false;
         }
 
@@ -174,14 +174,14 @@ public final class OSUtils {
 
     private static boolean existeEnPath(String ejecutable) {
         String path = System.getenv("PATH");
-        if (path == null || path.trim().isEmpty()) {
+        if (Normalizador.esVacio(path)) {
             return false;
         }
 
         String[] directorios = path.split(java.io.File.pathSeparator);
         List<String> candidatos = construirNombresCandidatos(ejecutable);
         for (String dir : directorios) {
-            if (dir == null || dir.trim().isEmpty()) {
+            if (Normalizador.esVacio(dir)) {
                 continue;
             }
             File base = new File(dir);

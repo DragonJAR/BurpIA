@@ -20,7 +20,7 @@ public final class ReparadorJson {
     }
 
     public static String repararJson(String jsonPotencial) {
-        if (jsonPotencial == null || jsonPotencial.trim().isEmpty()) {
+        if (Normalizador.esVacio(jsonPotencial)) {
             return null;
         }
 
@@ -52,7 +52,7 @@ public final class ReparadorJson {
     }
 
     public static boolean esJsonValido(String json) {
-        if (json == null || json.trim().isEmpty()) {
+        if (Normalizador.esVacio(json)) {
             return false;
         }
 

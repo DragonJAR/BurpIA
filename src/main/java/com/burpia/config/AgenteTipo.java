@@ -1,5 +1,6 @@
 package com.burpia.config;
 
+import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
 import java.util.Arrays;
 
@@ -78,7 +79,7 @@ public enum AgenteTipo {
     }
 
     public static AgenteTipo desdeCodigo(String codigo, AgenteTipo porDefecto) {
-        if (codigo == null || codigo.trim().isEmpty()) {
+        if (Normalizador.esVacio(codigo)) {
             return porDefecto;
         }
         try {
