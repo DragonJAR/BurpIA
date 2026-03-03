@@ -139,7 +139,7 @@ public class PanelEstadisticas extends JPanel {
         etiquetaResumenPrincipal.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_TOTAL());
         panelLineaHallazgos.add(etiquetaResumenPrincipal);
 
-        etiquetaSeparadorHallazgos = new JLabel(" | ");
+        etiquetaSeparadorHallazgos = new JLabel(I18nUI.General.SEPARADOR_ESTADISTICAS());
         etiquetaSeparadorHallazgos.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
         panelLineaHallazgos.add(etiquetaSeparadorHallazgos);
 
@@ -147,7 +147,7 @@ public class PanelEstadisticas extends JPanel {
         etiquetaResumenSeveridad.setToolTipText(I18nUI.Tooltips.Estadisticas.RESUMEN_SEVERIDAD());
         panelLineaHallazgos.add(etiquetaResumenSeveridad);
 
-        etiquetaSeparadorLimite = new JLabel(" | ");
+        etiquetaSeparadorLimite = new JLabel(I18nUI.General.SEPARADOR_ESTADISTICAS());
         etiquetaSeparadorLimite.setFont(EstilosUI.FUENTE_MONO_NEGRITA);
         panelLineaHallazgos.add(etiquetaSeparadorLimite);
 

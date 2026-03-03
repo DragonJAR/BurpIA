@@ -1118,7 +1118,7 @@ public class PanelHallazgos extends JPanel {
     private ExecutorService crearEjecutorAcciones() {
         return Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable);
-            thread.setName("BurpIA-Hallazgos");
+            thread.setName(I18nUI.General.HILO_HALLAZGOS());
             thread.setDaemon(true);
             return thread;
         });
