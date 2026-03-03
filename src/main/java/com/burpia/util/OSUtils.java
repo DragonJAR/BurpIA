@@ -7,14 +7,11 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public final class OSUtils {
 
-    private static final Logger LOGGER = Logger.getLogger(OSUtils.class.getName());
     private static final String OS = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
 
     private OSUtils() {
@@ -67,9 +64,7 @@ public final class OSUtils {
                 }
             }
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.FINE, I18nLogs.tr("Error cerrando ventanas de ajustes"), e);
-            }
+            // Error al cerrar ventanas, no es crítico
         }
     }
 
