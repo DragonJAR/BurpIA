@@ -9,11 +9,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public final class HttpUtils {
-    private static final Logger LOGGER = Logger.getLogger(HttpUtils.class.getName());
 
     private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
 
@@ -153,9 +150,7 @@ public final class HttpUtils {
         try {
             return solicitud.body() != null ? solicitud.body().length() : -1L;
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.FINE, "No se pudo obtener longitud de body request para hash rápido", e);
-            }
+            // Error al obtener longitud, se retorna -1
             return -1L;
         }
     }
@@ -164,9 +159,7 @@ public final class HttpUtils {
         try {
             return respuesta.body() != null ? respuesta.body().length() : -1L;
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.FINE, "No se pudo obtener longitud de body response para hash rápido", e);
-            }
+            // Error al obtener longitud, se retorna -1
             return -1L;
         }
     }
