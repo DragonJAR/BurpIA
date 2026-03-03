@@ -24,3 +24,4 @@ BurpIA.zip
 /.vscode
 /src/test/java/com/burpia/config
 src/test/java/com/burpia/ui/CLAUDE.md
+AGENTS.md
