@@ -67,6 +67,14 @@ public class ConfiguracionAPI {
     private Map<String, Integer> tiempoEsperaPorModelo;
     private boolean promptModificado;
 
+    // UI State Persistence - PanelHallazgos filters
+    private String textoFiltroHallazgos;
+    private String filtroSeveridadHallazgos;
+
+    // UI State Persistence flags
+    private boolean persistirFiltroBusquedaHallazgos;
+    private boolean persistirFiltroSeveridadHallazgos;
+
     public ConfiguracionAPI() {
         this.proveedorAI = "Z.ai";
         this.retrasoSegundos = normalizarRetrasoSegundos(5);
@@ -104,6 +112,14 @@ public class ConfiguracionAPI {
         this.tamanioFuenteEstandar = TAMANIO_FUENTE_ESTANDAR_DEFECTO;
         this.nombreFuenteMono = FUENTE_MONO_DEFECTO;
         this.tamanioFuenteMono = TAMANIO_FUENTE_MONO_DEFECTO;
+
+        // Valores por defecto para estado UI
+        this.textoFiltroHallazgos = "";
+        this.filtroSeveridadHallazgos = "";
+
+        // Valores por defecto para flags de persistencia UI
+        this.persistirFiltroBusquedaHallazgos = true;
+        this.persistirFiltroSeveridadHallazgos = true;
     }
 
     public String obtenerUrlApi() {
@@ -384,6 +400,42 @@ public class ConfiguracionAPI {
         this.tamanioFuenteEstandar = TAMANIO_FUENTE_ESTANDAR_DEFECTO;
         this.nombreFuenteMono = FUENTE_MONO_DEFECTO;
         this.tamanioFuenteMono = TAMANIO_FUENTE_MONO_DEFECTO;
+    }
+
+    // UI State Persistence - Getters and Setters for PanelHallazgos
+
+    public String obtenerTextoFiltroHallazgos() {
+        return textoFiltroHallazgos != null ? textoFiltroHallazgos : "";
+    }
+
+    public void establecerTextoFiltroHallazgos(String texto) {
+        this.textoFiltroHallazgos = texto != null ? texto : "";
+    }
+
+    public String obtenerFiltroSeveridadHallazgos() {
+        return filtroSeveridadHallazgos != null ? filtroSeveridadHallazgos : "";
+    }
+
+    public void establecerFiltroSeveridadHallazgos(String severidad) {
+        this.filtroSeveridadHallazgos = severidad != null ? severidad : "";
+    }
+
+    // UI State Persistence Flags - Getters and Setters
+
+    public boolean persistirFiltroBusquedaHallazgos() {
+        return persistirFiltroBusquedaHallazgos;
+    }
+
+    public void establecerPersistirFiltroBusquedaHallazgos(boolean persistir) {
+        this.persistirFiltroBusquedaHallazgos = persistir;
+    }
+
+    public boolean persistirFiltroSeveridadHallazgos() {
+        return persistirFiltroSeveridadHallazgos;
+    }
+
+    public void establecerPersistirFiltroSeveridadHallazgos(boolean persistir) {
+        this.persistirFiltroSeveridadHallazgos = persistir;
     }
 
     public static String obtenerAgentePromptPorDefecto() {
@@ -1177,6 +1229,11 @@ public class ConfiguracionAPI {
         snapshot.nombreFuenteMono = this.nombreFuenteMono;
         snapshot.tamanioFuenteMono = this.tamanioFuenteMono;
 
+        snapshot.textoFiltroHallazgos = this.textoFiltroHallazgos;
+        snapshot.filtroSeveridadHallazgos = this.filtroSeveridadHallazgos;
+        snapshot.persistirFiltroBusquedaHallazgos = this.persistirFiltroBusquedaHallazgos;
+        snapshot.persistirFiltroSeveridadHallazgos = this.persistirFiltroSeveridadHallazgos;
+
         snapshot.apiKeysPorProveedor = new HashMap<>(this.apiKeysPorProveedor);
         snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
         snapshot.modelosPorProveedor = new HashMap<>(this.modelosPorProveedor);
@@ -1228,6 +1285,12 @@ public class ConfiguracionAPI {
         this.tamanioFuenteEstandar = origen.tamanioFuenteEstandar;
         this.nombreFuenteMono = origen.nombreFuenteMono;
         this.tamanioFuenteMono = origen.tamanioFuenteMono;
+
+        this.textoFiltroHallazgos = origen.textoFiltroHallazgos;
+        this.filtroSeveridadHallazgos = origen.filtroSeveridadHallazgos;
+        this.persistirFiltroBusquedaHallazgos = origen.persistirFiltroBusquedaHallazgos;
+        this.persistirFiltroSeveridadHallazgos = origen.persistirFiltroSeveridadHallazgos;
+
         asegurarMapas();
     }
 

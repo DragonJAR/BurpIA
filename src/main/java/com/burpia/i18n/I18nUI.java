@@ -1189,6 +1189,18 @@ public final class I18nUI {
             return tr("Alertas:", "Alerts:");
         }
 
+        public static String TITULO_PERSISTENCIA_UI() {
+            return tr("💾 PERSISTENCIA DE ESTADO UI", "💾 UI STATE PERSISTENCE");
+        }
+
+        public static String CHECK_PERSISTIR_FILTRO_BUSQUEDA() {
+            return tr("Persistir filtro de búsqueda", "Persist search filter");
+        }
+
+        public static String CHECK_PERSISTIR_FILTRO_SEVERIDAD() {
+            return tr("Persistir filtro de severidad", "Persist severity filter");
+        }
+
         public static String MSG_CORRIGE_CAMPOS() {
             return tr("Corrige los siguientes campos:\n", "Please fix the following fields:\n");
         }
@@ -2306,6 +2318,16 @@ public final class I18nUI {
             public static String HABILITAR_ALERTAS() {
                 return I18nUI.tr("Activa o desactiva las ventanas emergentes de confirmación y advertencia.",
                         "Enable or disable confirmation and warning pop-ups.");
+            }
+
+            public static String PERSISTIR_FILTRO_BUSQUEDA() {
+                return I18nUI.tr("Si está marcado, el texto de búsqueda en Hallazgos se restaura al reiniciar Burp Suite.",
+                        "When checked, the search text in Findings is restored when Burp Suite restarts.");
+            }
+
+            public static String PERSISTIR_FILTRO_SEVERIDAD() {
+                return I18nUI.tr("Si está marcado, el filtro de severidad en Hallazgos se restaura al reiniciar Burp Suite.",
+                        "When checked, the severity filter in Findings is restored when Burp Suite restarts.");
             }
 
             public static String RESTAURAR_PROMPT_AGENTE() {

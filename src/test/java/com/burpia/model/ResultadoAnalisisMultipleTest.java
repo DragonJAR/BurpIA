@@ -15,7 +15,6 @@ class ResultadoAnalisisMultipleTest {
     void testToleraListaNula() {
         ResultadoAnalisisMultiple resultado = new ResultadoAnalisisMultiple(
             "https://example.com",
-            "2026-02-22 10:00:00",
             null,
             null
         );
@@ -30,7 +29,6 @@ class ResultadoAnalisisMultipleTest {
     void testSeveridadMaximaIgnoraNulos() {
         ResultadoAnalisisMultiple resultado = new ResultadoAnalisisMultiple(
             "https://example.com",
-            "2026-02-22 10:00:00",
             java.util.Arrays.asList(
                 null,
                 new Hallazgo("https://example.com", "T", "detalle", Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.CONFIANZA_MEDIA)

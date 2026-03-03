@@ -201,7 +201,9 @@ public class PanelConsola extends JPanel {
     }
 
     private void aplicarAutoScrollEnEdt(boolean activo, boolean notificarCambio) {
-        if (checkboxAutoScroll.isSelected() != activo) {
+        boolean estadoActual = checkboxAutoScroll.isSelected();
+
+        if (estadoActual != activo) {
             actualizandoAutoScroll = true;
             try {
                 checkboxAutoScroll.setSelected(activo);
@@ -209,8 +211,10 @@ public class PanelConsola extends JPanel {
                 actualizandoAutoScroll = false;
             }
         }
+
         gestorConsola.establecerAutoScroll(activo);
-        if (notificarCambio && manejadorCambioAutoScroll != null) {
+
+        if (notificarCambio && manejadorCambioAutoScroll != null && estadoActual != activo) {
             manejadorCambioAutoScroll.accept(activo);
         }
     }

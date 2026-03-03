@@ -38,6 +38,8 @@ public class DialogoConfiguracion extends JDialog {
     private JCheckBox chkIgnorarSSL;
     private JCheckBox chkSoloProxy;
     private JCheckBox chkAlertasHabilitadas;
+    private JCheckBox chkPersistirBusqueda;
+    private JCheckBox chkPersistirSeveridad;
     private JTextArea txtPrompt;
     private JButton btnRestaurarPrompt;
     private JLabel lblContadorPrompt;
@@ -169,6 +171,11 @@ public class DialogoConfiguracion extends JDialog {
         chkAlertasHabilitadas = new JCheckBox(I18nUI.Configuracion.LABEL_HABILITAR_ALERTAS());
         chkAlertasHabilitadas.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_ALERTAS());
 
+        chkPersistirBusqueda = new JCheckBox(I18nUI.Configuracion.CHECK_PERSISTIR_FILTRO_BUSQUEDA());
+        chkPersistirBusqueda.setToolTipText(I18nUI.Tooltips.Configuracion.PERSISTIR_FILTRO_BUSQUEDA());
+        chkPersistirSeveridad = new JCheckBox(I18nUI.Configuracion.CHECK_PERSISTIR_FILTRO_SEVERIDAD());
+        chkPersistirSeveridad.setToolTipText(I18nUI.Tooltips.Configuracion.PERSISTIR_FILTRO_SEVERIDAD());
+
         comboIdioma = new JComboBox<>(IdiomaUI.values());
         comboIdioma.setFont(EstilosUI.FUENTE_ESTANDAR);
         comboIdioma.setToolTipText(I18nUI.Tooltips.Configuracion.IDIOMA());
@@ -279,6 +286,12 @@ public class DialogoConfiguracion extends JDialog {
         panelFuentes.setAlignmentX(Component.LEFT_ALIGNMENT);
         panelFuentes.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelFuentes.getPreferredSize().height));
         contenido.add(panelFuentes);
+        contenido.add(Box.createVerticalStrut(15));
+
+        JPanel panelPersistenciaUI = crearPanelPersistenciaUI();
+        panelPersistenciaUI.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelPersistenciaUI.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelPersistenciaUI.getPreferredSize().height));
+        contenido.add(panelPersistenciaUI);
 
         root.add(new JScrollPane(contenido), BorderLayout.CENTER);
         return root;
@@ -335,6 +348,27 @@ public class DialogoConfiguracion extends JDialog {
         panelBoton.setOpaque(false);
         panelBoton.add(btnRestaurarFuentes);
         panel.add(panelBoton, gbc);
+
+        return panel;
+    }
+
+    private JPanel crearPanelPersistenciaUI() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(UIUtils.crearBordeTitulado(
+                I18nUI.Configuracion.TITULO_PERSISTENCIA_UI(), 12, 16));
+
+        JPanel panelChecks = new JPanel(new GridLayout(0, 2, 12, 8));
+        panelChecks.setOpaque(false);
+
+        chkPersistirBusqueda.setFont(EstilosUI.FUENTE_ESTANDAR);
+        chkPersistirSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
+
+        panelChecks.add(chkPersistirBusqueda);
+        panelChecks.add(chkPersistirSeveridad);
+
+        panelChecks.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(panelChecks);
 
         return panel;
     }
@@ -766,15 +800,17 @@ public class DialogoConfiguracion extends JDialog {
         gbcHero.anchor = GridBagConstraints.WEST;
         gbcHero.insets = new Insets(0, 0, 0, 25);
 
-        JLabel lblIcono;
+        JLabel lblIcono = new JLabel(I18nUI.Configuracion.ICONO_APP());
+        lblIcono.setFont(EstilosUI.FUENTE_TITULO_BANNER);
         try {
-            ImageIcon icon = new ImageIcon("/Users/jaimearestrepo/Proyectos/BurpIA/src/assets/logo.png");
-            Image img = icon.getImage();
-            Image newimg = img.getScaledInstance(80, 80, java.awt.Image.SCALE_SMOOTH);
-            lblIcono = new JLabel(new ImageIcon(newimg));
-        } catch (Exception e) {
-            lblIcono = new JLabel(I18nUI.Configuracion.ICONO_APP());
-            lblIcono.setFont(EstilosUI.FUENTE_TITULO_BANNER);
+            var resourceUrl = getClass().getResource("/logo.png");
+            if (resourceUrl != null) {
+                ImageIcon icon = new ImageIcon(resourceUrl);
+                Image img = icon.getImage();
+                Image newimg = img.getScaledInstance(80, 80, java.awt.Image.SCALE_SMOOTH);
+                lblIcono = new JLabel(new ImageIcon(newimg));
+            }
+        } catch (Exception ignored) {
         }
         heroPanel.add(lblIcono, gbcHero);
 
@@ -813,7 +849,7 @@ public class DialogoConfiguracion extends JDialog {
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        content.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
         content.setOpaque(false);
 
         // Summary
@@ -821,7 +857,7 @@ public class DialogoConfiguracion extends JDialog {
                 I18nUI.Configuracion.TITULO_RESUMEN(VersionBurpIA.obtenerVersionActual()),
                 I18nUI.Configuracion.DESCRIPCION_APP(),
                 null));
-        content.add(Box.createVerticalStrut(15));
+        content.add(Box.createVerticalStrut(20));
 
         // Developer
         JPanel panelBotonWeb = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 5));
@@ -839,7 +875,7 @@ public class DialogoConfiguracion extends JDialog {
                 I18nUI.Configuracion.TITULO_DESARROLLADO_POR(),
                 "",
                 panelBotonWeb));
-        content.add(Box.createVerticalStrut(15));
+        content.add(Box.createVerticalStrut(20));
 
         // Updates
         JPanel panelBotonUpdate = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 5));
@@ -853,7 +889,6 @@ public class DialogoConfiguracion extends JDialog {
                 I18nUI.Configuracion.TITULO_ACTUALIZACIONES(),
                 I18nUI.Configuracion.DESCRIPCION_ACTUALIZACIONES(),
                 panelBotonUpdate));
-        content.add(Box.createVerticalStrut(10));
 
         main.add(content, BorderLayout.CENTER);
 
@@ -861,27 +896,30 @@ public class DialogoConfiguracion extends JDialog {
     }
 
     private JPanel crearSeccionAcerca(String titulo, String contenido, JComponent extra) {
-        JPanel p = new JPanel(new BorderLayout(0, 5));
+        JPanel p = new JPanel(new BorderLayout(0, 8));
         p.setOpaque(false);
         p.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
 
         JLabel lblTitulo = new JLabel(titulo);
         lblTitulo.setFont(EstilosUI.FUENTE_NEGRITA);
         lblTitulo.setForeground(EstilosUI.COLOR_INFO);
         p.add(lblTitulo, BorderLayout.NORTH);
 
-        JPanel cPanel = new JPanel(new BorderLayout());
+        JPanel cPanel = new JPanel(new BorderLayout(0, 8));
         cPanel.setOpaque(false);
         cPanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0));
 
-        JTextArea txt = new JTextArea(contenido);
-        txt.setEditable(false);
-        txt.setLineWrap(true);
-        txt.setWrapStyleWord(true);
-        txt.setOpaque(false);
-        txt.setFont(EstilosUI.FUENTE_ESTANDAR);
-        txt.setForeground(EstilosUI.colorTextoPrimario(EstilosUI.obtenerFondoPanel()));
-        cPanel.add(txt, BorderLayout.CENTER);
+        if (contenido != null && !contenido.isEmpty()) {
+            JTextArea txt = new JTextArea(contenido);
+            txt.setEditable(false);
+            txt.setLineWrap(true);
+            txt.setWrapStyleWord(true);
+            txt.setOpaque(false);
+            txt.setFont(EstilosUI.FUENTE_ESTANDAR);
+            txt.setForeground(EstilosUI.colorTextoPrimario(EstilosUI.obtenerFondoPanel()));
+            cPanel.add(txt, BorderLayout.CENTER);
+        }
 
         if (extra != null) {
             cPanel.add(extra, BorderLayout.SOUTH);
@@ -932,6 +970,8 @@ public class DialogoConfiguracion extends JDialog {
         chkIgnorarSSL.setSelected(config.ignorarErroresSSL());
         chkSoloProxy.setSelected(config.soloProxy());
         chkAlertasHabilitadas.setSelected(config.alertasHabilitadas());
+        chkPersistirBusqueda.setSelected(config.persistirFiltroBusquedaHallazgos());
+        chkPersistirSeveridad.setSelected(config.persistirFiltroSeveridadHallazgos());
 
         String tipoAgente = config.obtenerTipoAgente();
         if (tipoAgente != null && !tipoAgente.isEmpty()) {
@@ -998,6 +1038,8 @@ public class DialogoConfiguracion extends JDialog {
         final boolean ignorarSSL = chkIgnorarSSL.isSelected();
         final boolean soloProxy = chkSoloProxy.isSelected();
         final boolean alertasHabilitadas = chkAlertasHabilitadas.isSelected();
+        final boolean persistirBusqueda = chkPersistirBusqueda.isSelected();
+        final boolean persistirSeveridad = chkPersistirSeveridad.isSelected();
         final boolean agenteHabilitado = chkAgenteHabilitado.isSelected();
         final String tipoAgente = (String) comboAgente.getSelectedItem();
         final String agentePromptInicial = txtAgentePromptInicial.getText();
@@ -1061,6 +1103,8 @@ public class DialogoConfiguracion extends JDialog {
                     snapshot.establecerIgnorarErroresSSL(ignorarSSL);
                     snapshot.establecerSoloProxy(soloProxy);
                     snapshot.establecerAlertasHabilitadas(alertasHabilitadas);
+                    snapshot.establecerPersistirFiltroBusquedaHallazgos(persistirBusqueda);
+                    snapshot.establecerPersistirFiltroSeveridadHallazgos(persistirSeveridad);
                     snapshot.establecerAgenteHabilitado(agenteHabilitado);
                     snapshot.establecerTipoAgente(tipoAgente);
                     snapshot.establecerAgentePreflightPrompt(agentePromptInicial);

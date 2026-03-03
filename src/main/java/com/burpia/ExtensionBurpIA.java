@@ -186,6 +186,10 @@ public class ExtensionBurpIA implements BurpExtension {
         }
         pestaniaPrincipal.establecerManejadorToggleCaptura(this::alternarCapturaDesdeUI);
         pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
+
+        pestaniaPrincipal.establecerManejadorCambioFiltros(
+            () -> guardarConfiguracionSilenciosa("cambio-filtros-hallazgos")
+        );
         api.http().registerHttpHandler(manejadorHttp);
         registrar("Manejador HTTP registrado exitosamente");
 
@@ -865,7 +869,8 @@ public class ExtensionBurpIA implements BurpExtension {
                     return version;
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
+            // La version de Burp no es critica; si falla, devolvemos null
         }
         return null;
     }

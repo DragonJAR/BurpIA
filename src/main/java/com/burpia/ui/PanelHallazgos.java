@@ -60,6 +60,7 @@ public class PanelHallazgos extends JPanel {
     private com.burpia.config.ConfiguracionAPI config;
     private Predicate<Hallazgo> manejadorEnviarAAgente;
     private Runnable manejadorCambioAlertasEnviarA;
+    private Runnable manejadorCambioFiltros;
     private final ExecutorService ejecutorAcciones;
 
     @SuppressWarnings("this-escape")
@@ -228,6 +229,8 @@ public class PanelHallazgos extends JPanel {
         } else {
             sorter.setRowFilter(null);
         }
+
+        guardarEstadoFiltros();
     }
 
     private void limpiarFiltros() {
@@ -980,6 +983,63 @@ public class PanelHallazgos extends JPanel {
 
     public void establecerConfiguracion(com.burpia.config.ConfiguracionAPI config) {
         this.config = config;
+        restaurarEstadoFiltros();
+    }
+
+    private void restaurarEstadoFiltros() {
+        if (config == null) {
+            return;
+        }
+        ejecutarEnEdt(() -> {
+            String textoGuardado = config.obtenerTextoFiltroHallazgos();
+            if (textoGuardado != null && !textoGuardado.isEmpty()) {
+                campoBusqueda.setText(textoGuardado);
+            }
+
+            String severidadGuardada = config.obtenerFiltroSeveridadHallazgos();
+            if (severidadGuardada != null && !severidadGuardada.isEmpty()) {
+                DefaultComboBoxModel<String> modelo = (DefaultComboBoxModel<String>) comboSeveridad.getModel();
+                for (int i = 0; i < modelo.getSize(); i++) {
+                    if (severidadGuardada.equals(modelo.getElementAt(i))) {
+                        comboSeveridad.setSelectedIndex(i);
+                        break;
+                    }
+                }
+            }
+            aplicarFiltros();
+        });
+    }
+
+    private void guardarEstadoFiltros() {
+        if (config == null) {
+            return;
+        }
+
+        String textoActual = campoBusqueda.getText().trim();
+        String severidadActual = (String) comboSeveridad.getSelectedItem();
+
+        // DRY: Solo guardar si el flag está habilitado y hubo cambio
+        boolean textoCambio = !textoActual.equals(config.obtenerTextoFiltroHallazgos());
+        boolean severidadCambio = severidadActual != null &&
+            !severidadActual.equals(config.obtenerFiltroSeveridadHallazgos());
+
+        boolean debeGuardarTexto = textoCambio && config.persistirFiltroBusquedaHallazgos();
+        boolean debeGuardarSeveridad = severidadCambio && config.persistirFiltroSeveridadHallazgos();
+
+        if (!debeGuardarTexto && !debeGuardarSeveridad) {
+            return;
+        }
+
+        if (debeGuardarTexto) {
+            config.establecerTextoFiltroHallazgos(textoActual);
+        }
+        if (debeGuardarSeveridad) {
+            config.establecerFiltroSeveridadHallazgos(severidadActual != null ? severidadActual : "");
+        }
+
+        if (manejadorCambioFiltros != null) {
+            manejadorCambioFiltros.run();
+        }
     }
 
     public void establecerManejadorEnviarAAgente(Predicate<Hallazgo> manejador) {
@@ -988,6 +1048,10 @@ public class PanelHallazgos extends JPanel {
 
     public void establecerManejadorCambioAlertasEnviarA(Runnable manejador) {
         this.manejadorCambioAlertasEnviarA = manejador;
+    }
+
+    public void establecerManejadorCambioFiltros(Runnable manejador) {
+        this.manejadorCambioFiltros = manejador;
     }
 
     public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {
@@ -1000,7 +1064,10 @@ public class PanelHallazgos extends JPanel {
 
     private void aplicarEstadoGuardadoAutomaticoIssues(boolean activo, boolean notificarCambio) {
         boolean activoNormalizado = integracionIssuesDisponible && activo;
+        boolean estadoActual = guardadoAutomaticoIssuesActivo;
+
         guardadoAutomaticoIssuesActivo = activoNormalizado;
+
         if (chkGuardarEnIssues != null && chkGuardarEnIssues.isSelected() != activoNormalizado) {
             actualizandoEstadoAutoIssues = true;
             try {
@@ -1010,7 +1077,7 @@ public class PanelHallazgos extends JPanel {
             }
         }
 
-        if (notificarCambio && manejadorCambioGuardadoIssues != null) {
+        if (notificarCambio && manejadorCambioGuardadoIssues != null && estadoActual != activoNormalizado) {
             manejadorCambioGuardadoIssues.accept(activoNormalizado);
         }
     }

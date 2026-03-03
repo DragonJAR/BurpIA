@@ -6,7 +6,8 @@ import com.burpia.util.RutasBurpIA;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
-import java.io.*;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -298,6 +299,15 @@ public class GestorConfiguracion {
         if (archivo.tamanioFuenteMono != null)
             config.establecerTamanioFuenteMono(archivo.tamanioFuenteMono);
 
+        if (archivo.textoFiltroHallazgos != null)
+            config.establecerTextoFiltroHallazgos(archivo.textoFiltroHallazgos);
+        if (archivo.filtroSeveridadHallazgos != null)
+            config.establecerFiltroSeveridadHallazgos(archivo.filtroSeveridadHallazgos);
+        if (archivo.persistirFiltroBusquedaHallazgos != null)
+            config.establecerPersistirFiltroBusquedaHallazgos(archivo.persistirFiltroBusquedaHallazgos);
+        if (archivo.persistirFiltroSeveridadHallazgos != null)
+            config.establecerPersistirFiltroSeveridadHallazgos(archivo.persistirFiltroSeveridadHallazgos);
+
         config.establecerApiKeysPorProveedor(sanitizarMapaString(archivo.apiKeysPorProveedor));
         config.establecerUrlsBasePorProveedor(sanitizarMapaString(archivo.urlsBasePorProveedor));
         config.establecerModelosPorProveedor(sanitizarMapaString(archivo.modelosPorProveedor));
@@ -335,6 +345,10 @@ public class GestorConfiguracion {
         archivo.tamanioFuenteEstandar = config.obtenerTamanioFuenteEstandar();
         archivo.nombreFuenteMono = config.obtenerNombreFuenteMono();
         archivo.tamanioFuenteMono = config.obtenerTamanioFuenteMono();
+        archivo.textoFiltroHallazgos = config.obtenerTextoFiltroHallazgos();
+        archivo.filtroSeveridadHallazgos = config.obtenerFiltroSeveridadHallazgos();
+        archivo.persistirFiltroBusquedaHallazgos = config.persistirFiltroBusquedaHallazgos();
+        archivo.persistirFiltroSeveridadHallazgos = config.persistirFiltroSeveridadHallazgos();
         archivo.rutasBinarioPorAgente = new HashMap<>(config.obtenerTodasLasRutasBinario());
         archivo.apiKeysPorProveedor = new HashMap<>(config.obtenerApiKeysPorProveedor());
         archivo.urlsBasePorProveedor = new HashMap<>(config.obtenerUrlsBasePorProveedor());
@@ -426,5 +440,11 @@ public class GestorConfiguracion {
         private Integer tamanioFuenteEstandar;
         private String nombreFuenteMono;
         private Integer tamanioFuenteMono;
+
+        // UI State Persistence - PanelHallazgos filters
+        private String textoFiltroHallazgos;
+        private String filtroSeveridadHallazgos;
+        private Boolean persistirFiltroBusquedaHallazgos;
+        private Boolean persistirFiltroSeveridadHallazgos;
     }
 }

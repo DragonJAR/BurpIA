@@ -9,20 +9,6 @@ public class ResultadoAnalisisMultiple {
     private final List<Hallazgo> hallazgos;
     private final HttpRequest solicitudHttp;
 
-    public ResultadoAnalisisMultiple(String url, List<Hallazgo> hallazgos) {
-        this(url, hallazgos, null);
-    }
-
-    @SuppressWarnings("PMD.UnusedFormalParameter")
-    public ResultadoAnalisisMultiple(String url, String marcaTiempo, List<Hallazgo> hallazgos) {
-        this(url, hallazgos, null);
-    }
-
-    @SuppressWarnings("PMD.UnusedFormalParameter")
-    public ResultadoAnalisisMultiple(String url, String marcaTiempo, List<Hallazgo> hallazgos, HttpRequest solicitudHttp) {
-        this(url, hallazgos, solicitudHttp);
-    }
-
     public ResultadoAnalisisMultiple(String url, List<Hallazgo> hallazgos, HttpRequest solicitudHttp) {
         this.url = url;
         this.hallazgos = hallazgos != null ? new ArrayList<>(hallazgos) : new ArrayList<>();
