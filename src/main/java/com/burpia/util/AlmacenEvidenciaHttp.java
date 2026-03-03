@@ -21,13 +21,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class AlmacenEvidenciaHttp {
-    private static final Logger LOGGER = Logger.getLogger(AlmacenEvidenciaHttp.class.getName());
     private static final String EXTENSION_ARCHIVO = ".ev.gz";
 
     private final Path directorioEvidencia;
@@ -73,9 +70,7 @@ public class AlmacenEvidenciaHttp {
             }
             return evidenciaId;
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.FINE, "No se pudo guardar evidencia HTTP en disco", e);
-            }
+            // Error al guardar evidencia, se limpia archivo
             eliminarArchivoSilencioso(rutaArchivo);
             return null;
         }
@@ -108,9 +103,7 @@ public class AlmacenEvidenciaHttp {
             agregarACache(evidenciaId, evidencia, registro.requestBytes.length + registro.responseBytes.length);
             return evidencia;
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.FINE, "No se pudo reconstruir evidencia HTTP", e);
-            }
+            // Error al reconstruir evidencia
             return null;
         }
     }
@@ -145,9 +138,7 @@ public class AlmacenEvidenciaHttp {
         try {
             Files.createDirectories(directorioEvidencia);
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.FINE, "No se pudo crear directorio de evidencias", e);
-            }
+            // Error al crear directorio, se usará el directorio por defecto
         }
     }
 
@@ -226,9 +217,7 @@ public class AlmacenEvidenciaHttp {
             HttpResponse response = HttpResponse.httpResponse(ByteArray.byteArray(responseBytes));
             return HttpRequestResponse.httpRequestResponse(request, response);
         } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.log(Level.FINE, "No se pudo reconstruir request/response desde bytes", e);
-            }
+            // Error al reconstruir request/response desde bytes
             return null;
         }
     }
