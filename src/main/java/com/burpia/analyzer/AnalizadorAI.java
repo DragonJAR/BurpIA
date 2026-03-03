@@ -670,20 +670,29 @@ public class AnalizadorAI implements Runnable {
         }
     }
 
+    /**
+     * Parsea hallazgos JSON aplicando múltiples estrategias de forma robusta.
+     *
+     * Proceso:
+     * 1. Método maestro extraerArrayJsonInteligente() intenta parseo + limpieza
+     * 2. Si falla, parsearHallazgosCampoPorCampo() como último fallback
+     *
+     * NOTA: ParserRespuestasAI es responsable de SU PROPIA limpieza de bloques.
+     * AnalizadorAI NO sabe sobre "bloques de pensamiento" (encapsulamiento correcto).
+     */
     private List<Hallazgo> parsearHallazgosJsonNoEstricto(String contenido) {
-        List<Hallazgo> hallazgos = new ArrayList<>();
         if (Normalizador.esVacio(contenido)) {
-            return hallazgos;
+            return new ArrayList<>();
         }
 
-        // ESTRATEGIA 1-2-3: Usar método genérico de extracción múltiple (reutilizable, DRY)
-        JsonArray arrayHallazgos = ParserRespuestasAI.extraerArrayConMultiplesEstrategias(contenido, gson);
+        // MÉTODO MAESTRO ÚNICO: hace todo (parseo + limpieza + 3 estrategias)
+        JsonArray arrayHallazgos = ParserRespuestasAI.extraerArrayJsonInteligente(contenido, gson);
 
         if (arrayHallazgos != null && arrayHallazgos.size() > 0) {
             return convertirArrayAHallazgos(arrayHallazgos);
         }
 
-        // ESTRATEGIA 4: Parseo no estricto campo por campo (fallback original para JSON malformado)
+        // ÚLTIMO FALLBACK: parseo manual (casi nunca se usa)
         return parsearHallazgosCampoPorCampo(contenido);
     }
 
@@ -711,15 +720,24 @@ public class AnalizadorAI implements Runnable {
     }
 
     /**
-     * Estrategia 4: Parseo no estricto campo por campo para JSON malformado.
+     * Estrategia 4: Parseo campo por campo para JSON malformado.
      * Fallback cuando las estrategias de extracción de JSON no funcionan.
+     *
+     * NOTA: Este método está OBSOLETO. El método maestro extraerArrayJsonInteligente()
+     * ya maneja todos los casos incluyendo JSON malformado. Se mantiene por compatibilidad.
      */
+    @Deprecated
     private List<Hallazgo> parsearHallazgosCampoPorCampo(String contenido) {
         List<Hallazgo> hallazgos = new ArrayList<>();
 
-        String contenidoLimpio = ParserRespuestasAI.limpiarBloquesPensamientoParaAnalisis(contenido);
-        String bloqueHallazgos = extraerBloqueArrayHallazgos(contenidoLimpio);
+        // Intentar usar el método maestro primero
+        JsonArray arrayHallazgos = ParserRespuestasAI.extraerArrayJsonInteligente(contenido, gson);
+        if (arrayHallazgos != null && arrayHallazgos.size() > 0) {
+            return convertirArrayAHallazgos(arrayHallazgos);
+        }
 
+        // Fallback original: parseo manual con regex
+        String bloqueHallazgos = extraerBloqueArrayHallazgos(contenido);
         if (Normalizador.esVacio(bloqueHallazgos)) {
             return hallazgos;
         }
