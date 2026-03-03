@@ -101,6 +101,35 @@ public final class I18nUI {
         public static String TOOLTIP_NO_VOLVER_MOSTRAR_ALERTA() {
             return tr("Desactiva futuros avisos de esta acción.", "Disable future notices for this action.");
         }
+
+        public static String HILO_HALLAZGOS() {
+            return tr("BurpIA-Hallazgos", "BurpIA-Findings");
+        }
+
+        public static String SEPARADOR_ESTADISTICAS() {
+            return tr(" | ", " | ");
+        }
+    }
+
+    public static final class Herramientas {
+        private Herramientas() {
+        }
+
+        public static String REPEATER() {
+            return tr("BurpIA-Repeater", "BurpIA-Repeater");
+        }
+
+        public static String INTRUDER() {
+            return tr("BurpIA-Intruder", "BurpIA-Intruder");
+        }
+
+        public static String SCANNER() {
+            return tr("BurpIA-Scanner", "BurpIA-Scanner");
+        }
+
+        public static String ISSUES() {
+            return tr("BurpIA-Issues", "BurpIA-Issues");
+        }
     }
 
     public static final class Estadisticas {
