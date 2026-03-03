@@ -406,4 +406,102 @@ public class ParserRespuestasAI {
     private static String normalizarContenidoExtraido(String valor) {
         return Normalizador.normalizarTextoConControlesEnEspacio(valor);
     }
+
+    /**
+     * Extrae un array JSON de una respuesta que puede contener texto antes/después.
+     * Busca patrones como: "[{...}]" o cualquier estructura JSON válida.
+     *
+     * @param contenido Texto que puede contener JSON rodeado de texto
+     * @return JsonArray si se encuentra JSON válido, null en caso contrario
+     */
+    public static JsonArray extraerJsonDeTextoLibre(String contenido) {
+        if (Normalizador.esVacio(contenido)) {
+            return null;
+        }
+
+        // Buscar el primer '[' que inicia un array JSON
+        int inicioArray = contenido.indexOf('[');
+        if (inicioArray == -1) {
+            return null;
+        }
+
+        // Buscar el cierre del array JSON
+        int finArray = encontrarCierreJson(contenido, inicioArray);
+        if (finArray == -1) {
+            return null;
+        }
+
+        String jsonExtraido = contenido.substring(inicioArray, finArray + 1);
+
+        try {
+            JsonElement elemento = JsonParser.parseString(jsonExtraido);
+            if (elemento.isJsonArray()) {
+                return elemento.getAsJsonArray();
+            }
+        } catch (Exception e) {
+            // JSON inválido, retornar null
+        }
+
+        return null;
+    }
+
+    /**
+     * Hace público el método de limpieza de bloques de pensamiento
+     * para que pueda ser usado por AnalizadorAI.
+     *
+     * @param texto Texto que puede contener bloques <thinking> o ```
+     * @return Texto limpio sin bloques de pensamiento
+     */
+    public static String limpiarBloquesPensamientoParaAnalisis(String texto) {
+        return limpiarBloquesPensamiento(texto);
+    }
+
+    /**
+     * Encuentra la posición del carácter que cierra un array JSON,
+     * contando corchetes anidados y manejando strings correctamente.
+     *
+     * @param texto Texto completo
+     * @param posicionInicio Posición del '[' inicial
+     * @return Posición del ']' de cierre, o -1 si no se encuentra
+     */
+    private static int encontrarCierreJson(String texto, int posicionInicio) {
+        int profundidad = 0;
+        boolean enString = false;
+        char caracterEscape = '\0';
+
+        for (int i = posicionInicio; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+
+            if (enString) {
+                if (caracterEscape == '\\') {
+                    caracterEscape = c;
+                    continue;
+                }
+                if (c == '\\') {
+                    caracterEscape = c;
+                    continue;
+                }
+                if (c == '"') {
+                    enString = false;
+                }
+                continue;
+            }
+
+            if (c == '"') {
+                enString = true;
+                continue;
+            }
+
+            if (c == '[') {
+                profundidad++;
+            } else if (c == ']') {
+                profundidad--;
+                if (profundidad == 0) {
+                    return i;
+                }
+            }
+        }
+
+        return -1;
+    }
 }

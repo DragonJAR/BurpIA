@@ -676,38 +676,107 @@ public class AnalizadorAI implements Runnable {
             return hallazgos;
         }
 
-        String bloqueHallazgos = extraerBloqueArrayHallazgos(contenido);
-        if (Normalizador.esVacio(bloqueHallazgos)) {
+        // LIMPIEZA: Eliminar bloques de pensamiento PRIMERO
+        String contenidoLimpio = ParserRespuestasAI.limpiarBloquesPensamientoParaAnalisis(contenido);
+
+        // ESTRATEGIA 1: Parseo estricto directo (comportamiento original con Gson)
+        try {
+            String contenidoSinMarkdown = limpiarBloquesMarkdownJson(contenidoLimpio);
+            JsonElement elemento = gson.fromJson(contenidoSinMarkdown, JsonElement.class);
+            if (elemento != null && elemento.isJsonObject()) {
+                JsonObject raiz = elemento.getAsJsonObject();
+                List<JsonObject> objetosHallazgos = extraerObjetosHallazgos(raiz);
+                if (!objetosHallazgos.isEmpty()) {
+                    for (JsonObject obj : objetosHallazgos) {
+                        agregarHallazgoNormalizado(
+                            hallazgos,
+                            extraerCampoFlexible(obj, CAMPOS_TITULO),
+                            extraerCampoFlexible(obj, CAMPOS_DESCRIPCION),
+                            extraerCampoFlexible(obj, CAMPOS_SEVERIDAD),
+                            extraerCampoFlexible(obj, CAMPOS_CONFIANZA),
+                            extraerCampoFlexible(obj, CAMPOS_EVIDENCIA)
+                        );
+                    }
+                    rastrear("Estrategia 1: Parseo estricto recuperó " + hallazgos.size() + " hallazgos");
+                    return hallazgos;
+                }
+            } else if (elemento != null && elemento.isJsonArray()) {
+                JsonArray array = elemento.getAsJsonArray();
+                for (JsonElement item : array) {
+                    if (item.isJsonObject()) {
+                        JsonObject obj = item.getAsJsonObject();
+                        agregarHallazgoNormalizado(
+                            hallazgos,
+                            extraerCampoFlexible(obj, CAMPOS_TITULO),
+                            extraerCampoFlexible(obj, CAMPOS_DESCRIPCION),
+                            extraerCampoFlexible(obj, CAMPOS_SEVERIDAD),
+                            extraerCampoFlexible(obj, CAMPOS_CONFIANZA),
+                            extraerCampoFlexible(obj, CAMPOS_EVIDENCIA)
+                        );
+                    }
+                }
+                rastrear("Estrategia 1: Parseo estricto de array recuperó " + hallazgos.size() + " hallazgos");
+                return hallazgos;
+            }
+        } catch (Exception e) {
+            // No es JSON válido, intentar siguientes estrategias
+        }
+
+        // ESTRATEGIA 2: Extraer JSON de texto libre (NUEVO - para qwen, thinking models)
+        JsonArray arrayExtraido = ParserRespuestasAI.extraerJsonDeTextoLibre(contenidoLimpio);
+        if (arrayExtraido != null && arrayExtraido.size() > 0) {
+            for (JsonElement item : arrayExtraido) {
+                if (item.isJsonObject()) {
+                    JsonObject obj = item.getAsJsonObject();
+                    agregarHallazgoNormalizado(
+                        hallazgos,
+                        extraerCampoFlexible(obj, CAMPOS_TITULO),
+                        extraerCampoFlexible(obj, CAMPOS_DESCRIPCION),
+                        extraerCampoFlexible(obj, CAMPOS_SEVERIDAD),
+                        extraerCampoFlexible(obj, CAMPOS_CONFIANZA),
+                        extraerCampoFlexible(obj, CAMPOS_EVIDENCIA)
+                    );
+                }
+            }
+            rastrear("Estrategia 2: JSON extraído de texto libre con " + hallazgos.size() + " hallazgos");
             return hallazgos;
         }
 
-        for (String objeto : extraerObjetosNoEstrictos(bloqueHallazgos)) {
-            String bloqueHallazgo = normalizarObjetoNoEstricto(objeto);
-            if (Normalizador.esVacio(bloqueHallazgo)) {
-                continue;
+        // ESTRATEGIA 3: Parseo no estricto campo por campo (comportamiento original existente)
+        String bloqueHallazgos = extraerBloqueArrayHallazgos(contenidoLimpio);
+        if (Normalizador.noEsVacio(bloqueHallazgos)) {
+            for (String objeto : extraerObjetosNoEstrictos(bloqueHallazgos)) {
+                String bloqueHallazgo = normalizarObjetoNoEstricto(objeto);
+                if (Normalizador.esVacio(bloqueHallazgo)) {
+                    continue;
+                }
+                String titulo = ParserRespuestasAI.extraerCampoNoEstricto("titulo", bloqueHallazgo);
+                if (Normalizador.esVacio(titulo)) {
+                    titulo = ParserRespuestasAI.extraerCampoNoEstricto("title", bloqueHallazgo);
+                }
+                String descripcion = ParserRespuestasAI.extraerCampoNoEstricto("descripcion", bloqueHallazgo);
+                if (Normalizador.esVacio(descripcion)) {
+                    descripcion = ParserRespuestasAI.extraerCampoNoEstricto("description", bloqueHallazgo);
+                }
+                String severidad = ParserRespuestasAI.extraerCampoNoEstricto("severidad", bloqueHallazgo);
+                if (Normalizador.esVacio(severidad)) {
+                    severidad = ParserRespuestasAI.extraerCampoNoEstricto("severity", bloqueHallazgo);
+                }
+                String confianza = ParserRespuestasAI.extraerCampoNoEstricto("confianza", bloqueHallazgo);
+                if (Normalizador.esVacio(confianza)) {
+                    confianza = ParserRespuestasAI.extraerCampoNoEstricto("confidence", bloqueHallazgo);
+                }
+                String evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidencia", bloqueHallazgo);
+                if (Normalizador.esVacio(evidencia)) {
+                    evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidence", bloqueHallazgo);
+                }
+                agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
             }
-            String titulo = ParserRespuestasAI.extraerCampoNoEstricto("titulo", bloqueHallazgo);
-            if (Normalizador.esVacio(titulo)) {
-                titulo = ParserRespuestasAI.extraerCampoNoEstricto("title", bloqueHallazgo);
+            if (!hallazgos.isEmpty()) {
+                rastrear("Estrategia 3: Parseo no estricto recuperó " + hallazgos.size() + " hallazgos");
             }
-            String descripcion = ParserRespuestasAI.extraerCampoNoEstricto("descripcion", bloqueHallazgo);
-            if (Normalizador.esVacio(descripcion)) {
-                descripcion = ParserRespuestasAI.extraerCampoNoEstricto("description", bloqueHallazgo);
-            }
-            String severidad = ParserRespuestasAI.extraerCampoNoEstricto("severidad", bloqueHallazgo);
-            if (Normalizador.esVacio(severidad)) {
-                severidad = ParserRespuestasAI.extraerCampoNoEstricto("severity", bloqueHallazgo);
-            }
-            String confianza = ParserRespuestasAI.extraerCampoNoEstricto("confianza", bloqueHallazgo);
-            if (Normalizador.esVacio(confianza)) {
-                confianza = ParserRespuestasAI.extraerCampoNoEstricto("confidence", bloqueHallazgo);
-            }
-            String evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidencia", bloqueHallazgo);
-            if (Normalizador.esVacio(evidencia)) {
-                evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidence", bloqueHallazgo);
-            }
-            agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
         }
+
         return hallazgos;
     }
 
