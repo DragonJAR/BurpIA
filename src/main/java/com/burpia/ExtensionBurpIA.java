@@ -151,6 +151,8 @@ public class ExtensionBurpIA implements BurpExtension {
         gestorConsola = new GestorConsolaGUI();
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
 
+        gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, api, null);
+
         registrarResumenInicio();
 
         limitador = new LimitadorTasa(config.obtenerMaximoConcurrente());
@@ -552,23 +554,23 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void registrar(String mensaje) {
-        registrarConFallback(mensaje, false);
+        gestorLogging.info(mensaje);
     }
 
     private void registrarResumenInicio() {
-        registrar(LOG_SEPARADOR);
-        registrar(" BurpIA v" + VersionBurpIA.obtenerVersionActual() + " - "
+        gestorLogging.separador();
+        gestorLogging.info(" BurpIA v" + VersionBurpIA.obtenerVersionActual() + " - "
                 + I18nUI.General.COMPLEMENTO_SEGURIDAD_IA());
-        registrar(LOG_SEPARADOR);
+        gestorLogging.separador();
 
-        registrar("[" + I18nUI.General.ENTORNO() + "]");
+        gestorLogging.info("[" + I18nUI.General.ENTORNO() + "]");
         registrarLineaInicio("Burp Suite", esProfessional ? "Professional" : "Community Edition");
         String versionBurp = obtenerVersionBurp(api);
         if (versionBurp != null) {
             registrarLineaInicio("Version Burp Suite", versionBurp);
         }
 
-        registrar("[" + I18nUI.General.CONFIGURACION_IA() + "]");
+        gestorLogging.info("[" + I18nUI.General.CONFIGURACION_IA() + "]");
         String proveedor = config.obtenerProveedorAI();
         String modelo = config.obtenerModelo();
         registrarLineaInicio("Proveedor", proveedor);
@@ -591,49 +593,17 @@ public class ExtensionBurpIA implements BurpExtension {
         registrarLineaInicio(
                 "Agente Activo (" + config.obtenerTipoAgente() + ")",
                 config.agenteHabilitado() ? I18nUI.General.ACTIVADO() : I18nUI.General.DESACTIVADO());
-        registrar(LOG_SEPARADOR);
+        gestorLogging.separador();
     }
 
     private void registrarLineaInicio(String etiqueta, Object valor) {
         String etiquetaSegura = etiqueta != null ? etiqueta : "";
         String valorSeguro = valor != null ? String.valueOf(valor) : "";
-        registrar(String.format("  - %-28s %s", etiquetaSegura + ":", valorSeguro));
+        gestorLogging.info(String.format("  - %-28s %s", etiquetaSegura + ":", valorSeguro));
     }
 
     private void registrarError(String mensaje) {
-        registrarConFallback(mensaje, true);
-    }
-
-    private void registrarConFallback(String mensaje, boolean error) {
-        String mensajeSeguro = mensaje != null ? mensaje : "";
-        if (gestorConsola != null) {
-            if (error) {
-                gestorConsola.registrarError("BurpIA", mensajeSeguro);
-            } else {
-                gestorConsola.registrarInfo("BurpIA", mensajeSeguro);
-            }
-            return;
-        }
-
-        String mensajeLocalizado = I18nLogs.tr(mensajeSeguro);
-        String prefijo = error ? "[BurpIA] [ERROR] " : "[BurpIA] ";
-        PrintWriter stream = error ? stderr : stdout;
-        if (stream != null) {
-            stream.println(prefijo + mensajeLocalizado);
-            stream.flush();
-            return;
-        }
-
-        if (api != null) {
-            try {
-                if (error) {
-                    api.logging().logToError(prefijo + mensajeLocalizado);
-                } else {
-                    api.logging().logToOutput(prefijo + mensajeLocalizado);
-                }
-            } catch (Exception ignored) {
-            }
-        }
+        gestorLogging.error(mensaje);
     }
 
     private void alternarCapturaDesdeUI() {

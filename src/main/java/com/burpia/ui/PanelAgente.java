@@ -4,6 +4,7 @@ import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
 import com.jediterm.pty.PtyProcessTtyConnector;
@@ -33,6 +34,7 @@ import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 public class PanelAgente extends JPanel {
 
     private static final Logger LOGGER = Logger.getLogger(PanelAgente.class.getName());
+    private final GestorLoggingUnificado gestorLogging;
 
     private static final int DELAY_INICIO_BINARIO_MS = 800;
     private static final int DELAY_DIFERIDA_POST_ARRANQUE_MS = 180;
@@ -80,6 +82,7 @@ public class PanelAgente extends JPanel {
     @SuppressWarnings("this-escape")
     public PanelAgente(ConfiguracionAPI config, boolean iniciarConsola) {
         this.config = config;
+        this.gestorLogging = GestorLoggingUnificado.crearConLogger(LOGGER);
         this.inyectorPty = crearInyectorPty();
         this.promptInicialEnviado = new AtomicBoolean(false);
         this.inicializacionPendiente = new AtomicBoolean(false);
@@ -93,7 +96,7 @@ public class PanelAgente extends JPanel {
 
         setLayout(new BorderLayout(EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL));
         setBorder(BorderFactory.createEmptyBorder(
-            EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL, 
+            EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL,
             EstilosUI.MARGEN_PANEL, EstilosUI.MARGEN_PANEL
         ));
 
@@ -1119,14 +1122,10 @@ public class PanelAgente extends JPanel {
     }
 
     private void registrarLog(Level nivel, String mensaje) {
-        if (LOGGER.isLoggable(nivel)) {
-            LOGGER.log(nivel, mensaje);
-        }
+        gestorLogging.log(nivel, mensaje);
     }
 
     private void registrarLog(Level nivel, String mensaje, Throwable error) {
-        if (LOGGER.isLoggable(nivel)) {
-            LOGGER.log(nivel, mensaje, error);
-        }
+        gestorLogging.log(nivel, mensaje, error);
     }
 }

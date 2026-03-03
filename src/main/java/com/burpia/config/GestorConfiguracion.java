@@ -2,6 +2,7 @@ package com.burpia.config;
 
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 import com.burpia.util.RutasBurpIA;
 import com.google.gson.Gson;
@@ -23,6 +24,7 @@ public class GestorConfiguracion {
     private final Gson gson;
     private final PrintWriter out;
     private final PrintWriter err;
+    private final GestorLoggingUnificado gestorLogging;
 
     public GestorConfiguracion() {
         this(null, null);
@@ -33,6 +35,7 @@ public class GestorConfiguracion {
         this.out = out != null ? out : new PrintWriter(System.out, true);
         this.err = err != null ? err : new PrintWriter(System.err, true);
         this.rutaConfig = RutasBurpIA.obtenerRutaConfig();
+        this.gestorLogging = GestorLoggingUnificado.crearMinimal(out, err);
 
         logInfo("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
     }
@@ -166,11 +169,11 @@ public class GestorConfiguracion {
     }
 
     private void logInfo(String mensaje) {
-        out.println(I18nLogs.tr(mensaje));
+        gestorLogging.info("Configuracion", mensaje);
     }
 
     private void logError(String mensaje) {
-        err.println(I18nLogs.tr(mensaje));
+        gestorLogging.error("Configuracion", mensaje);
     }
 
     private void asegurarPermisosPrivados(Path path) {
