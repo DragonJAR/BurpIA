@@ -19,6 +19,7 @@ import com.burpia.ui.EstilosUI;
 import com.burpia.ui.DialogoConfiguracion;
 import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.util.GestorConsolaGUI;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
@@ -50,6 +51,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private ManejadorHttpBurpIA manejadorHttp;
     private PrintWriter stdout;
     private PrintWriter stderr;
+    private GestorLoggingUnificado gestorLogging;
     private Estadisticas estadisticas;
     private GestorTareas gestorTareas;
     private GestorConsolaGUI gestorConsola;
