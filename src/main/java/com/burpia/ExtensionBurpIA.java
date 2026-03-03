@@ -695,7 +695,7 @@ public class ExtensionBurpIA implements BurpExtension {
         StringBuilder mensajeError = new StringBuilder();
         if (!gestorConfig.guardarConfiguracion(config, mensajeError)) {
             String detalle = mensajeError.toString().trim();
-            if (detalle.isEmpty()) {
+            if (Normalizador.esVacio(detalle)) {
                 detalle = "Error desconocido";
             }
             registrarError("No se pudo persistir configuracion (" + origen + "): " + detalle);
