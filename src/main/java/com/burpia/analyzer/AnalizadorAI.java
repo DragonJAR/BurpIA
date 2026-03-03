@@ -47,6 +47,7 @@ public class AnalizadorAI implements Runnable {
     private final BooleanSupplier tareaPausada;
     private final ControlBackpressureGlobal controlBackpressure;
     private final Object logLock;
+    private volatile Call llamadaHttpActiva;
     private static final int MAX_CHARS_LOG_DETALLADO = 4000;
     private static final int MAX_INTENTOS_RETRY = 5;
     private static final long BACKOFF_INICIAL_MS = 1000L;
@@ -167,6 +168,21 @@ public class AnalizadorAI implements Runnable {
         this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, null, null, null);
     }
 
+    /**
+     * Cancela la llamada HTTP activa si existe.
+     * Libera inmediatamente el thread y el socket al usar OkHttp Call.cancel().
+     *
+     * <p>Este método está diseñado para ser llamado desde un thread externo
+     * cuando se pausa o cancela una tarea, permitiendo que la siguiente tarea
+     * en cola comience inmediatamente.</p>
+     */
+    public void cancelarLlamadaHttpActiva() {
+        Call call = llamadaHttpActiva;
+        if (call != null && !call.isCanceled()) {
+            call.cancel();
+        }
+    }
+
     @Override
     public void run() {
         String nombreHilo = Thread.currentThread().getName();
@@ -233,6 +249,27 @@ public class AnalizadorAI implements Runnable {
                 registrarError("[" + nombreHilo + "] Analisis interrumpido despues de " + duracion + "ms: " + causa);
                 callback.alErrorAnalisis(mensajeAnalisisInterrumpido(causa));
             }
+        } catch (IOException e) {
+            long duracion = System.currentTimeMillis() - tiempoInicio;
+            String mensaje = e.getMessage();
+
+            // Detectar si es cancelación de OkHttp (Call.cancel())
+            if ("Canceled".equals(mensaje) || (mensaje != null && mensaje.contains("Canceled"))) {
+                if (esPausada()) {
+                    registrar("[" + nombreHilo + "] Análisis pausado (HTTP call cancelada) después de " + duracion + "ms");
+                    return;
+                }
+                if (esCancelada()) {
+                    registrar("[" + nombreHilo + "] Análisis cancelado por usuario (HTTP call cancelada) después de " + duracion + "ms");
+                    callback.alCanceladoAnalisis();
+                    return;
+                }
+            }
+
+            // Manejo existente de otros errores HTTP
+            String falloMsg = PoliticaReintentos.obtenerMensajeErrorAmigable(e);
+            registrarError("[" + nombreHilo + "] Análisis fallido después de " + duracion + "ms: " + falloMsg);
+            callback.alErrorAnalisis(falloMsg);
         } catch (Exception e) {
             long duracion = System.currentTimeMillis() - tiempoInicio;
             String falloMsg = PoliticaReintentos.obtenerMensajeErrorAmigable(e);
@@ -331,44 +368,57 @@ public class AnalizadorAI implements Runnable {
             rastrearTecnico("Encabezados de solicitud: Content-Type=application/json, Authorization=Bearer [OCULTO]");
         }
 
-        try (Response respuesta = clienteHttp.newCall(solicitudHttp).execute()) {
+        // Crear llamada HTTP y almacenar referencia para cancelación externa
+        Call call = clienteHttp.newCall(solicitudHttp);
+        llamadaHttpActiva = call;
+
+        try {
+            Response respuesta = call.execute();
             int codigoRespuesta = respuesta.code();
             registrar("Codigo de respuesta de API: " + codigoRespuesta);
             rastrearTecnico("Encabezados de respuesta de API: " + respuesta.headers());
 
-            if (!respuesta.isSuccessful()) {
-                String cuerpoError = "";
-                ResponseBody bodyError = respuesta.body();
-                if (bodyError != null) {
-                    try {
-                        cuerpoError = bodyError.string();
-                    } catch (IOException e) {
-                        rastrear("No se pudo leer cuerpo de error: " + e.getMessage());
+            try {
+                if (!respuesta.isSuccessful()) {
+                    String cuerpoError = "";
+                    ResponseBody bodyError = respuesta.body();
+                    if (bodyError != null) {
+                        try {
+                            cuerpoError = bodyError.string();
+                        } catch (IOException e) {
+                            rastrear("No se pudo leer cuerpo de error: " + e.getMessage());
+                        }
                     }
+                    String retryAfterHeader = respuesta.header("Retry-After");
+                    String mensajeError = "Error de API: " + codigoRespuesta + " - " +
+                        (Normalizador.noEsVacio(cuerpoError) ? cuerpoError : "sin cuerpo");
+                    throw new ApiHttpException(codigoRespuesta, cuerpoError, retryAfterHeader, mensajeError);
                 }
-                String retryAfterHeader = respuesta.header("Retry-After");
-                String mensajeError = "Error de API: " + codigoRespuesta + " - " +
-                    (Normalizador.noEsVacio(cuerpoError) ? cuerpoError : "sin cuerpo");
-                throw new ApiHttpException(codigoRespuesta, cuerpoError, retryAfterHeader, mensajeError);
-            }
 
-            ResponseBody cuerpo = respuesta.body();
-            if (cuerpo == null) {
-                throw new IOException("Respuesta de API sin cuerpo (null)");
+                ResponseBody cuerpo = respuesta.body();
+                if (cuerpo == null) {
+                    throw new IOException("Respuesta de API sin cuerpo (null)");
+                }
+                String cuerpoRespuesta = cuerpo.string();
+                if (cuerpoRespuesta == null) {
+                    cuerpoRespuesta = "";
+                }
+                registrar("Longitud de respuesta de API: " + cuerpoRespuesta.length() + " caracteres");
+                rastrearTecnico("Respuesta de API (preview):\n" + resumirParaLog(cuerpoRespuesta));
+                return cuerpoRespuesta;
+            } finally {
+                // Cerrar response para liberar recursos
+                respuesta.close();
             }
-            String cuerpoRespuesta = cuerpo.string();
-            if (cuerpoRespuesta == null) {
-                cuerpoRespuesta = "";
-            }
-            registrar("Longitud de respuesta de API: " + cuerpoRespuesta.length() + " caracteres");
-            rastrearTecnico("Respuesta de API (preview):\n" + resumirParaLog(cuerpoRespuesta));
-            return cuerpoRespuesta;
         } catch (ApiHttpException e) {
             throw e;
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
             throw new IOException("Error inesperado: " + e.getMessage(), e);
+        } finally {
+            // Limpiar referencia para permitir GC
+            llamadaHttpActiva = null;
         }
     }
 

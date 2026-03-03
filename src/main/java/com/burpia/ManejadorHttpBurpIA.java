@@ -71,6 +71,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final AlmacenEvidenciaHttp almacenEvidencia;
     private final Map<String, ContextoReintento> contextosReintento;
     private final Map<String, Future<?>> ejecucionesActivas;
+    private final Map<String, com.burpia.analyzer.AnalizadorAI> analizadoresActivos;
     private final Map<ConfiguracionAPI.CodigoValidacionConsulta, Long> alertasConfiguracionEmitidas;
 
     private static final class ContextoReintento {
@@ -105,6 +106,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.almacenEvidencia = new AlmacenEvidenciaHttp();
         this.contextosReintento = new ConcurrentHashMap<>();
         this.ejecucionesActivas = new ConcurrentHashMap<>();
+        this.analizadoresActivos = new ConcurrentHashMap<>();
         this.alertasConfiguracionEmitidas = new ConcurrentHashMap<>();
         Hallazgo.establecerResolutorEvidencia(almacenEvidencia::obtener);
         this.esBurpProfessional = ExtensionBurpIA.esBurpProfessional(api);
@@ -412,11 +414,20 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         if (Normalizador.esVacio(tareaId)) {
             return;
         }
+
+        // PRIMERO: Cancelar llamada HTTP activa (libera inmediatamente el socket)
+        com.burpia.analyzer.AnalizadorAI analizador = analizadoresActivos.get(tareaId);
+        if (analizador != null) {
+            analizador.cancelarLlamadaHttpActiva();
+            rastrear("Llamada HTTP cancelada para tarea: " + tareaId);
+        }
+
+        // DESPUÉS: Cancelar Future (interrumpe el thread)
         Future<?> future = ejecucionesActivas.remove(tareaId);
         if (future != null) {
             boolean cancelada = future.cancel(true);
             if (cancelada) {
-                rastrear("Cancelacion activa aplicada para tarea: " + tareaId);
+                rastrear("Cancelación activa aplicada para tarea: " + tareaId);
             }
         }
     }
@@ -512,6 +523,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         String id = tareaIdRef.get();
 
         try {
+            // Almacenar analizador ANTES de ejecutar para permitir cancelación inmediata
+            if (id != null) {
+                analizadoresActivos.put(id, analizador);
+            }
+
             future = executorService.submit(analizador);
             if (id != null) {
                 ejecucionesActivas.put(id, future);
@@ -521,6 +537,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         } catch (RejectedExecutionException ex) {
             // La cola está saturada, marcar error y limpiar recursos
             if (id != null) {
+                analizadoresActivos.remove(id);
                 finalizarEjecucionActiva(id);
             }
             contextosReintento.remove(id);
@@ -535,6 +552,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         } catch (Exception ex) {
             // Cualquier otra excepción durante el submit
             if (id != null) {
+                analizadoresActivos.remove(id);
                 gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error al iniciar análisis: " + ex.getMessage());
             }
             finalizarEjecucionActiva(id);
@@ -625,6 +643,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return;
         }
         ejecucionesActivas.remove(tareaId);
+        analizadoresActivos.remove(tareaId);
     }
 
     private void depurarContextosHuerfanos() {
@@ -932,6 +951,15 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void shutdown() {
+        // Cancelar todas las llamadas HTTP activas primero (libera sockets inmediatamente)
+        for (com.burpia.analyzer.AnalizadorAI analizador : analizadoresActivos.values()) {
+            if (analizador != null) {
+                analizador.cancelarLlamadaHttpActiva();
+            }
+        }
+        analizadoresActivos.clear();
+
+        // Después cancelar los futures
         for (Map.Entry<String, Future<?>> entry : ejecucionesActivas.entrySet()) {
             if (entry != null && entry.getValue() != null) {
                 entry.getValue().cancel(true);

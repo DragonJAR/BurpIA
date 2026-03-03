@@ -92,7 +92,7 @@ class PanelEstadisticasCapturaTest {
 
     private PanelEstadisticas crearPanel() throws Exception {
         final PanelEstadisticas[] holder = new PanelEstadisticas[1];
-        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelEstadisticas(new Estadisticas(), () -> 1000));
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelEstadisticas(new Estadisticas(), () -> 1000, null));
         return holder[0];
     }
 
