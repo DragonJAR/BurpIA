@@ -9,6 +9,7 @@ import com.burpia.ExtensionBurpIA;
 import com.burpia.config.AgenteTipo;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
+import com.burpia.util.Normalizador;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableRowSorter;
@@ -992,12 +993,12 @@ public class PanelHallazgos extends JPanel {
         }
         ejecutarEnEdt(() -> {
             String textoGuardado = config.obtenerTextoFiltroHallazgos();
-            if (textoGuardado != null && !textoGuardado.isEmpty()) {
+            if (Normalizador.noEsVacio(textoGuardado)) {
                 campoBusqueda.setText(textoGuardado);
             }
 
             String severidadGuardada = config.obtenerFiltroSeveridadHallazgos();
-            if (severidadGuardada != null && !severidadGuardada.isEmpty()) {
+            if (Normalizador.noEsVacio(severidadGuardada)) {
                 DefaultComboBoxModel<String> modelo = (DefaultComboBoxModel<String>) comboSeveridad.getModel();
                 for (int i = 0; i < modelo.getSize(); i++) {
                     if (severidadGuardada.equals(modelo.getElementAt(i))) {

@@ -174,7 +174,7 @@ public class PanelAgente extends JPanel {
     }
 
     public void escribirComandoCrudo(String comando) {
-        if (comando == null || comando.isEmpty()) {
+        if (Normalizador.esVacio(comando)) {
             return;
         }
         long sesionObjetivo = sesionActivaId;
@@ -201,7 +201,7 @@ public class PanelAgente extends JPanel {
     }
 
     private boolean escribirTextoViaTtyConnector(String texto) {
-        if (texto == null || texto.isEmpty() || ttyConnector == null) {
+        if (Normalizador.esVacio(texto) || ttyConnector == null) {
             return false;
         }
 
@@ -250,10 +250,10 @@ public class PanelAgente extends JPanel {
     }
 
     private boolean escribirTextoDirectoPTY(String texto) {
-        if (texto == null || texto.isEmpty()) {
+        if (Normalizador.esVacio(texto)) {
             return false;
         }
-        
+
         byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
         if (process == null || !process.isAlive()) {
             registrarLog(Level.FINE, I18nLogs.tr("Escritura PTY omitida: proceso no disponible"));
