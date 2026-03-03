@@ -1082,6 +1082,21 @@ public class PanelHallazgos extends JPanel {
         }
     }
 
+    /**
+     * Obtiene el hallazgo actualmente seleccionado en la tabla.
+     *
+     * @return El hallazgo seleccionado, o null si no hay selección
+     */
+    public Hallazgo obtenerHallazgoSeleccionado() {
+        int filaSeleccionada = tabla.getSelectedRow();
+        if (filaSeleccionada < 0) {
+            return null;
+        }
+
+        int indiceModelo = tabla.convertRowIndexToModel(filaSeleccionada);
+        return modelo.obtenerHallazgo(indiceModelo);
+    }
+
     public void destruir() {
         ejecutorAcciones.shutdownNow();
     }
