@@ -1189,7 +1189,28 @@ El build debe pasar **siempre** antes de commit. Esto asegura que:
 - El JAR es funcional
 - Los cambios son listos para producción
 
-### 6. 📝 COMMIT con Mensaje Claro
+### 6. 🧹 LIMPIAR Código Huérfano
+
+**⚠️ OBLIGATORIO: Antes de commit, elimina TODO el código no utilizado:**
+
+```bash
+# Usa tu IDE para detectar código no usado
+# - IntelliJ: Analyze → Inspect Code → "Unused declaration"
+# - VS Code: Ejecuta "SonarLint" o herramienta similar
+```
+
+**Elimina antes de commit:**
+- ❌ Métodos privados que nunca se llaman
+- ❌ Campos que se declaran pero nunca se usan
+- ❌ Imports que no se utilizan
+- ❌ Bloques de código comentados
+- ❌ `// TODO` o `// FIXME` sin issue
+
+**Regla:**
+> **No debe haber NI UNA línea de código muerto en el repositorio.**
+> **Si el código no se usa, se ELIMINA.**
+
+### 7. 📝 COMMIT con Mensaje Claro
 
 ```bash
 git commit -m "$(cat <<'EOF'
@@ -1211,7 +1232,7 @@ EOF
 - `test` - Adición de tests
 - `chore` - Mantenimiento (deps, build, etc.)
 
-### 7. 📚 ACTUALIZAR Documentación (si aplica)
+### 8. 📚 ACTUALIZAR Documentación (si aplica)
 
 **Si agregaste nuevas funciones:**
 ```bash
@@ -1260,6 +1281,93 @@ EOF
 - **Version checks:** Verifica versión de Burp Suite si usas APIs específicas
 - **Graceful degradation:** La app debe funcionar aunque falten componentes opcionales
 
+### 6. Calidad de Código
+
+> **⚠️ REGLAS ESTRICTAS:**
+
+#### Código Huérfano (Dead Code)
+
+**🚫 PROHIBIDO:**
+- Métodos privados que nunca se llaman
+- Campos que se declaran pero nunca se usan
+- Imports que no se utilizan
+- Clases completas que no se referencian
+- Bloques de código comentados
+- `// TODO` o `// FIXME` sin issue de seguimiento
+
+**✅ ACCIÓN REQUERIDA:**
+- Antes de commit, elimina TODO el código no utilizado
+- Usa tu IDE para detectar métodos/imports no usados
+- Si eliminas funcionalidad, elimina TAMBIÉN:
+  - Los métodos que la implementaban
+  - Los campos relacionados
+  - Los imports ya no necesarios
+  - Los comentarios que la describían
+
+**🔍 VALIDACIÓN:**
+```bash
+# Ejecutar antes de commit (si está disponible)
+./gradlew checkDeadCode  # o tu herramienta equivalente
+
+# O usar tu IDE:
+# - IntelliJ: Analyze → Inspect Code → "Unused declaration"
+# - VS Code: Extensión "SonarLint" o similar
+```
+
+#### Comentarios en el Código
+
+**🚫 EVITAR:**
+- Comentarios que explican "qué hace" el código (el código debe hablar por sí solo)
+- Comentarios obsoletos o desactualizados
+- Bloques grandes de comentario que podrían ser documentación separada
+
+**✅ USAR COMENTARIOS PARA:**
+- **Javadoc** en métodos públicos (obligatorio)
+- Explicar **POR QUÉ** se hace algo no obvio
+- Explicar **trade-offs** o decisiones arquitectónicas
+- Referencias a documentación externa o issues
+
+**📝 EJEMPLOS: CORRECTO ✅**
+```java
+/**
+ * Envía un hallazgo al agente AI para análisis adicional.
+ *
+ * @param hallazgo El hallazgo a analizar (no puede ser null)
+ * @throws IllegalStateException si el agente no está configurado
+ */
+public void enviarAlAgente(Hallazgo hallazgo) {
+    if (config.obtenerTipoAgente() == null) {
+        throw new IllegalStateException("Agente no configurado");
+    }
+    // ...
+}
+```
+
+```java
+// Usar SHA-256 en lugar de MD5 por seguridad (colisiones)
+String hash = calcularHashSHA256(contenido);
+```
+
+**❌ EJEMPLOS: INCORRECTO**
+```java
+// Este método envía el hallazgo al agente
+public void enviarAlAgente(Hallazgo h) { }  // ❌ Javadoc faltante, nombre no descriptivo
+
+// // TODO: implementar esto luego
+// public void metodoFuturo() { }  // ❌ Código comentado
+
+// String nombre = "Juan";  // Código antiguo
+// nombre = "Pedro";  // ❌ Comentar en lugar de eliminar
+```
+
+**🎯 PRINCIPIO:**
+> **El código debe ser auto-documentado. Si necesitas muchos comentarios para explicarlo, probablemente necesitas refactorizar.**
+
+**Excepciones:**
+- Javadoc es **OBLIGATORIO** en APIs públicas
+- Comentarios breves para explicar **POR QUÉ** (no qué) son aceptables
+- Referencias a issues/tickets son bienvenidas: `// #ISSUE-123`
+
 ---
 
 ## Referencias Rápidas
@@ -1287,10 +1395,18 @@ EOF
 ### Rutas Importantes
 
 ```
-Configuración: ~/.burpia/config.json
-Logs:         En PanelConsola (via GestorConsolaGUI)
-JAR output:   build/libs/BurpIA-1.0-SNAPSHOT.jar
+Configuración:               ~/.burpia/config.json
+Logs:                        En PanelConsola (via GestorConsolaGUI)
+JAR output (ruta fija):      /Users/jaimearestrepo/Proyectos/BurpIA/build/libs/BurpIA-{VERSION}.jar
+                            Donde {VERSION} es la versión actual (ej: 1.0.2)
+Versión actual del código:   src/main/java/com/burpia/util/VersionBurpIA.java
 ```
+
+> **📌 REGLA:** El binario SIEMPRE debe generarse en:
+> `/Users/jaimearestrepo/Proyectos/BurpIA/build/libs/BurpIA-{VERSION}.jar`
+>
+> Donde `{VERSION}` se obtiene dinámicamente de `VersionBurpIA.java`.
+> El script `build-jar.sh` se encarga de esto automáticamente.
 
 ### Claves de Configuración Comunes
 
