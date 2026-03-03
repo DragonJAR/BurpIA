@@ -1,4 +1,5 @@
 package com.burpia.ui;
+import com.burpia.util.Normalizador;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
@@ -56,7 +57,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        if (severidadStr == null || severidadStr.isEmpty()) return;
+        if (Normalizador.esVacio(severidadStr)) return;
 
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);

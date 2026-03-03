@@ -1,4 +1,5 @@
 package com.burpia.ui;
+import com.burpia.util.Normalizador;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
@@ -39,7 +40,7 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
     private static final java.util.Map<String, Integer> SEGMENT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
 
     private int obtenerSegmentos(String conf) {
-        if (conf == null || conf.isEmpty()) return 0;
+        if (Normalizador.esVacio(conf)) return 0;
         return SEGMENT_CACHE.computeIfAbsent(conf, c -> {
             if (c.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_ALTA())) return 3;
             if (c.equals(com.burpia.i18n.I18nUI.Hallazgos.CONFIANZA_MEDIA())) return 2;
@@ -52,7 +53,7 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        if (confianzaStr == null || confianzaStr.isEmpty()) return;
+        if (Normalizador.esVacio(confianzaStr)) return;
 
         Graphics2D g2 = (Graphics2D) g.create();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
