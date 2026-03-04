@@ -32,14 +32,12 @@ public class PanelTareas extends JPanel {
     private Function<String, Boolean> manejadorReintento;
     private volatile int ultimaVersionTareas = -1;
 
-    // Constantes para columnas de tabla
     private static final int COLUMNA_ID = 0;
     private static final int COLUMNA_URL = 1;
     private static final int COLUMNA_ESTADO = 2;
     private static final int COLUMNA_DURACION = 3;
     private static final int NUMERO_COLUMNAS = 4;
 
-    // Constantes para anchos de columna
     private static final int ANCHO_COLUMNA_ID = 120;
     private static final int ANCHO_COLUMNA_URL = 400;
     private static final int ANCHO_COLUMNA_ESTADO = 130;

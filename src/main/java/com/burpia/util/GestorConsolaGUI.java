@@ -40,7 +40,7 @@ public class GestorConsolaGUI {
     private static final int MAXIMO_CARACTERES = 200_000;
     private static final int MAXIMO_BACKLOG_SIN_CONSOLA = PoliticaMemoria.MAXIMO_BACKLOG_CONSOLA;
     private static final Pattern ETIQUETAS_DESTACADAS =
-        Pattern.compile("(?iu)\\b(?:NOTA|ACCION|ACCIÓN|NOTE|ACTION):");
+        Pattern.compile("(?iu)\\b(?:NOTA|ACCION|ACCIÓN|NOTE|ACTION|PROVEEDOR|PROVIDER):");
 
     private Style estiloInfo;
     private Style estiloVerbose;

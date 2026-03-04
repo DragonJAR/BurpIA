@@ -52,6 +52,10 @@ public class ConstructorPrompts {
             );
         }
 
+        if (!promptFinal.contains("json_formatting")) {
+            promptFinal += "\n\n" + construirInstruccionesFormatoJson();
+        }
+
         return promptFinal;
     }
 
@@ -155,5 +159,31 @@ public class ConstructorPrompts {
         }
         String limpio = valor.trim();
         return limpio.isEmpty() ? valorDefecto : valor;
+    }
+
+    private String construirInstruccionesFormatoJson() {
+        return trPrompt(
+            "<json_formatting>" +
+            "CRITICAL: When generating JSON responses with HTML content in 'evidencia' field:" +
+            "1. Escape ALL double quotes inside HTML tags as backslash-double-quote (\\\") " +
+            "2. Examples of CORRECT escaping:" +
+            "   - \"evidencia\": \"<img src=\\\"logo.gif\\\">\" " +
+            "   - \"evidencia\": \"<form action=\\\"submit.php\\\">\" " +
+            "   - \"evidencia\": \"<embed src=\\\"file.swf\\\">\" " +
+            "3. NEVER include unescaped quotes inside JSON string values" +
+            "4. This prevents JSON parsing errors" +
+            "</json_formatting>",
+
+            "<json_formatting>" +
+            "CRITICAL: When generating JSON responses with HTML content in 'evidence' field:" +
+            "1. Escape ALL double quotes inside HTML tags as backslash-double-quote (\\\") " +
+            "2. Examples of CORRECT escaping:" +
+            "   - \"evidence\": \"<img src=\\\"logo.gif\\\">\" " +
+            "   - \"evidence\": \"<form action=\\\"submit.php\\\">\" " +
+            "   - \"evidence\": \"<embed src=\\\"file.swf\\\">\" " +
+            "3. NEVER include unescaped quotes inside JSON string values" +
+            "4. This prevents JSON parsing errors" +
+            "</json_formatting>"
+        );
     }
 }

@@ -149,6 +149,8 @@ public final class ReparadorJson {
 
         String resultado = texto.replace("\\\\\"", "\\\"");
 
+        resultado = repararCamposEvidenciaConHtml(resultado);
+
         Matcher matcher = PATRON_VALOR_CAMPO.matcher(resultado);
         StringBuilder sb = new StringBuilder();
 
@@ -165,6 +167,65 @@ public final class ReparadorJson {
         matcher.appendTail(sb);
 
         return sb.toString();
+    }
+
+    private static String repararCamposEvidenciaConHtml(String texto) {
+        if (Normalizador.esVacio(texto)) {
+            return texto;
+        }
+
+        Pattern evidenciaPattern = Pattern.compile(
+            "\"(?:evidencia|evidence)\"\\s*:\\s*\"([^\"]*?<[^>]*>[^\"]*?)\"",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
+        Matcher matcher = evidenciaPattern.matcher(texto);
+        StringBuffer sb = new StringBuffer();
+
+        while (matcher.find()) {
+            String valor = matcher.group(1);
+            String valorEscapado = escaparComillasEnHtml(valor);
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(
+                "\"evidencia\": \"" + valorEscapado + "\""
+            ));
+        }
+        matcher.appendTail(sb);
+
+        return sb.toString();
+    }
+
+    private static String escaparComillasEnHtml(String html) {
+        if (Normalizador.esVacio(html)) {
+            return html;
+        }
+
+        if (!html.contains("<") || !html.contains(">")) {
+            return html;
+        }
+
+        StringBuilder resultado = new StringBuilder(html.length() + 32);
+        boolean dentroDeTag = false;
+
+        for (int i = 0; i < html.length(); i++) {
+            char c = html.charAt(i);
+
+            if (c == '<') {
+                dentroDeTag = true;
+                resultado.append(c);
+            } else if (c == '>') {
+                dentroDeTag = false;
+                resultado.append(c);
+            } else if (c == '"' && dentroDeTag) {
+                resultado.append("\\\"");
+            } else if (c == '\\' && i + 1 < html.length() && html.charAt(i + 1) == '"') {
+                resultado.append("\\\\\"");
+                i++;
+            } else {
+                resultado.append(c);
+            }
+        }
+
+        return resultado.toString();
     }
 
     private static String eliminarContenidoExtra(String texto) {

@@ -621,7 +621,7 @@ public class ConfiguracionAPI {
     }
 
     private static String normalizarUrlBase(String urlBase) {
-        String base = (urlBase == null) ? "" : urlBase.trim();
+        String base = Normalizador.noEsVacio(urlBase) ? urlBase.trim() : "";
         while (base.endsWith("/")) {
             base = base.substring(0, base.length() - 1);
         }

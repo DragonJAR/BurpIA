@@ -264,6 +264,16 @@ class DialogoDetalleHallazgoTest {
         return holder[0];
     }
 
+    /**
+     * Obtiene un campo privado del diálogo usando reflexión.
+     * Uso legítimo en tests donde el caller controla el tipo esperado.
+     *
+     * @param <T> Tipo del componente (extiende Component)
+     * @param dialogo Diálogo del cual extraer el campo
+     * @param nombreCampo Nombre del campo a obtener
+     * @return Campo castado al tipo T
+     */
+    @SuppressWarnings("unchecked")
     private <T extends Component> T obtenerCampo(DialogoDetalleHallazgo dialogo, String nombreCampo) throws Exception {
         Field field = DialogoDetalleHallazgo.class.getDeclaredField(nombreCampo);
         field.setAccessible(true);

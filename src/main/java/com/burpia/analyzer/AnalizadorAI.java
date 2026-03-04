@@ -786,15 +786,15 @@ public class AnalizadorAI implements Runnable {
     /**
      * Estrategia 4: Parseo campo por campo para JSON malformado.
      * Fallback cuando las estrategias de extracción de JSON no funcionan.
+     * NOTA: Este método es llamado DESPUÉS de que extraerArrayJsonInteligente() falla,
+     * por lo que NO reintenta esa estrategia (evita duplicación de logs y procesamiento).
      */
     @Deprecated
     private List<Hallazgo> parsearHallazgosCampoPorCampo(String contenido) {
         List<Hallazgo> hallazgos = new ArrayList<>();
 
-        JsonArray arrayHallazgos = ParserRespuestasAI.extraerArrayJsonInteligente(contenido, gson);
-        if (arrayHallazgos != null && arrayHallazgos.size() > 0) {
-            return convertirArrayAHallazgos(arrayHallazgos);
-        }
+        // NOTA: NO volvemos a llamar a extraerArrayJsonInteligente() porque ya fue
+        // intentado en parsearHallazgosJsonNoEstricto(). Ir directamente al fallback.
 
         String bloqueHallazgos = extraerBloqueArrayHallazgos(contenido);
         if (Normalizador.esVacio(bloqueHallazgos)) {
@@ -1120,7 +1120,9 @@ public class AnalizadorAI implements Runnable {
             confianza,
             solicitud.obtenerSolicitudHttp()
         ));
-        rastrear("Hallazgo agregado: " + titulo + " (" + severidad + ", " + confianza + ")");
+        if (config.esDetallado()) {
+            rastrear("Hallazgo agregado: " + titulo + " (" + severidad + ", " + confianza + ")");
+        }
     }
 
     private String normalizarTextoSimple(String valor, String porDefecto) {
@@ -1146,7 +1148,7 @@ public class AnalizadorAI implements Runnable {
             return ejecutarAnalisisProveedorUnico();
         }
 
-        registrar("Multi-consulta iniciada con " + proveedores.size() + " proveedores");
+        registrar("PROVEEDOR: Multi-consulta iniciada con " + proveedores.size() + " proveedores");
         List<Hallazgo> todosHallazgos = new ArrayList<>();
         ConfiguracionAPI configOriginal = config;
 
@@ -1156,17 +1158,17 @@ public class AnalizadorAI implements Runnable {
                     continue;
                 }
                 if (!ProveedorAI.existeProveedor(proveedor)) {
-                    registrar("Multi-consulta: Proveedor no existe: " + proveedor + ", omitiendo");
+                    registrar("PROVEEDOR: Proveedor no existe: " + proveedor + ", omitiendo");
                     continue;
                 }
 
                 String modelo = config.obtenerModeloParaProveedor(proveedor);
                 if (Normalizador.esVacio(modelo)) {
-                    registrar("Multi-consulta: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo");
+                    registrar("PROVEEDOR: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo");
                     continue;
                 }
 
-                registrar("Analizando con proveedor: " + proveedor + " (" + modelo + ")");
+                registrar("PROVEEDOR: Analizando con proveedor: " + proveedor + " (" + modelo + ")");
 
                 try {
                     ConfiguracionAPI configProveedor = new ConfiguracionAPI();
@@ -1179,16 +1181,16 @@ public class AnalizadorAI implements Runnable {
                     ResultadoAnalisisMultiple resultado = parsearRespuestaConEtiqueta(respuesta, proveedor, modelo);
 
                     List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
-                    registrar("Hallazgos de proveedor " + proveedor + ": " + hallazgosProveedor.size() +
+                    registrar("PROVEEDOR: Hallazgos de proveedor " + proveedor + ": " + hallazgosProveedor.size() +
                              " agregados al resultado");
                     todosHallazgos.addAll(hallazgosProveedor);
 
                 } catch (Exception e) {
-                    registrar("Multi-consulta: Error con proveedor " + proveedor + ": " + e.getMessage());
+                    registrar("PROVEEDOR: Error con proveedor " + proveedor + ": " + e.getMessage());
                 }
             }
 
-            registrar("Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
+            registrar("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
 
             if (todosHallazgos.isEmpty()) {
                 return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
@@ -1425,6 +1427,9 @@ public class AnalizadorAI implements Runnable {
     private String resumirParaLog(String texto) {
         if (texto == null) {
             return "";
+        }
+        if (config.esDetallado()) {
+            return texto;
         }
         if (texto.length() <= MAX_CHARS_LOG_DETALLADO) {
             return texto;

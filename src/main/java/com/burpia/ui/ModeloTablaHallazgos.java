@@ -75,9 +75,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                         continue;
                     }
 
-                    // Verificar límite ANTES de agregar para prevenir objetos huérfanos
                     if (datos.size() >= limiteFilas) {
-                        // Límite alcanzado, no agregar más
                         break;
                     }
 
@@ -89,7 +87,6 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                 }
 
                 if (huboCambios) {
-                    // Doble protección: asegurar que dataVector también respete límite
                     aplicarLimiteFilas();
                     fireTableDataChanged();
                 }
