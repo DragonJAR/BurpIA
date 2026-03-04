@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
@@ -18,6 +19,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     private int limiteFilas;
     private final Set<Integer> filasIgnoradas;
     private final ReentrantLock lock;
+    private final List<EscuchaCambiosHallazgos> escuchas;
 
     public ModeloTablaHallazgos() {
         this(1000);
@@ -29,6 +31,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         this.limiteFilas = Math.max(1, limiteFilas);
         this.filasIgnoradas = new HashSet<>();
         this.lock = new ReentrantLock();
+        this.escuchas = new CopyOnWriteArrayList<>();
     }
 
     @Override
@@ -51,6 +54,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             } finally {
                 lock.unlock();
             }
+            notificarCambios();
         });
     }
 
@@ -61,27 +65,39 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         }
 
         ejecutarEnEdt(() -> {
+            boolean huboCambios = false;
             lock.lock();
             try {
-                boolean huboCambios = false;
+                int agregados = 0;
+
                 for (Hallazgo hallazgo : hallazgos) {
                     if (hallazgo == null) {
                         continue;
                     }
+
+                    // Verificar límite ANTES de agregar para prevenir objetos huérfanos
+                    if (datos.size() >= limiteFilas) {
+                        // Límite alcanzado, no agregar más
+                        break;
+                    }
+
                     datos.add(hallazgo);
-                    
                     Object[] rowData = hallazgo.aFilaTabla();
                     addRow(rowData);
+                    agregados++;
                     huboCambios = true;
                 }
-                
+
                 if (huboCambios) {
-                    if (aplicarLimiteFilas()) {
-                        fireTableDataChanged();
-                    }
+                    // Doble protección: asegurar que dataVector también respete límite
+                    aplicarLimiteFilas();
+                    fireTableDataChanged();
                 }
             } finally {
                 lock.unlock();
+            }
+            if (huboCambios) {
+                notificarCambios();
             }
         });
     }
@@ -118,6 +134,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             } finally {
                 lock.unlock();
             }
+            notificarCambios();
         });
     }
 
@@ -172,6 +189,82 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         lock.lock();
         try {
             return filasIgnoradas.size();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Obtiene el número de filas actualmente visibles en la tabla.
+     * Cuenta las filas que NO están ignoradas por filtros o marcas manuales.
+     *
+     * @return Número de filas visibles, o 0 si no hay datos
+     */
+    public int obtenerFilasVisibles() {
+        lock.lock();
+        try {
+            if (filasIgnoradas == null || filasIgnoradas.isEmpty()) {
+                return datos.size();
+            }
+
+            int visibles = 0;
+            for (int i = 0; i < datos.size(); i++) {
+                if (!filasIgnoradas.contains(i)) {
+                    visibles++;
+                }
+            }
+            return visibles;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Obtiene el conteo de hallazgos visibles agrupados por severidad.
+     * Solo cuenta hallazgos que NO están ignorados por filtros.
+     *
+     * @return Array de 6 elementos: [total, critical, high, medium, low, info]
+     */
+    public int[] obtenerEstadisticasVisibles() {
+        lock.lock();
+        try {
+            int[] stats = new int[6]; // [total, critical, high, medium, low, info]
+
+            for (int i = 0; i < datos.size(); i++) {
+                if (filasIgnoradas.contains(i)) {
+                    continue;
+                }
+
+                Hallazgo h = datos.get(i);
+                if (h == null) {
+                    continue;
+                }
+
+                stats[0]++; // total
+
+                String severidad = h.obtenerSeveridad();
+                if (severidad != null) {
+                    switch (severidad) {
+                        case Hallazgo.SEVERIDAD_CRITICAL:
+                            stats[1]++;
+                            break;
+                        case Hallazgo.SEVERIDAD_HIGH:
+                            stats[2]++;
+                            break;
+                        case Hallazgo.SEVERIDAD_MEDIUM:
+                            stats[3]++;
+                            break;
+                        case Hallazgo.SEVERIDAD_LOW:
+                            stats[4]++;
+                            break;
+                        case Hallazgo.SEVERIDAD_INFO:
+                            stats[5]++;
+                            break;
+                    }
+                }
+            }
+
+            return stats;
         } finally {
             lock.unlock();
         }
@@ -234,6 +327,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             if (indiceFila >= 0 && indiceFila < getRowCount()) {
                 removeRow(indiceFila);
             }
+            notificarCambios();
         });
     }
 
@@ -283,6 +377,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                     setValueAt(filaValores[i], indiceFila, i);
                 }
                 fireTableRowsUpdated(indiceFila, indiceFila);
+                notificarCambios();
             }
         });
     }
@@ -318,6 +413,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                     setValueAt(filaValores[i], indiceActualizado, i);
                 }
                 fireTableRowsUpdated(indiceActualizado, indiceActualizado);
+                notificarCambios();
             }
         });
         return true;
@@ -341,6 +437,46 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             setRowCount(0);
             for (Object[] fila : snapshot) {
                 addRow(fila);
+            }
+        });
+    }
+
+    /**
+     * Agrega un escucha que será notificado cuando cambien los hallazgos.
+     *
+     * @param escucha El escucha a agregar
+     */
+    public void agregarEscucha(EscuchaCambiosHallazgos escucha) {
+        if (escucha != null) {
+            escuchas.add(escucha);
+        }
+    }
+
+    /**
+     * Elimina un escucha para que deje de recibir notificaciones.
+     *
+     * @param escucha El escucha a eliminar
+     */
+    public void eliminarEscucha(EscuchaCambiosHallazgos escucha) {
+        escuchas.remove(escucha);
+    }
+
+    /**
+     * Notifica a todos los escuchas que los hallazgos han cambiado.
+     * La notificación se ejecuta en el EDT para garantizar seguridad UI.
+     */
+    private void notificarCambios() {
+        if (escuchas.isEmpty()) {
+            return;
+        }
+        ejecutarEnEdt(() -> {
+            for (EscuchaCambiosHallazgos escucha : escuchas) {
+                try {
+                    escucha.enHallazgosCambiados();
+                } catch (Exception e) {
+                    // Prevenir que un escucha mal implementado rompa las notificaciones
+                    System.err.println("Error en escucha de cambios: " + e.getMessage());
+                }
             }
         });
     }

@@ -15,7 +15,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -318,6 +320,12 @@ public class GestorConfiguracion {
         config.establecerMaxTokensPorProveedor(sanitizarMapaInt(archivo.maxTokensPorProveedor));
         config.establecerTiempoEsperaPorModelo(sanitizarMapaTimeoutPorModelo(archivo.tiempoEsperaPorModelo));
 
+        // Multi-Proveedor Configuration
+        if (archivo.multiProveedorHabilitado != null)
+            config.establecerMultiProveedorHabilitado(archivo.multiProveedorHabilitado);
+        if (archivo.proveedoresMultiConsulta != null && !archivo.proveedoresMultiConsulta.isEmpty())
+            config.establecerProveedoresMultiConsulta(archivo.proveedoresMultiConsulta);
+
         return config;
     }
 
@@ -359,6 +367,14 @@ public class GestorConfiguracion {
         archivo.modelosPorProveedor = new HashMap<>(config.obtenerModelosPorProveedor());
         archivo.maxTokensPorProveedor = new HashMap<>(config.obtenerMaxTokensPorProveedor());
         archivo.tiempoEsperaPorModelo = new HashMap<>(config.obtenerTiempoEsperaPorModelo());
+
+        // Multi-Proveedor Configuration
+        archivo.multiProveedorHabilitado = config.esMultiProveedorHabilitado();
+        List<String> proveedores = config.obtenerProveedoresMultiConsulta();
+        archivo.proveedoresMultiConsulta = proveedores != null && !proveedores.isEmpty()
+            ? new ArrayList<>(proveedores)
+            : null;
+
         return archivo;
     }
 
@@ -450,5 +466,9 @@ public class GestorConfiguracion {
         private String filtroSeveridadHallazgos;
         private Boolean persistirFiltroBusquedaHallazgos;
         private Boolean persistirFiltroSeveridadHallazgos;
+
+        // Multi-Proveedor Configuration
+        private Boolean multiProveedorHabilitado;
+        private List<String> proveedoresMultiConsulta;
     }
 }

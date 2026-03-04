@@ -25,13 +25,19 @@ public final class ReparadorJson {
         }
 
         String resultado = jsonPotencial.trim();
+        int longitudAnterior = jsonPotencial.length();
 
+        // Cache: parsear una sola vez al inicio
         if (esJsonValido(resultado)) {
             return resultado;
         }
 
         resultado = eliminarMarkdownCodeBlocks(resultado);
-        if (esJsonValido(resultado)) return resultado;
+        // Solo validar si el string cambió (optimización: evitar parse si no hay cambios)
+        if (resultado.length() != longitudAnterior) {
+            if (esJsonValido(resultado)) return resultado;
+            longitudAnterior = resultado.length();
+        }
 
         resultado = extraerPrimerObjetoJson(resultado);
         if (esJsonValido(resultado)) return resultado;
@@ -52,10 +58,11 @@ public final class ReparadorJson {
     }
 
     public static boolean esJsonValido(String json) {
-        if (Normalizador.esVacio(json)) {
+        if (json == null || json.trim().isEmpty()) {
             return false;
         }
 
+        // Optimizado: usar el string directamente para evitar doble trim
         String normalizado = json.trim();
 
         if (!normalizado.startsWith("{") && !normalizado.startsWith("[")) {

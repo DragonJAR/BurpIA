@@ -2,9 +2,7 @@ package com.burpia.model;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
-import com.burpia.ui.EstilosUI;
 import com.burpia.util.Normalizador;
-import java.awt.Color;
 import java.util.Locale;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -231,32 +229,12 @@ public class Hallazgo {
         return obtenerPrioridadSeveridad(severidad);
     }
 
-    public static Color obtenerColorSeveridad(String severidad) {
-        switch (normalizarSeveridadParaPrioridad(severidad)) {
-            case SEVERIDAD_CRITICAL: return EstilosUI.COLOR_CRITICAL;
-            case SEVERIDAD_HIGH:     return EstilosUI.COLOR_HIGH;
-            case SEVERIDAD_MEDIUM:   return EstilosUI.COLOR_MEDIUM;
-            case SEVERIDAD_LOW:      return EstilosUI.COLOR_LOW;
-            case SEVERIDAD_INFO:     return EstilosUI.COLOR_INFO;
-            default:                 return Color.GRAY;
-        }
-    }
-
     public static int obtenerPrioridadConfianza(String confianza) {
         switch (normalizarConfianzaParaPrioridad(confianza)) {
             case CONFIANZA_ALTA:  return 3;
             case CONFIANZA_MEDIA: return 2;
             case CONFIANZA_BAJA:  return 1;
             default:               return 0;
-        }
-    }
-
-    public static Color obtenerColorConfianza(String confianza) {
-        switch (normalizarConfianzaParaPrioridad(confianza)) {
-            case CONFIANZA_ALTA:  return EstilosUI.COLOR_LOW;    
-            case CONFIANZA_MEDIA: return EstilosUI.COLOR_MEDIUM; 
-            case CONFIANZA_BAJA:  return EstilosUI.COLOR_HIGH;   
-            default:               return Color.GRAY;
         }
     }
 

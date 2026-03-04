@@ -41,6 +41,7 @@ class PestaniaPrincipalTest {
         when(modeloTablaHallazgos.getColumnCount()).thenReturn(5);
         doReturn(String.class).when(modeloTablaHallazgos).getColumnClass(anyInt());
         when(modeloTablaHallazgos.getColumnName(anyInt())).thenReturn("MockCol");
+        when(modeloTablaHallazgos.obtenerEstadisticasVisibles()).thenReturn(new int[6]);
 
         when(modeloTablaTareas.getColumnCount()).thenReturn(5);
         doReturn(String.class).when(modeloTablaTareas).getColumnClass(anyInt());

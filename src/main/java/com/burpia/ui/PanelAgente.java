@@ -44,6 +44,19 @@ public class PanelAgente extends JPanel {
     private static final int DELAY_REINTENTO_ARRANQUE_MS = 200;
     private static final int DELAY_REINTENTO_FOCO_TERMINAL_MS = 120;
 
+    // Constantes para terminal
+    private static final int TERMINAL_ANCHO_CARACTERES = 120;
+    private static final int TERMINAL_ALTO_LINEAS = 24;
+    private static final int TERMINAL_MARGEN = 4;
+
+    // Constantes para bordes de títulos
+    private static final int MARGEN_BORDE_TITULO_GRANDE = 12;
+    private static final int MARGEN_BORDE_TITULO_PEQUEÑO = 3;
+
+    // Constantes para shell
+    private static final String SHELL_POR_DEFECTO = "/bin/bash";
+    private static final String PARAMETRO_SHELL_LOGIN = "--login";
+
     private final Object lockInyectorPty = new Object();
     private ExecutorService inyectorPty;
 
@@ -74,6 +87,7 @@ public class PanelAgente extends JPanel {
     private volatile String promptPendiente = null;
     private volatile int delayPendienteMs = 0;
     private volatile String ultimoAgenteIniciado = null;
+    private Timer reintentoFocoTimer;
 
     public PanelAgente(ConfiguracionAPI config) {
         this(config, true);
@@ -124,7 +138,7 @@ public class PanelAgente extends JPanel {
 
     private ExecutorService crearInyectorPty() {
         return Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "BurpIA-PTY-Injector");
+            Thread t = new Thread(r, "BurpIA-PTY-CommandInjector");
             t.setDaemon(true);
             return t;
         });
@@ -166,6 +180,14 @@ public class PanelAgente extends JPanel {
         }
     }
 
+    /**
+     * Verifica si un texto es nulo (sin trim, para preservar caracteres de control).
+     * Usado para comandos crudos como Ctrl+C (\u0003) que serían eliminados por trim().
+     */
+    private static boolean esNulo(String texto) {
+        return texto == null;
+    }
+
     public void escribirComando(String comando) {
         if (Normalizador.esVacio(comando)) {
             return;
@@ -174,7 +196,7 @@ public class PanelAgente extends JPanel {
     }
 
     public void escribirComandoCrudo(String comando) {
-        if (Normalizador.esVacio(comando)) {
+        if (comando == null) {
             return;
         }
         long sesionObjetivo = sesionActivaId;
@@ -201,7 +223,7 @@ public class PanelAgente extends JPanel {
     }
 
     private boolean escribirTextoViaTtyConnector(String texto) {
-        if (Normalizador.esVacio(texto) || ttyConnector == null) {
+        if (esNulo(texto) || ttyConnector == null) {
             return false;
         }
 
@@ -214,11 +236,13 @@ public class PanelAgente extends JPanel {
                 ttyConnector.write(texto);
                 return true;
             }
-            for (int i = 0; i < longitud; i += CHUNK_ESCRITURA_PTY) {
-                int end = Math.min(longitud, i + CHUNK_ESCRITURA_PTY);
-                ttyConnector.write(texto.substring(i, end));
-                aplicarRetardoEntreChunks(end, longitud);
-            }
+            escribirEnChunks(texto, (start, end) -> {
+                try {
+                    ttyConnector.write(texto.substring(start, end));
+                } catch (java.io.IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
             return true;
         } catch (Exception e) {
             registrarLog(Level.FINE, I18nLogs.tr("Error escribiendo por ttyConnector"), e);
@@ -250,7 +274,7 @@ public class PanelAgente extends JPanel {
     }
 
     private boolean escribirTextoDirectoPTY(String texto) {
-        if (Normalizador.esVacio(texto)) {
+        if (esNulo(texto)) {
             return false;
         }
 
@@ -259,29 +283,83 @@ public class PanelAgente extends JPanel {
             registrarLog(Level.FINE, I18nLogs.tr("Escritura PTY omitida: proceso no disponible"));
             return false;
         }
-        
+
         try {
             java.io.OutputStream os = process.getOutputStream();
             if (os == null) {
                 registrarLog(Level.FINE, I18nLogs.tr("Escritura PTY omitida: stream de salida nulo"));
                 return false;
             }
-            int longitud = bytes.length;
-            if (!requiereChunking(longitud)) {
-                os.write(bytes);
-                os.flush();
-                return true;
-            }
-            for (int i = 0; i < longitud; i += CHUNK_ESCRITURA_PTY) {
-                int end = Math.min(longitud, i + CHUNK_ESCRITURA_PTY);
-                os.write(bytes, i, end - i);
-                aplicarRetardoEntreChunks(end, longitud);
-            }
+            escribirEnChunks(bytes, (offset, length) -> {
+                try {
+                    os.write(bytes, offset, length);
+                } catch (java.io.IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
             os.flush();
             return true;
         } catch (Exception e) {
             registrarLog(Level.FINE, "Error escritura directa PTY", e);
             return false;
+        }
+    }
+
+    /**
+     * Escribe texto en chunks para evitar sobrecargar el PTY.
+     * Centraliza la lógica de chunking que se repite en 2 métodos.
+     * El consumer recibe (start, end) para extraer el substring.
+     */
+    private void escribirEnChunks(String texto, java.util.function.BiConsumer<Integer, Integer> escritor) {
+        int longitud = texto.length();
+        if (!requiereChunking(longitud)) {
+            escritor.accept(0, longitud);
+            return;
+        }
+        for (int i = 0; i < longitud; i += CHUNK_ESCRITURA_PTY) {
+            int end = Math.min(longitud, i + CHUNK_ESCRITURA_PTY);
+            escritor.accept(i, end);
+            aplicarRetardoEntreChunks(end, longitud);
+        }
+    }
+
+    /**
+     * Escribe bytes en chunks para evitar sobrecargar el PTY.
+     * Sobrecarga para arrays de bytes.
+     */
+    private void escribirEnChunks(byte[] bytes, java.util.function.BiConsumer<Integer, Integer> escritor) {
+        int longitud = bytes.length;
+        if (!requiereChunking(longitud)) {
+            escritor.accept(0, longitud);
+            return;
+        }
+        for (int i = 0; i < longitud; i += CHUNK_ESCRITURA_PTY) {
+            int end = Math.min(longitud, i + CHUNK_ESCRITURA_PTY);
+            escritor.accept(i, end - i);
+            aplicarRetardoEntreChunks(end, longitud);
+        }
+    }
+
+    /**
+     * Detiene el Timer de reintentos de foco si está corriendo.
+     * Previene memory leaks de múltiples Timers.
+     */
+    private void detenerReintentoFocoTimer() {
+        if (reintentoFocoTimer != null && reintentoFocoTimer.isRunning()) {
+            reintentoFocoTimer.stop();
+            reintentoFocoTimer = null;
+        }
+    }
+
+    /**
+     * Ejecuta una acción en el EDT, o directamente si ya está en el EDT.
+     * Evita validaciones repetitivas de SwingUtilities.isEventDispatchThread().
+     */
+    private void ejecutarEnEdtSiEsNecesario(Runnable accion) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            accion.run();
+        } else {
+            ejecutarEnEdt(accion);
         }
     }
 
@@ -336,7 +414,8 @@ public class PanelAgente extends JPanel {
     }
 
     public void destruir() {
-        invalidarSesionActiva();
+        detenerReintentoFocoTimer();
+        cerrarYCrearNuevaSesion();
         cerrarSesionActiva();
         reiniciarInyectorPty();
         UIUtils.ejecutarEnEdtYEsperar(() -> {
@@ -380,11 +459,11 @@ public class PanelAgente extends JPanel {
             setBackground(fondoPanel);
             if (panelControles != null) {
                 panelControles.setBackground(fondoPanel);
-                panelControles.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
+                panelControles.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), MARGEN_BORDE_TITULO_GRANDE, 16));
             }
             if (panelResultadosWrapper != null) {
                 panelResultadosWrapper.setBackground(fondoPanel);
-                panelResultadosWrapper.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), 3, 3));
+                panelResultadosWrapper.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), MARGEN_BORDE_TITULO_PEQUEÑO, MARGEN_BORDE_TITULO_PEQUEÑO));
             }
 
             if (lblDelay != null) {
@@ -392,15 +471,11 @@ public class PanelAgente extends JPanel {
             }
 
             if (terminalWidget != null && terminalWidget.getTerminalPanel() != null) {
-                terminalWidget.getTerminalPanel().setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+                terminalWidget.getTerminalPanel().setBorder(BorderFactory.createEmptyBorder(TERMINAL_MARGEN, TERMINAL_MARGEN, TERMINAL_MARGEN, TERMINAL_MARGEN));
             }
         };
 
-        if (SwingUtilities.isEventDispatchThread()) {
-            aplicar.run();
-        } else {
-            ejecutarEnEdt(aplicar);
-        }
+        ejecutarEnEdtSiEsNecesario(aplicar);
     }
     
     private void inicializarComponentesUI() {
@@ -413,7 +488,7 @@ public class PanelAgente extends JPanel {
 
     private JPanel crearPanelControles() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, EstilosUI.ESPACIADO_COMPONENTES, 4));
-        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
+        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), MARGEN_BORDE_TITULO_GRANDE, 16));
 
         btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(),
             I18nUI.Tooltips.Agente.REINICIAR(), e -> reiniciarYSolicitarFoco());
@@ -573,7 +648,7 @@ public class PanelAgente extends JPanel {
 
     private JPanel crearPanelResultados() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), 3, 3));
+        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), MARGEN_BORDE_TITULO_PEQUEÑO, MARGEN_BORDE_TITULO_PEQUEÑO));
         return panel;
     }
 
@@ -591,7 +666,7 @@ public class PanelAgente extends JPanel {
         return nuevaSesion;
     }
 
-    private void invalidarSesionActiva() {
+    private void cerrarYCrearNuevaSesion() {
         sesionActivaId = contadorSesiones.incrementAndGet();
     }
 
@@ -681,7 +756,7 @@ public class PanelAgente extends JPanel {
             return;
         }
         arranqueAgenteDespachado.set(false);
-        invalidarSesionActiva();
+        cerrarYCrearNuevaSesion();
         cerrarSesionActiva();
         try {
             UIUtils.ejecutarEnEdtYEsperar(this::recrearTerminalWidget);
@@ -692,22 +767,24 @@ public class PanelAgente extends JPanel {
         }
 
         long sesion = activarNuevaSesion();
-        Thread arrancador = new Thread(() -> iniciarProcesoPty(sesion), "BurpIA-PTY-Starter-" + sesion);
+        Thread arrancador = new Thread(() -> iniciarProcesoPty(sesion), "BurpIA-PTY-ShellStarter-" + sesion);
         arrancador.setDaemon(true);
         arrancador.start();
     }
 
     public void enfocarTerminal() {
+        detenerReintentoFocoTimer();
+
         ejecutarEnEdt(() -> {
             if (solicitarFocoTerminal()) {
                 return;
             }
-            Timer reintento = new Timer(DELAY_REINTENTO_FOCO_TERMINAL_MS, e -> {
-                ((Timer) e.getSource()).stop();
+            reintentoFocoTimer = new Timer(DELAY_REINTENTO_FOCO_TERMINAL_MS, e -> {
+                detenerReintentoFocoTimer();
                 ejecutarEnEdt(this::solicitarFocoTerminal);
             });
-            reintento.setRepeats(false);
-            reintento.start();
+            reintentoFocoTimer.setRepeats(false);
+            reintentoFocoTimer.start();
         });
     }
 
@@ -720,8 +797,8 @@ public class PanelAgente extends JPanel {
     }
 
     private JediTermWidget crearTerminalWidget() {
-        JediTermWidget widget = new JediTermWidget(120, 24, new AgentTerminalSettingsProvider());
-        widget.getTerminalPanel().setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        JediTermWidget widget = new JediTermWidget(TERMINAL_ANCHO_CARACTERES, TERMINAL_ALTO_LINEAS, new AgentTerminalSettingsProvider());
+        widget.getTerminalPanel().setBorder(BorderFactory.createEmptyBorder(TERMINAL_MARGEN, TERMINAL_MARGEN, TERMINAL_MARGEN, TERMINAL_MARGEN));
         return widget;
     }
 
@@ -801,12 +878,19 @@ public class PanelAgente extends JPanel {
         if (OSUtils.esWindows()) {
             return new String[]{"cmd.exe"};
         }
-        
+
         String shell = System.getenv("SHELL");
         if (Normalizador.esVacio(shell)) {
-            shell = "/bin/bash";
+            shell = SHELL_POR_DEFECTO;
         }
-        return new String[]{shell, "--login"};
+
+        String rutaShell = OSUtils.expandirRuta(shell);
+        if (!OSUtils.existeBinario(rutaShell)) {
+            registrarLog(Level.WARNING, I18nLogs.tr("Shell no encontrado: " + rutaShell + ", usando fallback a " + SHELL_POR_DEFECTO));
+            shell = SHELL_POR_DEFECTO;
+        }
+
+        return new String[]{shell, PARAMETRO_SHELL_LOGIN};
     }
 
     private void programarInyeccionInicial(long sesionObjetivo) {
@@ -1088,7 +1172,17 @@ public class PanelAgente extends JPanel {
     }
 
     private void manejarErrorPty(Throwable t) {
-        registrarLog(Level.SEVERE, I18nLogs.tr("Error nativo iniciando Consola PTY"), t);
+        if (t instanceof java.io.IOException) {
+            registrarLog(Level.SEVERE, I18nLogs.tr("Error de E/S iniciando proceso PTY"), t);
+        } else if (t instanceof SecurityException) {
+            registrarLog(Level.SEVERE, I18nLogs.tr("Error de seguridad iniciando proceso PTY"), t);
+        } else if (t instanceof InterruptedException) {
+            registrarLog(Level.WARNING, I18nLogs.tr("Operación interrumpida al iniciar PTY"), t);
+            Thread.currentThread().interrupt();
+        } else {
+            registrarLog(Level.SEVERE, I18nLogs.tr("Error inesperado iniciando Consola PTY"), t);
+        }
+
         String mensaje = t.getMessage() != null ? t.getMessage() : I18nLogs.tr("Error desconocido PTY");
         ejecutarEnEdt(() -> {
             UIUtils.mostrarError(PanelAgente.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje);

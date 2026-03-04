@@ -111,9 +111,15 @@ GRADLE_ARGS=(--no-daemon clean test fatJar)
 if [[ "${1:-}" == "--no-test" ]]; then
     echo -e "${YELLOW}Modo: Sin pruebas unitarias (rápido)${NC}"
     GRADLE_ARGS=(--no-daemon clean fatJar -x test)
-else
-    echo -e "${GREEN}Modo: Con pruebas unitarias${NC}"
+elif [[ "${1:-}" == "--with-benchmarks" ]]; then
+    echo -e "${CYAN}Modo: Con pruebas unitarias y benchmarks${NC}"
     echo -e "  ${CYAN}Archivos de prueba: ${TEST_COUNT}${NC}"
+    echo -e "  ${YELLOW}Incluye: Performance benchmarks (lentos)${NC}"
+    GRADLE_ARGS=(--no-daemon clean test benchmarkTest fatJar)
+else
+    echo -e "${GREEN}Modo: Con pruebas unitarias (sin benchmarks)${NC}"
+    echo -e "  ${CYAN}Archivos de prueba: ${TEST_COUNT}${NC}"
+    echo -e "  ${YELLOW}Excluye: benchmarks (usar --with-benchmarks para incluirlos)${NC}"
 fi
 
 echo ""

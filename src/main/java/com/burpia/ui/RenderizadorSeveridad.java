@@ -3,6 +3,9 @@ import com.burpia.util.Normalizador;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class RenderizadorSeveridad extends DefaultTableCellRenderer {
     private static final long serialVersionUID = 1L;
@@ -39,7 +42,14 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         return Color.GRAY;
     }
 
-    private static final java.util.Map<String, String> TEXTO_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int MAX_CACHE_TEXTO = 100;
+    private static final java.util.Map<String, String> TEXTO_CACHE =
+        Collections.synchronizedMap(new LinkedHashMap<String, String>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+                return size() > MAX_CACHE_TEXTO;
+            }
+        });
 
     private String obtenerTextoMostrar(String k) {
         return TEXTO_CACHE.computeIfAbsent(k, s -> {

@@ -30,12 +30,31 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PanelHallazgos extends JPanel {
+    // Constantes para columnas de tabla
+    private static final int COLUMNA_HORA = 0;
+    private static final int COLUMNA_URL = 1;
+    private static final int COLUMNA_TITULO = 2;
+    private static final int COLUMNA_SEVERIDAD = 3;
+    private static final int COLUMNA_CONFIANZA = 4;
+    private static final int NUMERO_COLUMNAS = 5;
+
+    // Constantes para anchos de columna
+    private static final int ANCHO_COLUMNA_HORA = 80;
+    private static final int ANCHO_COLUMNA_URL = 300;
+    private static final int ANCHO_COLUMNA_TITULO = 400;
+    private static final int ANCHO_COLUMNA_SEVERIDAD = 100;
+    private static final int ANCHO_COLUMNA_CONFIANZA = 100;
+
+    // Constante para límite defecto de hallazgos
+    private static final int LIMITE_DEFECTO_HALLAZGOS = 1000;
     private final ModeloTablaHallazgos modelo;
     private final JTable tabla;
     private JTextField campoBusqueda;
@@ -56,7 +75,7 @@ public class PanelHallazgos extends JPanel {
     private JCheckBox chkGuardarEnIssues;
     private volatile boolean guardadoAutomaticoIssuesActivo = true;
     private Consumer<Boolean> manejadorCambioGuardadoIssues;
-    private boolean actualizandoEstadoAutoIssues = false;
+    private final AtomicBoolean actualizandoEstadoAutoIssues = new AtomicBoolean(false);
 
     private com.burpia.config.ConfiguracionAPI config;
     private Predicate<Hallazgo> manejadorEnviarAAgente;
@@ -69,7 +88,7 @@ public class PanelHallazgos extends JPanel {
         this.api = api;
         this.esBurpProfessional = false;
         this.integracionIssuesDisponible = false;
-        this.modelo = new ModeloTablaHallazgos(1000);
+        this.modelo = new ModeloTablaHallazgos(LIMITE_DEFECTO_HALLAZGOS);
         this.tabla = new JTable(modelo);
         this.ejecutorAcciones = crearEjecutorAcciones();
         initComponents();
@@ -84,7 +103,7 @@ public class PanelHallazgos extends JPanel {
         this.api = api;
         this.esBurpProfessional = esBurpProfessional;
         this.integracionIssuesDisponible = esBurpProfessional;
-        this.modelo = modeloCompartido != null ? modeloCompartido : new ModeloTablaHallazgos(1000);
+        this.modelo = modeloCompartido != null ? modeloCompartido : new ModeloTablaHallazgos(LIMITE_DEFECTO_HALLAZGOS);
         this.tabla = new JTable(modelo);
         this.ejecutorAcciones = crearEjecutorAcciones();
         initComponents();
@@ -148,7 +167,7 @@ public class PanelHallazgos extends JPanel {
         chkGuardarEnIssues.setFont(EstilosUI.FUENTE_ESTANDAR);
         chkGuardarEnIssues.setToolTipText(obtenerTooltipGuardadoIssues());
         chkGuardarEnIssues.addActionListener(e -> {
-            if (actualizandoEstadoAutoIssues) {
+            if (actualizandoEstadoAutoIssues.get()) {
                 return;
             }
             aplicarEstadoGuardadoAutomaticoIssues(chkGuardarEnIssues.isSelected(), true);
@@ -211,18 +230,33 @@ public class PanelHallazgos extends JPanel {
         add(panelTablaWrapper, BorderLayout.CENTER);
     }
 
+    private String textoBusquedaCacheado = "";
+    private String textoBusquedaQuotado = "";
+    private String severidadCacheada = "";
+    private String severidadQuotada = "";
+
     private void aplicarFiltros() {
         String textoBusqueda = campoBusqueda.getText().trim();
         String severidadSeleccionada = (String) comboSeveridad.getSelectedItem();
 
+        if (!textoBusqueda.equals(textoBusquedaCacheado)) {
+            textoBusquedaCacheado = textoBusqueda;
+            textoBusquedaQuotado = textoBusqueda.isEmpty() ? "" : java.util.regex.Pattern.quote(textoBusqueda);
+        }
+
+        if (severidadSeleccionada != null && !severidadSeleccionada.equals(severidadCacheada)) {
+            severidadCacheada = severidadSeleccionada;
+            severidadQuotada = java.util.regex.Pattern.quote(severidadSeleccionada);
+        }
+
         List<RowFilter<Object, Object>> filtros = new ArrayList<>();
 
         if (!textoBusqueda.isEmpty()) {
-            filtros.add(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(textoBusqueda), 1, 2));
+            filtros.add(RowFilter.regexFilter("(?i)" + textoBusquedaQuotado, 1, 2));
         }
 
         if (severidadSeleccionada != null && comboSeveridad.getSelectedIndex() > 0) {
-            filtros.add(RowFilter.regexFilter("^" + java.util.regex.Pattern.quote(severidadSeleccionada) + "$", 3));
+            filtros.add(RowFilter.regexFilter("^" + severidadQuotada + "$", 3));
         }
 
         if (!filtros.isEmpty()) {
@@ -242,6 +276,47 @@ public class PanelHallazgos extends JPanel {
 
     private void exportarCSV() {
         exportarHallazgos("csv", I18nUI.Hallazgos.DIALOGO_EXPORTAR_CSV(), this::escribirCsv);
+    }
+
+    /**
+     * Valida que el archivo de exportación sea válido y se puede escribir.
+     *
+     * @param archivo Archivo a validar
+     * @return Mensaje de error si hay validación fallida, null si es válido
+     */
+    private String validarArchivoExportacion(File archivo) {
+        // Validación 1: El archivo existe (advertir sobre sobrescritura)
+        if (archivo.exists()) {
+            if (!archivo.isFile()) {
+                return I18nUI.Hallazgos.MSG_ERROR_RUTA_NO_ES_ARCHIVO(archivo.getAbsolutePath());
+            }
+            if (!archivo.canWrite()) {
+                return I18nUI.Hallazgos.MSG_ERROR_SIN_PERMISO_ESCRITURA(archivo.getAbsolutePath());
+            }
+        }
+
+        // Validación 2: Directorio padre existe y es escribible
+        File directorioPadre = archivo.getParentFile();
+        if (directorioPadre == null) {
+            return I18nUI.Hallazgos.MSG_ERROR_DIRECTORIO_INVALIDO();
+        }
+        if (!directorioPadre.exists()) {
+            return I18nUI.Hallazgos.MSG_ERROR_DIRECTORIO_NO_EXISTE(directorioPadre.getAbsolutePath());
+        }
+        if (!directorioPadre.canWrite()) {
+            return I18nUI.Hallazgos.MSG_ERROR_SIN_PERMISO_ESCRITURA_DIRECTORIO(directorioPadre.getAbsolutePath());
+        }
+
+        // Validación 3: Espacio en disco disponible (estimación conservadora: 1 MB por hallazgo)
+        long espacioNecesarioBytes = (long) modelo.getRowCount() * 1024 * 1024;
+        long espacioLibreBytes = directorioPadre.getFreeSpace();
+        if (espacioLibreBytes < espacioNecesarioBytes) {
+            long espacioNecesarioMB = espacioNecesarioBytes / (1024 * 1024);
+            long espacioLibreMB = espacioLibreBytes / (1024 * 1024);
+            return I18nUI.Hallazgos.MSG_ERROR_ESPACIO_INSUFICIENTE(espacioNecesarioMB, espacioLibreMB);
+        }
+
+        return null; // Todas las validaciones pasaron
     }
 
     private void exportarJSON() {
@@ -264,6 +339,14 @@ public class PanelHallazgos extends JPanel {
         }
 
         File archivo = selectorArchivos.getSelectedFile();
+
+        // Validaciones antes de exportar
+        String errorValidacion = validarArchivoExportacion(archivo);
+        if (errorValidacion != null) {
+            UIUtils.mostrarError(this, I18nUI.Hallazgos.TITULO_ERROR_EXPORTACION(), errorValidacion);
+            return;
+        }
+
         List<Hallazgo> hallazgosExportar = new ArrayList<>(modelo.obtenerHallazgosNoIgnorados());
         int totalEnTabla = modelo.getRowCount();
         int ignorados = Math.max(0, totalEnTabla - hallazgosExportar.size());
@@ -324,14 +407,44 @@ public class PanelHallazgos extends JPanel {
         writer.write("  ]\n}\n");
     }
 
+    /**
+     * Obtiene de forma segura un campo de un hallazgo, retornando cadena vacía si es null.
+     *
+     * @param hallazgo  El hallazgo del que obtener el campo
+     * @param extractor Función que extrae el campo específico del hallazgo
+     * @return El valor del campo o cadena vacía si el hallazgo es null
+     */
+    private String obtenerCampoSeguro(Hallazgo hallazgo,
+                                       java.util.function.Function<Hallazgo, String> extractor) {
+        return hallazgo != null ? extractor.apply(hallazgo) : "";
+    }
+
+    /**
+     * Actualiza tanto el texto como el tooltip de un componente UI en una sola operación.
+     *
+     * @param componente El componente a actualizar (JLabel, JButton, etc.)
+     * @param texto      El nuevo texto para el componente
+     * @param tooltip    El nuevo tooltip para el componente
+     */
+    private void actualizarTextoYTooltip(JComponent componente, String texto, String tooltip) {
+        if (componente instanceof JLabel) {
+            ((JLabel) componente).setText(texto);
+        } else if (componente instanceof JButton) {
+            ((JButton) componente).setText(texto);
+        } else if (componente instanceof JCheckBox) {
+            ((JCheckBox) componente).setText(texto);
+        }
+        componente.setToolTipText(tooltip);
+    }
+
     private String construirLineaCsv(Hallazgo hallazgo) {
         String[] valores = {
-            hallazgo != null ? hallazgo.obtenerHoraDescubrimiento() : "",
-            hallazgo != null ? hallazgo.obtenerUrl() : "",
-            hallazgo != null ? hallazgo.obtenerTitulo() : "",
-            hallazgo != null ? hallazgo.obtenerHallazgo() : "",
-            hallazgo != null ? hallazgo.obtenerSeveridad() : "",
-            hallazgo != null ? hallazgo.obtenerConfianza() : ""
+            obtenerCampoSeguro(hallazgo, Hallazgo::obtenerHoraDescubrimiento),
+            obtenerCampoSeguro(hallazgo, Hallazgo::obtenerUrl),
+            obtenerCampoSeguro(hallazgo, Hallazgo::obtenerTitulo),
+            obtenerCampoSeguro(hallazgo, Hallazgo::obtenerHallazgo),
+            obtenerCampoSeguro(hallazgo, Hallazgo::obtenerSeveridad),
+            obtenerCampoSeguro(hallazgo, Hallazgo::obtenerConfianza)
         };
 
         StringBuilder linea = new StringBuilder();
@@ -346,12 +459,12 @@ public class PanelHallazgos extends JPanel {
 
     private String construirObjetoJson(Hallazgo hallazgo) {
         return "    {\n"
-            + "      \"hora\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerHoraDescubrimiento() : "") + "\",\n"
-            + "      \"url\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerUrl() : "") + "\",\n"
-            + "      \"titulo\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerTitulo() : "") + "\",\n"
-            + "      \"hallazgo\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerHallazgo() : "") + "\",\n"
-            + "      \"severidad\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerSeveridad() : "") + "\",\n"
-            + "      \"confianza\": \"" + escapeJson(hallazgo != null ? hallazgo.obtenerConfianza() : "") + "\"\n"
+            + "      \"hora\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerHoraDescubrimiento)) + "\",\n"
+            + "      \"url\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerUrl)) + "\",\n"
+            + "      \"titulo\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerTitulo)) + "\",\n"
+            + "      \"hallazgo\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerHallazgo)) + "\",\n"
+            + "      \"severidad\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerSeveridad)) + "\",\n"
+            + "      \"confianza\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerConfianza)) + "\"\n"
             + "    }";
     }
 
@@ -463,6 +576,19 @@ public class PanelHallazgos extends JPanel {
         }
     }
 
+    /**
+     * Agrega un item de menú contextual para enviar hallazgos a una herramienta de Burp.
+     *
+     * @param menu    El menú contextual al que agregar el item
+     * @param etiqueta Etiqueta del item de menú
+     * @param tooltip Tooltip del item de menú
+     * @param accion  Acción a ejecutar con las filas seleccionadas
+     */
+    private void agregarMenuItemEnvio(JPopupMenu menu, String etiqueta, String tooltip,
+                                       java.util.function.Consumer<int[]> accion) {
+        menu.add(crearMenuItemContextual(etiqueta, tooltip, e -> accion.accept(tabla.getSelectedRows())));
+    }
+
     private JPopupMenu construirMenuContextualDinamico() {
         JPopupMenu menu = new JPopupMenu();
         menu.add(crearMenuItemContextual(
@@ -477,37 +603,25 @@ public class PanelHallazgos extends JPanel {
         }
 
         menu.addSeparator();
-        menu.add(crearMenuItemContextual(
-            I18nUI.Hallazgos.MENU_ENVIAR_REPEATER(),
-            I18nUI.Tooltips.Hallazgos.MENU_REPEATER(),
-            e -> enviarARepeater(tabla.getSelectedRows())
-        ));
-        menu.add(crearMenuItemContextual(
-            I18nUI.Hallazgos.MENU_ENVIAR_INTRUDER(),
-            I18nUI.Tooltips.Hallazgos.MENU_INTRUDER(),
-            e -> enviarAIntruder(tabla.getSelectedRows())
-        ));
+        agregarMenuItemEnvio(menu, I18nUI.Hallazgos.MENU_ENVIAR_REPEATER(),
+                            I18nUI.Tooltips.Hallazgos.MENU_REPEATER(), this::enviarARepeater);
+        agregarMenuItemEnvio(menu, I18nUI.Hallazgos.MENU_ENVIAR_INTRUDER(),
+                            I18nUI.Tooltips.Hallazgos.MENU_INTRUDER(), this::enviarAIntruder);
+
         if (esBurpProfessional) {
-            menu.add(crearMenuItemContextual(
-                I18nUI.Hallazgos.MENU_ENVIAR_SCANNER(),
-                I18nUI.Tooltips.Hallazgos.MENU_SCANNER(),
-                e -> enviarAScanner(tabla.getSelectedRows())
-            ));
+            agregarMenuItemEnvio(menu, I18nUI.Hallazgos.MENU_ENVIAR_SCANNER(),
+                                I18nUI.Tooltips.Hallazgos.MENU_SCANNER(), this::enviarAScanner);
         }
+
         if (config != null && config.agenteHabilitado() && manejadorEnviarAAgente != null) {
             String nombreAgente = obtenerNombreAgenteVisible();
-            menu.add(crearMenuItemContextual(
-                I18nUI.Hallazgos.MENU_ENVIAR_AGENTE_ROCKET(nombreAgente),
-                I18nUI.Tooltips.Hallazgos.ENVIAR_AGENTE(nombreAgente),
-                e -> enviarAAgente(tabla.getSelectedRows())
-            ));
+            agregarMenuItemEnvio(menu, I18nUI.Hallazgos.MENU_ENVIAR_AGENTE_ROCKET(nombreAgente),
+                                I18nUI.Tooltips.Hallazgos.ENVIAR_AGENTE(nombreAgente), this::enviarAAgente);
         }
+
         if (integracionIssuesDisponible && !guardadoAutomaticoIssuesActivo) {
-            menu.add(crearMenuItemContextual(
-                obtenerEtiquetaMenuIssues(),
-                obtenerTooltipMenuIssues(),
-                e -> enviarAIssues(tabla.getSelectedRows())
-            ));
+            agregarMenuItemEnvio(menu, obtenerEtiquetaMenuIssues(),
+                                obtenerTooltipMenuIssues(), this::enviarAIssues);
         }
 
         menu.addSeparator();
@@ -552,28 +666,36 @@ public class PanelHallazgos extends JPanel {
         }
     }
 
+    /**
+     * Obtiene el texto i18n apropiado según la disponibilidad de integración con Issues.
+     *
+     * @param textoDisponible Texto a usar cuando la integración está disponible
+     * @param textoSoloPro    Texto a usar cuando la integración NO está disponible
+     * @return El texto apropiado según el estado de la integración
+     */
+    private String obtenerTextoI18n(java.util.function.Supplier<String> textoDisponible,
+                                     java.util.function.Supplier<String> textoSoloPro) {
+        return integracionIssuesDisponible ? textoDisponible.get() : textoSoloPro.get();
+    }
+
     private String obtenerEtiquetaGuardadoIssues() {
-        return integracionIssuesDisponible
-            ? I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES()
-            : I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES_SOLO_PRO();
+        return obtenerTextoI18n(I18nUI.Hallazgos::CHECK_GUARDAR_ISSUES,
+                                I18nUI.Hallazgos::CHECK_GUARDAR_ISSUES_SOLO_PRO);
     }
 
     private String obtenerTooltipGuardadoIssues() {
-        return integracionIssuesDisponible
-            ? I18nUI.Tooltips.Hallazgos.GUARDAR_ISSUES()
-            : I18nUI.Tooltips.Hallazgos.GUARDAR_ISSUES_SOLO_PRO();
+        return obtenerTextoI18n(I18nUI.Tooltips.Hallazgos::GUARDAR_ISSUES,
+                                I18nUI.Tooltips.Hallazgos::GUARDAR_ISSUES_SOLO_PRO);
     }
 
     private String obtenerEtiquetaMenuIssues() {
-        return integracionIssuesDisponible
-            ? I18nUI.Hallazgos.MENU_ENVIAR_ISSUES()
-            : I18nUI.Hallazgos.MENU_ENVIAR_ISSUES_SOLO_PRO();
+        return obtenerTextoI18n(I18nUI.Hallazgos::MENU_ENVIAR_ISSUES,
+                                I18nUI.Hallazgos::MENU_ENVIAR_ISSUES_SOLO_PRO);
     }
 
     private String obtenerTooltipMenuIssues() {
-        return integracionIssuesDisponible
-            ? I18nUI.Tooltips.Hallazgos.MENU_ISSUES()
-            : I18nUI.Tooltips.Hallazgos.MENU_ISSUES_SOLO_PRO();
+        return obtenerTextoI18n(I18nUI.Tooltips.Hallazgos::MENU_ISSUES,
+                                I18nUI.Tooltips.Hallazgos::MENU_ISSUES_SOLO_PRO);
     }
 
     private void enviarAAgente(int[] filas) {
@@ -798,48 +920,39 @@ public class PanelHallazgos extends JPanel {
 
     private void borrarHallazgosDeTabla(int[] filas) {
         int[] filasModeloOrdenadasDesc = convertirFilasVistaAModeloOrdenDesc(filas);
-        final int[] borrados = {0};
+        int contadorBorrados = 0;
+
         for (int filaModelo : filasModeloOrdenadasDesc) {
             if (filaModelo >= 0) {
                 modelo.eliminarHallazgo(filaModelo);
-                borrados[0]++;
+                contadorBorrados++;
             }
         }
 
-        UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_HALLAZGOS_BORRADOS(), I18nUI.Hallazgos.MSG_HALLAZGOS_BORRADOS(borrados[0]));
+        UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_HALLAZGOS_BORRADOS(),
+            I18nUI.Hallazgos.MSG_HALLAZGOS_BORRADOS(contadorBorrados));
     }
 
     private int[] convertirFilasVistaAModelo(int[] filasVista) {
         if (filasVista == null || filasVista.length == 0) {
             return new int[0];
         }
-        List<Integer> filasModelo = new ArrayList<>();
-        Set<Integer> vistos = new HashSet<>();
-        for (int filaVista : filasVista) {
-            if (filaVista < 0 || filaVista >= tabla.getRowCount()) {
-                continue;
-            }
-            int filaModelo = tabla.convertRowIndexToModel(filaVista);
-            if (filaModelo >= 0 && vistos.add(filaModelo)) {
-                filasModelo.add(filaModelo);
-            }
-        }
-        int[] resultado = new int[filasModelo.size()];
-        for (int i = 0; i < filasModelo.size(); i++) {
-            resultado[i] = filasModelo.get(i);
-        }
-        return resultado;
+
+        return IntStream.of(filasVista)
+            .filter(f -> f >= 0 && f < tabla.getRowCount())
+            .map(tabla::convertRowIndexToModel)
+            .filter(f -> f >= 0)
+            .distinct()
+            .toArray();
     }
 
     private int[] convertirFilasVistaAModeloOrdenDesc(int[] filasVista) {
-        int[] filasModelo = convertirFilasVistaAModelo(filasVista);
-        java.util.Arrays.sort(filasModelo);
-        for (int i = 0, j = filasModelo.length - 1; i < j; i++, j--) {
-            int tmp = filasModelo[i];
-            filasModelo[i] = filasModelo[j];
-            filasModelo[j] = tmp;
-        }
-        return filasModelo;
+        int[] filas = convertirFilasVistaAModelo(filasVista);
+        java.util.Arrays.sort(filas);
+
+        return IntStream.range(0, filas.length)
+            .map(i -> filas[filas.length - 1 - i])
+            .toArray();
     }
 
     private ResultadoCapturaAccion capturarEntradasAccion(int[] filasVista) {
@@ -884,24 +997,24 @@ public class PanelHallazgos extends JPanel {
     }
 
     public void aplicarIdioma() {
-        etiquetaBusqueda.setText(I18nUI.Hallazgos.ETIQUETA_BUSCAR());
-        botonLimpiarFiltro.setText(I18nUI.Hallazgos.BOTON_LIMPIAR());
-        botonExportarCSV.setText(I18nUI.Hallazgos.BOTON_EXPORTAR_CSV());
-        botonExportarJSON.setText(I18nUI.Hallazgos.BOTON_EXPORTAR_JSON());
-        botonLimpiarTodo.setText(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
-        chkGuardarEnIssues.setText(obtenerEtiquetaGuardadoIssues());
-        actualizarOpcionesSeveridadIdioma();
+        actualizarTextoYTooltip(etiquetaBusqueda, I18nUI.Hallazgos.ETIQUETA_BUSCAR(),
+                                I18nUI.Tooltips.Hallazgos.BUSQUEDA());
+        actualizarTextoYTooltip(botonLimpiarFiltro, I18nUI.Hallazgos.BOTON_LIMPIAR(),
+                                I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
+        actualizarTextoYTooltip(botonExportarCSV, I18nUI.Hallazgos.BOTON_EXPORTAR_CSV(),
+                                I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
+        actualizarTextoYTooltip(botonExportarJSON, I18nUI.Hallazgos.BOTON_EXPORTAR_JSON(),
+                                I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
+        actualizarTextoYTooltip(botonLimpiarTodo, I18nUI.Hallazgos.BOTON_LIMPIAR_TODO(),
+                                I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
+        actualizarTextoYTooltip(chkGuardarEnIssues, obtenerEtiquetaGuardadoIssues(),
+                                obtenerTooltipGuardadoIssues());
 
-        etiquetaBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
         comboSeveridad.setToolTipText(I18nUI.Tooltips.Hallazgos.FILTRO_SEVERIDAD());
-        botonLimpiarFiltro.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
-        botonExportarCSV.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
-        botonExportarJSON.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
-        botonLimpiarTodo.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
-        chkGuardarEnIssues.setToolTipText(obtenerTooltipGuardadoIssues());
         tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
 
+        actualizarOpcionesSeveridadIdioma();
 
         UIUtils.actualizarTituloPanel(panelFiltros, I18nUI.Hallazgos.TITULO_FILTROS());
         UIUtils.actualizarTituloPanel(panelGuardarProyecto, I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO());
@@ -910,7 +1023,6 @@ public class PanelHallazgos extends JPanel {
 
         modelo.refrescarColumnasIdioma();
         ejecutarEnEdt(() -> {
-            sorter = new TableRowSorter<>(modelo);
             configurarSorters();
             configurarColumnasTabla();
             aplicarFiltros();
@@ -948,34 +1060,60 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void configurarColumnasTabla() {
-        if (tabla.getColumnModel().getColumnCount() < 5) {
+        if (tabla.getColumnModel().getColumnCount() < NUMERO_COLUMNAS) {
             return;
         }
-        tabla.getColumnModel().getColumn(0).setCellRenderer(
+        tabla.getColumnModel().getColumn(COLUMNA_HORA).setCellRenderer(
             new RenderizadorHallazgoBorrado(new RenderizadorCentrado(), tabla, modelo)
         );
-        tabla.getColumnModel().getColumn(1).setCellRenderer(
+        tabla.getColumnModel().getColumn(COLUMNA_URL).setCellRenderer(
             new RenderizadorHallazgoBorrado(new DefaultTableCellRenderer(), tabla, modelo)
         );
-        tabla.getColumnModel().getColumn(2).setCellRenderer(
+        tabla.getColumnModel().getColumn(COLUMNA_TITULO).setCellRenderer(
             new RenderizadorHallazgoBorrado(new DefaultTableCellRenderer(), tabla, modelo)
         );
-        tabla.getColumnModel().getColumn(3).setCellRenderer(
+        tabla.getColumnModel().getColumn(COLUMNA_SEVERIDAD).setCellRenderer(
             new RenderizadorHallazgoBorrado(new RenderizadorSeveridad(), tabla, modelo)
         );
-        tabla.getColumnModel().getColumn(4).setCellRenderer(
+        tabla.getColumnModel().getColumn(COLUMNA_CONFIANZA).setCellRenderer(
             new RenderizadorHallazgoBorrado(new RenderizadorConfianza(), tabla, modelo)
         );
 
-        tabla.getColumnModel().getColumn(0).setPreferredWidth(80);
-        tabla.getColumnModel().getColumn(1).setPreferredWidth(300);
-        tabla.getColumnModel().getColumn(2).setPreferredWidth(400);
-        tabla.getColumnModel().getColumn(3).setPreferredWidth(100);
-        tabla.getColumnModel().getColumn(4).setPreferredWidth(100);
+        tabla.getColumnModel().getColumn(COLUMNA_HORA).setPreferredWidth(ANCHO_COLUMNA_HORA);
+        tabla.getColumnModel().getColumn(COLUMNA_URL).setPreferredWidth(ANCHO_COLUMNA_URL);
+        tabla.getColumnModel().getColumn(COLUMNA_TITULO).setPreferredWidth(ANCHO_COLUMNA_TITULO);
+        tabla.getColumnModel().getColumn(COLUMNA_SEVERIDAD).setPreferredWidth(ANCHO_COLUMNA_SEVERIDAD);
+        tabla.getColumnModel().getColumn(COLUMNA_CONFIANZA).setPreferredWidth(ANCHO_COLUMNA_CONFIANZA);
     }
 
     public ModeloTablaHallazgos obtenerModelo() {
         return modelo;
+    }
+
+    /**
+     * Obtiene el número de hallazgos actualmente visibles en la tabla.
+     * Considera los filtros activos y las filas ignoradas.
+     *
+     * @return Número de hallazgos visibles, o 0 si no hay modelo
+     */
+    public int obtenerHallazgosVisibles() {
+        if (modelo == null) {
+            return 0;
+        }
+        return modelo.obtenerFilasVisibles();
+    }
+
+    /**
+     * Obtiene las estadísticas de hallazgos visibles agrupadas por severidad.
+     * Solo cuenta hallazgos que NO están filtrados.
+     *
+     * @return Array de 6 elementos: [total, critical, high, medium, low, info] o array de ceros si error
+     */
+    public int[] obtenerEstadisticasVisibles() {
+        if (modelo == null) {
+            return new int[6];
+        }
+        return modelo.obtenerEstadisticasVisibles();
     }
 
     public void establecerManejadorCambioGuardadoIssues(Consumer<Boolean> manejadorCambioGuardadoIssues) {
@@ -984,6 +1122,9 @@ public class PanelHallazgos extends JPanel {
 
     public void establecerConfiguracion(com.burpia.config.ConfiguracionAPI config) {
         this.config = config;
+        // Actualizar el límite de filas del modelo con el valor configurable
+        int limiteMaximoHallazgos = config.obtenerMaximoHallazgosTabla();
+        modelo.establecerLimiteFilas(limiteMaximoHallazgos);
         restaurarEstadoFiltros();
     }
 
@@ -1070,11 +1211,12 @@ public class PanelHallazgos extends JPanel {
         guardadoAutomaticoIssuesActivo = activoNormalizado;
 
         if (chkGuardarEnIssues != null && chkGuardarEnIssues.isSelected() != activoNormalizado) {
-            actualizandoEstadoAutoIssues = true;
-            try {
-                chkGuardarEnIssues.setSelected(activoNormalizado);
-            } finally {
-                actualizandoEstadoAutoIssues = false;
+            if (actualizandoEstadoAutoIssues.compareAndSet(false, true)) {
+                try {
+                    chkGuardarEnIssues.setSelected(activoNormalizado);
+                } finally {
+                    actualizandoEstadoAutoIssues.set(false);
+                }
             }
         }
 

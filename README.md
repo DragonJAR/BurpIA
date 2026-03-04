@@ -18,17 +18,17 @@ English version: [README.en.md](README.en.md)
 ### 1) Vista general de BurpIA (ES)
 ![BurpIA en Español](src/assets/ES.png)
 
-- Muestra el tablero central con conteo de hallazgos por severidad y estado operativo.
-- Ayuda a ubicar rápidamente las pestañas principales: tareas, hallazgos, agente y consola.
-- Deja claro el flujo de trabajo desde detección hasta validación manual.
+- Muestra el tablero central con el recuento de hallazgos por severidad y estado operativo.
+- Facilita la localización de las pestañas principales: tareas, hallazgos, agente y consola.
+- Ilustra el flujo de trabajo integral, desde la detección hasta la validación manual.
 
 
 ### 2) Validación manual con agente
 ![Consola del agente en BurpIA](src/assets/Agente.png)
 
-- Evidencia el flujo agéntico de pruebas dinámicas sobre tráfico HTTP real.
-- Permite ver baseline, payloads ejecutados, observaciones y hallazgos secundarios en una sola salida.
-- Facilita validar evidencia técnica antes de reportar un hallazgo.
+- Presenta el flujo dinámico basado en agentes sobre tráfico HTTP real.
+- Permite visualizar la línea base, los payloads ejecutados, observaciones y hallazgos secundarios en una misma salida.
+- Agiliza la revisión de la evidencia técnica antes de reportar un hallazgo.
 
 
 ### 3) Hallazgos validados en Repeater
@@ -65,7 +65,8 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ### v1.0.2 (actual)
 
-- Sistema de validación de actualizaciones.
+- Nuevo sistema multiproveedor: permite consultar peticiones en hasta 5 proveedores distintos.
+- Sistema de notificación de actualizaciones.
 - Mejoras en la experiencia de usuario.
 - Mejoras en la personalización de la interfaz.
 - Mejoras de rendimiento.

@@ -2,6 +2,7 @@ package com.burpia.ui;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JComboBox;
@@ -9,6 +10,9 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+
+import com.burpia.ui.TestDialogUtils;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -27,8 +31,15 @@ class DialogoConfiguracionTimeoutPorModeloTest {
 
     private String userHomeOriginal;
 
+    @BeforeEach
+    void setUp() {
+        TestDialogUtils.registrarCapturaDialogos();
+    }
+
     @AfterEach
     void tearDown() {
+        TestDialogUtils.limpiarDialogosPendientes();
+        TestDialogUtils.deregistrarCapturaDialogos();
         if (userHomeOriginal != null) {
             System.setProperty("user.home", userHomeOriginal);
         }

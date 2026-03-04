@@ -3,6 +3,9 @@ import com.burpia.util.Normalizador;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class RenderizadorConfianza extends DefaultTableCellRenderer {
     private static final long serialVersionUID = 1L;
@@ -37,7 +40,14 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         return Color.GRAY;
     }
 
-    private static final java.util.Map<String, Integer> SEGMENT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int MAX_CACHE_SEGMENTOS = 100;
+    private static final java.util.Map<String, Integer> SEGMENT_CACHE =
+        Collections.synchronizedMap(new LinkedHashMap<String, Integer>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
+                return size() > MAX_CACHE_SEGMENTOS;
+            }
+        });
 
     private int obtenerSegmentos(String conf) {
         if (Normalizador.esVacio(conf)) return 0;

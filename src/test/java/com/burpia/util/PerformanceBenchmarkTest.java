@@ -1,10 +1,17 @@
 package com.burpia.util;
 
+import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.GestorConfiguracion;
 import com.burpia.model.Hallazgo;
+import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaHallazgos;
+import com.burpia.ui.ModeloTablaTareas;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -14,7 +21,12 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Benchmark tests para identificar cuellos de botella en operaciones críticas.
  * Mide tiempo de ejecución y memoria para operaciones frecuentes.
+ *
+ * @Tag benchmark permite excluir estos tests de builds normales.
+ * Ejecutar con: ./gradlew test --tests "*Benchmark*" -Djunit.platform.conditions.include.tags=benchmark
+ * O con: ./gradlew benchmarkTest
  */
+@Tag("benchmark")
 @DisplayName("Performance Benchmarks")
 class PerformanceBenchmarkTest {
 
@@ -192,6 +204,161 @@ class PerformanceBenchmarkTest {
         while (modelo.getRowCount() > 0) {
             modelo.eliminarHallazgo(0);
         }
+    }
+
+    @Test
+    @DisplayName("I/O Configuration - Guardar configuracion")
+    void benchmarkGuardarConfiguracion() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-benchmark-io");
+        Path configDir = tempDir.resolve(".burpia");
+        Files.createDirectories(configDir);
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-4");
+        config.establecerApiKeyParaProveedor("OpenAI", "sk-test-key");
+        config.establecerTiempoEsperaAI(60);
+        config.establecerRetrasoSegundos(5);
+        config.establecerMaximoConcurrente(10);
+        config.establecerTema("oscuro");
+        config.establecerIdiomaUi("es");
+
+        String userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        try {
+            BenchmarkResult result = runBenchmark("I/O.guardarConfiguracion", () -> {
+                GestorConfiguracion gestor = new GestorConfiguracion();
+                gestor.guardarConfiguracion(config);
+            });
+
+            System.out.println(result);
+
+            assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(100),
+                "Guardar configuracion debe ser <100ms promedio. " + result);
+        } finally {
+            System.setProperty("user.home", userHomeOriginal);
+        }
+    }
+
+    @Test
+    @DisplayName("I/O Configuration - Cargar configuracion")
+    void benchmarkCargarConfiguracion() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-benchmark-io-load");
+        Path configDir = tempDir.resolve(".burpia");
+        Files.createDirectories(configDir);
+
+        ConfiguracionAPI configOriginal = new ConfiguracionAPI();
+        configOriginal.establecerProveedorAI("OpenAI");
+        configOriginal.establecerModeloParaProveedor("OpenAI", "gpt-4");
+        configOriginal.establecerApiKeyParaProveedor("OpenAI", "sk-test-key");
+        configOriginal.establecerTiempoEsperaAI(60);
+        configOriginal.establecerRetrasoSegundos(5);
+        configOriginal.establecerMaximoConcurrente(10);
+        configOriginal.establecerTema("oscuro");
+        configOriginal.establecerIdiomaUi("es");
+
+        String userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        try {
+            GestorConfiguracion gestorSetup = new GestorConfiguracion();
+            gestorSetup.guardarConfiguracion(configOriginal);
+
+            BenchmarkResult result = runBenchmark("I/O.cargarConfiguracion", () -> {
+                GestorConfiguracion gestor = new GestorConfiguracion();
+                ConfiguracionAPI loaded = gestor.cargarConfiguracion();
+                assertNotNull(loaded);
+            });
+
+            System.out.println(result);
+
+            assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(50),
+                "Cargar configuracion debe ser <50ms promedio. " + result);
+        } finally {
+            System.setProperty("user.home", userHomeOriginal);
+        }
+    }
+
+    @Test
+    @DisplayName("ModeloTablaTareas - Agregar multiples tareas (individual)")
+    void benchmarkModeloTablaTareasAgregarIndividual() {
+        ModeloTablaTareas modelo = new ModeloTablaTareas(1000);
+
+        List<Tarea> tareas = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            tareas.add(new Tarea(
+                "tarea-" + i,
+                "analisis",
+                "https://example.com/" + i,
+                "En proceso"
+            ));
+        }
+
+        BenchmarkResult result = runBenchmark("ModeloTablaTareas.agregar100.individual", () -> {
+            for (Tarea tarea : tareas) {
+                modelo.agregarTarea(tarea);
+            }
+            modelo.limpiar();
+        });
+
+        System.out.println(result);
+    }
+
+    @Test
+    @DisplayName("ModeloTablaTareas - Agregar multiples tareas (batch)")
+    void benchmarkModeloTablaTareasAgregarBatch() {
+        ModeloTablaTareas modelo = new ModeloTablaTareas(1000);
+
+        List<Tarea> tareas = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            tareas.add(new Tarea(
+                "tarea-" + i,
+                "analisis",
+                "https://example.com/" + i,
+                "En proceso"
+            ));
+        }
+
+        BenchmarkResult result = runBenchmark("ModeloTablaTareas.agregar100.batch", () -> {
+            modelo.agregarTareas(tareas);
+            modelo.limpiar();
+        });
+
+        System.out.println(result);
+
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(5),
+            "Agregar 100 tareas en batch debe ser <5ms promedio. " + result);
+    }
+
+    @Test
+    @DisplayName("ModeloTablaTareas - Eliminar por estado")
+    void benchmarkModeloTablaTareasEliminarPorEstado() {
+        ModeloTablaTareas modelo = new ModeloTablaTareas(1000);
+
+        for (int i = 0; i < 100; i++) {
+            modelo.agregarTarea(new Tarea(
+                "tarea-" + i,
+                "analisis",
+                "https://example.com/" + i,
+                i % 2 == 0 ? "Completada" : "En proceso"
+            ));
+        }
+
+        BenchmarkResult result = runBenchmark("ModeloTablaTareas.eliminarPorEstado", () -> {
+            modelo.eliminarPorEstado("Completada");
+            modelo.limpiar();
+            for (int i = 0; i < 100; i++) {
+                modelo.agregarTarea(new Tarea(
+                    "tarea-" + i,
+                    "analisis",
+                    "https://example.com/" + i,
+                    i % 2 == 0 ? "Completada" : "En proceso"
+                ));
+            }
+        });
+
+        System.out.println(result);
     }
 
     @Test

@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class ExtensionBurpIA implements BurpExtension {
-    private static final String LOG_SEPARADOR = "==================================================";
     private static final String TOKEN_REQUEST = "{REQUEST}";
     private static final String TOKEN_RESPONSE = "{RESPONSE}";
     private static final String TOKEN_TITLE = "{TITLE}";

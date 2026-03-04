@@ -5,8 +5,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
 
-import static com.burpia.ui.UIUtils.ejecutarEnEdt;
-
 public class PanelConsola extends JPanel {
     private final JTextPane consola;
     private final JCheckBox checkboxAutoScroll;
@@ -17,9 +15,28 @@ public class PanelConsola extends JPanel {
     private final JPanel panelControles;
     private final JPanel panelConsolaWrapper;
     private Consumer<Boolean> manejadorCambioAutoScroll;
-    private boolean actualizandoAutoScroll = false;
-    private volatile int ultimaVersionConsola = -1;
 
+    /**
+     * Flag para prevenir recursión en el listener del checkbox.
+     * Cuando se llama setSelected() programáticamente, el listener
+     * se dispararía de nuevo. Este flag previene esta recursión.
+     */
+    private boolean actualizandoAutoScroll = false;
+
+    /**
+     * Última versión de consola conocida. No necesita ser volatile porque
+     * todos los accesos están protegidos por el EDT (Event Dispatch Thread).
+     */
+    private int ultimaVersionConsola = -1;
+
+    /**
+     * Constructor de PanelConsola.
+     *
+     * @SuppressWarnings("this-escape")
+     * Justificación: Los listeners almacenados en componentes UI no se ejecutan
+     * durante el constructor. El Timer se inicia al final de la construcción,
+     * cuando el objeto ya está completamente inicializado.
+     */
     @SuppressWarnings("this-escape")
     public PanelConsola(GestorConsolaGUI gestorConsola) {
         this.gestorConsola = gestorConsola;
@@ -68,7 +85,7 @@ public class PanelConsola extends JPanel {
             if (actualizandoAutoScroll) {
                 return;
             }
-            aplicarAutoScroll(checkboxAutoScroll.isSelected(), true);
+            UIUtils.ejecutarEnEdt(() -> aplicarAutoScrollEnEdt(checkboxAutoScroll.isSelected(), true));
         });
 
         botonLimpiar.addActionListener(e -> {
@@ -88,7 +105,7 @@ public class PanelConsola extends JPanel {
             }
         });
 
-        timerActualizacion = new Timer(1000, e -> actualizarResumen());
+        timerActualizacion = new Timer(1000, e -> actualizarResumen(false));
         timerActualizacion.start();
 
         panelConsolaWrapper.add(panelDesplazable, BorderLayout.CENTER);
@@ -100,27 +117,18 @@ public class PanelConsola extends JPanel {
         gestorConsola.registrarInfo(I18nUI.Consola.LOG_INICIALIZADA());
     }
 
-    private void actualizarResumen() {
-        actualizarResumen(false);
-    }
-
     private void actualizarResumen(boolean forzar) {
         int versionActual = gestorConsola.obtenerVersion();
         if (!forzar && versionActual == ultimaVersionConsola) {
             return;
         }
         ultimaVersionConsola = versionActual;
-        Runnable actualizarUi = () -> etiquetaResumen.setText(I18nUI.Consola.RESUMEN(
+        UIUtils.ejecutarEnEdt(() -> etiquetaResumen.setText(I18nUI.Consola.RESUMEN(
             gestorConsola.obtenerTotalLogs(),
             gestorConsola.obtenerContadorInfo(),
             gestorConsola.obtenerContadorVerbose(),
             gestorConsola.obtenerContadorError()
-        ));
-        if (SwingUtilities.isEventDispatchThread()) {
-            actualizarUi.run();
-        } else {
-            ejecutarEnEdt(actualizarUi);
-        }
+        )));
     }
 
     public void aplicarIdioma() {
@@ -139,7 +147,7 @@ public class PanelConsola extends JPanel {
     }
 
     public void aplicarTema() {
-        Runnable aplicar = () -> {
+        UIUtils.ejecutarEnEdt(() -> {
             Color fondoPanel = EstilosUI.obtenerFondoPanel();
             Color fondoConsola = UIManager.getColor("TextPane.background");
             if (fondoConsola == null) {
@@ -163,13 +171,7 @@ public class PanelConsola extends JPanel {
 
             revalidate();
             repaint();
-        };
-
-        if (SwingUtilities.isEventDispatchThread()) {
-            aplicar.run();
-        } else {
-            ejecutarEnEdt(aplicar);
-        }
+        });
     }
 
     public void destruir() {
@@ -192,18 +194,11 @@ public class PanelConsola extends JPanel {
         return checkboxAutoScroll.isSelected();
     }
 
-    private void aplicarAutoScroll(boolean activo, boolean notificarCambio) {
-        if (!SwingUtilities.isEventDispatchThread()) {
-            ejecutarEnEdt(() -> aplicarAutoScroll(activo, notificarCambio));
-            return;
-        }
-        aplicarAutoScrollEnEdt(activo, notificarCambio);
-    }
-
     private void aplicarAutoScrollEnEdt(boolean activo, boolean notificarCambio) {
         boolean estadoActual = checkboxAutoScroll.isSelected();
+        boolean cambióEstado = estadoActual != activo;
 
-        if (estadoActual != activo) {
+        if (cambióEstado) {
             actualizandoAutoScroll = true;
             try {
                 checkboxAutoScroll.setSelected(activo);
@@ -214,7 +209,7 @@ public class PanelConsola extends JPanel {
 
         gestorConsola.establecerAutoScroll(activo);
 
-        if (notificarCambio && manejadorCambioAutoScroll != null && estadoActual != activo) {
+        if (notificarCambio && cambióEstado && manejadorCambioAutoScroll != null) {
             manejadorCambioAutoScroll.accept(activo);
         }
     }

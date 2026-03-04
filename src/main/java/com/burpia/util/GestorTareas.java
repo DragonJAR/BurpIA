@@ -1,6 +1,7 @@
 package com.burpia.util;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaTareas;
+import com.burpia.util.Normalizador;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -419,7 +420,9 @@ public class GestorTareas {
             return;
         }
         for (String id : idsCanceladas) {
-            notificarCancelacion(id);
+            if (!Normalizador.esVacio(id)) {
+                notificarCancelacion(id);
+            }
         }
     }
 
@@ -504,7 +507,7 @@ public class GestorTareas {
             return;
         }
         for (String idPurgado : idsPurgadas) {
-            if (idPurgado == null || idPurgado.isEmpty() || idPurgado.equals(idActual)) {
+            if (Normalizador.esVacio(idPurgado) || idPurgado.equals(idActual)) {
                 continue;
             }
             tareas.remove(idPurgado);
@@ -516,7 +519,7 @@ public class GestorTareas {
     }
 
     private void notificarManejador(Consumer<String> manejador, String id, String tipoOperacion) {
-        if (manejador == null || id == null || id.isEmpty()) {
+        if (manejador == null || Normalizador.esVacio(id)) {
             return;
         }
         try {

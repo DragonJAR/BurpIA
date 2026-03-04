@@ -1,6 +1,7 @@
 package com.burpia.ui;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
+import com.burpia.util.Normalizador;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
@@ -12,13 +13,14 @@ import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class ModeloTablaTareas extends DefaultTableModel {
     private static final int TOTAL_COLUMNAS = 4;
+    private static final int LIMITE_DEFECTO_TAREAS = 500;
     private final List<Tarea> datos;
-    private final int limiteFilas;
+    private int limiteFilas;
     private final ReentrantLock lock;
     private final AtomicInteger versionCambios = new AtomicInteger(0);
 
     public ModeloTablaTareas() {
-        this(500);
+        this(LIMITE_DEFECTO_TAREAS);
     }
 
     public ModeloTablaTareas(int limiteFilas) {
@@ -35,6 +37,51 @@ public class ModeloTablaTareas extends DefaultTableModel {
 
     public void agregarTarea(Tarea tarea) {
         agregarTareaYObtenerIdsPurgadas(tarea);
+    }
+
+    /**
+     * Agrega múltiples tareas en una sola operación batch.
+     * Mucho más eficiente que llamar agregarTarea() N veces porque
+     * minimiza las invocaciones al EDT y las notificaciones a listeners.
+     *
+     * @param tareas Lista de tareas a agregar
+     */
+    public void agregarTareas(List<Tarea> tareas) {
+        if (tareas == null || tareas.isEmpty()) {
+            return;
+        }
+
+        List<Tarea> tareasFiltradas = new ArrayList<>();
+        for (Tarea tarea : tareas) {
+            if (tarea != null) {
+                tareasFiltradas.add(tarea);
+            }
+        }
+
+        if (tareasFiltradas.isEmpty()) {
+            return;
+        }
+
+        ejecutarEnEdt(() -> {
+            List<String> idsPurgadas;
+            lock.lock();
+            try {
+                boolean huboCambios = false;
+                for (Tarea tarea : tareasFiltradas) {
+                    int tamañoAnterior = datos.size();
+                    datos.add(tarea);
+                    if (datos.size() > tamañoAnterior) {
+                        huboCambios = true;
+                    }
+                }
+                marcarCambio();
+                idsPurgadas = aplicarLimiteFilasEnDatos();
+            } finally {
+                lock.unlock();
+            }
+
+            sincronizarTablaDesdeDatosEnEdt();
+        });
     }
 
     public List<String> agregarTareaYObtenerIdsPurgadas(Tarea tarea) {
@@ -65,20 +112,16 @@ public class ModeloTablaTareas extends DefaultTableModel {
             return;
         }
         String idTarea = tarea.obtenerId();
-        if (idTarea == null || idTarea.isEmpty()) {
+        if (Normalizador.esVacio(idTarea)) {
             return;
         }
         int indiceEnDatos = -1;
         lock.lock();
         try {
-            for (int i = 0; i < datos.size(); i++) {
-                Tarea tareaActual = datos.get(i);
-                if (tareaActual != null && idTarea.equals(tareaActual.obtenerId())) {
-                    datos.set(i, tarea);
-                    indiceEnDatos = i;
-                    marcarCambio();
-                    break;
-                }
+            indiceEnDatos = buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
+            if (indiceEnDatos >= 0) {
+                datos.set(indiceEnDatos, tarea);
+                marcarCambio();
             }
         } finally {
             lock.unlock();
@@ -116,9 +159,20 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     private int buscarIndicePurgablePorLimite() {
+        return buscarIndiceSi(t -> t != null && t.esFinalizada());
+    }
+
+    /**
+     * Busca el índice de la primera tarea que cumpla con la condición especificada.
+     * Debe llamarse dentro de un lock bloqueado.
+     *
+     * @param condicion Predicado para evaluar cada tarea
+     * @return Índice de la primera tarea que cumple la condición, o -1 si no encuentra
+     */
+    private int buscarIndiceSi(java.util.function.Predicate<Tarea> condicion) {
         for (int i = 0; i < datos.size(); i++) {
             Tarea tarea = datos.get(i);
-            if (tarea != null && tarea.esFinalizada()) {
+            if (tarea != null && condicion.test(tarea)) {
                 return i;
             }
         }
@@ -180,25 +234,19 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public int buscarIndicePorId(String idTarea) {
-        if (idTarea == null || idTarea.isEmpty()) {
+        if (Normalizador.esVacio(idTarea)) {
             return -1;
         }
         lock.lock();
         try {
-            for (int i = 0; i < datos.size(); i++) {
-                Tarea tarea = datos.get(i);
-                if (tarea != null && idTarea.equals(tarea.obtenerId())) {
-                    return i;
-                }
-            }
-            return -1;
+            return buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
         } finally {
             lock.unlock();
         }
     }
 
     public void eliminarTareaPorId(String idTarea) {
-        if (idTarea == null || idTarea.isEmpty()) {
+        if (Normalizador.esVacio(idTarea)) {
             return;
         }
         int indice = buscarIndicePorId(idTarea);
@@ -217,18 +265,15 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public int contarPorEstado(String estado) {
-        if (estado == null || estado.isEmpty()) {
+        if (Normalizador.esVacio(estado)) {
             return 0;
         }
         lock.lock();
         try {
-            int count = 0;
-            for (Tarea tarea : datos) {
-                if (tarea != null && estado.equals(tarea.obtenerEstado())) {
-                    count++;
-                }
-            }
-            return count;
+            return (int) datos.stream()
+                .filter(t -> t != null)
+                .filter(t -> estado.equals(t.obtenerEstado()))
+                .count();
         } finally {
             lock.unlock();
         }
@@ -238,17 +283,15 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (estados == null || estados.length == 0) {
             return;
         }
+        java.util.Set<String> estadosSet = new java.util.HashSet<>(java.util.Arrays.asList(estados));
         boolean huboCambios = false;
         lock.lock();
         try {
             for (int i = datos.size() - 1; i >= 0; i--) {
                 Tarea tarea = datos.get(i);
-                for (String estado : estados) {
-                    if (tarea != null && estado != null && estado.equals(tarea.obtenerEstado())) {
-                        datos.remove(i);
-                        huboCambios = true;
-                        break;
-                    }
+                if (tarea != null && estadosSet.contains(tarea.obtenerEstado())) {
+                    datos.remove(i);
+                    huboCambios = true;
                 }
             }
         } finally {
@@ -304,9 +347,45 @@ public class ModeloTablaTareas extends DefaultTableModel {
             lock.unlock();
         }
 
-        setRowCount(0);
-        for (Object[] fila : snapshot) {
-            addRow(fila);
+        // Optimización: setDataVector() hace una sola notificación en lugar de N addRow() separados
+        // Esto mejora significativamente el rendimiento cuando hay muchas filas
+        setDataVector(
+            snapshot.toArray(new Object[0][]),
+            I18nUI.Tablas.COLUMNAS_TAREAS()
+        );
+    }
+
+    public int obtenerLimiteFilas() {
+        lock.lock();
+        try {
+            return limiteFilas;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    public void establecerLimiteFilas(int nuevoLimite) {
+        int limiteNormalizado = Math.max(1, nuevoLimite);
+        lock.lock();
+        try {
+            if (this.limiteFilas == limiteNormalizado) {
+                return;
+            }
+            this.limiteFilas = limiteNormalizado;
+        } finally {
+            lock.unlock();
+        }
+        // Aplicar el nuevo límite y sincronizar la tabla si se purgaron tareas
+        List<String> idsPurgadas = new ArrayList<>();
+        lock.lock();
+        try {
+            idsPurgadas = aplicarLimiteFilasEnDatos();
+            marcarCambio();
+        } finally {
+            lock.unlock();
+        }
+        if (!idsPurgadas.isEmpty()) {
+            programarSincronizacionTabla();
         }
     }
 }

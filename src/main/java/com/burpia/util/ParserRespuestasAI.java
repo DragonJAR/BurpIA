@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonArray;
+import java.util.List;
 import java.util.Locale;
 
 public class ParserRespuestasAI {
@@ -158,53 +159,87 @@ public class ParserRespuestasAI {
     }
 
     private static String extraerContenidoOpenAI(JsonObject raiz) {
-        String outputText = obtenerTexto(raiz, "output_text");
-        if (!outputText.isEmpty()) {
-            return outputText;
+        // Fast path: output_text directo
+        JsonElement outputTextElement = raiz.get("output_text");
+        if (outputTextElement != null && outputTextElement.isJsonPrimitive()) {
+            String outputText = outputTextElement.getAsString();
+            if (!outputText.isEmpty()) {
+                return outputText;
+            }
         }
 
+        // Fast path: output array
         JsonArray output = obtenerArreglo(raiz, "output");
-        if (output != null) {
-            StringBuilder contenidoCompleto = new StringBuilder();
+        if (output != null && output.size() > 0) {
+            StringBuilder contenidoCompleto = new StringBuilder(output.size() * 100);
             for (JsonElement outputItem : output) {
-                JsonObject outputObject = obtenerObjeto(outputItem);
-                JsonArray contenidos = obtenerArreglo(outputObject, "content");
-                if (contenidos == null) {
+                // Inline: obtenerObjeto(outputItem)
+                if (outputItem == null || !outputItem.isJsonObject()) {
                     continue;
                 }
-                anexarTexto(contenidoCompleto, extraerTextoDesdeArreglo(contenidos));
+                JsonObject outputObject = outputItem.getAsJsonObject();
+
+                JsonArray contenidos = obtenerArreglo(outputObject, "content");
+                if (contenidos != null) {
+                    String texto = extraerTextoDesdeArreglo(contenidos);
+                    if (texto != null && !texto.isEmpty()) {
+                        contenidoCompleto.append(texto);
+                    }
+                }
             }
             if (contenidoCompleto.length() > 0) {
                 return contenidoCompleto.toString();
             }
         }
 
+        // Path más complejo: choices
         JsonArray choices = obtenerArreglo(raiz, "choices");
-        if (choices != null) {
+        if (choices != null && choices.size() > 0) {
             for (JsonElement choiceItem : choices) {
-                JsonObject choice = obtenerObjeto(choiceItem);
-                if (choice == null) {
+                // Inline: obtenerObjeto(choiceItem)
+                if (choiceItem == null || !choiceItem.isJsonObject()) {
                     continue;
                 }
+                JsonObject choice = choiceItem.getAsJsonObject();
 
-                JsonObject message = obtenerObjeto(choice, "message");
-                String content = obtenerTexto(message, "content");
-                if (!content.isEmpty()) {
-                    return content;
-                }
-                String contentPartes = extraerTextoDesdeArreglo(obtenerArreglo(message, "content"));
-                if (!contentPartes.isEmpty()) {
-                    return contentPartes;
+                // Inline: obtenerObjeto(choice, "message")
+                JsonElement messageElement = choice.get("message");
+                if (messageElement != null && messageElement.isJsonObject()) {
+                    JsonObject message = messageElement.getAsJsonObject();
+
+                    // Try content field
+                    JsonElement contentElement = message.get("content");
+                    if (contentElement != null) {
+                        if (contentElement.isJsonPrimitive()) {
+                            String content = contentElement.getAsString();
+                            if (!content.isEmpty()) {
+                                return content;
+                            }
+                        } else if (contentElement.isJsonArray()) {
+                            String contentPartes = extraerTextoDesdeArreglo(contentElement.getAsJsonArray());
+                            if (contentPartes != null && !contentPartes.isEmpty()) {
+                                return contentPartes;
+                            }
+                        }
+                    }
+
+                    // Try reasoning_content
+                    JsonElement reasoningElement = message.get("reasoning_content");
+                    if (reasoningElement != null && reasoningElement.isJsonPrimitive()) {
+                        String reasoning = reasoningElement.getAsString();
+                        if (!reasoning.isEmpty()) {
+                            return reasoning;
+                        }
+                    }
                 }
 
-                String reasoning = obtenerTexto(message, "reasoning_content");
-                if (!reasoning.isEmpty()) {
-                    return reasoning;
-                }
-
-                String text = obtenerTexto(choice, "text");
-                if (!text.isEmpty()) {
-                    return text;
+                // Try text field on choice
+                JsonElement textElement = choice.get("text");
+                if (textElement != null && textElement.isJsonPrimitive()) {
+                    String text = textElement.getAsString();
+                    if (!text.isEmpty()) {
+                        return text;
+                    }
                 }
             }
         }
@@ -212,32 +247,51 @@ public class ParserRespuestasAI {
     }
 
     private static String extraerContenidoClaude(JsonObject raiz) {
-        if (raiz.has("content")) {
-            JsonElement content = raiz.get("content");
+        if (!raiz.has("content")) {
+            return "";
+        }
 
-            if (content.isJsonArray()) {
-                var contentArray = content.getAsJsonArray();
-                StringBuilder contenidoCompleto = new StringBuilder();
-                for (JsonElement item : contentArray) {
-                    JsonObject obj = obtenerObjeto(item);
-                    if (obj == null) {
-                        continue;
-                    }
-                    String tipo = obtenerTexto(obj, "type");
-                    String texto = obtenerTexto(obj, "text");
-                    if (!texto.isEmpty() && ("text".equals(tipo) || tipo.isEmpty())) {
-                        anexarTexto(contenidoCompleto, texto);
-                    }
-                }
-                if (contenidoCompleto.length() > 0) {
-                    return contenidoCompleto.toString();
-                }
+        JsonElement content = raiz.get("content");
+
+        // Fast path: primitivo
+        if (content.isJsonPrimitive()) {
+            return content.getAsString();
+        }
+
+        // Fast path: no es array
+        if (!content.isJsonArray()) {
+            return "";
+        }
+
+        // Optimizado: inline todas las llamadas a método para reducir overhead
+        var contentArray = content.getAsJsonArray();
+        StringBuilder contenidoCompleto = new StringBuilder(contentArray.size() * 100);
+
+        for (JsonElement item : contentArray) {
+            // Inline: obtenerObjeto(item)
+            if (item == null || !item.isJsonObject()) {
+                continue;
             }
-            else if (content.isJsonPrimitive()) {
-                return content.getAsString();
+            JsonObject obj = item.getAsJsonObject();
+
+            // Inline: obtenerTexto(obj, "type")
+            JsonElement typeElement = obj.get("type");
+            String tipo = (typeElement != null && typeElement.isJsonPrimitive())
+                ? typeElement.getAsString()
+                : "";
+
+            // Inline: obtenerTexto(obj, "text")
+            JsonElement textElement = obj.get("text");
+            if (textElement != null && textElement.isJsonPrimitive()) {
+                String texto = textElement.getAsString();
+                // Inline: anexarTexto + isEmpty check
+                if (!texto.isEmpty() && ("text".equals(tipo) || tipo.isEmpty())) {
+                    contenidoCompleto.append(texto);
+                }
             }
         }
-        return "";
+
+        return contenidoCompleto.length() > 0 ? contenidoCompleto.toString() : "";
     }
 
     private static String extraerContenidoGemini(JsonObject raiz) {
@@ -414,43 +468,6 @@ public class ParserRespuestasAI {
      * NOTA: Este método está DEPRECADO. Usar extraerArrayJsonInteligente() que incluye
      * limpieza automática de bloques de pensamiento y múltiples estrategias.
      *
-     * @param contenido Texto que puede contener JSON rodeado de texto
-     * @param gson Instancia de Gson para parseo
-     * @return JsonArray si se encuentra JSON válido, null en caso contrario
-     * @deprecated Usar extraerArrayJsonInteligente() que maneja más casos automáticamente
-     */
-    @Deprecated
-    public static JsonArray extraerJsonDeTextoLibre(String contenido, com.google.gson.Gson gson) {
-        if (Normalizador.esVacio(contenido)) {
-            return null;
-        }
-
-        // Buscar el primer '[' que inicia un array JSON
-        int inicioArray = contenido.indexOf('[');
-        if (inicioArray == -1) {
-            return null;
-        }
-
-        // Buscar el cierre del array JSON
-        int finArray = encontrarCierreJson(contenido, inicioArray);
-        if (finArray == -1) {
-            return null;
-        }
-
-        String jsonExtraido = contenido.substring(inicioArray, finArray + 1);
-
-        try {
-            JsonElement elemento = gson.fromJson(jsonExtraido, JsonElement.class);
-            if (elemento.isJsonArray()) {
-                return elemento.getAsJsonArray();
-            }
-        } catch (Exception e) {
-            // JSON inválido, retornar null
-        }
-
-        return null;
-    }
-
     /**
      * Encuentra la posición del carácter que cierra un array JSON,
      * contando corchetes anidados y manejando strings correctamente.
@@ -654,5 +671,99 @@ public class ParserRespuestasAI {
             }
         }
         return null;
+    }
+
+    /**
+     * Extrae hallazgos de texto estructurado EXTREMADAMENTE malformado.
+     *
+     * <p><b>ÚLTIMA OPCIÓN</b> en la cadena de fallback.</p>
+     *
+     * <p>Usa {@link ExtractorCamposRobusto} para extraer campos sin depender
+     * de JSON válido. Estrategia:</p>
+     *
+     * <ol>
+     *   <li>Usa "titulo" como delimitador (no depende de { })</li>
+     *   <li>Aplica 3 estrategias de extracción por campo</li>
+     *   <li>Maneja campos duplicados (último valor gana)</li>
+     * </ol>
+     *
+     * <p><b>Casos de uso:</b></p>
+     * <ul>
+     *   <li>Modelos con JSON roto (dragon-security, modelos locales)</li>
+     *   <li>LLMs que generan formato inconsistente</li>
+     *   <li>Respuestas con thinking process mezclado</li>
+     * </ul>
+     *
+     * @param contenido Texto estructurado malformado
+     * @param gson Instancia de Gson
+     * @return JsonArray con hallazgos recuperados, null si falla todo
+     * @since 1.0.3
+     */
+    public static JsonArray extraerHallazgosPorDelimitadores(String contenido, com.google.gson.Gson gson) {
+        if (Normalizador.esVacio(contenido)) {
+            return null;
+        }
+
+        try {
+            List<String> bloques = ExtractorCamposRobusto.extraerBloquesPorCampo(
+                contenido,
+                ExtractorCamposRobusto.CamposHallazgo.TITULO
+            );
+
+            if (bloques.isEmpty()) {
+                return null;
+            }
+
+            JsonArray arrayHallazgos = new JsonArray();
+
+            for (String bloque : bloques) {
+                JsonObject hallazgo = new JsonObject();
+
+                String titulo = extraerCampoConExtractor(
+                    ExtractorCamposRobusto.CamposHallazgo.TITULO, bloque);
+                String descripcion = extraerCampoConExtractor(
+                    ExtractorCamposRobusto.CamposHallazgo.DESCRIPCION, bloque);
+                String severidad = extraerCampoConExtractor(
+                    ExtractorCamposRobusto.CamposHallazgo.SEVERIDAD, bloque);
+                String confianza = extraerCampoConExtractor(
+                    ExtractorCamposRobusto.CamposHallazgo.CONFIANZA, bloque);
+                String evidencia = extraerCampoConExtractor(
+                    ExtractorCamposRobusto.CamposHallazgo.EVIDENCIA, bloque);
+
+                if (Normalizador.noEsVacio(titulo)) {
+                    hallazgo.addProperty("titulo", titulo);
+                    if (Normalizador.noEsVacio(descripcion)) {
+                        hallazgo.addProperty("descripcion", descripcion);
+                    }
+                    if (Normalizador.noEsVacio(severidad)) {
+                        hallazgo.addProperty("severidad", severidad);
+                    }
+                    if (Normalizador.noEsVacio(confianza)) {
+                        hallazgo.addProperty("confianza", confianza);
+                    }
+                    if (Normalizador.noEsVacio(evidencia)) {
+                        hallazgo.addProperty("evidencia", evidencia);
+                    }
+
+                    arrayHallazgos.add(hallazgo);
+                }
+            }
+
+            return arrayHallazgos.size() > 0 ? arrayHallazgos : null;
+
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Helper para extraer campo usando ExtractorCamposRobusto.
+     *
+     * @param campo Campo a extraer
+     * @param bloque Bloque de texto
+     * @return Valor extraído o vacío
+     */
+    private static String extraerCampoConExtractor(ExtractorCamposRobusto.Campo campo, String bloque) {
+        return ExtractorCamposRobusto.extraerCampoDeBloque(campo, bloque);
     }
 }

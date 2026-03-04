@@ -35,6 +35,7 @@ public class DialogoConfiguracion extends JDialog {
     private JTextField txtRetraso;
     private JTextField txtMaximoConcurrente;
     private JTextField txtMaximoHallazgosTabla;
+    private JTextField txtMaximoTareas;
     private JCheckBox chkDetallado;
     private JCheckBox chkIgnorarSSL;
     private JCheckBox chkSoloProxy;
@@ -59,6 +60,18 @@ public class DialogoConfiguracion extends JDialog {
     private JButton btnRefrescarModelos;
     private JButton btnProbarConexion;
     private JButton btnBuscarActualizaciones;
+
+    // Multi-Proveedor Components
+    private JCheckBox chkHabilitarMultiProveedor;
+    private JList<String> listaProveedoresDisponibles;
+    private JList<String> listaProveedoresSeleccionados;
+    private DefaultListModel<String> modeloListaDisponibles;
+    private DefaultListModel<String> modeloListaSeleccionados;
+    private JButton btnAgregarProveedor;
+    private JButton btnQuitarProveedor;
+    private JButton btnSubirProveedor;
+    private JButton btnBajarProveedor;
+    private JLabel lblEstadoMultiProveedor;
     private JTextField txtMaxTokens;
     private JTextField txtTimeoutModelo;
 
@@ -77,6 +90,7 @@ public class DialogoConfiguracion extends JDialog {
     private String proveedorActualUi;
     private String codigoIdiomaUiActual;
     private boolean actualizandoProveedorUi = false;
+    private boolean actualizandoListaMultiProveedor = false;
     private boolean guardandoConfiguracion = false;
     private boolean actualizandoRutaFlag = false;
     private long secuenciaRefrescoModelos = 0L;
@@ -153,9 +167,26 @@ public class DialogoConfiguracion extends JDialog {
         txtRetraso = new JTextField(10);
         txtRetraso.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         txtRetraso.setToolTipText(I18nUI.Tooltips.Configuracion.RETRASO());
+
         txtMaximoConcurrente = new JTextField(10);
         txtMaximoConcurrente.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         txtMaximoConcurrente.setToolTipText(I18nUI.Tooltips.Configuracion.MAXIMO_CONCURRENTE());
+
+        txtUrl = new JTextField(30);
+        txtUrl.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtUrl.setToolTipText(I18nUI.Tooltips.Configuracion.URL_API());
+
+        txtClave = new JPasswordField(30);
+        txtClave.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtClave.setToolTipText(I18nUI.Tooltips.Configuracion.CLAVE_API());
+
+        txtMaxTokens = new JTextField(10);
+        txtMaxTokens.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtMaxTokens.setToolTipText(I18nUI.Tooltips.Configuracion.MAX_TOKENS());
+
+        txtTimeoutModelo = new JTextField(10);
+        txtTimeoutModelo.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtTimeoutModelo.setToolTipText(I18nUI.Tooltips.Configuracion.TIMEOUT_MODELO());
 
         txtMaximoHallazgosTabla = new JTextField(10);
         txtMaximoHallazgosTabla.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
@@ -163,6 +194,14 @@ public class DialogoConfiguracion extends JDialog {
                 I18nUI.Tooltips.Configuracion.MAXIMO_HALLAZGOS() + " (" +
                         ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA + "-" +
                         ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA + ")");
+
+        txtMaximoTareas = new JTextField(10);
+        txtMaximoTareas.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtMaximoTareas.setToolTipText(
+                I18nUI.Tooltips.Configuracion.MAXIMO_TAREAS() + " (" +
+                        ConfiguracionAPI.MINIMO_TAREAS_TABLA + "-" +
+                        ConfiguracionAPI.MAXIMO_TAREAS_TABLA + ")");
+
         chkDetallado = new JCheckBox(I18nUI.Configuracion.CHECK_DETALLADO());
         chkDetallado.setToolTipText(I18nUI.Tooltips.Configuracion.DETALLADO());
         chkIgnorarSSL = new JCheckBox(I18nUI.Configuracion.LABEL_IGNORAR_SSL());
@@ -181,6 +220,22 @@ public class DialogoConfiguracion extends JDialog {
         comboIdioma.setFont(EstilosUI.FUENTE_ESTANDAR);
         comboIdioma.setToolTipText(I18nUI.Tooltips.Configuracion.IDIOMA());
         comboIdioma.addActionListener(e -> alCambiarIdiomaUi());
+
+        comboProveedor = new JComboBox<>(ProveedorAI.obtenerNombresProveedores().toArray(new String[0]));
+        comboProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
+        comboProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.PROVEEDOR());
+        comboProveedor.addActionListener(e -> alCambiarProveedor());
+
+        comboModelo = new JComboBox<>();
+        comboModelo.setFont(EstilosUI.FUENTE_ESTANDAR);
+        comboModelo.setEditable(true);
+        comboModelo.setToolTipText(I18nUI.Tooltips.Configuracion.MODELO());
+        comboModelo.addActionListener(e -> actualizarTimeoutModeloSeleccionado());
+
+        btnRefrescarModelos = new JButton(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
+        btnRefrescarModelos.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnRefrescarModelos.setToolTipText(I18nUI.Tooltips.Configuracion.CARGAR_MODELOS());
+        btnRefrescarModelos.addActionListener(e -> refrescarModelosDesdeAPI());
 
         String[] fuentes = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
         comboFuenteEstandar = new JComboBox<>(fuentes);
@@ -212,6 +267,101 @@ public class DialogoConfiguracion extends JDialog {
 
         root.add(contenido, BorderLayout.CENTER);
         return root;
+    }
+
+    private JPanel crearPanelProveedor() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(UIUtils.crearBordeTitulado(
+                I18nUI.Configuracion.TITULO_PROVEEDOR(), 12, 16));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        int fila = 0;
+
+        // Proveedor AI
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDOR_AI()), gbc);
+
+        gbc.gridx = 1; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 1.0;
+        panel.add(comboProveedor, gbc);
+
+        fila++;
+
+        // URL de API
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_URL_API()), gbc);
+
+        gbc.gridx = 1; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 1.0;
+        panel.add(txtUrl, gbc);
+
+        fila++;
+
+        // Clave de API
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_CLAVE_API()), gbc);
+
+        gbc.gridx = 1; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 1.0;
+        panel.add(txtClave, gbc);
+
+        fila++;
+
+        // Modelo
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_MODELO()), gbc);
+
+        gbc.gridx = 1; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 1.0;
+        JPanel panelModelo = new JPanel(new BorderLayout(5, 0));
+        panelModelo.setOpaque(false);
+        panelModelo.add(comboModelo, BorderLayout.CENTER);
+        panelModelo.add(btnRefrescarModelos, BorderLayout.EAST);
+        panel.add(panelModelo, gbc);
+
+        fila++;
+
+        // FILA COMBINADA 1: Timeout + Retraso
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_TIMEOUT_MODELO()), gbc);
+
+        gbc.gridx = 1; gbc.gridwidth = 1; gbc.weightx = 0.5;
+        panel.add(txtTimeoutModelo, gbc);
+
+        gbc.gridx = 2; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.insets = new Insets(8, 15, 8, 8);
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_RETRASO()), gbc);
+
+        gbc.gridx = 3; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 0.5;
+        gbc.insets = new Insets(8, 8, 8, 8);
+        panel.add(txtRetraso, gbc);
+
+        fila++;
+
+        // FILA COMBINADA 2: Máximo Tokens + Máximo Concurrente
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        JLabel lblMaxTokens = new JLabel(I18nUI.Configuracion.LABEL_MAX_TOKENS());
+        lblMaxTokens.setToolTipText(I18nUI.Tooltips.Configuracion.MAX_TOKENS());
+        panel.add(lblMaxTokens, gbc);
+
+        gbc.gridx = 1; gbc.gridwidth = 1; gbc.weightx = 0.5;
+        JPanel panelMaxTokens = new JPanel(new BorderLayout(5, 0));
+        panelMaxTokens.setOpaque(false);
+        panelMaxTokens.add(txtMaxTokens, BorderLayout.CENTER);
+        JLabel lblInfoTokens = new JLabel("ℹ️");
+        lblInfoTokens.setToolTipText(I18nUI.Tooltips.Configuracion.INFO_TOKENS());
+        panelMaxTokens.add(lblInfoTokens, BorderLayout.EAST);
+        panel.add(panelMaxTokens, gbc);
+
+        gbc.gridx = 2; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.insets = new Insets(8, 15, 8, 8);
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_MAXIMO_CONCURRENTE()), gbc);
+
+        gbc.gridx = 3; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 0.5;
+        gbc.insets = new Insets(8, 8, 8, 8);
+        panel.add(txtMaximoConcurrente, gbc);
+
+        return panel;
     }
 
     private JPanel crearTabAjustesUsuario() {
@@ -250,13 +400,21 @@ public class DialogoConfiguracion extends JDialog {
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.weightx = 0;
+        panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_MAXIMO_TAREAS()), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        panelAjustes.add(txtMaximoTareas, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.weightx = 0;
         panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_MODO_DETALLADO()), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1;
         panelAjustes.add(chkDetallado, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 3;
+        gbc.gridy = 4;
         gbc.weightx = 0;
         panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_SEGURIDAD_SSL()), gbc);
         gbc.gridx = 1;
@@ -264,7 +422,7 @@ public class DialogoConfiguracion extends JDialog {
         panelAjustes.add(chkIgnorarSSL, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         gbc.weightx = 0;
         panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_FILTRO_HERRAMIENTAS()), gbc);
         gbc.gridx = 1;
@@ -272,7 +430,7 @@ public class DialogoConfiguracion extends JDialog {
         panelAjustes.add(chkSoloProxy, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 5;
+        gbc.gridy = 6;
         gbc.weightx = 0;
         panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_ALERTAS()), gbc);
         gbc.gridx = 1;
@@ -401,173 +559,323 @@ public class DialogoConfiguracion extends JDialog {
                 I18nUI.Configuracion.TITULO_MULTI_PROVEEDOR(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(12, 16, 12, 16);
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        int fila = 0;
+
+        // Checkbox para habilitar multi-proveedor
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 3;
+        chkHabilitarMultiProveedor = new JCheckBox(I18nUI.Configuracion.LABEL_HABILITAR_MULTI_PROVEEDOR());
+        chkHabilitarMultiProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
+        chkHabilitarMultiProveedor.addActionListener(e -> actualizarEstadoMultiProveedor());
+        panel.add(chkHabilitarMultiProveedor, gbc);
+
+        fila++;
+
+        // Separador
+        gbc.gridy = fila;
+        gbc.gridwidth = 3;
+        gbc.insets = new Insets(16, 8, 8, 8);
+        panel.add(new JSeparator(SwingConstants.HORIZONTAL), gbc);
+        gbc.insets = new Insets(8, 8, 8, 8);
+
+        fila++;
+
+        // Lista de proveedores disponibles
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.weightx = 1;
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDORES_DISPONIBLES()), gbc);
+
+        fila++;
+
+        gbc.gridy = fila;
+        gbc.gridheight = 5;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+
+        modeloListaDisponibles = new DefaultListModel<>();
+        listaProveedoresDisponibles = new JList<>(modeloListaDisponibles);
+        listaProveedoresDisponibles.setFont(EstilosUI.FUENTE_ESTANDAR);
+        listaProveedoresDisponibles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        listaProveedoresDisponibles.setVisibleRowCount(5);
+        JScrollPane scrollDisponibles = new JScrollPane(listaProveedoresDisponibles);
+        scrollDisponibles.setPreferredSize(new Dimension(200, 120));
+        panel.add(scrollDisponibles, gbc);
+
+        // Botones centrales
+        gbc.gridx = 1;
+        gbc.gridy = fila;
+        gbc.gridheight = 1;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
 
-        JButton btnHabilitar = new JButton(I18nUI.Configuracion.BOTON_HABILITAR());
-        btnHabilitar.setFont(EstilosUI.FUENTE_NEGRITA);
-        btnHabilitar.setEnabled(false);
+        JPanel panelBotonesCentro = new JPanel(new GridLayout(4, 1, 5, 5));
+        btnAgregarProveedor = new JButton("→");
+        btnAgregarProveedor.setToolTipText("Agregar proveedor seleccionado");
+        btnAgregarProveedor.setEnabled(false);
+        btnAgregarProveedor.addActionListener(e -> agregarProveedorSeleccionado());
+        panelBotonesCentro.add(btnAgregarProveedor);
 
-        JLabel lblPronto = new JLabel("✨ " + I18nUI.Configuracion.LABEL_PRONTO().toUpperCase() + " ✨");
-        lblPronto.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
-        lblPronto.setForeground(EstilosUI.COLOR_INFO);
+        btnQuitarProveedor = new JButton("←");
+        btnQuitarProveedor.setToolTipText("Quitar proveedor seleccionado");
+        btnQuitarProveedor.setEnabled(false);
+        btnQuitarProveedor.addActionListener(e -> quitarProveedorSeleccionado());
+        panelBotonesCentro.add(btnQuitarProveedor);
 
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panel.add(btnHabilitar, gbc);
+        Box.createVerticalStrut(10);
+        panelBotonesCentro.add(Box.createVerticalStrut(10));
 
-        gbc.gridx = 1;
-        panel.add(Box.createHorizontalStrut(30), gbc);
+        panel.add(panelBotonesCentro, gbc);
 
+        // Lista de proveedores seleccionados
         gbc.gridx = 2;
-        panel.add(lblPronto, gbc);
+        gbc.gridheight = 5;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+
+        modeloListaSeleccionados = new DefaultListModel<>();
+        listaProveedoresSeleccionados = new JList<>(modeloListaSeleccionados);
+        listaProveedoresSeleccionados.setFont(EstilosUI.FUENTE_ESTANDAR);
+        listaProveedoresSeleccionados.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        listaProveedoresSeleccionados.setVisibleRowCount(5);
+
+        ListSelectionModel seleccionDisponibles = listaProveedoresDisponibles.getSelectionModel();
+        seleccionDisponibles.addListSelectionListener(e -> actualizarBotonesMultiProveedor());
+
+        ListSelectionModel seleccionSeleccionados = listaProveedoresSeleccionados.getSelectionModel();
+        seleccionSeleccionados.addListSelectionListener(e -> actualizarBotonesMultiProveedor());
+
+        JScrollPane scrollSeleccionados = new JScrollPane(listaProveedoresSeleccionados);
+        scrollSeleccionados.setPreferredSize(new Dimension(200, 120));
+        panel.add(scrollSeleccionados, gbc);
+
+        fila += 5;
+
+        // Botones de reordenamiento
+        gbc.gridx = 2;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.gridheight = 1;
+        gbc.weightx = 0;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.NONE;
+
+        JPanel panelBotonesReordenar = new JPanel(new GridLayout(1, 2, 5, 0));
+        btnSubirProveedor = new JButton("▲");
+        btnSubirProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnSubirProveedor.setToolTipText("Subir proveedor en el orden");
+        btnSubirProveedor.setEnabled(false);
+        btnSubirProveedor.addActionListener(e -> subirProveedor());
+        panelBotonesReordenar.add(btnSubirProveedor);
+
+        btnBajarProveedor = new JButton("▼");
+        btnBajarProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnBajarProveedor.setToolTipText("Bajar proveedor en el orden");
+        btnBajarProveedor.setEnabled(false);
+        btnBajarProveedor.addActionListener(e -> bajarProveedor());
+        panelBotonesReordenar.add(btnBajarProveedor);
+
+        panel.add(panelBotonesReordenar, gbc);
+
+        fila++;
+
+        // Etiqueta de estado
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 3;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        lblEstadoMultiProveedor = new JLabel(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_DESHABILITADO());
+        lblEstadoMultiProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
+        lblEstadoMultiProveedor.setForeground(EstilosUI.COLOR_INFO);
+        panel.add(lblEstadoMultiProveedor, gbc);
+
+        fila++;
+
+        // Configurar listeners de selección para botones de reordenamiento
+        listaProveedoresSeleccionados.addListSelectionListener(e -> {
+            actualizarBotonesReordenamiento();
+        });
 
         return panel;
     }
 
-    private JPanel crearPanelProveedor() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(UIUtils.crearBordeTitulado(
-                I18nUI.Configuracion.TITULO_PROVEEDOR(), 12, 16));
+    private void actualizarEstadoMultiProveedor() {
+        boolean habilitado = chkHabilitarMultiProveedor.isSelected();
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.anchor = GridBagConstraints.WEST;
+        listaProveedoresDisponibles.setEnabled(habilitado);
+        listaProveedoresSeleccionados.setEnabled(habilitado);
+        btnAgregarProveedor.setEnabled(habilitado);
+        btnQuitarProveedor.setEnabled(habilitado);
+        btnSubirProveedor.setEnabled(habilitado);
+        btnBajarProveedor.setEnabled(habilitado);
 
-        int fila = 0;
+        if (habilitado) {
+            asegurarProveedorActualEnPrimeraPosicion();
+            actualizarEtiquetaEstadoMultiProveedor();
+        } else {
+            lblEstadoMultiProveedor.setText(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_DESHABILITADO());
+        }
+    }
 
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.weightx = 0;
-        panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDOR_AI()), gbc);
+    private void actualizarBotonesMultiProveedor() {
+        boolean haySeleccionDisponible = !listaProveedoresDisponibles.isSelectionEmpty();
+        boolean haySeleccionSeleccionados = !listaProveedoresSeleccionados.isSelectionEmpty();
 
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        comboProveedor = new JComboBox<>(ProveedorAI.obtenerNombresProveedores().toArray(new String[0]));
-        comboProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
-        comboProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.PROVEEDOR());
-        comboProveedor.addActionListener(e -> alCambiarProveedor());
-        panel.add(comboProveedor, gbc);
+        btnAgregarProveedor.setEnabled(haySeleccionDisponible && chkHabilitarMultiProveedor.isSelected());
+        btnQuitarProveedor.setEnabled(haySeleccionSeleccionados && chkHabilitarMultiProveedor.isSelected());
 
-        fila++;
+        actualizarBotonesReordenamiento();
+    }
 
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.weightx = 0;
-        panel.add(new JLabel(I18nUI.Configuracion.LABEL_URL_API()), gbc);
+    private void actualizarBotonesReordenamiento() {
+        int indiceSeleccionado = listaProveedoresSeleccionados.getSelectedIndex();
+        boolean habilitado = chkHabilitarMultiProveedor.isSelected();
 
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        txtUrl = new JTextField(30);
-        txtUrl.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
-        txtUrl.setToolTipText(I18nUI.Tooltips.Configuracion.URL_API());
-        panel.add(txtUrl, gbc);
+        btnSubirProveedor.setEnabled(habilitado && indiceSeleccionado > 0);
+        btnBajarProveedor.setEnabled(habilitado && indiceSeleccionado >= 0 &&
+            indiceSeleccionado < modeloListaSeleccionados.getSize() - 1);
+    }
 
-        fila++;
+    private void asegurarProveedorActualEnPrimeraPosicion() {
+        String proveedorActual = (String) comboProveedor.getSelectedItem();
+        if (Normalizador.esVacio(proveedorActual)) {
+            return;
+        }
 
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.weightx = 0;
-        panel.add(new JLabel(I18nUI.Configuracion.LABEL_CLAVE_API()), gbc);
+        int indiceActual = modeloListaSeleccionados.indexOf(proveedorActual);
 
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        txtClave = new JPasswordField(30);
-        txtClave.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
-        txtClave.setToolTipText(I18nUI.Tooltips.Configuracion.CLAVE_API());
-        panel.add(txtClave, gbc);
+        if (indiceActual == 0) {
+            return;
+        }
 
-        fila++;
+        if (indiceActual > 0) {
+            modeloListaSeleccionados.removeElementAt(indiceActual);
+            modeloListaSeleccionados.insertElementAt(proveedorActual, 0);
+        } else {
+            if (modeloListaSeleccionados.getSize() >= 5) {
+                modeloListaSeleccionados.removeElementAt(modeloListaSeleccionados.getSize() - 1);
+            }
+            modeloListaSeleccionados.insertElementAt(proveedorActual, 0);
 
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.weightx = 0;
-        panel.add(new JLabel(I18nUI.Configuracion.LABEL_MODELO()), gbc);
+            modeloListaDisponibles.removeElement(proveedorActual);
+        }
 
-        JPanel panelModelo = new JPanel(new BorderLayout(5, 0));
-        comboModelo = new JComboBox<>();
-        comboModelo.setFont(EstilosUI.FUENTE_ESTANDAR);
-        comboModelo.setEditable(true);
-        comboModelo.setToolTipText(I18nUI.Tooltips.Configuracion.MODELO());
-        comboModelo.addActionListener(e -> actualizarTimeoutModeloSeleccionado());
-        panelModelo.add(comboModelo, BorderLayout.CENTER);
+        listaProveedoresSeleccionados.setSelectedIndex(0);
+        actualizarBotonesMultiProveedor();
+    }
 
-        btnRefrescarModelos = new JButton(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
-        btnRefrescarModelos.setFont(EstilosUI.FUENTE_ESTANDAR);
-        btnRefrescarModelos.setToolTipText(I18nUI.Tooltips.Configuracion.CARGAR_MODELOS());
-        btnRefrescarModelos.addActionListener(e -> refrescarModelosDesdeAPI());
-        panelModelo.add(btnRefrescarModelos, BorderLayout.EAST);
+    private void actualizarEtiquetaEstadoMultiProveedor() {
+        int cantidad = modeloListaSeleccionados.getSize();
+        if (cantidad == 0) {
+            lblEstadoMultiProveedor.setText(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_DESHABILITADO());
+        } else if (cantidad == 1) {
+            lblEstadoMultiProveedor.setText("⚠️ " + I18nUI.Configuracion.ERROR_MIN_PROVEEDORES());
+        } else {
+            lblEstadoMultiProveedor.setText("✅ " + I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_HABILITADO(String.valueOf(cantidad)));
+        }
+    }
 
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(panelModelo, gbc);
+    private void agregarProveedorSeleccionado() {
+        String proveedor = listaProveedoresDisponibles.getSelectedValue();
+        if (Normalizador.esVacio(proveedor)) {
+            return;
+        }
 
-        fila++;
+        if (modeloListaSeleccionados.getSize() >= 5) {
+            UIUtils.mostrarAdvertencia(this, "Límite alcanzado", I18nUI.Configuracion.ERROR_MAX_PROVEEDORES());
+            return;
+        }
 
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.weightx = 0;
-        JLabel lblMaxTokens = new JLabel(I18nUI.Configuracion.LABEL_MAX_TOKENS());
-        lblMaxTokens.setToolTipText(I18nUI.Tooltips.Configuracion.MAX_TOKENS());
-        panel.add(lblMaxTokens, gbc);
+        if (modeloListaSeleccionados.indexOf(proveedor) >= 0) {
+            return;
+        }
 
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        JPanel panelMaxTokens = new JPanel(new BorderLayout(5, 0));
-        txtMaxTokens = new JTextField(30);
-        txtMaxTokens.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
-        txtMaxTokens.setToolTipText(I18nUI.Tooltips.Configuracion.MAX_TOKENS());
-        panelMaxTokens.add(txtMaxTokens, BorderLayout.CENTER);
+        modeloListaSeleccionados.addElement(proveedor);
 
-        JLabel lblInfoTokens = new JLabel("ℹ️");
-        lblInfoTokens.setToolTipText(I18nUI.Tooltips.Configuracion.INFO_TOKENS());
-        panelMaxTokens.add(lblInfoTokens, BorderLayout.EAST);
+        // Remover de disponibles para mantener exclusión mutua
+        modeloListaDisponibles.removeElement(proveedor);
 
-        panel.add(panelMaxTokens, gbc);
+        actualizarEtiquetaEstadoMultiProveedor();
+        actualizarBotonesMultiProveedor();
+    }
 
-        fila++;
+    private void quitarProveedorSeleccionado() {
+        String proveedor = listaProveedoresSeleccionados.getSelectedValue();
+        if (Normalizador.esVacio(proveedor)) {
+            return;
+        }
 
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.weightx = 0;
-        panel.add(new JLabel(I18nUI.Configuracion.LABEL_TIMEOUT_MODELO()), gbc);
+        int indiceSeleccionado = listaProveedoresSeleccionados.getSelectedIndex();
+        String proveedorActual = (String) comboProveedor.getSelectedItem();
 
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        txtTimeoutModelo = new JTextField(30);
-        txtTimeoutModelo.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
-        txtTimeoutModelo.setToolTipText(I18nUI.Tooltips.Configuracion.TIMEOUT_MODELO());
-        panel.add(txtTimeoutModelo, gbc);
+        if (indiceSeleccionado == 0 && proveedor.equals(proveedorActual)) {
+            UIUtils.mostrarAdvertencia(this,
+                I18nUI.Configuracion.TITULO_ADVERTENCIA_PROVEEDOR_PRINCIPAL(),
+                I18nUI.Configuracion.MSG_NO_QUITAR_PROVEEDOR_PRINCIPAL());
+            return;
+        }
 
-        fila++;
+        modeloListaSeleccionados.removeElement(proveedor);
 
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.weightx = 0;
-        panel.add(new JLabel(I18nUI.Configuracion.LABEL_RETRASO()), gbc);
+        if (!proveedor.equals(proveedorActual)) {
+            modeloListaDisponibles.addElement(proveedor);
+        }
 
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        panel.add(txtRetraso, gbc);
+        actualizarEtiquetaEstadoMultiProveedor();
+        actualizarBotonesMultiProveedor();
+    }
 
-        fila++;
+    private void subirProveedor() {
+        int indice = listaProveedoresSeleccionados.getSelectedIndex();
+        if (indice <= 0) {
+            return;
+        }
 
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.weightx = 0;
-        panel.add(new JLabel(I18nUI.Configuracion.LABEL_MAXIMO_CONCURRENTE()), gbc);
+        String proveedor = modeloListaSeleccionados.remove(indice);
+        modeloListaSeleccionados.add(indice - 1, proveedor);
+        listaProveedoresSeleccionados.setSelectedIndex(indice - 1);
+        actualizarBotonesReordenamiento();
 
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        panel.add(txtMaximoConcurrente, gbc);
+        if (indice - 1 == 0 && !actualizandoProveedorUi) {
+            actualizandoListaMultiProveedor = true;
+            try {
+                comboProveedor.setSelectedItem(proveedor);
+            } finally {
+                actualizandoListaMultiProveedor = false;
+            }
+        }
+    }
 
-        return panel;
+    private void bajarProveedor() {
+        int indice = listaProveedoresSeleccionados.getSelectedIndex();
+        if (indice < 0 || indice >= modeloListaSeleccionados.getSize() - 1) {
+            return;
+        }
+
+        String proveedor = modeloListaSeleccionados.remove(indice);
+        modeloListaSeleccionados.add(indice + 1, proveedor);
+        listaProveedoresSeleccionados.setSelectedIndex(indice + 1);
+        actualizarBotonesReordenamiento();
+
+        if (indice == 0 && !actualizandoProveedorUi) {
+            String nuevoProveedorPrincipal = modeloListaSeleccionados.getElementAt(0);
+            actualizandoListaMultiProveedor = true;
+            try {
+                comboProveedor.setSelectedItem(nuevoProveedorPrincipal);
+            } finally {
+                actualizandoListaMultiProveedor = false;
+            }
+        }
     }
 
     private JPanel crearPanelPrompt() {
@@ -967,6 +1275,7 @@ public class DialogoConfiguracion extends JDialog {
         txtRetraso.setText(String.valueOf(config.obtenerRetrasoSegundos()));
         txtMaximoConcurrente.setText(String.valueOf(config.obtenerMaximoConcurrente()));
         txtMaximoHallazgosTabla.setText(String.valueOf(config.obtenerMaximoHallazgosTabla()));
+        txtMaximoTareas.setText(String.valueOf(config.obtenerMaximoTareasTabla()));
         chkDetallado.setSelected(config.esDetallado());
         chkIgnorarSSL.setSelected(config.ignorarErroresSSL());
         chkSoloProxy.setSelected(config.soloProxy());
@@ -1009,6 +1318,28 @@ public class DialogoConfiguracion extends JDialog {
 
         proveedorActualUi = (String) comboProveedor.getSelectedItem();
         cargarEstadoProveedor(proveedorActualUi);
+
+        // Cargar configuración multi-proveedor
+        chkHabilitarMultiProveedor.setSelected(config.esMultiProveedorHabilitado());
+
+        // Cargar proveedores seleccionados PRIMERO (para filtrar correctamente)
+        modeloListaSeleccionados.clear();
+        List<String> seleccionados = config.obtenerProveedoresMultiConsulta();
+        for (String proveedor : seleccionados) {
+            modeloListaSeleccionados.addElement(proveedor);
+        }
+
+        // Cargar proveedores disponibles DESPUÉS (filtrando contra seleccionados ya cargados)
+        modeloListaDisponibles.clear();
+        List<String> disponibles = config.obtenerProveedoresDisponibles();
+        for (String proveedor : disponibles) {
+            if (modeloListaSeleccionados.indexOf(proveedor) == -1) {
+                modeloListaDisponibles.addElement(proveedor);
+            }
+        }
+
+        actualizarEstadoMultiProveedor();
+        actualizarBotonesMultiProveedor();
     }
 
     private void guardarConfiguracion() {
@@ -1048,11 +1379,18 @@ public class DialogoConfiguracion extends JDialog {
         final String retrasoTexto = txtRetraso.getText();
         final String maximoConcurrenteTexto = txtMaximoConcurrente.getText();
         final String maximoHallazgosTexto = txtMaximoHallazgosTabla.getText();
+        final String maximoTareasTexto = txtMaximoTareas.getText();
 
         final String nombreFuenteEstandar = (String) comboFuenteEstandar.getSelectedItem();
         final int tamanioFuenteEstandar = (int) spinnerTamanioEstandar.getValue();
         final String nombreFuenteMono = (String) comboFuenteMono.getSelectedItem();
         final int tamanioFuenteMono = (int) spinnerTamanioMono.getValue();
+
+        final boolean multiProveedorHabilitado = chkHabilitarMultiProveedor.isSelected();
+        final List<String> proveedoresMultiConsulta = new ArrayList<>();
+        for (int i = 0; i < modeloListaSeleccionados.getSize(); i++) {
+            proveedoresMultiConsulta.add(modeloListaSeleccionados.getElementAt(i));
+        }
 
         final Map<String, String> rutasTemporalesCopy = new HashMap<>(rutasBinarioAgenteTemporal);
         final String promptPorDefecto = ConfiguracionAPI.obtenerPromptPorDefecto();
@@ -1121,11 +1459,15 @@ public class DialogoConfiguracion extends JDialog {
                     snapshot.establecerRetrasoSegundos(parsearEntero(retrasoTexto));
                     snapshot.establecerMaximoConcurrente(parsearEntero(maximoConcurrenteTexto));
                     snapshot.establecerMaximoHallazgosTabla(parsearEntero(maximoHallazgosTexto));
+                    snapshot.establecerMaximoTareasTabla(parsearEntero(maximoTareasTexto));
 
                     snapshot.establecerNombreFuenteEstandar(nombreFuenteEstandar);
                     snapshot.establecerTamanioFuenteEstandar(tamanioFuenteEstandar);
                     snapshot.establecerNombreFuenteMono(nombreFuenteMono);
                     snapshot.establecerTamanioFuenteMono(tamanioFuenteMono);
+
+                    snapshot.establecerMultiProveedorHabilitado(multiProveedorHabilitado);
+                    snapshot.establecerProveedoresMultiConsulta(proveedoresMultiConsulta);
 
                     java.util.Map<String, String> errores = snapshot.validar();
                     if (!errores.isEmpty()) {
@@ -1278,6 +1620,10 @@ public class DialogoConfiguracion extends JDialog {
 
             proveedorActualUi = nuevoProveedor;
             cargarEstadoProveedor(nuevoProveedor);
+
+            if (chkHabilitarMultiProveedor.isSelected() && !actualizandoListaMultiProveedor) {
+                SwingUtilities.invokeLater(this::asegurarProveedorActualEnPrimeraPosicion);
+            }
         } finally {
             actualizandoProveedorUi = false;
         }

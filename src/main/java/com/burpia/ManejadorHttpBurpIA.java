@@ -48,7 +48,10 @@ import java.util.function.Supplier;
 public class ManejadorHttpBurpIA implements HttpHandler {
     private static final String ORIGEN_LOG = "BurpIA";
     private static final long INTERVALO_ALERTA_CONFIG_MS = 120000L;
-    private static final long TTL_CONTEXTO_REINTENTO_MS = 20L * 60L * 1000L;
+    // TTL específicos por estado de tarea (state-aware retention policy)
+    private static final long TTL_CONTEXTO_COMPLETADO_MS = 0L;                    // Purga inmediata para tareas exitosas
+    private static final long TTL_CONTEXTO_REINTENTABLE_MS = 5L * 60L * 1000L;  // 5 minutos para ERROR/CANCELADO
+    private static final long TTL_CONTEXTO_ACTIVO_MS = Long.MAX_VALUE;          // Mantener hasta cambio de estado
     private static final int MAX_CONTEXTO_REINTENTO = 1000;
     private final MontoyaApi api;
     private final ConfiguracionAPI config;
@@ -560,9 +563,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             eliminarEvidenciaSiDisponible(evidenciaId);
             registrarError("Error al iniciar análisis para " + url + ": " + ex.getMessage());
         }
-
-        // Importante: La Future ya fue agregada a ejecucionesActivas (si se creó exitosamente)
-        // No hay limpieza aquí porque la Future se limpia en finalizarEjecucionActiva()
     }
 
     private HttpRequestResponse construirEvidenciaHttp(HttpRequest solicitud, burp.api.montoya.http.message.responses.HttpResponse respuesta) {
@@ -652,22 +652,45 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
         long ahora = System.currentTimeMillis();
         Iterator<Map.Entry<String, ContextoReintento>> it = contextosReintento.entrySet().iterator();
+
         while (it.hasNext()) {
             Map.Entry<String, ContextoReintento> entry = it.next();
             if (entry == null) {
                 continue;
             }
+
             String tareaId = entry.getKey();
             ContextoReintento contexto = entry.getValue();
-            boolean huerfano = tareaId == null || gestorTareas.obtenerTarea(tareaId) == null;
-            boolean expirado = contexto != null && (ahora - contexto.creadoMs) > TTL_CONTEXTO_REINTENTO_MS;
-            if (huerfano || expirado) {
-                if (contexto != null) {
-                    eliminarEvidenciaSiDisponible(contexto.evidenciaId);
-                }
+
+            // Defensive: validar null
+            if (tareaId == null || contexto == null) {
+                it.remove();
+                continue;
+            }
+
+            // Obtener estado actual de la tarea
+            String estado = null;
+            Tarea tarea = gestorTareas.obtenerTarea(tareaId);
+            if (tarea != null) {
+                estado = tarea.obtenerEstado();
+            }
+
+            // Calcular TTL según estado (state-aware policy)
+            long ttlAplicable = calcularTTLParaEstado(estado);
+
+            // Decidir purga: huérfano O expirado
+            boolean debePurgar = (estado == null) ||  // Tarea huérfana
+                                (ttlAplicable == 0L) || // TTL inmediato (COMPLETADO)
+                                (ttlAplicable != Long.MAX_VALUE &&
+                                 (ahora - contexto.creadoMs) > ttlAplicable); // Expiró
+
+            if (debePurgar) {
+                eliminarEvidenciaSiDisponible(contexto.evidenciaId);
                 it.remove();
             }
         }
+
+        // LRU eviction solo si todavía excede límite después de purga state-aware
         if (contextosReintento.size() <= MAX_CONTEXTO_REINTENTO) {
             return;
         }
@@ -687,6 +710,39 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 eliminarEvidenciaSiDisponible(contexto.evidenciaId);
             }
         }
+    }
+
+    /**
+     * Calcula el TTL aplicable para un contexto basado en el estado de la tarea.
+     * Sigue principio DRY reutilizando Tarea.esEstadoReintentable().
+     *
+     * Política de retención state-aware:
+     * - COMPLETADO: 0ms (purga inmediata, no necesita retry)
+     * - ERROR/CANCELADO: 5 minutos (ventana para reintento manual)
+     * - EN_COLA/ANALIZANDO/PAUSADO: Long.MAX_VALUE (mantener hasta cambio)
+     *
+     * @param estado Estado actual de la tarea (null si tarea no existe)
+     * @return TTL en milisegundos para este estado
+     */
+    private long calcularTTLParaEstado(String estado) {
+        // Tarea no existe (huérfana) o estado null
+        if (estado == null) {
+            return TTL_CONTEXTO_COMPLETADO_MS;
+        }
+
+        // Éxito = no necesita reintento
+        if (Tarea.ESTADO_COMPLETADO.equals(estado)) {
+            return TTL_CONTEXTO_COMPLETADO_MS;
+        }
+
+        // Error/Cancelado = reintentable, mantener 5 minutos
+        if (Tarea.esEstadoReintentable(estado)) {
+            return TTL_CONTEXTO_REINTENTABLE_MS;
+        }
+
+        // Estados activos (EN_COLA, ANALIZANDO, PAUSADO)
+        // Mantener hasta cambio de estado
+        return TTL_CONTEXTO_ACTIVO_MS;
     }
 
     private void rastrearEstadoCola() {

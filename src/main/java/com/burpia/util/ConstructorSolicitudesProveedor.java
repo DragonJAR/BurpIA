@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,7 +25,13 @@ public final class ConstructorSolicitudesProveedor {
 
     private static final long CACHE_MODELOS_GEMINI_MS = 5 * 60 * 1000L;
     private static final int MAX_ENTRADAS_CACHE_GEMINI = 128;
-    private static final Map<String, CacheModelosGemini> CACHE_GEMINI = new ConcurrentHashMap<>();
+    private static final Map<String, CacheModelosGemini> CACHE_GEMINI =
+        Collections.synchronizedMap(new LinkedHashMap<String, CacheModelosGemini>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<String, CacheModelosGemini> eldest) {
+                return size() > MAX_ENTRADAS_CACHE_GEMINI;
+            }
+        });
 
     private ConstructorSolicitudesProveedor() {
     }

@@ -18,6 +18,7 @@ public class PanelEstadisticas extends JPanel {
     private final JLabel etiquetaResumenOperativo;
     private final Estadisticas estadisticas;
     private final IntSupplier proveedorLimiteHallazgos;
+    private final java.util.function.Supplier<int[]> proveedorEstadisticasVisibles;
     private Timer timerActualizacion;
     private final JButton botonConfiguracion;
     private final JButton botonCaptura;
@@ -40,15 +41,29 @@ public class PanelEstadisticas extends JPanel {
     private static final int AJUSTE_Y_BOTONES = -3;
 
     @SuppressWarnings("this-escape")
-    public PanelEstadisticas(Estadisticas estadisticas, IntSupplier proveedorLimiteHallazgos) {
+    public PanelEstadisticas(Estadisticas estadisticas,
+                             IntSupplier proveedorLimiteHallazgos,
+                             PanelHallazgos panelHallazgos) {
         this.estadisticas = estadisticas;
         this.proveedorLimiteHallazgos = proveedorLimiteHallazgos != null ? proveedorLimiteHallazgos : () -> 1000;
+        this.proveedorEstadisticasVisibles = () -> {
+            return panelHallazgos != null ? panelHallazgos.obtenerEstadisticasVisibles() : new int[6];
+        };
         this.etiquetaResumenPrincipal = new JLabel();
         this.etiquetaResumenSeveridad = new JLabel();
         this.etiquetaLimiteHallazgos = new JLabel();
         this.etiquetaResumenOperativo = new JLabel();
         this.botonConfiguracion = new JButton();
         this.botonCaptura = new JButton();
+
+        // Suscribirse a cambios en el modelo de hallazgos
+        if (panelHallazgos != null) {
+            ModeloTablaHallazgos modelo = panelHallazgos.obtenerModelo();
+            if (modelo != null) {
+                modelo.agregarEscucha(() -> actualizar(true));
+            }
+        }
+
         initComponents();
     }
 
@@ -278,14 +293,21 @@ public class PanelEstadisticas extends JPanel {
         }
         ultimaVersionEstadisticas = versionActual;
         Runnable actualizarUi = () -> {
-            etiquetaResumenPrincipal.setText(I18nUI.Estadisticas.RESUMEN_TOTAL(estadisticas.obtenerHallazgosCreados()));
+            int[] statsVisibles = proveedorEstadisticasVisibles.get();
+            if (statsVisibles == null) {
+                statsVisibles = new int[6];
+            }
+
+            etiquetaResumenPrincipal.setText(
+                I18nUI.Estadisticas.RESUMEN_TOTAL(statsVisibles[0])
+            );
 
             etiquetaResumenSeveridad.setText(I18nUI.Estadisticas.RESUMEN_SEVERIDAD(
-                    estadisticas.obtenerHallazgosCritical(),
-                    estadisticas.obtenerHallazgosHigh(),
-                    estadisticas.obtenerHallazgosMedium(),
-                    estadisticas.obtenerHallazgosLow(),
-                    estadisticas.obtenerHallazgosInfo()));
+                    statsVisibles[1],
+                    statsVisibles[2],
+                    statsVisibles[3],
+                    statsVisibles[4],
+                    statsVisibles[5]));
 
             etiquetaLimiteHallazgos.setText(I18nUI.Estadisticas.LIMITE_HALLAZGOS(proveedorLimiteHallazgos.getAsInt()));
 

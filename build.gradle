@@ -65,8 +65,26 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        // Excluir benchmarks por defecto para builds rápidos
+        excludeTags 'benchmark'
+    }
     finalizedBy jacocoTestReport
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+        showStandardStreams = true
+    }
+}
+
+// Tarea especializada para ejecutar solo benchmarks
+tasks.register('benchmarkTest', Test) {
+    group = 'verification'
+    description = 'Ejecuta solo tests de rendimiento (tag: benchmark).'
+    useJUnitPlatform {
+        // Incluir solo tests con tag "benchmark"
+        includeTags 'benchmark'
+    }
     testLogging {
         events "passed", "skipped", "failed"
         exceptionFormat "full"

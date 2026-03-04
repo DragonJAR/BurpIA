@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 
@@ -152,5 +153,48 @@ class ParserRespuestasAITest {
         assertEquals("SQL Injection 'or 1=1--", ParserRespuestasAI.extraerCampoNoEstricto("title", contenidoEstructurado));
         assertEquals("Encontramos un error: \"syntax error\" o \"Error 500\". Esto es grave.", ParserRespuestasAI.extraerCampoNoEstricto("description", contenidoEstructurado));
         assertEquals("High", ParserRespuestasAI.extraerCampoNoEstricto("severity", contenidoEstructurado));
+    }
+
+    @Test
+    @DisplayName("Recupera hallazgos de JSON extremadamente malformado (dragon-security)")
+    void testExtraerHallazgosPorDelimitadores_CasoDragonSecurity() {
+        String jsonRoto = "{\"hallazgos\":[{\"titulo\":\"SQL Injection\", " +
+            "\"descripcion\":\"...Injection]\", \"severidad\":\"High\", " +
+            "{\"titulo\":\"XSS\", \"severidad\":\"Medium\"}]}";
+
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        com.google.gson.JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores(
+            jsonRoto,
+            gson
+        );
+
+        assertEquals(2, hallazgos.size(), "Debe recuperar 2 hallazgos");
+        assertEquals("SQL Injection",
+            hallazgos.get(0).getAsJsonObject().get("titulo").getAsString());
+        assertEquals("XSS",
+            hallazgos.get(1).getAsJsonObject().get("titulo").getAsString());
+    }
+
+    @Test
+    @DisplayName("extraerHallazgosPorDelimitadores retorna null si contenido es vacío")
+    void testExtraerHallazgosPorDelimitadores_ContenidoVacio() {
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        com.google.gson.JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores("", gson);
+
+        assertNull(hallazgos, "Debe retornar null");
+    }
+
+    @Test
+    @DisplayName("extraerHallazgosPorDelimitadores retorna null si no hay títulos")
+    void testExtraerHallazgosPorDelimitadores_SinTitulos() {
+        String sinTitulos = "{\"severidad\":\"High\", \"confianza\":\"Medium\"}";
+
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        com.google.gson.JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores(
+            sinTitulos,
+            gson
+        );
+
+        assertNull(hallazgos, "Debe retornar null");
     }
 }

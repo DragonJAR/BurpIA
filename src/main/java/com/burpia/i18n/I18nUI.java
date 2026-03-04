@@ -144,6 +144,13 @@ public final class I18nUI {
             return tr("📊 DETALLES OPERATIVOS", "📊 OPERATIONAL DETAILS");
         }
 
+        /**
+         * Resumen total de hallazgos VISIBLES en la tabla.
+         * Solo cuenta hallazgos que no están filtrados.
+         *
+         * @param total Número de hallazgos visibles
+         * @return Texto formateado: "🔎 Total: X"
+         */
         public static String RESUMEN_TOTAL(int total) {
             return trf("🔎 Total: %d", "🔎 Total: %d", total);
         }
@@ -544,6 +551,40 @@ public final class I18nUI {
 
         public static String TITULO_ERROR_EXPORTACION() {
             return tr("Error de exportación", "Export error");
+        }
+
+        public static String MSG_ERROR_RUTA_NO_ES_ARCHIVO(String ruta) {
+            return trf("La ruta especificada no es un archivo: %s",
+                    "The specified path is not a file: %s",
+                    ruta);
+        }
+
+        public static String MSG_ERROR_SIN_PERMISO_ESCRITURA(String ruta) {
+            return trf("Sin permisos de escritura en: %s",
+                    "No write permissions for: %s",
+                    ruta);
+        }
+
+        public static String MSG_ERROR_DIRECTORIO_INVALIDO() {
+            return tr("Directorio padre inválido", "Invalid parent directory");
+        }
+
+        public static String MSG_ERROR_DIRECTORIO_NO_EXISTE(String ruta) {
+            return trf("El directorio no existe: %s",
+                    "The directory does not exist: %s",
+                    ruta);
+        }
+
+        public static String MSG_ERROR_SIN_PERMISO_ESCRITURA_DIRECTORIO(String ruta) {
+            return trf("Sin permisos de escritura en el directorio: %s",
+                    "No write permissions for directory: %s",
+                    ruta);
+        }
+
+        public static String MSG_ERROR_ESPACIO_INSUFICIENTE(long necesario, long disponible) {
+            return trf("Espacio insuficiente en disco. Necesario: %d MB, Disponible: %d MB",
+                    "Insufficient disk space. Required: %d MB, Available: %d MB",
+                    necesario, disponible);
         }
 
         public static String MENU_ENVIAR_REPEATER() {
@@ -1163,6 +1204,55 @@ public final class I18nUI {
             return tr("🔗 Consultas Multi-Proveedor", "🔗 Multi-Provider Queries");
         }
 
+        public static String LABEL_HABILITAR_MULTI_PROVEEDOR() {
+            return tr("Habilitar multi-consulta (usar múltiples proveedores en una sola petición)",
+                    "Enable multi-query (use multiple providers in a single request)");
+        }
+
+        public static String LABEL_PROVEEDORES_DISPONIBLES() {
+            return tr("Proveedores disponibles (con API key configurada):",
+                    "Available providers (with API key configured):");
+        }
+
+        public static String LABEL_PROVEEDORES_SELECCIONADOS() {
+            return tr("Proveedores seleccionados (arrastrar para reordenar, máximo 5):",
+                    "Selected providers (drag to reorder, maximum 5):");
+        }
+
+        public static String TXT_MULTI_PROVEEDOR_DESHABILITADO() {
+            return tr("Multi-consulta deshabilitada - usando proveedor único",
+                    "Multi-query disabled - using single provider");
+        }
+
+        public static String TXT_MULTI_PROVEEDOR_HABILITADO(String cantidad) {
+            return tr("Multi-consulta habilitada - usando " + cantidad + " proveedores",
+                    "Multi-query enabled - using " + cantidad + " providers");
+        }
+
+        public static String ERROR_MAX_PROVEEDORES() {
+            return tr("Máximo 5 proveedores permitidos",
+                    "Maximum 5 providers allowed");
+        }
+
+        public static String ERROR_MIN_PROVEEDORES() {
+            return tr("Selecciona al menos 2 proveedores para multi-consulta",
+                    "Select at least 2 providers for multi-query");
+        }
+
+        public static String TITULO_ADVERTENCIA_PROVEEDOR_PRINCIPAL() {
+            return tr("Proveedor principal", "Main provider");
+        }
+
+        public static String MSG_NO_QUITAR_PROVEEDOR_PRINCIPAL() {
+            return tr("El proveedor principal (seleccionado en CONFIGURACION DE PROVEEDOR AI) no puede quitarse de la primera posición.",
+                    "The main provider (selected in AI PROVIDER CONFIGURATION) cannot be removed from the first position.");
+        }
+
+        public static String TXT_DESCUBIERTO_CON(String proveedor, String modelo) {
+            return tr("\n\n[descubierto con " + proveedor + " - " + modelo + "]",
+                    "\n\n[discovered with " + proveedor + " - " + modelo + "]");
+        }
+
         public static String BOTON_HABILITAR() {
             return tr("Habilitar", "Enable");
         }
@@ -1397,6 +1487,10 @@ public final class I18nUI {
 
         public static String LABEL_MAX_HALLAZGOS_TABLA() {
             return tr("Max Hallazgos Tabla:", "Max Findings Table:");
+        }
+
+        public static String LABEL_MAXIMO_TAREAS() {
+            return tr("Maximo Tareas:", "Max Tasks:");
         }
 
         public static String LABEL_MODO_DETALLADO() {
@@ -2264,6 +2358,11 @@ public final class I18nUI {
             public static String MAXIMO_HALLAZGOS() {
                 return I18nUI.tr("Límite de hallazgos retenidos en memoria y tabla.",
                         "Findings limit kept in memory and table.");
+            }
+
+            public static String MAXIMO_TAREAS() {
+                return I18nUI.tr("Límite de tareas retenidas en la tabla.",
+                        "Tasks limit kept in table.");
             }
 
             public static String DETALLADO() {

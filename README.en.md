@@ -18,17 +18,17 @@ Spanish version: [README.md](README.md)
 ### 1) BurpIA Overview (EN)
 ![BurpIA in English](src/assets/EN.png)
 
-- Shows the central dashboard with finding counts by severity and operational status.
+- Displays the central dashboard with finding counts by severity and operational status.
 - Helps quickly locate the main tabs: tasks, findings, agent, and console.
-- Clarifies the end-to-end workflow from detection to manual validation.
+- Clarifies the end-to-end workflow, from detection to manual validation.
 
 
 ### 2) Agent-Based Manual Validation
 ![BurpIA Agent Console](src/assets/Agent.png)
 
 - Demonstrates the agentic dynamic testing flow over real HTTP traffic.
-- Shows baseline, executed payloads, observations, and side findings in a single output.
-- Makes technical evidence review faster before reporting a finding.
+- Shows the baseline, executed payloads, observations, and side findings in a single output.
+- Speeds up the technical evidence review before reporting a finding.
 
 
 ### 3) Validated Findings in Repeater
@@ -65,7 +65,8 @@ See the change summary in **Version history**.
 
 ### v1.0.2 (current)
 
-- Update validation system.
+- New multi-provider system: check requests using up to 5 different providers.
+- Update notification system.
 - User experience improvements.
 - Interface customization improvements.
 - Performance improvements.

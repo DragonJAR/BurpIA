@@ -44,11 +44,12 @@ public class PestaniaPrincipal extends JPanel {
                             ConfiguracionAPI config) {
         this.config = config;
 
-        panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas);
-
         panelTareas = new PanelTareas(gestorTareas, modeloTareas);
+        panelTareas.establecerConfiguracion(config);
         panelHallazgos = new PanelHallazgos(api, modeloHallazgos, esBurpProfessional);
         panelHallazgos.establecerConfiguracion(config);
+
+        panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas, panelHallazgos);
         this.panelConsola = new PanelConsola(gestorConsola);
         this.panelAgente = new PanelAgente(config, config.agenteHabilitado());
         this.panelAgente.establecerManejadorFocoPestania(this::enfocarPestaniaAgenteDesdeManejador);

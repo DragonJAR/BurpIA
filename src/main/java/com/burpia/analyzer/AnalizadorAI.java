@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.ProveedorAI;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
@@ -33,7 +34,7 @@ import java.util.regex.Pattern;
 public class AnalizadorAI implements Runnable {
     private static final String ORIGEN_LOG = "AnalizadorAI";
     private final SolicitudAnalisis solicitud;
-    private final ConfiguracionAPI config;
+    private ConfiguracionAPI config;
     private final PrintWriter stdout;
     private final PrintWriter stderr;
     private final LimitadorTasa limitador;
@@ -222,8 +223,13 @@ public class AnalizadorAI implements Runnable {
 
             registrar("Analizando: " + solicitud.obtenerUrl());
 
-            String respuesta = llamarAPIAIConRetries();
-            ResultadoAnalisisMultiple resultadoMultiple = parsearRespuesta(respuesta);
+            ResultadoAnalisisMultiple resultadoMultiple;
+            if (config.esMultiProveedorHabilitado()) {
+                resultadoMultiple = ejecutarAnalisisMultiProveedorSecuencial();
+            } else {
+                String respuesta = llamarAPIAIConRetries();
+                resultadoMultiple = parsearRespuesta(respuesta);
+            }
 
             long duracion = System.currentTimeMillis() - tiempoInicio;
             registrar("Analisis completado: " + solicitud.obtenerUrl() + " (tomo " + duracion + "ms)");
@@ -735,14 +741,22 @@ public class AnalizadorAI implements Runnable {
             return new ArrayList<>();
         }
 
-        // MÉTODO MAESTRO ÚNICO: hace todo (parseo + limpieza + 3 estrategias)
+        // ESTRATEGIA PRINCIPAL: Método maestro (hace todo: parseo + limpieza + 3 estrategias)
         JsonArray arrayHallazgos = ParserRespuestasAI.extraerArrayJsonInteligente(contenido, gson);
 
         if (arrayHallazgos != null && arrayHallazgos.size() > 0) {
             return convertirArrayAHallazgos(arrayHallazgos);
         }
 
-        // ÚLTIMO FALLBACK: parseo manual (casi nunca se usa)
+        // ÚLTIMA OPCIÓN: Recuperación por delimitadores (JSON extremadamente roto)
+        JsonArray arrayRecuperado = ParserRespuestasAI.extraerHallazgosPorDelimitadores(contenido, gson);
+
+        if (arrayRecuperado != null && arrayRecuperado.size() > 0) {
+            rastrear("Recuperación extrema: " + arrayRecuperado.size() + " hallazgos");
+            return convertirArrayAHallazgos(arrayRecuperado);
+        }
+
+        // Fallback final: parseo campo por campo (DEPRECATED, mantener por compatibilidad)
         return parsearHallazgosCampoPorCampo(contenido);
     }
 
@@ -772,21 +786,16 @@ public class AnalizadorAI implements Runnable {
     /**
      * Estrategia 4: Parseo campo por campo para JSON malformado.
      * Fallback cuando las estrategias de extracción de JSON no funcionan.
-     *
-     * NOTA: Este método está OBSOLETO. El método maestro extraerArrayJsonInteligente()
-     * ya maneja todos los casos incluyendo JSON malformado. Se mantiene por compatibilidad.
      */
     @Deprecated
     private List<Hallazgo> parsearHallazgosCampoPorCampo(String contenido) {
         List<Hallazgo> hallazgos = new ArrayList<>();
 
-        // Intentar usar el método maestro primero
         JsonArray arrayHallazgos = ParserRespuestasAI.extraerArrayJsonInteligente(contenido, gson);
         if (arrayHallazgos != null && arrayHallazgos.size() > 0) {
             return convertirArrayAHallazgos(arrayHallazgos);
         }
 
-        // Fallback original: parseo manual con regex
         String bloqueHallazgos = extraerBloqueArrayHallazgos(contenido);
         if (Normalizador.esVacio(bloqueHallazgos)) {
             return hallazgos;
@@ -797,26 +806,13 @@ public class AnalizadorAI implements Runnable {
             if (Normalizador.esVacio(bloqueHallazgo)) {
                 continue;
             }
-            String titulo = ParserRespuestasAI.extraerCampoNoEstricto("titulo", bloqueHallazgo);
-            if (Normalizador.esVacio(titulo)) {
-                titulo = ParserRespuestasAI.extraerCampoNoEstricto("title", bloqueHallazgo);
-            }
-            String descripcion = ParserRespuestasAI.extraerCampoNoEstricto("descripcion", bloqueHallazgo);
-            if (Normalizador.esVacio(descripcion)) {
-                descripcion = ParserRespuestasAI.extraerCampoNoEstricto("description", bloqueHallazgo);
-            }
-            String severidad = ParserRespuestasAI.extraerCampoNoEstricto("severidad", bloqueHallazgo);
-            if (Normalizador.esVacio(severidad)) {
-                severidad = ParserRespuestasAI.extraerCampoNoEstricto("severity", bloqueHallazgo);
-            }
-            String confianza = ParserRespuestasAI.extraerCampoNoEstricto("confianza", bloqueHallazgo);
-            if (Normalizador.esVacio(confianza)) {
-                confianza = ParserRespuestasAI.extraerCampoNoEstricto("confidence", bloqueHallazgo);
-            }
-            String evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidencia", bloqueHallazgo);
-            if (Normalizador.esVacio(evidencia)) {
-                evidencia = ParserRespuestasAI.extraerCampoNoEstricto("evidence", bloqueHallazgo);
-            }
+
+            String titulo = extraerCampoConFallback(CAMPOS_TITULO, bloqueHallazgo);
+            String descripcion = extraerCampoConFallback(CAMPOS_DESCRIPCION, bloqueHallazgo);
+            String severidad = extraerCampoConFallback(CAMPOS_SEVERIDAD, bloqueHallazgo);
+            String confianza = extraerCampoConFallback(CAMPOS_CONFIANZA, bloqueHallazgo);
+            String evidencia = extraerCampoConFallback(CAMPOS_EVIDENCIA, bloqueHallazgo);
+
             agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
         }
 
@@ -825,6 +821,16 @@ public class AnalizadorAI implements Runnable {
         }
 
         return hallazgos;
+    }
+
+    private String extraerCampoConFallback(String[] campos, String bloque) {
+        for (String campo : campos) {
+            String valor = ParserRespuestasAI.extraerCampoNoEstricto(campo, bloque);
+            if (Normalizador.noEsVacio(valor)) {
+                return valor;
+            }
+        }
+        return "";
     }
 
     private String extraerBloqueArrayHallazgos(String contenido) {
@@ -1097,7 +1103,9 @@ public class AnalizadorAI implements Runnable {
         if (Normalizador.esVacio(descripcion)) {
             descripcion = evidencia;
         } else if (Normalizador.noEsVacio(evidencia) && !descripcion.contains(evidencia)) {
-            descripcion = descripcion + "\n" + etiquetaEvidencia() + ": " + evidencia;
+            StringBuilder sb = new StringBuilder(descripcion.length() + evidencia.length() + 32);
+            sb.append(descripcion).append("\n").append(etiquetaEvidencia()).append(": ").append(evidencia);
+            descripcion = sb.toString();
         }
         if (Normalizador.esVacio(descripcion)) {
             descripcion = descripcionPorDefecto();
@@ -1124,6 +1132,109 @@ public class AnalizadorAI implements Runnable {
             return porDefecto != null ? porDefecto : "";
         }
         return normalizado;
+    }
+
+    private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException {
+        List<String> proveedores = config.obtenerProveedoresMultiConsulta();
+        if (proveedores == null || proveedores.isEmpty()) {
+            registrar("Multi-consulta: No hay proveedores seleccionados, usando proveedor único");
+            return ejecutarAnalisisProveedorUnico();
+        }
+
+        if (proveedores.size() == 1) {
+            registrar("Multi-consulta: Solo 1 proveedor seleccionado, usando proveedor único");
+            return ejecutarAnalisisProveedorUnico();
+        }
+
+        registrar("Multi-consulta iniciada con " + proveedores.size() + " proveedores");
+        List<Hallazgo> todosHallazgos = new ArrayList<>();
+        ConfiguracionAPI configOriginal = config;
+
+        try {
+            for (String proveedor : proveedores) {
+                if (Normalizador.esVacio(proveedor)) {
+                    continue;
+                }
+                if (!ProveedorAI.existeProveedor(proveedor)) {
+                    registrar("Multi-consulta: Proveedor no existe: " + proveedor + ", omitiendo");
+                    continue;
+                }
+
+                String modelo = config.obtenerModeloParaProveedor(proveedor);
+                if (Normalizador.esVacio(modelo)) {
+                    registrar("Multi-consulta: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo");
+                    continue;
+                }
+
+                registrar("Analizando con proveedor: " + proveedor + " (" + modelo + ")");
+
+                try {
+                    ConfiguracionAPI configProveedor = new ConfiguracionAPI();
+                    configProveedor.aplicarDesde(configOriginal);
+                    configProveedor.establecerProveedorAI(proveedor);
+
+                    this.config = configProveedor;
+
+                    String respuesta = llamarAPIAIConRetries();
+                    ResultadoAnalisisMultiple resultado = parsearRespuestaConEtiqueta(respuesta, proveedor, modelo);
+
+                    List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
+                    registrar("Hallazgos de proveedor " + proveedor + ": " + hallazgosProveedor.size() +
+                             " agregados al resultado");
+                    todosHallazgos.addAll(hallazgosProveedor);
+
+                } catch (Exception e) {
+                    registrar("Multi-consulta: Error con proveedor " + proveedor + ": " + e.getMessage());
+                }
+            }
+
+            registrar("Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
+
+            if (todosHallazgos.isEmpty()) {
+                return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
+                    solicitud.obtenerSolicitudHttp());
+            }
+
+            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
+                solicitud.obtenerSolicitudHttp());
+
+        } finally {
+            this.config = configOriginal;
+        }
+    }
+
+    private ResultadoAnalisisMultiple ejecutarAnalisisProveedorUnico() throws IOException {
+        String respuesta = llamarAPIAIConRetries();
+        return parsearRespuesta(respuesta);
+    }
+
+    private ResultadoAnalisisMultiple parsearRespuestaConEtiqueta(String respuestaJson,
+                                                                   String proveedor,
+                                                                   String modelo) {
+        ResultadoAnalisisMultiple resultado = parsearRespuesta(respuestaJson);
+        List<Hallazgo> hallazgos = resultado.obtenerHallazgos();
+        List<Hallazgo> hallazgosConEtiqueta = new ArrayList<>();
+
+        for (Hallazgo hallazgo : hallazgos) {
+            String descripcionOriginal = hallazgo.obtenerHallazgo();
+            String etiqueta = I18nUI.Configuracion.TXT_DESCUBIERTO_CON(proveedor, modelo);
+            String descripcionConEtiqueta = descripcionOriginal + etiqueta;
+
+            Hallazgo hallazgoEtiquetado = new Hallazgo(
+                hallazgo.obtenerUrl(),
+                hallazgo.obtenerTitulo(),
+                descripcionConEtiqueta,
+                hallazgo.obtenerSeveridad(),
+                hallazgo.obtenerConfianza(),
+                hallazgo.obtenerSolicitudHttp(),
+                hallazgo.obtenerEvidenciaHttp()
+            );
+
+            hallazgosConEtiqueta.add(hallazgoEtiquetado);
+        }
+
+        return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), hallazgosConEtiqueta,
+            solicitud.obtenerSolicitudHttp());
     }
 
     private List<Hallazgo> parsearTextoPlano(String contenido) {

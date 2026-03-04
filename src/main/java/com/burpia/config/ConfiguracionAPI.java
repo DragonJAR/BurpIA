@@ -5,6 +5,8 @@ import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.Normalizador;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ConfiguracionAPI {
     public enum CodigoValidacionConsulta {
@@ -19,6 +21,11 @@ public class ConfiguracionAPI {
     public static final int MAXIMO_HALLAZGOS_TABLA_DEFECTO = 1000;
     public static final int MINIMO_HALLAZGOS_TABLA = 100;
     public static final int MAXIMO_HALLAZGOS_TABLA = 50000;
+
+    public static final int MAXIMO_TAREAS_TABLA_DEFECTO = 500;
+    public static final int MINIMO_TAREAS_TABLA = 100;
+    public static final int MAXIMO_TAREAS_TABLA = 10000;
+
     public static final int MINIMO_RETRASO_SEGUNDOS = 0;
     public static final int MAXIMO_RETRASO_SEGUNDOS = 60;
     public static final int MINIMO_MAXIMO_CONCURRENTE = 1;
@@ -36,6 +43,7 @@ public class ConfiguracionAPI {
     private int retrasoSegundos;
     private int maximoConcurrente;
     private int maximoHallazgosTabla;
+    private int maximoTareasTabla;
     private boolean detallado;
     private String proveedorAI;
     private int tiempoEsperaAI;
@@ -68,6 +76,10 @@ public class ConfiguracionAPI {
     private Map<String, Integer> tiempoEsperaPorModelo;
     private boolean promptModificado;
 
+    // Multi-Proveedor Configuration
+    private boolean multiProveedorHabilitado;
+    private List<String> proveedoresMultiConsulta;
+
     // UI State Persistence - PanelHallazgos filters
     private String textoFiltroHallazgos;
     private String filtroSeveridadHallazgos;
@@ -81,6 +93,7 @@ public class ConfiguracionAPI {
         this.retrasoSegundos = normalizarRetrasoSegundos(5);
         this.maximoConcurrente = normalizarMaximoConcurrente(1);
         this.maximoHallazgosTabla = MAXIMO_HALLAZGOS_TABLA_DEFECTO;
+        this.maximoTareasTabla = MAXIMO_TAREAS_TABLA_DEFECTO;
         this.tiempoEsperaAI = 120;
         this.detallado = false;
         this.tema = "Light";
@@ -121,6 +134,10 @@ public class ConfiguracionAPI {
         // Valores por defecto para flags de persistencia UI
         this.persistirFiltroBusquedaHallazgos = true;
         this.persistirFiltroSeveridadHallazgos = true;
+
+        // Valores por defecto para multi-proveedor
+        this.multiProveedorHabilitado = false;
+        this.proveedoresMultiConsulta = new ArrayList<>();
     }
 
     public String obtenerUrlApi() {
@@ -182,6 +199,14 @@ public class ConfiguracionAPI {
 
     public void establecerMaximoHallazgosTabla(int maximoHallazgosTabla) {
         this.maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
+    }
+
+    public int obtenerMaximoTareasTabla() {
+        return maximoTareasTabla;
+    }
+
+    public void establecerMaximoTareasTabla(int maximoTareasTabla) {
+        this.maximoTareasTabla = normalizarMaximoTareas(maximoTareasTabla);
     }
 
     public boolean esDetallado() {
@@ -455,10 +480,6 @@ public class ConfiguracionAPI {
             return compuesto;
         }
         return compuesto.substring(0, indiceRol).trim();
-    }
-
-    public static String obtenerAgentePreflightPromptFijo() {
-        return obtenerAgentePreflightPromptPorDefecto();
     }
 
     private static String obtenerAgentePromptCompuestoPorDefecto() {
@@ -1084,6 +1105,56 @@ public class ConfiguracionAPI {
         this.tiempoEsperaPorModelo = normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo);
     }
 
+    public boolean esMultiProveedorHabilitado() {
+        return multiProveedorHabilitado;
+    }
+
+    public void establecerMultiProveedorHabilitado(boolean multiProveedorHabilitado) {
+        this.multiProveedorHabilitado = multiProveedorHabilitado;
+    }
+
+    public List<String> obtenerProveedoresMultiConsulta() {
+        if (proveedoresMultiConsulta == null) {
+            proveedoresMultiConsulta = new ArrayList<>();
+        }
+        return new ArrayList<>(proveedoresMultiConsulta);
+    }
+
+    public void establecerProveedoresMultiConsulta(List<String> proveedores) {
+        if (proveedores == null) {
+            this.proveedoresMultiConsulta = new ArrayList<>();
+        } else {
+            List<String> normalizados = new ArrayList<>();
+            for (String proveedor : proveedores) {
+                if (Normalizador.noEsVacio(proveedor) && ProveedorAI.existeProveedor(proveedor)) {
+                    normalizados.add(proveedor);
+                }
+            }
+            this.proveedoresMultiConsulta = normalizados;
+        }
+    }
+
+    public void agregarProveedorMultiConsulta(String proveedor) {
+        if (Normalizador.esVacio(proveedor)) {
+            return;
+        }
+        if (!ProveedorAI.existeProveedor(proveedor)) {
+            return;
+        }
+        if (proveedoresMultiConsulta == null) {
+            proveedoresMultiConsulta = new ArrayList<>();
+        }
+        if (!proveedoresMultiConsulta.contains(proveedor)) {
+            proveedoresMultiConsulta.add(proveedor);
+        }
+    }
+
+    public void removerProveedorMultiConsulta(String proveedor) {
+        if (proveedoresMultiConsulta != null) {
+            proveedoresMultiConsulta.remove(proveedor);
+        }
+    }
+
     private void asegurarMapas() {
         if (apiKeysPorProveedor == null) {
             apiKeysPorProveedor = new HashMap<>();
@@ -1107,6 +1178,7 @@ public class ConfiguracionAPI {
         retrasoSegundos = normalizarRetrasoSegundos(retrasoSegundos);
         maximoConcurrente = normalizarMaximoConcurrente(maximoConcurrente);
         maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
+        maximoTareasTabla = normalizarMaximoTareas(maximoTareasTabla);
     }
 
     /**
@@ -1125,6 +1197,10 @@ public class ConfiguracionAPI {
 
     private static int normalizarMaximoHallazgos(int valor) {
         return normalizarRango(valor, MINIMO_HALLAZGOS_TABLA, MAXIMO_HALLAZGOS_TABLA);
+    }
+
+    private static int normalizarMaximoTareas(int valor) {
+        return normalizarRango(valor, MINIMO_TAREAS_TABLA, MAXIMO_TAREAS_TABLA);
     }
 
     /**
@@ -1291,8 +1367,38 @@ public class ConfiguracionAPI {
         this.filtroSeveridadHallazgos = origen.filtroSeveridadHallazgos;
         this.persistirFiltroBusquedaHallazgos = origen.persistirFiltroBusquedaHallazgos;
         this.persistirFiltroSeveridadHallazgos = origen.persistirFiltroSeveridadHallazgos;
+        this.multiProveedorHabilitado = origen.multiProveedorHabilitado;
+        this.proveedoresMultiConsulta = new ArrayList<>(origen.proveedoresMultiConsulta);
 
         asegurarMapas();
+    }
+
+    public List<String> obtenerProveedoresDisponibles() {
+        List<String> disponibles = new ArrayList<>();
+        List<String> todosProveedores = ProveedorAI.obtenerNombresProveedores();
+
+        for (String proveedor : todosProveedores) {
+            if (!ProveedorAI.existeProveedor(proveedor)) {
+                continue;
+            }
+
+            ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
+            if (config == null) {
+                continue;
+            }
+
+            if (!config.requiereClaveApi()) {
+                disponibles.add(proveedor);
+                continue;
+            }
+
+            String apiKey = obtenerApiKeyParaProveedor(proveedor);
+            if (Normalizador.noEsVacio(apiKey)) {
+                disponibles.add(proveedor);
+            }
+        }
+
+        return disponibles;
     }
 
 }
