@@ -1018,11 +1018,11 @@ public class DialogoConfiguracion extends JDialog {
         gbc.weightx = 1.0;
         panelAgenteGeneral.add(txtAgenteBinario, gbc);
 
-        JPanel panelPrompts = new JPanel(new GridLayout(2, 1, 0, 10));
+        JPanel panelPrompts = new JPanel(new GridLayout(1, 2, 10, 10));
         panelPrompts.setBorder(UIUtils.crearBordeTitulado(
                 I18nUI.Configuracion.Agentes.TITULO_PROMPTS_AGENTE(), 12, 16));
 
-        txtAgentePromptInicial = new JTextArea(8, 40);
+        txtAgentePromptInicial = new JTextArea(6, 35);
         txtAgentePromptInicial.setFont(EstilosUI.FUENTE_MONO);
         txtAgentePromptInicial.setLineWrap(true);
         txtAgentePromptInicial.setWrapStyleWord(false);
@@ -1033,7 +1033,7 @@ public class DialogoConfiguracion extends JDialog {
         btnRestaurarPromptAgenteInicial.addActionListener(
                 e -> txtAgentePromptInicial.setText(ConfiguracionAPI.obtenerAgentePreflightPromptPorDefecto()));
 
-        txtAgentePrompt = new JTextArea(10, 40);
+        txtAgentePrompt = new JTextArea(7, 35);
         txtAgentePrompt.setFont(EstilosUI.FUENTE_MONO);
         txtAgentePrompt.setLineWrap(true);
         txtAgentePrompt.setWrapStyleWord(false);
@@ -1048,12 +1048,14 @@ public class DialogoConfiguracion extends JDialog {
                 I18nUI.Configuracion.Agentes.TITULO_PROMPT_INICIAL_AGENTE(),
                 txtAgentePromptInicial,
                 btnRestaurarPromptAgenteInicial,
-                I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_INICIAL_AGENTE()));
+                I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_INICIAL_AGENTE(),
+                FlowLayout.LEFT));
         panelPrompts.add(crearSeccionPromptAgente(
                 I18nUI.Configuracion.Agentes.TITULO_PROMPT_AGENTE(),
                 txtAgentePrompt,
                 btnRestaurarPromptAgente,
-                I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_VALIDACION_AGENTE()));
+                I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_VALIDACION_AGENTE(),
+                FlowLayout.RIGHT));
 
         JPanel contenido = new JPanel(new BorderLayout(0, 10));
         contenido.add(panelAgenteGeneral, BorderLayout.NORTH);
@@ -1070,7 +1072,8 @@ public class DialogoConfiguracion extends JDialog {
     private JPanel crearSeccionPromptAgente(String titulo,
             JTextArea area,
             JButton botonRestaurar,
-            String descripcion) {
+            String descripcion,
+            int alineacionBoton) {
         JPanel seccion = new JPanel(new BorderLayout(0, 6));
         seccion.setBorder(UIUtils.crearBordeTitulado(titulo, 8, 10));
 
@@ -1086,7 +1089,7 @@ public class DialogoConfiguracion extends JDialog {
         scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         seccion.add(scroll, BorderLayout.CENTER);
 
-        JPanel acciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        JPanel acciones = new JPanel(new FlowLayout(alineacionBoton, 0, 0));
         acciones.add(botonRestaurar);
         seccion.add(acciones, BorderLayout.SOUTH);
 

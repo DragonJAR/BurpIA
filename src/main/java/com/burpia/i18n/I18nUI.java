@@ -1311,15 +1311,15 @@ public final class I18nUI {
         }
 
         public static String TITULO_PERSISTENCIA_UI() {
-            return tr("💾 PERSISTENCIA DE ESTADO UI", "💾 UI STATE PERSISTENCE");
+            return tr("💾 RECORDAR AJUSTES", "💾 REMEMBER SETTINGS");
         }
 
         public static String CHECK_PERSISTIR_FILTRO_BUSQUEDA() {
-            return tr("Persistir filtro de búsqueda", "Persist search filter");
+            return tr("Guardar filtro de búsqueda", "Save search filter");
         }
 
         public static String CHECK_PERSISTIR_FILTRO_SEVERIDAD() {
-            return tr("Persistir filtro de severidad", "Persist severity filter");
+            return tr("Guardar filtro de severidad", "Save severity filter");
         }
 
         public static String MSG_CORRIGE_CAMPOS() {
@@ -2451,13 +2451,13 @@ public final class I18nUI {
             }
 
             public static String PERSISTIR_FILTRO_BUSQUEDA() {
-                return I18nUI.tr("Si está marcado, el texto de búsqueda en Hallazgos se restaura al reiniciar Burp Suite.",
-                        "When checked, the search text in Findings is restored when Burp Suite restarts.");
+                return I18nUI.tr("Si está marcado, el texto de búsqueda en Hallazgos se guarda al cerrar Burp Suite.",
+                        "When checked, the search text in Findings is saved when closing Burp Suite.");
             }
 
             public static String PERSISTIR_FILTRO_SEVERIDAD() {
-                return I18nUI.tr("Si está marcado, el filtro de severidad en Hallazgos se restaura al reiniciar Burp Suite.",
-                        "When checked, the severity filter in Findings is restored when Burp Suite restarts.");
+                return I18nUI.tr("Si está marcado, el filtro de severidad en Hallazgos se guarda al cerrar Burp Suite.",
+                        "When checked, the severity filter in Findings is saved when closing Burp Suite.");
             }
 
             public static String RESTAURAR_PROMPT_AGENTE() {
