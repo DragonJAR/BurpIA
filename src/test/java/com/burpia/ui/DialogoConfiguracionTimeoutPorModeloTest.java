@@ -1,6 +1,7 @@
 package com.burpia.ui;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.util.RutasBurpIA;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
 
     @BeforeEach
     void setUp() {
+        RutasBurpIA.limpiarCacheParaTests();
         TestDialogUtils.registrarCapturaDialogos();
     }
 

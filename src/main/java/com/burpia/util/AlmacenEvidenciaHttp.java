@@ -21,10 +21,33 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+/**
+ * Almacén persistente de evidencias HTTP para su posterior recuperación.
+ * <p>
+ * Esta clase proporciona un sistema de almacenamiento eficiente para evidencias HTTP
+ * (pares request/response) con las siguientes características:
+ * </p>
+ * <ul>
+ *   <li>Almacenamiento en disco comprimido con GZIP</li>
+ *   <li>Cache en memoria con política LRU</li>
+ *   <li>Limpieza automática de archivos antiguos</li>
+ *   <li>Thread-safe mediante ReentrantLock</li>
+ * </ul>
+ *
+ * @see PoliticaMemoria para configuración de límites
+ * @since 1.0.2
+ */
 public class AlmacenEvidenciaHttp {
+
+    private static final Logger LOGGER = Logger.getLogger(AlmacenEvidenciaHttp.class.getName());
+    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearConLogger(LOGGER);
+
+    /** Tamaño máximo permitido para request o response (10 MB) para prevenir OOM */
+    private static final int MAXIMO_BYTES_PARTE = 10 * 1024 * 1024;
     private static final String EXTENSION_ARCHIVO = ".ev.gz";
 
     private final Path directorioEvidencia;
@@ -33,10 +56,18 @@ public class AlmacenEvidenciaHttp {
     private final AtomicInteger escrituras;
     private long bytesCache;
 
+    /**
+     * Crea una nueva instancia del almacén usando el directorio de evidencia por defecto.
+     */
     public AlmacenEvidenciaHttp() {
         this(RutasBurpIA.obtenerDirectorioEvidencia());
     }
 
+    /**
+     * Crea una nueva instancia del almacén con un directorio específico.
+     *
+     * @param directorioEvidencia Ruta del directorio donde se almacenarán las evidencias
+     */
     AlmacenEvidenciaHttp(Path directorioEvidencia) {
         this.directorioEvidencia = directorioEvidencia;
         this.lock = new ReentrantLock();
@@ -47,6 +78,12 @@ public class AlmacenEvidenciaHttp {
         depurarArchivosDisco();
     }
 
+    /**
+     * Guarda una evidencia HTTP en el almacén.
+     *
+     * @param evidencia El par request/response a almacenar
+     * @return El ID único de la evidencia guardada, o {@code null} si no se pudo guardar
+     */
     public String guardar(HttpRequestResponse evidencia) {
         if (evidencia == null) {
             return null;
@@ -70,12 +107,21 @@ public class AlmacenEvidenciaHttp {
             }
             return evidenciaId;
         } catch (Exception e) {
-            // Error al guardar evidencia, se limpia archivo
+            gestorLogging.error("AlmacenEvidenciaHttp", "Error al guardar evidencia, se limpia archivo: " + rutaArchivo, e);
             eliminarArchivoSilencioso(rutaArchivo);
             return null;
         }
     }
 
+    /**
+     * Obtiene una evidencia HTTP previamente almacenada.
+     * <p>
+     * Primero busca en el cache de memoria, y si no la encuentra, la carga desde disco.
+     * </p>
+     *
+     * @param evidenciaId El ID único de la evidencia
+     * @return La evidencia HTTP, o {@code null} si no existe o no se pudo cargar
+     */
     public HttpRequestResponse obtener(String evidenciaId) {
         if (Normalizador.esVacio(evidenciaId)) {
             return null;
@@ -103,11 +149,16 @@ public class AlmacenEvidenciaHttp {
             agregarACache(evidenciaId, evidencia, registro.requestBytes.length + registro.responseBytes.length);
             return evidencia;
         } catch (Exception e) {
-            // Error al reconstruir evidencia
+            gestorLogging.error("AlmacenEvidenciaHttp", "Error al reconstruir evidencia: " + evidenciaId, e);
             return null;
         }
     }
 
+    /**
+     * Elimina una evidencia del almacén (tanto de memoria como de disco).
+     *
+     * @param evidenciaId El ID único de la evidencia a eliminar
+     */
     public void eliminar(String evidenciaId) {
         if (Normalizador.esVacio(evidenciaId)) {
             return;
@@ -124,6 +175,12 @@ public class AlmacenEvidenciaHttp {
         eliminarArchivoSilencioso(rutaArchivo(evidenciaId));
     }
 
+    /**
+     * Limpia completamente el cache de memoria.
+     * <p>
+     * Los archivos en disco no se eliminan, solo se libera la memoria.
+     * </p>
+     */
     public void limpiarCacheMemoria() {
         lock.lock();
         try {
@@ -138,7 +195,7 @@ public class AlmacenEvidenciaHttp {
         try {
             Files.createDirectories(directorioEvidencia);
         } catch (Exception e) {
-            // Error al crear directorio, se usará el directorio por defecto
+            gestorLogging.error("AlmacenEvidenciaHttp", "Error al crear directorio de evidencia: " + directorioEvidencia, e);
         }
     }
 
@@ -195,11 +252,19 @@ public class AlmacenEvidenciaHttp {
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(new GZIPInputStream(
             Files.newInputStream(rutaArchivo, StandardOpenOption.READ)
         )))) {
-            int reqLen = Math.max(0, in.readInt());
+            int reqLen = in.readInt();
+            if (reqLen < 0 || reqLen > MAXIMO_BYTES_PARTE) {
+                gestorLogging.warning("AlmacenEvidenciaHttp", "Tamaño de request inválido en archivo: " + rutaArchivo + " (reqLen=" + reqLen + ")");
+                throw new IOException("Tamaño de request inválido: " + reqLen);
+            }
             byte[] requestBytes = new byte[reqLen];
             in.readFully(requestBytes);
 
-            int resLen = Math.max(0, in.readInt());
+            int resLen = in.readInt();
+            if (resLen < 0 || resLen > MAXIMO_BYTES_PARTE) {
+                gestorLogging.warning("AlmacenEvidenciaHttp", "Tamaño de response inválido en archivo: " + rutaArchivo + " (resLen=" + resLen + ")");
+                throw new IOException("Tamaño de response inválido: " + resLen);
+            }
             byte[] responseBytes = new byte[resLen];
             if (resLen > 0) {
                 in.readFully(responseBytes);
@@ -217,7 +282,7 @@ public class AlmacenEvidenciaHttp {
             HttpResponse response = HttpResponse.httpResponse(ByteArray.byteArray(responseBytes));
             return HttpRequestResponse.httpRequestResponse(request, response);
         } catch (Exception e) {
-            // Error al reconstruir request/response desde bytes
+            gestorLogging.error("AlmacenEvidenciaHttp", "Error al reconstruir request/response desde bytes", e);
             return null;
         }
     }
@@ -229,6 +294,7 @@ public class AlmacenEvidenciaHttp {
             }
             return evidencia.request().toByteArray().getBytes();
         } catch (Exception e) {
+            gestorLogging.verbose("AlmacenEvidenciaHttp", "Error al extraer bytes de request: " + e.getMessage());
             return new byte[0];
         }
     }
@@ -240,6 +306,7 @@ public class AlmacenEvidenciaHttp {
             }
             return evidencia.response().toByteArray().getBytes();
         } catch (Exception e) {
+            gestorLogging.verbose("AlmacenEvidenciaHttp", "Error al extraer bytes de response: " + e.getMessage());
             return new byte[0];
         }
     }
@@ -252,6 +319,7 @@ public class AlmacenEvidenciaHttp {
         try {
             Files.createDirectories(directorioEvidencia);
         } catch (Exception e) {
+            gestorLogging.error("AlmacenEvidenciaHttp", "Error al crear directorio para depuración: " + directorioEvidencia, e);
             return;
         }
 
@@ -271,6 +339,7 @@ public class AlmacenEvidenciaHttp {
                 }
                 candidatos.add(archivo);
             } catch (Exception e) {
+                gestorLogging.verbose("AlmacenEvidenciaHttp", "Error al obtener modificación de archivo: " + archivo);
                 eliminarArchivoSilencioso(archivo);
             }
         }
@@ -292,7 +361,8 @@ public class AlmacenEvidenciaHttp {
             stream.filter(Files::isRegularFile)
                 .filter(path -> path.getFileName() != null && path.getFileName().toString().endsWith(EXTENSION_ARCHIVO))
                 .forEach(archivos::add);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            gestorLogging.error("AlmacenEvidenciaHttp", "Error al listar archivos de evidencia: " + directorioEvidencia, e);
         }
         return archivos;
     }
@@ -301,6 +371,7 @@ public class AlmacenEvidenciaHttp {
         try {
             return Files.getLastModifiedTime(archivo).toMillis();
         } catch (Exception e) {
+            gestorLogging.verbose("AlmacenEvidenciaHttp", "Error al obtener última modificación: " + archivo);
             return 0L;
         }
     }
@@ -311,7 +382,8 @@ public class AlmacenEvidenciaHttp {
         }
         try {
             Files.deleteIfExists(archivo);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            gestorLogging.verbose("AlmacenEvidenciaHttp", "Error al eliminar archivo: " + archivo);
         }
     }
 

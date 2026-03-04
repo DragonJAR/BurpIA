@@ -1,11 +1,17 @@
 package com.burpia.util;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utilidad para reparar JSON potencialmente dañado o mal formado proveniente de respuestas AI.
+ * Implementa una cadena de estrategias de reparación para manejar diversos formatos de entrada.
+ */
 public final class ReparadorJson {
 
     private static final Pattern MARKDOWN_CODE_BLOCK_START_PATTERN = Pattern.compile("(?m)^```(?:json)?\\s*");
@@ -19,21 +25,27 @@ public final class ReparadorJson {
     private ReparadorJson() {
     }
 
+    /**
+     * Intenta reparar un JSON potencialmente dañado aplicando múltiples estrategias de reparación.
+     * Las estrategias se aplican en orden: markdown, extracción de objeto, comillas, contenido extra,
+     * comas finales, y extracción de pares clave-valor.
+     *
+     * @param jsonPotencial el texto que puede contener JSON dañado o mal formado
+     * @return el JSON reparado y válido, o null si no se puede reparar
+     */
     public static String repararJson(String jsonPotencial) {
         if (Normalizador.esVacio(jsonPotencial)) {
             return null;
         }
 
         String resultado = jsonPotencial.trim();
-        int longitudAnterior = jsonPotencial.length();
+        int longitudAnterior = resultado.length();
 
-        // Cache: parsear una sola vez al inicio
         if (esJsonValido(resultado)) {
             return resultado;
         }
 
         resultado = eliminarMarkdownCodeBlocks(resultado);
-        // Solo validar si el string cambió (optimización: evitar parse si no hay cambios)
         if (resultado.length() != longitudAnterior) {
             if (esJsonValido(resultado)) return resultado;
             longitudAnterior = resultado.length();
@@ -57,13 +69,21 @@ public final class ReparadorJson {
         return null;
     }
 
+    /**
+     * Verifica si una cadena es un JSON válido (objeto o arreglo).
+     *
+     * @param json la cadena a validar
+     * @return true si es un JSON válido, false en caso contrario
+     */
     public static boolean esJsonValido(String json) {
-        if (json == null || json.trim().isEmpty()) {
+        if (json == null) {
             return false;
         }
 
-        // Optimizado: usar el string directamente para evitar doble trim
         String normalizado = json.trim();
+        if (normalizado.isEmpty()) {
+            return false;
+        }
 
         if (!normalizado.startsWith("{") && !normalizado.startsWith("[")) {
             return false;
@@ -175,7 +195,7 @@ public final class ReparadorJson {
         }
 
         Pattern evidenciaPattern = Pattern.compile(
-            "\"(?:evidencia|evidence)\"\\s*:\\s*\"([^\"]*?<[^>]*>[^\"]*?)\"",
+            "\"(evidencia|evidence)\"\\s*:\\s*\"([^\"]*?<[^>]*>[^\"]*?)\"",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL
         );
 
@@ -183,10 +203,11 @@ public final class ReparadorJson {
         StringBuffer sb = new StringBuffer();
 
         while (matcher.find()) {
-            String valor = matcher.group(1);
+            String claveOriginal = matcher.group(1);
+            String valor = matcher.group(2);
             String valorEscapado = escaparComillasEnHtml(valor);
             matcher.appendReplacement(sb, Matcher.quoteReplacement(
-                "\"evidencia\": \"" + valorEscapado + "\""
+                "\"" + claveOriginal + "\": \"" + valorEscapado + "\""
             ));
         }
         matcher.appendTail(sb);

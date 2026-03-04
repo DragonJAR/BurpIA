@@ -54,6 +54,7 @@ public class AnalizadorAI implements Runnable {
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
     private static final long DELAY_ENTRE_PROVEEDORES_MS = 2000L; // 2 segundos entre proveedores
+    private static final String LINEA_SEPARADORA_PROVEEDOR = "========================================";
     private static final int MAX_CLIENTES_HTTP_CACHE = 8;
     private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = 
         Collections.synchronizedMap(new LinkedHashMap<String, OkHttpClient>(16, 0.75f, true) {
@@ -235,10 +236,11 @@ public class AnalizadorAI implements Runnable {
                 resultadoMultiple = ejecutarAnalisisMultiProveedorSecuencial();
             } else {
                 if (multiHabilitado) {
-                    rastrear("DIAGNOSTICO: Multi-proveedor habilitado pero solo " +
-                             (proveedoresConfig != null ? proveedoresConfig.size() : 0) + " proveedor(es). Usando proveedor único.");
+                    registrar("PROVEEDOR: Multi-proveedor habilitado pero solo " +
+                             (proveedoresConfig != null ? proveedoresConfig.size() : 0) +
+                             " proveedor(es) configurado(s). Usando proveedor único: " + config.obtenerProveedorAI());
                 } else {
-                    rastrear("DIAGNOSTICO: Multi-proveedor no habilitado. Usando proveedor único.");
+                    registrar("PROVEEDOR: Usando proveedor único: " + config.obtenerProveedorAI());
                 }
                 String respuesta = llamarAPIAIConRetries();
                 resultadoMultiple = parsearRespuesta(respuesta);
@@ -1194,7 +1196,6 @@ public class AnalizadorAI implements Runnable {
             return ejecutarAnalisisProveedorUnico();
         }
 
-        registrar("PROVEEDOR: Multi-consulta iniciada con " + proveedores.size() + " proveedores");
         List<Hallazgo> todosHallazgos = new ArrayList<>();
         List<String> proveedoresFallidos = new ArrayList<>();
         ConfiguracionAPI configOriginal = config;
@@ -1226,7 +1227,9 @@ public class AnalizadorAI implements Runnable {
                     esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
                 }
 
-                registrar("PROVEEDOR: Analizando con proveedor: " + proveedor + " (" + modelo + ")");
+                // CONFIABILIDAD: Línea separadora antes de cada proveedor para claridad visual
+                registrar(LINEA_SEPARADORA_PROVEEDOR);
+                registrar("PROVEEDOR: " + proveedor + " (" + modelo + ")");
 
                 try {
                     ConfiguracionAPI configProveedor = new ConfiguracionAPI();
@@ -1238,12 +1241,11 @@ public class AnalizadorAI implements Runnable {
                     ResultadoAnalisisMultiple resultado = parsearRespuestaConEtiqueta(respuesta, proveedor, modelo);
 
                     List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
-                    registrar("PROVEEDOR: Hallazgos de proveedor " + proveedor + ": " + hallazgosProveedor.size() +
-                             " agregados al resultado");
+                    registrar("PROVEEDOR: " + proveedor + " completado - " + hallazgosProveedor.size() + " hallazgo(s) encontrado(s)");
                     todosHallazgos.addAll(hallazgosProveedor);
 
                 } catch (Exception e) {
-                    registrar("PROVEEDOR: Error con proveedor " + proveedor + ": " + e.getMessage());
+                    registrar("PROVEEDOR: Error con " + proveedor + ": " + e.getMessage());
                     proveedoresFallidos.add(proveedor);
                 }
             }
@@ -1254,6 +1256,7 @@ public class AnalizadorAI implements Runnable {
                              " proveedor(es) fallaron: " + String.join(", ", proveedoresFallidos));
             }
 
+            registrar(LINEA_SEPARADORA_PROVEEDOR);
             registrar("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
 
             return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,

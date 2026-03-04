@@ -66,6 +66,15 @@ public final class ExtractorCamposRobusto {
         }
 
         /**
+         * Obtiene las variaciones del nombre del campo.
+         *
+         * @return Array con las variaciones del campo (i18n, aliases)
+         */
+        public String[] obtenerVariaciones() {
+            return variaciones.clone();
+        }
+
+        /**
          * Compila el patrón regex para las variaciones del campo.
          * Formato: "campo1|campo2|campo3" (case-insensitive)
          *
@@ -128,20 +137,13 @@ public final class ExtractorCamposRobusto {
                 return new String[0];
             }
 
-            switch (nombreCampo.toLowerCase()) {
-                case "titulo":
-                    return new String[]{"titulo", "title", "name", "nombre"};
-                case "descripcion":
-                    return new String[]{"descripcion", "description", "finding", "hallazgo", "details"};
-                case "severidad":
-                    return new String[]{"severidad", "severity", "risk", "impacto"};
-                case "confianza":
-                    return new String[]{"confianza", "confidence", "certainty", "certeza"};
-                case "evidencia":
-                    return new String[]{"evidencia", "evidence", "proof", "indicator"};
-                default:
-                    return new String[]{nombreCampo};
+            String nombreLower = nombreCampo.toLowerCase();
+            for (Campo campo : TODOS) {
+                if (campo.obtenerNombre().equalsIgnoreCase(nombreLower)) {
+                    return campo.obtenerVariaciones();
+                }
             }
+            return new String[]{nombreCampo};
         }
 
         private CamposHallazgo() {
@@ -240,18 +242,17 @@ public final class ExtractorCamposRobusto {
      */
     private static String extraerCampoEstricto(Campo campo, String bloque) {
         String ultimoValor = "";
-        String[] variaciones = CamposHallazgo.obtenerVariaciones(campo.obtenerNombre());
+        String[] variaciones = campo.obtenerVariaciones();
 
         for (String variacion : variaciones) {
-            // Buscar todas las ocurrencias manualmente y tomar la última
-            String patronStr = "\"" + variacion + "\"\\s*:\\s*\"([^\"]*)";
+            String patronStr = "\"" + Pattern.quote(variacion) + "\"\\s*:\\s*\"([^\"]*)";
             Pattern patron = Pattern.compile(patronStr, Pattern.CASE_INSENSITIVE);
             Matcher matcher = patron.matcher(bloque);
 
             while (matcher.find()) {
                 String valor = matcher.group(1);
                 if (Normalizador.noEsVacio(valor)) {
-                    ultimoValor = valor; // Sobrescribe con cada ocurrencia (última gana)
+                    ultimoValor = valor;
                 }
             }
         }

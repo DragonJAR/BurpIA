@@ -1,15 +1,35 @@
 package com.burpia.util;
+
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import okhttp3.*;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Utilidad para probar la conexión con proveedores de IA.
+ * <p>
+ * Verifica que la configuración de API key, modelo y endpoint sea correcta
+ * enviando una solicitud de prueba y analizando la respuesta.
+ * </p>
+ *
+ * @see ConfiguracionAPI
+ * @see ConstructorSolicitudesProveedor
+ */
 public class ProbadorConexionAI {
     private final ConfiguracionAPI config;
     private final OkHttpClient clienteHttp;
 
+    /**
+     * Crea un nuevo probador de conexión con la configuración especificada.
+     *
+     * @param config la configuración de API a probar, no puede ser {@code null}
+     * @throws IllegalArgumentException si la configuración es {@code null}
+     */
     public ProbadorConexionAI(ConfiguracionAPI config) {
+        if (config == null) {
+            throw new IllegalArgumentException("La configuración no puede ser null");
+        }
         this.config = config;
         int timeoutLectura = config.obtenerTiempoEsperaParaModelo(
             config.obtenerProveedorAI(),
@@ -22,6 +42,19 @@ public class ProbadorConexionAI {
                 .build();
     }
 
+    /**
+     * Ejecuta la prueba de conexión con el proveedor de IA configurado.
+     * <p>
+     * Realiza las siguientes verificaciones:
+     * </p>
+     * <ol>
+     *   <li>Valida la configuración (API key, modelo, etc.)</li>
+     *   <li>Envía una solicitud de prueba simple ("Responde exactamente con OK")</li>
+     *   <li>Analiza la respuesta para determinar si la conexión es exitosa</li>
+     * </ol>
+     *
+     * @return un {@link ResultadoPrueba} con el resultado de la prueba
+     */
     public ResultadoPrueba probarConexion() {
         try {
             java.util.Map<String, String> errores = config.validar();
@@ -37,7 +70,7 @@ public class ProbadorConexionAI {
             String respuesta = resultadoHttp.respuesta;
             String endpointFinal = resultadoHttp.endpoint;
 
-            if (respuesta != null && !respuesta.isEmpty()) {
+            if (Normalizador.noEsVacio(respuesta)) {
                 String mensaje = analizarRespuesta(respuesta, endpointFinal, resultadoHttp.modeloUsado, resultadoHttp.advertencia);
                 return new ResultadoPrueba(true, mensaje, respuesta);
             } else {
@@ -79,18 +112,14 @@ public class ProbadorConexionAI {
         mensaje.append(I18nUI.Conexion.INFO_MODELO()).append(modeloUsado).append("\n");
         mensaje.append(I18nUI.Conexion.INFO_URL_BASE()).append(ConfiguracionAPI.extraerUrlBase(endpointProbado)).append("\n");
         mensaje.append(I18nUI.Conexion.INFO_ENDPOINT()).append(endpointProbado).append("\n\n");
-        if (advertenciaModelo != null && !advertenciaModelo.isEmpty()) {
+        if (Normalizador.noEsVacio(advertenciaModelo)) {
             mensaje.append("ℹ️ ").append(advertenciaModelo).append("\n\n");
         }
 
         if (respuestaValida) {
             mensaje.append(I18nUI.Conexion.MSG_ENVIADO());
             mensaje.append(I18nUI.Conexion.RESPUESTA_MODELO());
-            if (contenidoRespuesta.length() > 100) {
-                mensaje.append("   ").append(contenidoRespuesta.substring(0, 100)).append("...");
-            } else {
-                mensaje.append("   ").append(contenidoRespuesta);
-            }
+            mensaje.append("   ").append(truncarTexto(contenidoRespuesta, 100));
             mensaje.append(I18nUI.Conexion.RESPUESTA_CORRECTA());
             mensaje.append(I18nUI.Conexion.RESPUESTA_ACEPTADA());
         } else if (conexionValida) {
@@ -98,43 +127,65 @@ public class ProbadorConexionAI {
             mensaje.append(I18nUI.Conexion.PROVEEDOR_RESPONDIO());
             mensaje.append(I18nUI.Conexion.CONEXION_VALIDA_SIN_OK());
             mensaje.append(I18nUI.Conexion.MODELO_RESPONDE());
-            if (contenidoRespuesta.length() > 150) {
-                mensaje.append("   ").append(contenidoRespuesta.substring(0, 150)).append("...");
-            } else {
-                mensaje.append("   ").append(contenidoRespuesta);
-            }
+            mensaje.append("   ").append(truncarTexto(contenidoRespuesta, 150));
         } else {
             mensaje.append(I18nUI.Conexion.MSG_ENVIADO());
-            if (!contenidoRespuesta.isEmpty()) {
+            if (Normalizador.noEsVacio(contenidoRespuesta)) {
                 mensaje.append(I18nUI.Conexion.RESPUESTA_SIN_OK());
                 mensaje.append(I18nUI.Conexion.RESPUESTA_RECIBIDA());
-                if (contenidoRespuesta.length() > 100) {
-                    mensaje.append("   ").append(contenidoRespuesta.substring(0, 100)).append("...");
-                } else {
-                    mensaje.append("   ").append(contenidoRespuesta);
-                }
+                mensaje.append("   ").append(truncarTexto(contenidoRespuesta, 100));
                 mensaje.append(I18nUI.Conexion.RESPUESTA_FORMATO_INCORRECTO());
             } else {
                 mensaje.append(I18nUI.Conexion.ERROR_EXTRAER_CONTENIDO());
                 mensaje.append(I18nUI.Conexion.EXITO_FORMATO_INCORRECTO());
                 mensaje.append(I18nUI.Conexion.RESPUESTA_CRUDA());
                 String respuestaNormalizada = respuesta.replaceAll("\\s+", " ");
-                if (respuestaNormalizada.length() > 200) {
-                    mensaje.append("   ").append(respuestaNormalizada.substring(0, 200)).append("...");
-                } else {
-                    mensaje.append("   ").append(respuestaNormalizada);
-                }
+                mensaje.append("   ").append(truncarTexto(respuestaNormalizada, 200));
             }
         }
 
         return mensaje.toString();
     }
 
+    /**
+     * Trunca un texto a una longitud máxima, agregando "..." si se truncó.
+     *
+     * @param texto el texto a truncar
+     * @param longitudMaxima la longitud máxima permitida
+     * @return el texto truncado con "..." si era más largo, o el texto original
+     */
+    private static String truncarTexto(String texto, int longitudMaxima) {
+        if (texto == null) {
+            return "";
+        }
+        if (texto.length() > longitudMaxima) {
+            return texto.substring(0, longitudMaxima) + "...";
+        }
+        return texto;
+    }
+
+    /**
+     * Resultado de una prueba de conexión.
+     * <p>
+     * Contiene información sobre si la prueba fue exitosa, un mensaje descriptivo
+     * y la respuesta cruda del servidor (si la hubo).
+     * </p>
+     */
     public static class ResultadoPrueba {
+        /** Indica si la prueba de conexión fue exitosa */
         public final boolean exito;
+        /** Mensaje descriptivo del resultado de la prueba */
         public final String mensaje;
+        /** Respuesta cruda del servidor, puede ser {@code null} */
         public final String respuestaRaw;
 
+        /**
+         * Crea un nuevo resultado de prueba.
+         *
+         * @param exito si la prueba fue exitosa
+         * @param mensaje mensaje descriptivo del resultado
+         * @param respuestaRaw respuesta cruda del servidor, puede ser {@code null}
+         */
         public ResultadoPrueba(boolean exito, String mensaje, String respuestaRaw) {
             this.exito = exito;
             this.mensaje = mensaje;
@@ -142,6 +193,9 @@ public class ProbadorConexionAI {
         }
     }
 
+    /**
+     * Resultado interno de una solicitud HTTP de prueba.
+     */
     private static class ResultadoHttpPrueba {
         private final String endpoint;
         private final String respuesta;

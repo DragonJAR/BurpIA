@@ -7,8 +7,6 @@ public class ConstructorPrompts {
     private static final String TOKEN_REQUEST = "{REQUEST}";
     private static final String TOKEN_RESPONSE = "{RESPONSE}";
     private static final String TOKEN_OUTPUT_LANGUAGE = "{OUTPUT_LANGUAGE}";
-    private static final int MAX_CARACTERES_CUERPO_REQUEST = PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES;
-    private static final int MAX_CARACTERES_CUERPO_RESPONSE = PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES;
 
     private final ConfiguracionAPI config;
 
@@ -90,7 +88,7 @@ public class ConstructorPrompts {
             requestBuilder.append("\nBODY:\n")
                 .append(truncarTexto(
                     cuerpo,
-                    MAX_CARACTERES_CUERPO_REQUEST,
+                    PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
                     trPrompt("cuerpo de solicitud", "request body")
                 ));
         }
@@ -124,7 +122,7 @@ public class ConstructorPrompts {
             responseBuilder.append("\nBODY:\n")
                 .append(truncarTexto(
                     cuerpo,
-                    MAX_CARACTERES_CUERPO_RESPONSE,
+                    PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
                     trPrompt("cuerpo de respuesta", "response body")
                 ));
         } else {

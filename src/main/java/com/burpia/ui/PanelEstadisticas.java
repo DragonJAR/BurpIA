@@ -1,5 +1,6 @@
 package com.burpia.ui;
 
+import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import javax.swing.*;
@@ -45,7 +46,7 @@ public class PanelEstadisticas extends JPanel {
                              IntSupplier proveedorLimiteHallazgos,
                              PanelHallazgos panelHallazgos) {
         this.estadisticas = estadisticas;
-        this.proveedorLimiteHallazgos = proveedorLimiteHallazgos != null ? proveedorLimiteHallazgos : () -> 1000;
+        this.proveedorLimiteHallazgos = proveedorLimiteHallazgos != null ? proveedorLimiteHallazgos : () -> ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO;
         this.proveedorEstadisticasVisibles = () -> panelHallazgos != null ? panelHallazgos.obtenerEstadisticasVisibles() : new int[6];
         this.etiquetaResumenPrincipal = new JLabel();
         this.etiquetaResumenSeveridad = new JLabel();

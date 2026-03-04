@@ -1458,12 +1458,23 @@ public class DialogoConfiguracion extends JDialog {
                             idiomaSeleccionado != null ? idiomaSeleccionado.codigo() : IdiomaUI.porDefecto().codigo());
                     snapshot.establecerProveedorAI(proveedorSeleccionado);
 
-                    snapshot.establecerApiKeyParaProveedor(proveedorSeleccionado, estadoUI.getApiKey());
-                    snapshot.establecerModeloParaProveedor(proveedorSeleccionado, estadoUI.getModelo());
-                    snapshot.establecerUrlBaseParaProveedor(proveedorSeleccionado, estadoUI.getBaseUrl());
-                    snapshot.establecerMaxTokensParaProveedor(proveedorSeleccionado, estadoUI.getMaxTokens());
-                    snapshot.establecerTiempoEsperaParaModelo(proveedorSeleccionado, estadoUI.getModelo(),
-                            estadoUI.getTimeout());
+                    // CONFIABILIDAD: Guardar estado actual del proveedor seleccionado antes de procesar todos
+                    estadoProveedorTemporal.put(proveedorSeleccionado, extraerEstadoActualRapido());
+
+                    // CONFIABILIDAD: Guardar TODOS los proveedores configurados, no solo el seleccionado
+                    for (Map.Entry<String, EstadoProveedorUI> entry : estadoProveedorTemporal.entrySet()) {
+                        String nombreProveedor = entry.getKey();
+                        EstadoProveedorUI estadoProveedor = entry.getValue();
+
+                        if (estadoProveedor != null && Normalizador.noEsVacio(nombreProveedor)) {
+                            snapshot.establecerApiKeyParaProveedor(nombreProveedor, estadoProveedor.getApiKey());
+                            snapshot.establecerModeloParaProveedor(nombreProveedor, estadoProveedor.getModelo());
+                            snapshot.establecerUrlBaseParaProveedor(nombreProveedor, estadoProveedor.getBaseUrl());
+                            snapshot.establecerMaxTokensParaProveedor(nombreProveedor, estadoProveedor.getMaxTokens());
+                            snapshot.establecerTiempoEsperaParaModelo(nombreProveedor, estadoProveedor.getModelo(),
+                                    estadoProveedor.getTimeout());
+                        }
+                    }
 
                     snapshot.establecerDetallado(detallado);
                     snapshot.establecerIgnorarErroresSSL(ignorarSSL);

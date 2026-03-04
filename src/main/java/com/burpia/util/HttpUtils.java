@@ -84,10 +84,10 @@ public final class HttpUtils {
             return convertirDigestHex(md.digest());
         }
         for (String parte : partes) {
-            if (parte != null && !parte.isEmpty()) {
+            if (Normalizador.noEsVacio(parte)) {
                 md.update(parte.getBytes(StandardCharsets.UTF_8));
             }
-            md.update((byte) 0); 
+            md.update((byte) 0);
         }
         return convertirDigestHex(md.digest());
     }

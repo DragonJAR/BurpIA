@@ -173,11 +173,10 @@ public class ParserRespuestasAI {
         if (output != null && output.size() > 0) {
             StringBuilder contenidoCompleto = new StringBuilder(output.size() * 100);
             for (JsonElement outputItem : output) {
-                // Inline: obtenerObjeto(outputItem)
-                if (outputItem == null || !outputItem.isJsonObject()) {
+                JsonObject outputObject = obtenerObjeto(outputItem);
+                if (outputObject == null) {
                     continue;
                 }
-                JsonObject outputObject = outputItem.getAsJsonObject();
 
                 JsonArray contenidos = obtenerArreglo(outputObject, "content");
                 if (contenidos != null) {
@@ -196,17 +195,13 @@ public class ParserRespuestasAI {
         JsonArray choices = obtenerArreglo(raiz, "choices");
         if (choices != null && choices.size() > 0) {
             for (JsonElement choiceItem : choices) {
-                // Inline: obtenerObjeto(choiceItem)
-                if (choiceItem == null || !choiceItem.isJsonObject()) {
+                JsonObject choice = obtenerObjeto(choiceItem);
+                if (choice == null) {
                     continue;
                 }
-                JsonObject choice = choiceItem.getAsJsonObject();
 
-                // Inline: obtenerObjeto(choice, "message")
-                JsonElement messageElement = choice.get("message");
-                if (messageElement != null && messageElement.isJsonObject()) {
-                    JsonObject message = messageElement.getAsJsonObject();
-
+                JsonObject message = obtenerObjeto(choice, "message");
+                if (message != null) {
                     // Try content field
                     JsonElement contentElement = message.get("content");
                     if (contentElement != null) {
@@ -224,22 +219,16 @@ public class ParserRespuestasAI {
                     }
 
                     // Try reasoning_content
-                    JsonElement reasoningElement = message.get("reasoning_content");
-                    if (reasoningElement != null && reasoningElement.isJsonPrimitive()) {
-                        String reasoning = reasoningElement.getAsString();
-                        if (!reasoning.isEmpty()) {
-                            return reasoning;
-                        }
+                    String reasoning = obtenerTexto(message, "reasoning_content");
+                    if (!reasoning.isEmpty()) {
+                        return reasoning;
                     }
                 }
 
                 // Try text field on choice
-                JsonElement textElement = choice.get("text");
-                if (textElement != null && textElement.isJsonPrimitive()) {
-                    String text = textElement.getAsString();
-                    if (!text.isEmpty()) {
-                        return text;
-                    }
+                String text = obtenerTexto(choice, "text");
+                if (!text.isEmpty()) {
+                    return text;
                 }
             }
         }
@@ -263,31 +252,19 @@ public class ParserRespuestasAI {
             return "";
         }
 
-        // Optimizado: inline todas las llamadas a método para reducir overhead
         var contentArray = content.getAsJsonArray();
         StringBuilder contenidoCompleto = new StringBuilder(contentArray.size() * 100);
 
         for (JsonElement item : contentArray) {
-            // Inline: obtenerObjeto(item)
-            if (item == null || !item.isJsonObject()) {
+            JsonObject obj = obtenerObjeto(item);
+            if (obj == null) {
                 continue;
             }
-            JsonObject obj = item.getAsJsonObject();
 
-            // Inline: obtenerTexto(obj, "type")
-            JsonElement typeElement = obj.get("type");
-            String tipo = (typeElement != null && typeElement.isJsonPrimitive())
-                ? typeElement.getAsString()
-                : "";
-
-            // Inline: obtenerTexto(obj, "text")
-            JsonElement textElement = obj.get("text");
-            if (textElement != null && textElement.isJsonPrimitive()) {
-                String texto = textElement.getAsString();
-                // Inline: anexarTexto + isEmpty check
-                if (!texto.isEmpty() && ("text".equals(tipo) || tipo.isEmpty())) {
-                    contenidoCompleto.append(texto);
-                }
+            String tipo = obtenerTexto(obj, "type");
+            String texto = obtenerTexto(obj, "text");
+            if (!texto.isEmpty() && ("text".equals(tipo) || tipo.isEmpty())) {
+                anexarTexto(contenidoCompleto, texto);
             }
         }
 
@@ -462,13 +439,6 @@ public class ParserRespuestasAI {
     }
 
     /**
-     * Extrae un array JSON de una respuesta que puede contener texto antes/después.
-     * Busca patrones como: "[{...}]" o cualquier estructura JSON válida.
-     *
-     * NOTA: Este método está DEPRECADO. Usar extraerArrayJsonInteligente() que incluye
-     * limpieza automática de bloques de pensamiento y múltiples estrategias.
-     *
-    /**
      * Encuentra la posición del carácter que cierra un array JSON,
      * contando corchetes anidados y manejando strings correctamente.
      *
@@ -479,18 +449,18 @@ public class ParserRespuestasAI {
     private static int encontrarCierreJson(String texto, int posicionInicio) {
         int profundidad = 0;
         boolean enString = false;
-        char caracterEscape = '\0';
+        boolean escapando = false;
 
         for (int i = posicionInicio; i < texto.length(); i++) {
             char c = texto.charAt(i);
 
             if (enString) {
-                if (caracterEscape == '\\') {
-                    caracterEscape = c;
+                if (escapando) {
+                    escapando = false;
                     continue;
                 }
                 if (c == '\\') {
-                    caracterEscape = c;
+                    escapando = true;
                     continue;
                 }
                 if (c == '"') {

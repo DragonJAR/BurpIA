@@ -869,29 +869,44 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         ConfiguracionAPI.CodigoValidacionConsulta codigo = codigoValidacionConsulta();
         if (codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK) {
             // Verificar si multi-proveedor está habilitado
-            if (config.esMultiProveedorHabilitado()) {
-                List<String> proveedores = config.obtenerProveedoresMultiConsulta();
-                if (proveedores != null && proveedores.size() > 1) {
-                    // Multi-proveedor con 2+ proveedores
-                    String proveedorPrincipal = config.obtenerProveedorAI();
-                    List<String> proveedoresAdicionales = new ArrayList<>();
-                    for (String p : proveedores) {
-                        if (!p.equals(proveedorPrincipal)) {
-                            proveedoresAdicionales.add(p);
-                        }
+            boolean multiHabilitado = config.esMultiProveedorHabilitado();
+            List<String> proveedores = config.obtenerProveedoresMultiConsulta();
+
+            // LOG DE DIAGNÓSTICO: Siempre visible
+            rastrear("DIAGNOSTICO: Configuración multi-proveedor al inicio:");
+            rastrear("DIAGNOSTICO:   - Habilitado: " + multiHabilitado);
+            rastrear("DIAGNOSTICO:   - Proveedores: " +
+                     (proveedores != null ? proveedores.size() + " elemento(s)" : "null"));
+            if (proveedores != null && !proveedores.isEmpty()) {
+                rastrear("DIAGNOSTICO:   - Lista: " + String.join(", ", proveedores));
+            }
+
+            if (multiHabilitado && proveedores != null && proveedores.size() > 1) {
+                // Multi-proveedor con 2+ proveedores
+                String proveedorPrincipal = config.obtenerProveedorAI();
+                List<String> proveedoresAdicionales = new ArrayList<>();
+                for (String p : proveedores) {
+                    if (!p.equals(proveedorPrincipal)) {
+                        proveedoresAdicionales.add(p);
                     }
-                    registrar(
-                        I18nUI.Consola.ESTADO_INICIAL_LLM_MULTIPROVEEDOR(
-                            proveedorPrincipal,
-                            config.obtenerModelo(),
-                            proveedoresAdicionales
-                        )
-                    );
-                    return;
                 }
+                registrar(
+                    I18nUI.Consola.ESTADO_INICIAL_LLM_MULTIPROVEEDOR(
+                        proveedorPrincipal,
+                        config.obtenerModelo(),
+                        proveedoresAdicionales
+                    )
+                );
+                return;
             }
 
             // Caso normal: proveedor único
+            if (multiHabilitado) {
+                registrar("AVISO: Multi-proveedor está habilitado pero solo hay " +
+                         (proveedores != null ? proveedores.size() : 0) +
+                         " proveedor(es) configurado(s). Se usará proveedor único: " + config.obtenerProveedorAI());
+            }
+
             registrar(
                 I18nUI.Consola.ESTADO_INICIAL_LLM_LISTO(
                     config.obtenerProveedorAI(),

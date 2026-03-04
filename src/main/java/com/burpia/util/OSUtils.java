@@ -2,7 +2,6 @@ package com.burpia.util;
 
 import javax.swing.*;
 import java.awt.*;
-import com.burpia.i18n.I18nLogs;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,11 +39,10 @@ public final class OSUtils {
         if (texto == null) {
             return null;
         }
-        String eol = obtenerEolTerminal();
         if (texto.endsWith("\r") || texto.endsWith("\n")) {
             return texto;
         }
-        return texto + eol;
+        return texto + obtenerEolTerminal();
     }
 
     public static void cerrarVentanaAjustes() {
@@ -63,34 +61,38 @@ public final class OSUtils {
                     }
                 }
             }
-        } catch (Exception e) {
-            // Error al cerrar ventanas, no es crítico
+        } catch (Exception ignored) {
+            // Non-critical UI operation: closing configuration dialogs is best-effort
         }
     }
 
     static boolean debeCerrarVentanaAjustes(String className) {
-        String nombre = className != null ? className.trim() : "";
-        return nombre.contains("DialogoConfiguracion");
+        if (Normalizador.esVacio(className)) {
+            return false;
+        }
+        return className.trim().contains("DialogoConfiguracion");
     }
 
     public static String expandirRuta(String rutaObj) {
-        if (rutaObj == null) return null;
+        if (Normalizador.esVacio(rutaObj)) {
+            return rutaObj;
+        }
         String expansion = rutaObj;
-        
+
         if (esWindows() && expansion.contains("%USERPROFILE%")) {
             String userProfile = System.getenv("USERPROFILE");
-            if (userProfile != null) {
+            if (Normalizador.noEsVacio(userProfile)) {
                 expansion = expansion.replace("%USERPROFILE%", userProfile);
             }
         }
 
         if (expansion.startsWith("~")) {
             String userHome = System.getProperty("user.home");
-            if (userHome != null) {
+            if (Normalizador.noEsVacio(userHome)) {
                 expansion = userHome + expansion.substring(1);
             }
         }
-        
+
         return expansion;
     }
 
@@ -122,24 +124,17 @@ public final class OSUtils {
      */
     public static String resolverEjecutableComando(String comando) {
         String ejecutable = extraerEjecutableComando(comando);
-        if (ejecutable == null) {
-            return null;
+        if (Normalizador.esVacio(ejecutable)) {
+            return ejecutable;
         }
-        String limpio = ejecutable.trim();
-        if (limpio.isEmpty()) {
-            return "";
-        }
-        return expandirRuta(limpio);
+        return expandirRuta(ejecutable.trim());
     }
 
     public static String extraerEjecutableComando(String comando) {
-        if (comando == null) {
-            return null;
+        if (Normalizador.esVacio(comando)) {
+            return comando;
         }
         String limpio = comando.trim();
-        if (limpio.isEmpty()) {
-            return "";
-        }
 
         char primero = limpio.charAt(0);
         if (primero == '"' || primero == '\'') {
@@ -158,7 +153,7 @@ public final class OSUtils {
     }
 
     private static boolean tieneSeparadorRuta(String ejecutable) {
-        if (ejecutable == null || ejecutable.isEmpty()) {
+        if (Normalizador.esVacio(ejecutable)) {
             return false;
         }
         return ejecutable.contains("/")
@@ -184,7 +179,7 @@ public final class OSUtils {
                 continue;
             }
             for (String nombre : candidatos) {
-                if (nombre == null || nombre.isEmpty()) {
+                if (Normalizador.esVacio(nombre)) {
                     continue;
                 }
                 File candidato = new File(base, nombre);
@@ -208,7 +203,7 @@ public final class OSUtils {
 
     private static List<String> construirNombresCandidatos(String ejecutable) {
         List<String> candidatos = new ArrayList<>();
-        if (ejecutable == null || ejecutable.isEmpty()) {
+        if (Normalizador.esVacio(ejecutable)) {
             return candidatos;
         }
         candidatos.add(ejecutable);

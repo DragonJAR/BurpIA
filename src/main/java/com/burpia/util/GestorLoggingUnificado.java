@@ -7,12 +7,15 @@ import java.io.PrintWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static com.burpia.util.Normalizador.esVacio;
+import static com.burpia.util.Normalizador.noEsVacio;
+
 /**
  * Clase unificada para centralizar toda la lógica de logging en la aplicación.
  * Sigue el principio DRY (Don't Repeat Yourself) eliminando duplicación
  * de métodos de logging en múltiples clases.
  *
- * <p>Soporta tres formas de logging:</p>
+ * <p>Soporta cuatro formas de logging:</p>
  * <ul>
  *   <li>Logging a consola GUI (vía GestorConsolaGUI)</li>
  *   <li>Logging a stdout/stderr (vía PrintWriter)</li>
@@ -25,9 +28,8 @@ import java.util.logging.Logger;
  */
 public final class GestorLoggingUnificado {
 
-    private static final String PREFIJO_INFO = "[BurpIA] ";
-    private static final String PREFIJO_ERROR = "[BurpIA] [ERROR] ";
     private static final String SEPARADOR_LOG = "==================================================";
+    private static final String ORIGEN_POR_DEFECTO = "BurpIA";
 
     private final GestorConsolaGUI gestorConsola;
     private final PrintWriter stdout;
@@ -96,36 +98,30 @@ public final class GestorLoggingUnificado {
     /**
      * Registra un mensaje informativo.
      *
-     * @param origen Origen del mensaje (ej: "BurpIA", nombre de componente)
+     * @param origen Origen del mensaje (ej: "BurpIA", nombre de componente). Si es null o vacío, se usa "BurpIA".
      * @param mensaje Mensaje a registrar (puede tener marcadores de i18n)
      */
     public void info(String origen, String mensaje) {
-        if (mensaje == null) {
+        if (esVacio(mensaje)) {
             return;
         }
 
+        String origenNormalizado = normalizarOrigen(origen);
         String mensajeLocalizado = I18nLogs.tr(mensaje);
 
-        // 1. Intentar log a consola GUI
+        // 1. Log a consola GUI
         if (gestorConsola != null) {
-            gestorConsola.registrarInfo(origen, mensajeLocalizado);
+            gestorConsola.registrarInfo(origenNormalizado, mensajeLocalizado);
         }
 
-        // 2. Log a stdout/stderr
+        // 2. Log a stdout
         if (stdout != null) {
-            String prefijo = origen != null ? "[" + origen + "] " : "";
-            stdout.println(prefijo + mensajeLocalizado);
+            stdout.println(construirPrefijoConsola(origenNormalizado) + mensajeLocalizado);
             stdout.flush();
         }
 
         // 3. Log a Burp API
-        if (api != null) {
-            try {
-                api.logging().logToOutput(prefijoSinCorchetes(origen) + mensajeLocalizado);
-            } catch (Exception e) {
-                // Ignorar errores de logging a Burp API
-            }
-        }
+        logToBurpApi(origenNormalizado, mensajeLocalizado, false);
 
         // 4. Log a java.util.logging
         if (logger != null && logger.isLoggable(Level.INFO)) {
@@ -136,36 +132,30 @@ public final class GestorLoggingUnificado {
     /**
      * Registra un mensaje de error.
      *
-     * @param origen Origen del mensaje
+     * @param origen Origen del mensaje. Si es null o vacío, se usa "BurpIA".
      * @param mensaje Mensaje de error
      */
     public void error(String origen, String mensaje) {
-        if (mensaje == null) {
+        if (esVacio(mensaje)) {
             return;
         }
 
+        String origenNormalizado = normalizarOrigen(origen);
         String mensajeLocalizado = I18nLogs.tr(mensaje);
 
-        // 1. Intentar log a consola GUI
+        // 1. Log a consola GUI
         if (gestorConsola != null) {
-            gestorConsola.registrarError(origen, mensajeLocalizado);
+            gestorConsola.registrarError(origenNormalizado, mensajeLocalizado);
         }
 
         // 2. Log a stderr
         if (stderr != null) {
-            String prefijo = origen != null ? "[" + origen + "] [ERROR] " : "[ERROR] ";
-            stderr.println(prefijo + mensajeLocalizado);
+            stderr.println(construirPrefijoConsola(origenNormalizado) + "[ERROR] " + mensajeLocalizado);
             stderr.flush();
         }
 
         // 3. Log a Burp API
-        if (api != null) {
-            try {
-                api.logging().logToError(prefijoSinCorchetes(origen) + "[ERROR] " + mensajeLocalizado);
-            } catch (Exception e) {
-                // Ignorar errores de logging a Burp API
-            }
-        }
+        logToBurpApi(origenNormalizado, "[ERROR] " + mensajeLocalizado, true);
 
         // 4. Log a java.util.logging
         if (logger != null && logger.isLoggable(Level.SEVERE)) {
@@ -176,34 +166,41 @@ public final class GestorLoggingUnificado {
     /**
      * Registra un mensaje de error con excepción.
      *
-     * @param origen Origen del mensaje
+     * @param origen Origen del mensaje. Si es null o vacío, se usa "BurpIA".
      * @param mensaje Mensaje de error
      * @param throwable Excepción asociada
      */
     public void error(String origen, String mensaje, Throwable throwable) {
-        if (mensaje == null && throwable == null) {
+        if (esVacio(mensaje) && throwable == null) {
             return;
         }
 
-        String mensajeLocalizado = mensaje != null ? I18nLogs.tr(mensaje) : "";
+        String origenNormalizado = normalizarOrigen(origen);
+        String mensajeLocalizado = noEsVacio(mensaje) ? I18nLogs.tr(mensaje) : "";
         String stackTrace = throwable != null ? obtenerStackTrace(throwable) : "";
 
         // 1. Log a consola GUI
         if (gestorConsola != null) {
-            gestorConsola.registrarError(origen, mensajeLocalizado + " - " + stackTrace);
+            String mensajeCompleto = mensajeLocalizado;
+            if (noEsVacio(stackTrace)) {
+                mensajeCompleto = mensajeLocalizado + " - " + stackTrace;
+            }
+            gestorConsola.registrarError(origenNormalizado, mensajeCompleto);
         }
 
         // 2. Log a stderr
         if (stderr != null) {
-            String prefijo = origen != null ? "[" + origen + "] [ERROR] " : "[ERROR] ";
-            stderr.println(prefijo + mensajeLocalizado);
+            stderr.println(construirPrefijoConsola(origenNormalizado) + "[ERROR] " + mensajeLocalizado);
             if (throwable != null) {
                 throwable.printStackTrace(stderr);
             }
             stderr.flush();
         }
 
-        // 3. Log a java.util.logging
+        // 3. Log a Burp API
+        logToBurpApi(origenNormalizado, "[ERROR] " + mensajeLocalizado + (noEsVacio(stackTrace) ? " - " + stackTrace : ""), true);
+
+        // 4. Log a java.util.logging
         if (logger != null && logger.isLoggable(Level.SEVERE)) {
             if (throwable != null) {
                 logger.log(Level.SEVERE, mensajeLocalizado, throwable);
@@ -220,7 +217,7 @@ public final class GestorLoggingUnificado {
      * @param mensaje Mensaje a registrar
      */
     public void log(Level nivel, String mensaje) {
-        if (mensaje == null || nivel == null) {
+        if (esVacio(mensaje) || nivel == null) {
             return;
         }
 
@@ -229,7 +226,7 @@ public final class GestorLoggingUnificado {
             logger.log(nivel, mensaje);
         } else if (stdout != null) {
             // Fallback a stdout si no hay logger
-            String prefijo = nivel == Level.SEVERE ? "[ERROR] " : "[INFO] ";
+            String prefijo = nivel == Level.SEVERE ? "[ERROR] " : (nivel == Level.WARNING ? "[WARNING] " : "[INFO] ");
             stdout.println(prefijo + mensaje);
             stdout.flush();
         }
@@ -243,7 +240,7 @@ public final class GestorLoggingUnificado {
      * @param throwable Excepción asociada
      */
     public void log(Level nivel, String mensaje, Throwable throwable) {
-        if (mensaje == null || nivel == null) {
+        if (esVacio(mensaje) || nivel == null) {
             return;
         }
 
@@ -253,14 +250,80 @@ public final class GestorLoggingUnificado {
     }
 
     /**
+     * Registra un mensaje de tipo verbose/traza.
+     *
+     * @param origen Origen del mensaje. Si es null o vacío, se usa "BurpIA".
+     * @param mensaje Mensaje a registrar
+     */
+    public void verbose(String origen, String mensaje) {
+        if (esVacio(mensaje)) {
+            return;
+        }
+
+        String origenNormalizado = normalizarOrigen(origen);
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
+
+        // 1. Log a consola GUI
+        if (gestorConsola != null) {
+            gestorConsola.registrarVerbose(origenNormalizado, mensajeLocalizado);
+        }
+
+        // 2. Log a stdout (verbose no suele ser crítico)
+        if (stdout != null) {
+            stdout.println(construirPrefijoConsola(origenNormalizado) + "[VERBOSE] " + mensajeLocalizado);
+            stdout.flush();
+        }
+
+        // 3. Log a java.util.logging (FINE level)
+        if (logger != null && logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, mensajeLocalizado);
+        }
+    }
+
+    /**
+     * Registra un mensaje de advertencia.
+     *
+     * @param origen Origen del mensaje. Si es null o vacío, se usa "BurpIA".
+     * @param mensaje Mensaje a registrar
+     */
+    public void warning(String origen, String mensaje) {
+        if (esVacio(mensaje)) {
+            return;
+        }
+
+        String origenNormalizado = normalizarOrigen(origen);
+        String mensajeLocalizado = I18nLogs.tr(mensaje);
+
+        // 1. Log a consola GUI (como INFO con prefijo WARNING)
+        if (gestorConsola != null) {
+            gestorConsola.registrarInfo(origenNormalizado, "[WARNING] " + mensajeLocalizado);
+        }
+
+        // 2. Log a stdout
+        if (stdout != null) {
+            stdout.println(construirPrefijoConsola(origenNormalizado) + "[WARNING] " + mensajeLocalizado);
+            stdout.flush();
+        }
+
+        // 3. Log a Burp API
+        logToBurpApi(origenNormalizado, "[WARNING] " + mensajeLocalizado, false);
+
+        // 4. Log a java.util.logging
+        if (logger != null && logger.isLoggable(Level.WARNING)) {
+            logger.log(Level.WARNING, mensajeLocalizado);
+        }
+    }
+
+    /**
      * Registra un separador visual en los logs.
      */
     public void separador() {
         if (gestorConsola != null) {
-            gestorConsola.registrarInfo("BurpIA", SEPARADOR_LOG);
+            gestorConsola.registrarInfo(ORIGEN_POR_DEFECTO, SEPARADOR_LOG);
         }
         if (stdout != null) {
             stdout.println(SEPARADOR_LOG);
+            stdout.flush();
         }
     }
 
@@ -272,7 +335,7 @@ public final class GestorLoggingUnificado {
      * @param mensaje Mensaje a registrar
      */
     public void info(String mensaje) {
-        info("BurpIA", mensaje);
+        info(ORIGEN_POR_DEFECTO, mensaje);
     }
 
     /**
@@ -281,7 +344,7 @@ public final class GestorLoggingUnificado {
      * @param mensaje Mensaje de error
      */
     public void error(String mensaje) {
-        error("BurpIA", mensaje);
+        error(ORIGEN_POR_DEFECTO, mensaje);
     }
 
     /**
@@ -291,10 +354,81 @@ public final class GestorLoggingUnificado {
      * @param throwable Excepción asociada
      */
     public void error(String mensaje, Throwable throwable) {
-        error("BurpIA", mensaje, throwable);
+        error(ORIGEN_POR_DEFECTO, mensaje, throwable);
+    }
+
+    /**
+     * Método de conveniencia para registrar verbose sin origen explícito.
+     *
+     * @param mensaje Mensaje a registrar
+     */
+    public void verbose(String mensaje) {
+        verbose(ORIGEN_POR_DEFECTO, mensaje);
+    }
+
+    /**
+     * Método de conveniencia para registrar warning sin origen explícito.
+     *
+     * @param mensaje Mensaje a registrar
+     */
+    public void warning(String mensaje) {
+        warning(ORIGEN_POR_DEFECTO, mensaje);
     }
 
     // ============ MÉTODOS PRIVADOS DE AYUDA ============
+
+    /**
+     * Normaliza el origen, usando el valor por defecto si es null o vacío.
+     * Sigue el principio DRY usando Normalizador.esVacio().
+     */
+    private static String normalizarOrigen(String origen) {
+        if (esVacio(origen)) {
+            return ORIGEN_POR_DEFECTO;
+        }
+        return origen.trim();
+    }
+
+    /**
+     * Construye un prefijo para consola con el formato [Origen].
+     */
+    private static String construirPrefijoConsola(String origen) {
+        return "[" + origen + "] ";
+    }
+
+    /**
+     * Construye un prefijo para Burp API sin corchetes (formato "Origen: ").
+     */
+    private static String construirPrefijoBurpApi(String origen) {
+        return origen + ": ";
+    }
+
+    /**
+     * Registra mensaje en Burp API con manejo de errores.
+     * Si falla el logging a Burp API, intenta loguear a stderr como fallback.
+     *
+     * @param origen Origen normalizado
+     * @param mensaje Mensaje completo (incluye prefijos de nivel si aplica)
+     * @param esError Si es true, usa logToError; si es false, usa logToOutput
+     */
+    private void logToBurpApi(String origen, String mensaje, boolean esError) {
+        if (api == null) {
+            return;
+        }
+        try {
+            String mensajeCompleto = construirPrefijoBurpApi(origen) + mensaje;
+            if (esError) {
+                api.logging().logToError(mensajeCompleto);
+            } else {
+                api.logging().logToOutput(mensajeCompleto);
+            }
+        } catch (Exception e) {
+            // Fallback: intentar loguear el error de logging a stderr
+            if (stderr != null) {
+                stderr.println("[BurpIA] [ERROR] Fallo al loguear a Burp API: " + e.getMessage());
+                stderr.flush();
+            }
+        }
+    }
 
     /**
      * Genera el stack trace de una excepción como string.
@@ -308,15 +442,5 @@ public final class GestorLoggingUnificado {
         java.io.PrintWriter pw = new java.io.PrintWriter(sw);
         throwable.printStackTrace(pw);
         return sw.toString();
-    }
-
-    /**
-     * Genera un prefijo sin corchetes para logging a Burp API.
-     */
-    private static String prefijoSinCorchetes(String origen) {
-        if (origen == null || origen.isEmpty()) {
-            return "BurpIA: ";
-        }
-        return origen + ": ";
     }
 }

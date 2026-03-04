@@ -27,6 +27,27 @@ class NormalizadorTest {
         }
 
         @Test
+        @DisplayName("Desescapa retorno de carro")
+        void desescapaRetornoCarro() {
+            assertEquals("linea1\rlinea2", Normalizador.normalizarTexto("linea1\\rlinea2"));
+        }
+
+        @Test
+        @DisplayName("Desescapa barra invertida")
+        void desescapaBarraInvertida() {
+            assertEquals("ruta\\archivo", Normalizador.normalizarTexto("ruta\\\\archivo"));
+            assertEquals("c:\\path\\to\\file", Normalizador.normalizarTexto("c:\\\\path\\\\to\\\\file"));
+        }
+
+        @Test
+        @DisplayName("Maneja secuencias mixtas")
+        void manejaSecuenciasMixtas() {
+            String entrada = "Linea1\\nLinea2\\tcon\\\"comillas\\\" y \\\\barra";
+            String esperado = "Linea1\nLinea2\tcon\"comillas\" y \\barra";
+            assertEquals(esperado, Normalizador.normalizarTexto(entrada));
+        }
+
+        @Test
         @DisplayName("Recorta espacios en blanco")
         void recortaEspacios() {
             assertEquals("texto", Normalizador.normalizarTexto("  texto  "));
@@ -47,6 +68,18 @@ class NormalizadorTest {
         @DisplayName("Retorna cadena vacía para null")
         void retornaVacioParaNull() {
             assertEquals("", Normalizador.normalizarTextoConControlesEnEspacio(null));
+        }
+
+        @Test
+        @DisplayName("Desescapa barra invertida")
+        void desescapaBarraInvertida() {
+            assertEquals("ruta\\archivo", Normalizador.normalizarTextoConControlesEnEspacio("ruta\\\\archivo"));
+        }
+
+        @Test
+        @DisplayName("Desescapa comillas")
+        void desescapaComillas() {
+            assertEquals("dice \"hola\"", Normalizador.normalizarTextoConControlesEnEspacio("dice \\\"hola\\\""));
         }
     }
 

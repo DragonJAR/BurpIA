@@ -977,6 +977,39 @@ public final class I18nUI {
             return tr("🧹 Limpiar Consola", "🧹 Clear Console");
         }
 
+        public static String ETIQUETA_BUSCAR() {
+            return tr("🔍 Buscar:", "🔍 Search:");
+        }
+
+        public static String BOTON_BUSCAR() {
+            return tr("Buscar", "Search");
+        }
+
+        public static String BOTON_BUSCAR_SIGUIENTE() {
+            return tr("Siguiente", "Next");
+        }
+
+        public static String BOTON_BUSCAR_ANTERIOR() {
+            return tr("Anterior", "Previous");
+        }
+
+        public static String MSG_BUSQUEDA_VACIA() {
+            return tr("Ingrese el texto a buscar", "Enter search text");
+        }
+
+        public static String MSG_BUSQUEDA_NO_ENCONTRADA(String texto) {
+            return trf("No se encontró: \"%s\"", "Not found: \"%s\"", texto);
+        }
+
+        public static String MSG_BUSQUEDA_ENCONTRADA(int coincidencias, String texto) {
+            return trf("%d coincidencia(s) para \"%s\"", "%d match(es) for \"%s\"", coincidencias, texto);
+        }
+
+        public static String MSG_BUSQUENA_REGEX_INVALIDA(String regex, String error) {
+            return trf("Expresión regular inválida: \"%s\"\nError: %s",
+                       "Invalid regular expression: \"%s\"\nError: %s", regex, error);
+        }
+
         public static String RESUMEN(int total, int info, int detallados, int errores) {
             return "📊 " + RESUMEN_LOGS_BASE(total, info, detallados, errores);
         }
@@ -2346,6 +2379,26 @@ public final class I18nUI {
             public static String LIMPIAR() {
                 return I18nUI.tr("Borra todo el historial de logs de la consola.",
                         "Clear full console log history.");
+            }
+
+            public static String BUSCAR() {
+                return I18nUI.tr("Busca texto en los logs de la consola. Soporta expresiones regulares.",
+                        "Search text in console logs. Supports regular expressions.");
+            }
+
+            public static String CAMPO_BUSCAR() {
+                return I18nUI.tr("Texto o expresión regular a buscar en los logs",
+                        "Text or regular expression to search in logs");
+            }
+
+            public static String SIGUIENTE() {
+                return I18nUI.tr("Busca la siguiente coincidencia",
+                        "Find next match");
+            }
+
+            public static String ANTERIOR() {
+                return I18nUI.tr("Busca la coincidencia anterior",
+                        "Find previous match");
             }
 
             public static String RESUMEN() {

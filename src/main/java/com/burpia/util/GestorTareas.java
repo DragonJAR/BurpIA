@@ -71,7 +71,7 @@ public class GestorTareas {
             Tarea tarea = tareas.get(id);
             if (tarea != null) {
                 tarea.establecerEstado(nuevoEstado);
-                if (mensajeInfo != null && !mensajeInfo.isEmpty()) {
+                if (Normalizador.noEsVacio(mensajeInfo)) {
                     tarea.establecerMensajeInfo(mensajeInfo);
                 }
                 actualizarFilaTabla(tarea);
@@ -175,7 +175,7 @@ public class GestorTareas {
                     com.burpia.i18n.I18nUI.Tareas.ESTADO_TAREA_ATASCADA()
                 );
                 String id = tarea.obtenerId();
-                if (id != null && !id.isEmpty()) {
+                if (Normalizador.noEsVacio(id)) {
                     idsAInterrumpir.add(id);
                 }
             }
@@ -272,7 +272,7 @@ public class GestorTareas {
                 return false;
             }
             tarea.establecerEstado(Tarea.ESTADO_ANALIZANDO);
-            if (mensajeInfo != null && !mensajeInfo.isEmpty()) {
+            if (Normalizador.noEsVacio(mensajeInfo)) {
                 tarea.establecerMensajeInfo(mensajeInfo);
             }
             actualizarFilaTabla(tarea);

@@ -7,6 +7,7 @@ import burp.api.montoya.scanner.BuiltInAuditConfiguration;
 import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.config.AgenteTipo;
+import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.util.Normalizador;
@@ -52,8 +53,6 @@ public class PanelHallazgos extends JPanel {
     private static final int ANCHO_COLUMNA_SEVERIDAD = 100;
     private static final int ANCHO_COLUMNA_CONFIANZA = 100;
 
-    // Constante para límite defecto de hallazgos
-    private static final int LIMITE_DEFECTO_HALLAZGOS = 1000;
     private final ModeloTablaHallazgos modelo;
     private final JTable tabla;
     private JTextField campoBusqueda;
@@ -87,7 +86,7 @@ public class PanelHallazgos extends JPanel {
         this.api = api;
         this.esBurpProfessional = false;
         this.integracionIssuesDisponible = false;
-        this.modelo = new ModeloTablaHallazgos(LIMITE_DEFECTO_HALLAZGOS);
+        this.modelo = new ModeloTablaHallazgos(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO);
         this.tabla = new JTable(modelo);
         this.ejecutorAcciones = crearEjecutorAcciones();
         initComponents();
@@ -102,7 +101,7 @@ public class PanelHallazgos extends JPanel {
         this.api = api;
         this.esBurpProfessional = esBurpProfessional;
         this.integracionIssuesDisponible = esBurpProfessional;
-        this.modelo = modeloCompartido != null ? modeloCompartido : new ModeloTablaHallazgos(LIMITE_DEFECTO_HALLAZGOS);
+        this.modelo = modeloCompartido != null ? modeloCompartido : new ModeloTablaHallazgos(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO);
         this.tabla = new JTable(modelo);
         this.ejecutorAcciones = crearEjecutorAcciones();
         initComponents();

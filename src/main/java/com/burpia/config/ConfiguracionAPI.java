@@ -1316,6 +1316,14 @@ public class ConfiguracionAPI {
         snapshot.modelosPorProveedor = new HashMap<>(this.modelosPorProveedor);
         snapshot.maxTokensPorProveedor = new HashMap<>(this.maxTokensPorProveedor);
         snapshot.tiempoEsperaPorModelo = new HashMap<>(this.tiempoEsperaPorModelo);
+
+        // CONFIABILIDAD: Copiar campos de configuración faltantes en snapshot
+        snapshot.maximoTareasTabla = this.maximoTareasTabla;
+        snapshot.multiProveedorHabilitado = this.multiProveedorHabilitado;
+        if (this.proveedoresMultiConsulta != null && !this.proveedoresMultiConsulta.isEmpty()) {
+            snapshot.proveedoresMultiConsulta = new ArrayList<>(this.proveedoresMultiConsulta);
+        }
+
         return snapshot;
     }
 

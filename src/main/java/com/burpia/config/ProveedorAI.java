@@ -20,8 +20,8 @@ public class ProveedorAI {
         private final int maxTokensPorDefecto;
 
         public ConfiguracionProveedor(String urlApi, String modeloPorDefecto,
-                                      List<String> modelosDisponibles, boolean requiereClaveApi,
-                                      int maxTokensPorDefecto) {
+                List<String> modelosDisponibles, boolean requiereClaveApi,
+                int maxTokensPorDefecto) {
             this.urlApi = urlApi;
             this.modeloPorDefecto = modeloPorDefecto;
             this.modelosDisponibles = new ArrayList<>(modelosDisponibles);
@@ -29,133 +29,132 @@ public class ProveedorAI {
             this.maxTokensPorDefecto = maxTokensPorDefecto;
         }
 
-        public String obtenerUrlApi() { return urlApi; }
-        public String obtenerModeloPorDefecto() { return modeloPorDefecto; }
-        public List<String> obtenerModelosDisponibles() { return new ArrayList<>(modelosDisponibles); }
-        public boolean requiereClaveApi() { return requiereClaveApi; }
-        public int obtenerMaxTokensPorDefecto() { return maxTokensPorDefecto; }
+        public String obtenerUrlApi() {
+            return urlApi;
+        }
+
+        public String obtenerModeloPorDefecto() {
+            return modeloPorDefecto;
+        }
+
+        public List<String> obtenerModelosDisponibles() {
+            return new ArrayList<>(modelosDisponibles);
+        }
+
+        public boolean requiereClaveApi() {
+            return requiereClaveApi;
+        }
+
+        public int obtenerMaxTokensPorDefecto() {
+            return maxTokensPorDefecto;
+        }
     }
 
     private static final Map<String, ConfiguracionProveedor> PROVEEDORES = new LinkedHashMap<>();
 
     static {
         PROVEEDORES.put("Ollama", new ConfiguracionProveedor(
-            "http://localhost:11434",
-            "gemma3:12b",
-            Arrays.asList(
+                "http://localhost:11434",
                 "gemma3:12b",
-                "deepseek-v3.2",
-                "phi4",
-                "llama3.3", "llama3.2",
-                "deepseek-r1", "deepseek-coder",
-                "qwen2.5", "qwen2.5-coder",
-                "mistral", "mixtral",
-                "codellama"
-            ),
-            false,
-            4096
-        ));
+                Arrays.asList(
+                        "gemma3:12b",
+                        "deepseek-v3.2",
+                        "phi4",
+                        "llama3.3", "llama3.2",
+                        "deepseek-r1", "deepseek-coder",
+                        "qwen2.5", "qwen2.5-coder",
+                        "mistral", "mixtral",
+                        "codellama"),
+                false,
+                4096));
 
         PROVEEDORES.put("OpenAI", new ConfiguracionProveedor(
-            "https://api.openai.com/v1",
-            "gpt-5.2-pro",
-            Arrays.asList(
-                "gpt-5.3-codex",
+                "https://api.openai.com/v1",
                 "gpt-5.2-pro",
-                "gpt-5.2-thinking",
-                "gpt-5-mini",
-                "gpt-4o", "gpt-4o-mini",
-                "o1", "o1-mini", "o1-preview",
-                "gpt-4-turbo", "gpt-3.5-turbo"
-            ),
-            true,
-            4096
-        ));
+                Arrays.asList(
+                        "gpt-5.3-codex",
+                        "gpt-5.2-pro",
+                        "gpt-5.2-thinking",
+                        "gpt-5-mini",
+                        "gpt-4o", "gpt-4o-mini",
+                        "o1", "o1-mini", "o1-preview",
+                        "gpt-4-turbo", "gpt-3.5-turbo"),
+                true,
+                4096));
 
         PROVEEDORES.put("Claude", new ConfiguracionProveedor(
-            "https://api.anthropic.com/v1",
-            "claude-sonnet-4-6",
-            Arrays.asList(
+                "https://api.anthropic.com/v1",
                 "claude-sonnet-4-6",
-                "claude-3-sonnet-20260217",
-                "claude-3-opus-20260205",
-                "claude-3-haiku-202511",
-                "claude-3-5-sonnet-20241022",
-                "claude-3-5-haiku-20241022",
-                "claude-3-opus-20240229"
-            ),
-            true,
-            8192
-        ));
+                Arrays.asList(
+                        "claude-sonnet-4-6",
+                        "claude-3-sonnet-20260217",
+                        "claude-3-opus-20260205",
+                        "claude-3-haiku-202511",
+                        "claude-3-5-sonnet-20241022",
+                        "claude-3-5-haiku-20241022",
+                        "claude-3-opus-20240229"),
+                true,
+                8192));
 
         PROVEEDORES.put("Gemini", new ConfiguracionProveedor(
-            "https://generativelanguage.googleapis.com/v1beta",
-            "gemini-1.5-pro-002",
-            Arrays.asList(
+                "https://generativelanguage.googleapis.com/v1beta",
                 "gemini-1.5-pro-002",
-                "gemini-1.5-flash-002"
-            ),
-            true,
-            8192
-        ));
+                Arrays.asList(
+                        "gemini-1.5-pro-002",
+                        "gemini-1.5-flash-002"),
+                true,
+                8192));
 
         PROVEEDORES.put("Z.ai", new ConfiguracionProveedor(
-            "https://api.z.ai/api/paas/v4",
-            "glm-5",
-            Arrays.asList(
+                "https://api.z.ai/api/paas/v4",
                 "glm-5",
-                "glm-4.7-thinking",
-                "glm-4.5v",
-                "glm-4-plus", "glm-4-air", "glm-4-flash",
-                "glm-4-long"
-            ),
-            true,
-            4096
-        ));
+                Arrays.asList(
+                        "glm-5",
+                        "glm-4.7-thinking",
+                        "glm-4.5v",
+                        "glm-4-plus", "glm-4-air", "glm-4-flash",
+                        "glm-4-long"),
+                true,
+                4096));
 
         PROVEEDORES.put("minimax", new ConfiguracionProveedor(
-            "https://api.minimax.io/v1",
-            "minimax-m2.5",
-            Arrays.asList(
+                "https://api.minimax.io/v1",
                 "minimax-m2.5",
-                "minimax-m2.5-lightning",
-                "minimax-m2.1-codex",
-                "abab6.5s-chat",
-                "abab6-chat"
-            ),
-            true,
-            4096
-        ));
+                Arrays.asList(
+                        "minimax-m2.5",
+                        "minimax-m2.5-lightning",
+                        "minimax-m2.1-codex",
+                        "abab6.5s-chat",
+                        "abab6-chat"),
+                true,
+                4096));
 
         PROVEEDORES.put("Moonshot (Kimi)", new ConfiguracionProveedor(
-            "https://api.moonshot.ai/v1",
-            "kimi-k2.5",
-            Arrays.asList(
+                "https://api.moonshot.cn/v1",
                 "kimi-k2.5",
-                "kimi-latest",
-                "kimi-k2-thinking",
-                "kimi-k2-thinking-turbo",
-                "kimi-k2-0905",
-                "kimi-k2-turbo",
-                "moonshot-v1-128k",
-                "moonshot-v1-128k-vision",
-                "moonshot-v1-32k",
-                "moonshot-v1-32k-vision",
-                "moonshot-v1-8k",
-                "moonshot-v1-8k-vision",
-                "moonshot-v1-auto"
-            ),
-            true,
-            4096
-        ));
+                Arrays.asList(
+                        "kimi-k2.5",
+                        "kimi-latest",
+                        "kimi-k2-thinking",
+                        "kimi-k2-thinking-turbo",
+                        "kimi-k2-0905",
+                        "kimi-k2-turbo",
+                        "moonshot-v1-128k",
+                        "moonshot-v1-128k-vision",
+                        "moonshot-v1-32k",
+                        "moonshot-v1-32k-vision",
+                        "moonshot-v1-8k",
+                        "moonshot-v1-8k-vision",
+                        "moonshot-v1-auto"),
+                true,
+                4096));
 
         PROVEEDORES.put(PROVEEDOR_CUSTOM, new ConfiguracionProveedor(
-            URL_CUSTOM_ES,
-            "",
-            Collections.emptyList(),
-            false,
-            4096
-        ));
+                URL_CUSTOM_ES,
+                "",
+                Collections.emptyList(),
+                false,
+                4096));
     }
 
     public static ConfiguracionProveedor obtenerProveedor(String nombre) {

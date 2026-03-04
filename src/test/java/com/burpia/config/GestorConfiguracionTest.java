@@ -1,6 +1,8 @@
 package com.burpia.config;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.RutasBurpIA;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.io.PrintWriter;
@@ -21,6 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class GestorConfiguracionTest {
 
     private String userHomeOriginal;
+
+    @BeforeEach
+    void setUp() {
+        RutasBurpIA.limpiarCacheParaTests();
+    }
 
     @AfterEach
     void tearDown() {
