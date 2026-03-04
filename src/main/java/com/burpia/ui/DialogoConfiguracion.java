@@ -282,37 +282,57 @@ public class DialogoConfiguracion extends JDialog {
         int fila = 0;
 
         // Proveedor AI
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDOR_AI()), gbc);
 
-        gbc.gridx = 1; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 1.0;
+        gbc.gridx = 1;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1.0;
         panel.add(comboProveedor, gbc);
 
         fila++;
 
         // URL de API
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_URL_API()), gbc);
 
-        gbc.gridx = 1; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 1.0;
+        gbc.gridx = 1;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1.0;
         panel.add(txtUrl, gbc);
 
         fila++;
 
         // Clave de API
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_CLAVE_API()), gbc);
 
-        gbc.gridx = 1; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 1.0;
+        gbc.gridx = 1;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1.0;
         panel.add(txtClave, gbc);
 
         fila++;
 
         // Modelo
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_MODELO()), gbc);
 
-        gbc.gridx = 1; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 1.0;
+        gbc.gridx = 1;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1.0;
         JPanel panelModelo = new JPanel(new BorderLayout(5, 0));
         panelModelo.setOpaque(false);
         panelModelo.add(comboModelo, BorderLayout.CENTER);
@@ -322,29 +342,43 @@ public class DialogoConfiguracion extends JDialog {
         fila++;
 
         // FILA COMBINADA 1: Timeout + Retraso
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_TIMEOUT_MODELO()), gbc);
 
-        gbc.gridx = 1; gbc.gridwidth = 1; gbc.weightx = 0.5;
+        gbc.gridx = 1;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0.5;
         panel.add(txtTimeoutModelo, gbc);
 
-        gbc.gridx = 2; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridx = 2;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         gbc.insets = new Insets(8, 15, 8, 8);
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_RETRASO()), gbc);
 
-        gbc.gridx = 3; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 0.5;
+        gbc.gridx = 3;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 0.5;
         gbc.insets = new Insets(8, 8, 8, 8);
         panel.add(txtRetraso, gbc);
 
         fila++;
 
         // FILA COMBINADA 2: Máximo Tokens + Máximo Concurrente
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         JLabel lblMaxTokens = new JLabel(I18nUI.Configuracion.LABEL_MAX_TOKENS());
         lblMaxTokens.setToolTipText(I18nUI.Tooltips.Configuracion.MAX_TOKENS());
         panel.add(lblMaxTokens, gbc);
 
-        gbc.gridx = 1; gbc.gridwidth = 1; gbc.weightx = 0.5;
+        gbc.gridx = 1;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0.5;
         JPanel panelMaxTokens = new JPanel(new BorderLayout(5, 0));
         panelMaxTokens.setOpaque(false);
         panelMaxTokens.add(txtMaxTokens, BorderLayout.CENTER);
@@ -353,11 +387,15 @@ public class DialogoConfiguracion extends JDialog {
         panelMaxTokens.add(lblInfoTokens, BorderLayout.EAST);
         panel.add(panelMaxTokens, gbc);
 
-        gbc.gridx = 2; gbc.gridwidth = 1; gbc.weightx = 0;
+        gbc.gridx = 2;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
         gbc.insets = new Insets(8, 15, 8, 8);
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_MAXIMO_CONCURRENTE()), gbc);
 
-        gbc.gridx = 3; gbc.gridwidth = GridBagConstraints.REMAINDER; gbc.weightx = 0.5;
+        gbc.gridx = 3;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 0.5;
         gbc.insets = new Insets(8, 8, 8, 8);
         panel.add(txtMaximoConcurrente, gbc);
 
@@ -449,7 +487,8 @@ public class DialogoConfiguracion extends JDialog {
 
         JPanel panelPersistenciaUI = crearPanelPersistenciaUI();
         panelPersistenciaUI.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelPersistenciaUI.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelPersistenciaUI.getPreferredSize().height));
+        panelPersistenciaUI
+                .setMaximumSize(new Dimension(Integer.MAX_VALUE, panelPersistenciaUI.getPreferredSize().height));
         contenido.add(panelPersistenciaUI);
 
         root.add(new JScrollPane(contenido), BorderLayout.CENTER);
@@ -743,7 +782,7 @@ public class DialogoConfiguracion extends JDialog {
 
         btnSubirProveedor.setEnabled(habilitado && indiceSeleccionado > 0);
         btnBajarProveedor.setEnabled(habilitado && indiceSeleccionado >= 0 &&
-            indiceSeleccionado < modeloListaSeleccionados.getSize() - 1);
+                indiceSeleccionado < modeloListaSeleccionados.getSize() - 1);
     }
 
     private void asegurarProveedorActualEnPrimeraPosicion() {
@@ -781,7 +820,8 @@ public class DialogoConfiguracion extends JDialog {
         } else if (cantidad == 1) {
             lblEstadoMultiProveedor.setText("⚠️ " + I18nUI.Configuracion.ERROR_MIN_PROVEEDORES());
         } else {
-            lblEstadoMultiProveedor.setText("✅ " + I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_HABILITADO(String.valueOf(cantidad)));
+            lblEstadoMultiProveedor
+                    .setText("✅ " + I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_HABILITADO(String.valueOf(cantidad)));
         }
     }
 
@@ -820,8 +860,8 @@ public class DialogoConfiguracion extends JDialog {
 
         if (indiceSeleccionado == 0 && proveedor.equals(proveedorActual)) {
             UIUtils.mostrarAdvertencia(this,
-                I18nUI.Configuracion.TITULO_ADVERTENCIA_PROVEEDOR_PRINCIPAL(),
-                I18nUI.Configuracion.MSG_NO_QUITAR_PROVEEDOR_PRINCIPAL());
+                    I18nUI.Configuracion.TITULO_ADVERTENCIA_PROVEEDOR_PRINCIPAL(),
+                    I18nUI.Configuracion.MSG_NO_QUITAR_PROVEEDOR_PRINCIPAL());
             return;
         }
 
@@ -1019,10 +1059,9 @@ public class DialogoConfiguracion extends JDialog {
         panelAgenteGeneral.add(txtAgenteBinario, gbc);
 
         JPanel panelPrompts = new JPanel(new GridLayout(1, 2, 10, 10));
-        panelPrompts.setBorder(UIUtils.crearBordeTitulado(
-                I18nUI.Configuracion.Agentes.TITULO_PROMPTS_AGENTE(), 12, 16));
+        // Eliminado TitledBorder que causaba distribución desigual
 
-        txtAgentePromptInicial = new JTextArea(6, 35);
+        txtAgentePromptInicial = new JTextArea();
         txtAgentePromptInicial.setFont(EstilosUI.FUENTE_MONO);
         txtAgentePromptInicial.setLineWrap(true);
         txtAgentePromptInicial.setWrapStyleWord(false);
@@ -1033,7 +1072,7 @@ public class DialogoConfiguracion extends JDialog {
         btnRestaurarPromptAgenteInicial.addActionListener(
                 e -> txtAgentePromptInicial.setText(ConfiguracionAPI.obtenerAgentePreflightPromptPorDefecto()));
 
-        txtAgentePrompt = new JTextArea(7, 35);
+        txtAgentePrompt = new JTextArea();
         txtAgentePrompt.setFont(EstilosUI.FUENTE_MONO);
         txtAgentePrompt.setLineWrap(true);
         txtAgentePrompt.setWrapStyleWord(false);
@@ -1332,7 +1371,8 @@ public class DialogoConfiguracion extends JDialog {
             modeloListaSeleccionados.addElement(proveedor);
         }
 
-        // Cargar proveedores disponibles DESPUÉS (filtrando contra seleccionados ya cargados)
+        // Cargar proveedores disponibles DESPUÉS (filtrando contra seleccionados ya
+        // cargados)
         modeloListaDisponibles.clear();
         List<String> disponibles = config.obtenerProveedoresDisponibles();
         for (String proveedor : disponibles) {
