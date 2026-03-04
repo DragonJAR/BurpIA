@@ -38,3 +38,4 @@ docs/
 # Test directories
 /src/test/java/com/burpia/config
 AGENTS.md
+*.sh
