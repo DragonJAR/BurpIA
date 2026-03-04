@@ -1,4 +1,5 @@
 package com.burpia.ui;
+
 import burp.api.montoya.MontoyaApi;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
@@ -6,9 +7,11 @@ import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
+
 import javax.swing.*;
 import java.awt.*;
 import java.beans.PropertyChangeListener;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -31,7 +34,7 @@ public class PestaniaPrincipal extends JPanel {
     private final JTabbedPane tabbedPane;
     private final ConfiguracionAPI config;
     private final PropertyChangeListener listenerLookAndFeel;
-    private Timer timerFocoAgente;
+    private volatile Timer timerFocoAgente;
 
     @SuppressWarnings("this-escape")
     public PestaniaPrincipal(MontoyaApi api,
@@ -82,31 +85,65 @@ public class PestaniaPrincipal extends JPanel {
         aplicarTema();
     }
 
+    /**
+     * Agrega un hallazgo al panel de hallazgos.
+     *
+     * @param hallazgo El hallazgo a agregar
+     */
     public void agregarHallazgo(Hallazgo hallazgo) {
         panelHallazgos.agregarHallazgo(hallazgo);
     }
 
 
+    /**
+     * Registra un mensaje informativo en la consola.
+     *
+     * @param mensaje El mensaje a registrar
+     */
     public void registrar(String mensaje) {
         panelConsola.obtenerGestorConsola().registrarInfo(mensaje);
     }
 
+    /**
+     * Actualiza las estadísticas mostradas en el panel.
+     */
     public void actualizarEstadisticas() {
         panelEstadisticas.actualizar();
     }
 
+    /**
+     * Obtiene el panel principal como JPanel.
+     *
+     * @return Esta instancia como JPanel
+     */
     public JPanel obtenerPanel() {
         return this;
     }
 
+    /**
+     * Obtiene el panel de consola.
+     *
+     * @return El panel de consola
+     */
     public PanelConsola obtenerPanelConsola() {
         return panelConsola;
     }
 
+    /**
+     * Obtiene el panel de agente.
+     *
+     * @return El panel de agente
+     */
     public PanelAgente obtenerPanelAgente() {
         return panelAgente;
     }
 
+    /**
+     * Actualiza la visibilidad del panel de agente según la configuración.
+     * Si el agente está habilitado y no está visible, lo agrega.
+     * Si está deshabilitado y está visible, lo remueve.
+     * Si está habilitado y visible, actualiza su título y tooltip.
+     */
     public void actualizarVisibilidadAgentes() {
         boolean habilitado = config.agenteHabilitado();
         int index = tabbedPane.indexOfComponent(panelAgente);
@@ -134,12 +171,15 @@ public class PestaniaPrincipal extends JPanel {
             panelAgente.asegurarConsolaIniciada();
             
             String idActual = config.obtenerTipoAgente();
-            if (!java.util.Objects.equals(idActual, panelAgente.obtenerUltimoAgenteIniciado())) {
+            if (!Objects.equals(idActual, panelAgente.obtenerUltimoAgenteIniciado())) {
                 panelAgente.reiniciar();
             }
         }
     }
 
+    /**
+     * Selecciona y enfoca la pestaña del agente.
+     */
     public void seleccionarPestaniaAgente() {
         enfocarPestania(DestinoPestania.AGENTE, true);
     }
@@ -287,58 +327,126 @@ public class PestaniaPrincipal extends JPanel {
         timerFocoAgente.start();
     }
 
+    /**
+     * Obtiene el panel de hallazgos.
+     *
+     * @return El panel de hallazgos
+     */
     public PanelHallazgos obtenerPanelHallazgos() {
         return panelHallazgos;
     }
 
+    /**
+     * Establece el manejador para el botón de configuración.
+     *
+     * @param manejador El manejador a ejecutar cuando se presiona el botón
+     */
     public void establecerManejadorConfiguracion(Runnable manejador) {
         panelEstadisticas.establecerManejadorConfiguracion(manejador);
     }
 
+    /**
+     * Establece el manejador para el toggle de captura.
+     *
+     * @param manejador El manejador a ejecutar cuando se cambia el estado de captura
+     */
     public void establecerManejadorToggleCaptura(Runnable manejador) {
         panelEstadisticas.establecerManejadorToggleCaptura(manejador);
     }
 
+    /**
+     * Establece el manejador para cambios en la configuración del agente.
+     *
+     * @param manejador El manejador a ejecutar cuando cambia la configuración del agente
+     */
     public void establecerManejadorCambioAgente(Runnable manejador) {
         panelAgente.establecerManejadorCambioConfiguracion(manejador);
     }
 
+    /**
+     * Establece el estado de captura de tráfico.
+     *
+     * @param activa true si la captura está activa, false en caso contrario
+     */
     public void establecerEstadoCaptura(boolean activa) {
         panelEstadisticas.establecerEstadoCaptura(activa);
     }
 
+    /**
+     * Establece si el guardado automático de issues está activo.
+     *
+     * @param activo true si está activo, false en caso contrario
+     */
     public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {
         panelHallazgos.establecerGuardadoAutomaticoIssuesActivo(activo);
     }
 
+    /**
+     * Establece el manejador para cambios en el guardado automático de issues.
+     *
+     * @param manejador El consumidor que recibe el nuevo estado
+     */
     public void establecerManejadorAutoGuardadoIssues(Consumer<Boolean> manejador) {
         panelHallazgos.establecerManejadorCambioGuardadoIssues(manejador);
     }
 
+    /**
+     * Establece si el auto-scroll de la consola está activo.
+     *
+     * @param activo true si está activo, false en caso contrario
+     */
     public void establecerAutoScrollConsolaActivo(boolean activo) {
         panelConsola.establecerAutoScrollActivo(activo);
     }
 
+    /**
+     * Establece el manejador para cambios en el auto-scroll de la consola.
+     *
+     * @param manejador El consumidor que recibe el nuevo estado
+     */
     public void establecerManejadorAutoScrollConsola(Consumer<Boolean> manejador) {
         panelConsola.establecerManejadorCambioAutoScroll(manejador);
     }
 
+    /**
+     * Establece el manejador para reintentar tareas.
+     *
+     * @param manejador La función que recibe el ID de la tarea y devuelve true si se reintento exitosamente
+     */
     public void establecerManejadorReintentoTareas(Function<String, Boolean> manejador) {
         panelTareas.establecerManejadorReintento(manejador);
     }
 
+    /**
+     * Establece el manejador para enviar hallazgos al agente.
+     *
+     * @param manejador El predicado que recibe el hallazgo y devuelve true si se envió exitosamente
+     */
     public void establecerManejadorEnviarAAgente(Predicate<Hallazgo> manejador) {
         panelHallazgos.establecerManejadorEnviarAAgente(manejador);
     }
 
+    /**
+     * Establece el manejador para cambios en las alertas de envío.
+     *
+     * @param manejador El manejador a ejecutar cuando cambian las alertas
+     */
     public void establecerManejadorAlertasEnviarA(Runnable manejador) {
         panelHallazgos.establecerManejadorCambioAlertasEnviarA(manejador);
     }
 
+    /**
+     * Establece el manejador para cambios en los filtros de hallazgos.
+     *
+     * @param manejador El manejador a ejecutar cuando cambian los filtros
+     */
     public void establecerManejadorCambioFiltros(Runnable manejador) {
         panelHallazgos.establecerManejadorCambioFiltros(manejador);
     }
 
+    /**
+     * Aplica el idioma configurado a todos los componentes de la interfaz.
+     */
     public void aplicarIdioma() {
         panelEstadisticas.aplicarIdioma();
         panelTareas.aplicarIdioma();
@@ -357,6 +465,9 @@ public class PestaniaPrincipal extends JPanel {
         aplicarTooltipsPestanias();
     }
 
+    /**
+     * Aplica el tema visual a todos los componentes de la interfaz.
+     */
     public void aplicarTema() {
         panelEstadisticas.aplicarTema();
         panelConsola.aplicarTema();
@@ -378,6 +489,10 @@ public class PestaniaPrincipal extends JPanel {
         }
     }
 
+    /**
+     * Libera todos los recursos asociados a este panel.
+     * Debe llamarse cuando el panel ya no se va a usar.
+     */
     public void destruir() {
         UIManager.removePropertyChangeListener(listenerLookAndFeel);
         if (timerFocoAgente != null) {

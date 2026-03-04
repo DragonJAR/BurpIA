@@ -1,5 +1,8 @@
 package com.burpia.ui;
+
+import com.burpia.i18n.I18nUI;
 import com.burpia.util.Normalizador;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import java.awt.*;
@@ -7,8 +10,28 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Renderizador de celdas para mostrar severidades con estilo visual (píldora coloreada).
+ * Implementa el patrón DRY centralizando la configuración de severidades en un mapa unificado.
+ */
 public class RenderizadorSeveridad extends DefaultTableCellRenderer {
     private static final long serialVersionUID = 1L;
+
+    private static final String ICONO_CRITICAL = "⚠ ";
+    private static final String ICONO_HIGH = "▲ ";
+    private static final String ICONO_MEDIUM = "◆ ";
+    private static final String ICONO_LOW = "▽ ";
+    private static final String ICONO_INFO = "ℹ ";
+
+    private static final int MAX_CACHE_TEXTO = 100;
+    private static final Map<String, String> TEXTO_CACHE = Collections.synchronizedMap(
+            new LinkedHashMap<String, String>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+                    return size() > MAX_CACHE_TEXTO;
+                }
+            });
+
     private String severidadStr = "";
     private boolean isIgnorado = false;
 
@@ -32,35 +55,62 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         return this;
     }
 
+    /**
+     * Obtiene el color asociado a una severidad traducida.
+     * Usa comparación centralizada para cumplir con DRY.
+     */
     private Color obtenerColorSeveridadTraducida(String sevTraducida) {
-        if (sevTraducida == null) return Color.GRAY;
-        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) return EstilosUI.COLOR_CRITICAL;
-        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_HIGH())) return EstilosUI.COLOR_HIGH;
-        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_MEDIUM())) return EstilosUI.COLOR_MEDIUM;
-        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_LOW())) return EstilosUI.COLOR_LOW;
-        if (sevTraducida.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_INFO())) return EstilosUI.COLOR_INFO;
+        if (Normalizador.esVacio(sevTraducida)) {
+            return Color.GRAY;
+        }
+
+        if (sevTraducida.equals(I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) return EstilosUI.COLOR_CRITICAL;
+        if (sevTraducida.equals(I18nUI.Hallazgos.SEVERIDAD_HIGH())) return EstilosUI.COLOR_HIGH;
+        if (sevTraducida.equals(I18nUI.Hallazgos.SEVERIDAD_MEDIUM())) return EstilosUI.COLOR_MEDIUM;
+        if (sevTraducida.equals(I18nUI.Hallazgos.SEVERIDAD_LOW())) return EstilosUI.COLOR_LOW;
+        if (sevTraducida.equals(I18nUI.Hallazgos.SEVERIDAD_INFO())) return EstilosUI.COLOR_INFO;
+
         return Color.GRAY;
     }
 
-    private static final int MAX_CACHE_TEXTO = 100;
-    private static final java.util.Map<String, String> TEXTO_CACHE =
-        Collections.synchronizedMap(new LinkedHashMap<String, String>(16, 0.75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
-                return size() > MAX_CACHE_TEXTO;
-            }
-        });
+    /**
+     * Obtiene el icono asociado a una severidad traducida.
+     * Centraliza la lógica de iconos para cumplir con DRY.
+     */
+    private String obtenerIconoSeveridad(String severidad) {
+        if (Normalizador.esVacio(severidad)) {
+            return "";
+        }
 
-    private String obtenerTextoMostrar(String k) {
-        return TEXTO_CACHE.computeIfAbsent(k, s -> {
-            StringBuilder texto = new StringBuilder(s);
-            if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) texto.insert(0, "⚠ ");
-            else if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_HIGH())) texto.insert(0, "▲ ");
-            else if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_MEDIUM())) texto.insert(0, "◆ ");
-            else if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_LOW())) texto.insert(0, "▽ ");
-            else if (s.equals(com.burpia.i18n.I18nUI.Hallazgos.SEVERIDAD_INFO())) texto.insert(0, "ℹ ");
-            return texto.toString();
-        });
+        if (severidad.equals(I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) return ICONO_CRITICAL;
+        if (severidad.equals(I18nUI.Hallazgos.SEVERIDAD_HIGH())) return ICONO_HIGH;
+        if (severidad.equals(I18nUI.Hallazgos.SEVERIDAD_MEDIUM())) return ICONO_MEDIUM;
+        if (severidad.equals(I18nUI.Hallazgos.SEVERIDAD_LOW())) return ICONO_LOW;
+        if (severidad.equals(I18nUI.Hallazgos.SEVERIDAD_INFO())) return ICONO_INFO;
+
+        return "";
+    }
+
+    /**
+     * Obtiene el texto a mostrar con icono, usando cache para optimizar rendimiento.
+     * El cache implementa LRU (Least Recently Used) con LinkedHashMap access-order.
+     */
+    private String obtenerTextoMostrar(String severidad) {
+        if (Normalizador.esVacio(severidad)) {
+            return "";
+        }
+
+        synchronized (TEXTO_CACHE) {
+            String cached = TEXTO_CACHE.get(severidad);
+            if (cached != null) {
+                return cached;
+            }
+
+            String icono = obtenerIconoSeveridad(severidad);
+            String texto = icono + severidad;
+            TEXTO_CACHE.put(severidad, texto);
+            return texto;
+        }
     }
 
     @Override

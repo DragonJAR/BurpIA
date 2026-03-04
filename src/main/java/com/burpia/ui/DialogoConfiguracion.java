@@ -604,7 +604,6 @@ public class DialogoConfiguracion extends JDialog {
 
         int fila = 0;
 
-        // Checkbox para habilitar multi-proveedor
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 3;
@@ -615,7 +614,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // Separador
         gbc.gridy = fila;
         gbc.gridwidth = 3;
         gbc.insets = new Insets(16, 8, 8, 8);
@@ -624,7 +622,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // Lista de proveedores disponibles
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 1;
@@ -648,7 +645,6 @@ public class DialogoConfiguracion extends JDialog {
         scrollDisponibles.setPreferredSize(new Dimension(200, 120));
         panel.add(scrollDisponibles, gbc);
 
-        // Botones centrales
         gbc.gridx = 1;
         gbc.gridy = fila;
         gbc.gridheight = 1;
@@ -675,7 +671,6 @@ public class DialogoConfiguracion extends JDialog {
 
         panel.add(panelBotonesCentro, gbc);
 
-        // Lista de proveedores seleccionados
         gbc.gridx = 2;
         gbc.gridheight = 5;
         gbc.fill = GridBagConstraints.BOTH;
@@ -700,7 +695,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila += 5;
 
-        // Botones de reordenamiento
         gbc.gridx = 2;
         gbc.gridy = fila;
         gbc.gridwidth = 1;
@@ -728,7 +722,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // Etiqueta de estado
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 3;
@@ -740,7 +733,6 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // Configurar listeners de selección para botones de reordenamiento
         listaProveedoresSeleccionados.addListSelectionListener(e -> {
             actualizarBotonesReordenamiento();
         });
@@ -842,7 +834,6 @@ public class DialogoConfiguracion extends JDialog {
 
         modeloListaSeleccionados.addElement(proveedor);
 
-        // Remover de disponibles para mantener exclusión mutua
         modeloListaDisponibles.removeElement(proveedor);
 
         actualizarEtiquetaEstadoMultiProveedor();
@@ -1059,7 +1050,6 @@ public class DialogoConfiguracion extends JDialog {
         panelAgenteGeneral.add(txtAgenteBinario, gbc);
 
         JPanel panelPrompts = new JPanel(new GridLayout(1, 2, 10, 10));
-        // Eliminado TitledBorder que causaba distribución desigual
 
         txtAgentePromptInicial = new JTextArea();
         txtAgentePromptInicial.setFont(EstilosUI.FUENTE_MONO);
@@ -1139,7 +1129,6 @@ public class DialogoConfiguracion extends JDialog {
         JPanel main = new JPanel(new BorderLayout());
         main.setBackground(EstilosUI.obtenerFondoPanel());
 
-        // --- HERO SECTION (HORIZONTAL) ---
         JPanel heroPanel = new JPanel(new GridBagLayout());
         heroPanel.setBackground(EstilosUI.colorFondoSecundario(main.getBackground()));
         heroPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
@@ -1165,7 +1154,6 @@ public class DialogoConfiguracion extends JDialog {
         }
         heroPanel.add(lblIcono, gbcHero);
 
-        // Text Panel for Title/Subtitle
         JPanel textPanel = new JPanel(new GridBagLayout());
         textPanel.setOpaque(false);
         GridBagConstraints gbcText = new GridBagConstraints();
@@ -1194,7 +1182,6 @@ public class DialogoConfiguracion extends JDialog {
 
         main.add(heroPanel, BorderLayout.NORTH);
 
-        // --- CONTENT SECTION ---
         JPanel contentScroll = new JPanel(new BorderLayout());
         contentScroll.setOpaque(false);
 
@@ -1203,14 +1190,12 @@ public class DialogoConfiguracion extends JDialog {
         content.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
         content.setOpaque(false);
 
-        // Summary
         content.add(crearSeccionAcerca(
                 I18nUI.Configuracion.TITULO_RESUMEN(VersionBurpIA.obtenerVersionActual()),
                 I18nUI.Configuracion.DESCRIPCION_APP(),
                 null));
         content.add(Box.createVerticalStrut(20));
 
-        // Developer
         JPanel panelBotonWeb = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 5));
         panelBotonWeb.setOpaque(false);
         btnSitioWeb = new JButton(I18nUI.Configuracion.BOTON_SITIO_WEB());
@@ -1228,7 +1213,6 @@ public class DialogoConfiguracion extends JDialog {
                 panelBotonWeb));
         content.add(Box.createVerticalStrut(20));
 
-        // Updates
         JPanel panelBotonUpdate = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 5));
         panelBotonUpdate.setOpaque(false);
         btnBuscarActualizaciones = new JButton(I18nUI.Configuracion.BOTON_BUSCAR_ACTUALIZACIONES());
@@ -1995,17 +1979,6 @@ public class DialogoConfiguracion extends JDialog {
     }
 
     private static final class ResultadoActualizacion {
-        /*
-         * - **Horizontal Hero Layout**: The logo is now smaller (80x80) and positioned
-         * to the left of the title for a more compact and modern look.
-         * - **Scroll-Free Experience**: Optimized vertical spacing (reduced from 20px
-         * to 10-15px gaps) to ensure all content, including "Updates", fits without
-         * scrollbars.
-         * - **Preserved Functionality**: The "Search Updates" button is kept and fully
-         * visible.
-         * - **Dynamic Version Header**: The summary section title includes the version
-         * `BurpIA (VERSION)`.
-         */
         private final String versionActual;
         private final String versionRemota;
         private final boolean hayActualizacion;

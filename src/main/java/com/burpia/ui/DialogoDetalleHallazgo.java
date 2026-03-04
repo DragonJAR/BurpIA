@@ -1,10 +1,15 @@
 package com.burpia.ui;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
+import com.burpia.util.Normalizador;
 import javax.swing.*;
 import java.awt.*;
 import java.util.function.Consumer;
 
+/**
+ * Diálogo para ver y editar los detalles de un hallazgo de seguridad.
+ * Permite modificar URL, título, descripción, severidad y confianza.
+ */
 public class DialogoDetalleHallazgo extends JDialog {
     private final Hallazgo hallazgoOriginal;
     private final Consumer<Hallazgo> alGuardar;
@@ -15,6 +20,13 @@ public class DialogoDetalleHallazgo extends JDialog {
     private JComboBox<String> comboSeveridad;
     private JComboBox<String> comboConfianza;
 
+    /**
+     * Crea un nuevo diálogo para editar un hallazgo.
+     *
+     * @param padre   Ventana padre del diálogo
+     * @param hallazgo Hallazgo a editar, puede ser null para crear uno nuevo
+     * @param alGuardar Callback que se ejecuta al guardar los cambios
+     */
     @SuppressWarnings("this-escape")
     public DialogoDetalleHallazgo(Window padre, Hallazgo hallazgo, Consumer<Hallazgo> alGuardar) {
         super(padre, I18nUI.DetalleHallazgo.TITULO_DIALOGO(), Dialog.ModalityType.APPLICATION_MODAL);
@@ -76,10 +88,10 @@ public class DialogoDetalleHallazgo extends JDialog {
         comboSeveridad.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.SEVERIDAD());
         panelClasificacion.add(comboSeveridad);
 
-        JLabel lblEspacio = new JLabel(I18nUI.DetalleHallazgo.LABEL_CONFIANZA());
-        lblEspacio.setFont(EstilosUI.FUENTE_ESTANDAR);
-        lblEspacio.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.CONFIANZA());
-        panelClasificacion.add(lblEspacio);
+        JLabel lblConfianza = new JLabel(I18nUI.DetalleHallazgo.LABEL_CONFIANZA());
+        lblConfianza.setFont(EstilosUI.FUENTE_ESTANDAR);
+        lblConfianza.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.CONFIANZA());
+        panelClasificacion.add(lblConfianza);
 
         comboConfianza = new JComboBox<>(new String[]{
             I18nUI.Hallazgos.CONFIANZA_ALTA(),
@@ -155,7 +167,7 @@ public class DialogoDetalleHallazgo extends JDialog {
         String nuevaSeveridad = (String) comboSeveridad.getSelectedItem();
         String nuevaConfianza = (String) comboConfianza.getSelectedItem();
 
-        if (nuevaUrl.isEmpty() || nuevaDescripcion.isEmpty() || nuevoTitulo.isEmpty()) {
+        if (Normalizador.esVacio(nuevaUrl) || Normalizador.esVacio(nuevaDescripcion) || Normalizador.esVacio(nuevoTitulo)) {
             UIUtils.mostrarError(this, I18nUI.DetalleHallazgo.TITULO_ERROR_VALIDACION(), I18nUI.DetalleHallazgo.MSG_VALIDACION());
             return;
         }

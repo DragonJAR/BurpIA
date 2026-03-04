@@ -9,9 +9,7 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -301,6 +299,11 @@ public class PanelTareas extends JPanel {
     private void crearMenuUnaTarea(JPopupMenu menu, TareaSeleccionada seleccion) {
         String tareaId = seleccion.tareaId;
         String estado = seleccion.estado;
+
+        if (Normalizador.esVacio(tareaId)) {
+            return;
+        }
+
         if (Tarea.ESTADO_ERROR.equals(estado)) {
             menu.add(crearMenuItemContextual(
                 I18nUI.Tareas.MENU_VER_DETALLES_ERROR(),
@@ -319,10 +322,8 @@ public class PanelTareas extends JPanel {
                 I18nUI.Tareas.MENU_REINTENTAR(),
                 I18nUI.Tooltips.Tareas.MENU_REINTENTAR_UNA(),
                 e -> {
-                    if (tareaId != null) {
-                        reencolarTarea(tareaId);
-                        actualizarEstadisticas();
-                    }
+                    reencolarTarea(tareaId);
+                    actualizarEstadisticas();
                 }
             ));
         }
@@ -332,10 +333,8 @@ public class PanelTareas extends JPanel {
                 I18nUI.Tareas.MENU_PAUSAR(),
                 I18nUI.Tooltips.Tareas.MENU_PAUSAR_UNA(),
                 e -> {
-                    if (tareaId != null) {
-                        if (gestorTareas.pausarTarea(tareaId)) {
-                            actualizarEstadisticas();
-                        }
+                    if (gestorTareas.pausarTarea(tareaId)) {
+                        actualizarEstadisticas();
                     }
                 }
             ));
@@ -346,10 +345,8 @@ public class PanelTareas extends JPanel {
                 I18nUI.Tareas.MENU_REANUDAR(),
                 I18nUI.Tooltips.Tareas.MENU_REANUDAR_UNA(),
                 e -> {
-                    if (tareaId != null) {
-                        if (gestorTareas.reanudarTarea(tareaId)) {
-                            actualizarEstadisticas();
-                        }
+                    if (gestorTareas.reanudarTarea(tareaId)) {
+                        actualizarEstadisticas();
                     }
                 }
             ));
@@ -367,10 +364,8 @@ public class PanelTareas extends JPanel {
                         I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
                         I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_UNA_TAREA()
                     );
-                    if (confirmacion && tareaId != null) {
-                        if (gestorTareas.cancelarTarea(tareaId)) {
-                            actualizarEstadisticas();
-                        }
+                    if (confirmacion && gestorTareas.cancelarTarea(tareaId)) {
+                        actualizarEstadisticas();
                     }
                 }
             ));
@@ -383,10 +378,8 @@ public class PanelTareas extends JPanel {
                 I18nUI.Tareas.MENU_ELIMINAR_LISTA(),
                 I18nUI.Tooltips.Tareas.MENU_ELIMINAR_UNA(),
                 e -> {
-                    if (tareaId != null) {
-                        if (gestorTareas.limpiarTarea(tareaId)) {
-                            actualizarEstadisticas();
-                        }
+                    if (gestorTareas.limpiarTarea(tareaId)) {
+                        actualizarEstadisticas();
                     }
                 }
             ));
@@ -624,7 +617,6 @@ public class PanelTareas extends JPanel {
     public void aplicarIdioma() {
         botonCancelar.setText(I18nUI.Tareas.BOTON_CANCELAR_TODO());
         botonLimpiarCompletadas.setText(I18nUI.Tareas.BOTON_LIMPIAR());
-        botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.PAUSAR_REANUDAR());
         botonCancelar.setToolTipText(I18nUI.Tooltips.Tareas.CANCELAR());
         botonLimpiarCompletadas.setToolTipText(I18nUI.Tooltips.Tareas.LIMPIAR());
         etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
@@ -752,8 +744,8 @@ public class PanelTareas extends JPanel {
         private final String duracion;
 
         private TareaSeleccionada(String tareaId, String estado, String url, String duracion) {
-            this.tareaId = tareaId;
-            this.estado = estado;
+            this.tareaId = tareaId != null ? tareaId : "";
+            this.estado = estado != null ? estado : "";
             this.url = url != null ? url : "";
             this.duracion = duracion != null ? duracion : "";
         }

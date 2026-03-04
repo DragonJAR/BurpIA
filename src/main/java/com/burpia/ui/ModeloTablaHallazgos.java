@@ -2,6 +2,7 @@ package com.burpia.ui;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
+import com.burpia.util.GestorLoggingUnificado;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
@@ -10,11 +11,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Logger;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class ModeloTablaHallazgos extends DefaultTableModel {
+    private static final Logger LOGGER = Logger.getLogger(ModeloTablaHallazgos.class.getName());
     private static final int TOTAL_COLUMNAS = 5;
+    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearConLogger(LOGGER);
     private final List<Hallazgo> datos;
     private int limiteFilas;
     private final Set<Integer> filasIgnoradas;
@@ -37,6 +41,17 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     @Override
     public boolean isCellEditable(int fila, int columna) {
         return false;
+    }
+
+    /**
+     * Verifica si un índice de fila es válido.
+     * Método auxiliar para evitar repetición de validación (DRY).
+     *
+     * @param indice El índice a verificar
+     * @return true si el índice está dentro del rango válido
+     */
+    private boolean esIndiceValido(int indice) {
+        return indice >= 0 && indice < datos.size();
     }
 
     public void agregarHallazgo(Hallazgo hallazgo) {
@@ -68,8 +83,6 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             boolean huboCambios = false;
             lock.lock();
             try {
-                int agregados = 0;
-
                 for (Hallazgo hallazgo : hallazgos) {
                     if (hallazgo == null) {
                         continue;
@@ -82,7 +95,6 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                     datos.add(hallazgo);
                     Object[] rowData = hallazgo.aFilaTabla();
                     addRow(rowData);
-                    agregados++;
                     huboCambios = true;
                 }
 
@@ -138,7 +150,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     public Hallazgo obtenerHallazgo(int indiceFila) {
         lock.lock();
         try {
-            if (indiceFila >= 0 && indiceFila < datos.size()) {
+            if (esIndiceValido(indiceFila)) {
                 return datos.get(indiceFila);
             }
             return null;
@@ -160,7 +172,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         boolean filaValida;
         lock.lock();
         try {
-            filaValida = fila >= 0 && fila < datos.size();
+            filaValida = esIndiceValido(fila);
             if (filaValida) {
                 filasIgnoradas.add(fila);
             }
@@ -200,7 +212,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     public int obtenerFilasVisibles() {
         lock.lock();
         try {
-            if (filasIgnoradas == null || filasIgnoradas.isEmpty()) {
+            if (filasIgnoradas.isEmpty()) {
                 return datos.size();
             }
 
@@ -285,7 +297,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     public HttpRequest obtenerSolicitudHttp(int indiceFila) {
         lock.lock();
         try {
-            if (indiceFila >= 0 && indiceFila < datos.size()) {
+            if (esIndiceValido(indiceFila)) {
                 Hallazgo h = datos.get(indiceFila);
                 return h != null ? h.obtenerSolicitudHttp() : null;
             }
@@ -299,7 +311,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         boolean eliminado = false;
         lock.lock();
         try {
-            if (indiceFila >= 0 && indiceFila < datos.size()) {
+            if (esIndiceValido(indiceFila)) {
                 datos.remove(indiceFila);
                 eliminado = true;
                 Set<Integer> nuevosIgnorados = new HashSet<>();
@@ -358,25 +370,15 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         }
         lock.lock();
         try {
-            if (indiceFila >= 0 && indiceFila < datos.size()) {
-                datos.set(indiceFila, nuevoHallazgo);
-            } else {
+            if (!esIndiceValido(indiceFila)) {
                 return;
             }
+            datos.set(indiceFila, nuevoHallazgo);
         } finally {
             lock.unlock();
         }
 
-        ejecutarEnEdt(() -> {
-            if (indiceFila < getRowCount()) {
-                Object[] filaValores = nuevoHallazgo.aFilaTabla();
-                for (int i = 0; i < TOTAL_COLUMNAS; i++) {
-                    setValueAt(filaValores[i], indiceFila, i);
-                }
-                fireTableRowsUpdated(indiceFila, indiceFila);
-                notificarCambios();
-            }
-        });
+        actualizarFilaEnTabla(indiceFila, nuevoHallazgo);
     }
 
     public boolean actualizarHallazgo(Hallazgo hallazgoOriginal, Hallazgo nuevoHallazgo) {
@@ -402,18 +404,28 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             lock.unlock();
         }
 
-        final int indiceActualizado = indiceFila;
+        actualizarFilaEnTabla(indiceFila, nuevoHallazgo);
+        return true;
+    }
+
+    /**
+     * Actualiza los valores de una fila en la tabla UI.
+     * Método auxiliar para evitar duplicación de código (DRY).
+     *
+     * @param indice   El índice de la fila a actualizar
+     * @param hallazgo El hallazgo con los nuevos valores
+     */
+    private void actualizarFilaEnTabla(int indice, Hallazgo hallazgo) {
         ejecutarEnEdt(() -> {
-            if (indiceActualizado < getRowCount()) {
-                Object[] filaValores = nuevoHallazgo.aFilaTabla();
+            if (indice < getRowCount()) {
+                Object[] filaValores = hallazgo.aFilaTabla();
                 for (int i = 0; i < TOTAL_COLUMNAS; i++) {
-                    setValueAt(filaValores[i], indiceActualizado, i);
+                    setValueAt(filaValores[i], indice, i);
                 }
-                fireTableRowsUpdated(indiceActualizado, indiceActualizado);
+                fireTableRowsUpdated(indice, indice);
                 notificarCambios();
             }
         });
-        return true;
     }
 
     public void refrescarColumnasIdioma() {
@@ -471,8 +483,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                 try {
                     escucha.enHallazgosCambiados();
                 } catch (Exception e) {
-                    // Prevenir que un escucha mal implementado rompa las notificaciones
-                    System.err.println("Error en escucha de cambios: " + e.getMessage());
+                    gestorLogging.error("ModeloTablaHallazgos", "Error en escucha de cambios: " + e.getMessage());
                 }
             }
         });

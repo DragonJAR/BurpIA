@@ -46,9 +46,7 @@ public class PanelEstadisticas extends JPanel {
                              PanelHallazgos panelHallazgos) {
         this.estadisticas = estadisticas;
         this.proveedorLimiteHallazgos = proveedorLimiteHallazgos != null ? proveedorLimiteHallazgos : () -> 1000;
-        this.proveedorEstadisticasVisibles = () -> {
-            return panelHallazgos != null ? panelHallazgos.obtenerEstadisticasVisibles() : new int[6];
-        };
+        this.proveedorEstadisticasVisibles = () -> panelHallazgos != null ? panelHallazgos.obtenerEstadisticasVisibles() : new int[6];
         this.etiquetaResumenPrincipal = new JLabel();
         this.etiquetaResumenSeveridad = new JLabel();
         this.etiquetaLimiteHallazgos = new JLabel();
@@ -317,11 +315,7 @@ public class PanelEstadisticas extends JPanel {
                     estadisticas.obtenerTotalOmitidos(),
                     estadisticas.obtenerErrores()));
         };
-        if (SwingUtilities.isEventDispatchThread()) {
-            actualizarUi.run();
-        } else {
-            ejecutarEnEdt(actualizarUi);
-        }
+        ejecutarEnEdt(actualizarUi);
     }
 
     public void establecerManejadorToggleCaptura(Runnable manejador) {
@@ -330,15 +324,10 @@ public class PanelEstadisticas extends JPanel {
 
     public void establecerEstadoCaptura(boolean activa) {
         this.capturaActiva = activa;
-        Runnable actualizarUi = () -> {
+        ejecutarEnEdt(() -> {
             actualizarEstadoCapturaUI();
             actualizar();
-        };
-        if (SwingUtilities.isEventDispatchThread()) {
-            actualizarUi.run();
-        } else {
-            ejecutarEnEdt(actualizarUi);
-        }
+        });
     }
 
     private void actualizarEstadoCapturaUI() {
@@ -397,11 +386,7 @@ public class PanelEstadisticas extends JPanel {
             repaint();
         };
 
-        if (SwingUtilities.isEventDispatchThread()) {
-            aplicar.run();
-        } else {
-            ejecutarEnEdt(aplicar);
-        }
+        ejecutarEnEdt(aplicar);
     }
 
     private void actualizarTituloSeccion(JPanel panel, String titulo) {
@@ -411,6 +396,9 @@ public class PanelEstadisticas extends JPanel {
     }
 
     public void destruir() {
-        timerActualizacion.stop();
+        if (timerActualizacion != null) {
+            timerActualizacion.stop();
+            timerActualizacion = null;
+        }
     }
 }

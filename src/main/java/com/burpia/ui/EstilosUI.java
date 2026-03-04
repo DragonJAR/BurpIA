@@ -1,49 +1,90 @@
 package com.burpia.ui;
 
+import com.burpia.util.Normalizador;
+
 import javax.swing.UIManager;
 import java.awt.Color;
 import java.awt.Font;
 
 public class EstilosUI {
+    // Constantes de validación
+    private static final int TAMANIO_FUENTE_MIN = 6;
+    private static final int TAMANIO_FUENTE_MAX = 72;
+    private static final String FUENTE_POR_DEFECTO = Font.MONOSPACED;
+    private static final int TAMANIO_ESTANDAR_POR_DEFECTO = 11;
+    private static final int TAMANIO_MONO_POR_DEFECTO = 12;
+
+    // Constantes de contraste y diseño (WCAG 2.0 y proporciones visuales)
+    private static final double PROPORCION_BANNER = 2.36; // ~26px desde 11px base
+    private static final double PROPORCION_ICONO = 1.63; // ~18px desde 11px base
+    private static final double UMBRAL_TEMA_OSCURO = 0.45; // Luminancia para considerar tema oscuro
+    private static final int ITERACIONES_BUSQUEDA_CONTRASTE = 18; // Precisión binaria suficiente
+
     private EstilosUI() {
     }
 
     // Fuentes base - todas derivan de estas dos
-    public static Font FUENTE_ESTANDAR = new Font(Font.MONOSPACED, Font.PLAIN, 11);
-    public static Font FUENTE_NEGRITA = new Font(Font.MONOSPACED, Font.BOLD, 11);
-    public static Font FUENTE_MONO = new Font(Font.MONOSPACED, Font.PLAIN, 12);
-    public static Font FUENTE_MONO_NEGRITA = new Font(Font.MONOSPACED, Font.BOLD, 12);
-    
-    // Aliases para semántica - referencian las bases
+    public static Font FUENTE_ESTANDAR = new Font(FUENTE_POR_DEFECTO, Font.PLAIN, TAMANIO_ESTANDAR_POR_DEFECTO);
+    public static Font FUENTE_NEGRITA = new Font(FUENTE_POR_DEFECTO, Font.BOLD, TAMANIO_ESTANDAR_POR_DEFECTO);
+    public static Font FUENTE_MONO = new Font(FUENTE_POR_DEFECTO, Font.PLAIN, TAMANIO_MONO_POR_DEFECTO);
+    public static Font FUENTE_MONO_NEGRITA = new Font(FUENTE_POR_DEFECTO, Font.BOLD, TAMANIO_MONO_POR_DEFECTO);
+
+    // Aliases para semántica - referencian las bases (se actualizan en actualizarFuentes)
     public static Font FUENTE_TABLA = FUENTE_ESTANDAR;
     public static Font FUENTE_CAMPO_TEXTO = FUENTE_ESTANDAR;
     public static Font FUENTE_BOTON_PRINCIPAL = FUENTE_MONO_NEGRITA;
-    public static Font FUENTE_TITULO_BANNER = new Font(Font.MONOSPACED, Font.BOLD, 26);
-    public static Font FUENTE_ICONO_GRANDE = new Font(Font.MONOSPACED, Font.PLAIN, 18);
+    public static Font FUENTE_TITULO_BANNER = new Font(FUENTE_POR_DEFECTO, Font.BOLD, (int) (TAMANIO_ESTANDAR_POR_DEFECTO * PROPORCION_BANNER));
+    public static Font FUENTE_ICONO_GRANDE = new Font(FUENTE_POR_DEFECTO, Font.PLAIN, (int) (TAMANIO_ESTANDAR_POR_DEFECTO * PROPORCION_ICONO));
 
     public static void actualizarFuentes(com.burpia.config.ConfiguracionAPI config) {
-        if (config == null)
+        if (config == null) {
             return;
+        }
 
+        // Obtener y validar nombres de fuente
         String nombreEstandar = config.obtenerNombreFuenteEstandar();
-        int tamanioEstandar = config.obtenerTamanioFuenteEstandar();
         String nombreMono = config.obtenerNombreFuenteMono();
-        int tamanioMono = config.obtenerTamanioFuenteMono();
+
+        // Validar nombres de fuente con DRY principle
+        if (Normalizador.esVacio(nombreEstandar)) {
+            nombreEstandar = FUENTE_POR_DEFECTO;
+        }
+        if (Normalizador.esVacio(nombreMono)) {
+            nombreMono = FUENTE_POR_DEFECTO;
+        }
+
+        // Obtener y validar tamaños de fuente
+        int tamanioEstandar = validarTamanioFuente(config.obtenerTamanioFuenteEstandar(), TAMANIO_ESTANDAR_POR_DEFECTO);
+        int tamanioMono = validarTamanioFuente(config.obtenerTamanioFuenteMono(), TAMANIO_MONO_POR_DEFECTO);
 
         // Fuentes base
         FUENTE_ESTANDAR = new Font(nombreEstandar, Font.PLAIN, tamanioEstandar);
         FUENTE_NEGRITA = new Font(nombreEstandar, Font.BOLD, tamanioEstandar);
         FUENTE_MONO = new Font(nombreMono, Font.PLAIN, tamanioMono);
         FUENTE_MONO_NEGRITA = new Font(nombreMono, Font.BOLD, tamanioMono);
-        
+
         // Aliases - referencian las bases actualizadas
         FUENTE_TABLA = FUENTE_ESTANDAR;
         FUENTE_CAMPO_TEXTO = FUENTE_ESTANDAR;
         FUENTE_BOTON_PRINCIPAL = FUENTE_MONO_NEGRITA;
-        
+
         // Fuentes especiales con tamaño proporcional
-        FUENTE_TITULO_BANNER = new Font(nombreEstandar, Font.BOLD, (int) (tamanioEstandar * 2.36));
-        FUENTE_ICONO_GRANDE = new Font(nombreEstandar, Font.PLAIN, (int) (tamanioEstandar * 1.63));
+        FUENTE_TITULO_BANNER = new Font(nombreEstandar, Font.BOLD, (int) (tamanioEstandar * PROPORCION_BANNER));
+        FUENTE_ICONO_GRANDE = new Font(nombreEstandar, Font.PLAIN, (int) (tamanioEstandar * PROPORCION_ICONO));
+    }
+
+    /**
+     * Valida que el tamaño de fuente esté dentro del rango permitido.
+     *
+     * @param tamanio Tamaño a validar
+     * @param porDefecto Valor por defecto si está fuera de rango
+     * @return Tamaño validado dentro del rango [TAMANIO_FUENTE_MIN, TAMANIO_FUENTE_MAX]
+     */
+    private static int validarTamanioFuente(int tamanio, int porDefecto) {
+        if (tamanio < TAMANIO_FUENTE_MIN || tamanio > TAMANIO_FUENTE_MAX) {
+            return porDefecto;
+        }
+        return tamanio;
     }
 
     public static final Color COLOR_FONDO_PANEL = new Color(245, 245, 245);
@@ -79,7 +120,7 @@ public class EstilosUI {
 
     public static boolean esTemaOscuro(Color colorFondo) {
         Color fondo = normalizarColor(colorFondo, obtenerColorFondoBase());
-        return luminanciaRelativa(fondo) < 0.45d;
+        return luminanciaRelativa(fondo) < UMBRAL_TEMA_OSCURO;
     }
 
     public static double ratioContraste(Color fg, Color bg) {
@@ -114,7 +155,7 @@ public class EstilosUI {
         double min = 0.0d;
         double max = 1.0d;
         Color mejor = destino;
-        for (int i = 0; i < 18; i++) {
+        for (int i = 0; i < ITERACIONES_BUSQUEDA_CONTRASTE; i++) {
             double t = (min + max) / 2.0d;
             Color candidato = mezclar(colorBase, destino, t);
             if (ratioContraste(candidato, fondo) >= objetivo) {

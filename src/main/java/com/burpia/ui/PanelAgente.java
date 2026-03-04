@@ -278,11 +278,13 @@ public class PanelAgente extends JPanel {
             return false;
         }
 
-        byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
+        // Verificar proceso antes de crear el array de bytes (optimización)
         if (process == null || !process.isAlive()) {
             registrarLog(Level.FINE, I18nLogs.tr("Escritura PTY omitida: proceso no disponible"));
             return false;
         }
+
+        byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
 
         try {
             java.io.OutputStream os = process.getOutputStream();

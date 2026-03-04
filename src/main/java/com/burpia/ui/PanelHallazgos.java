@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -251,7 +250,7 @@ public class PanelHallazgos extends JPanel {
 
         List<RowFilter<Object, Object>> filtros = new ArrayList<>();
 
-        if (!textoBusqueda.isEmpty()) {
+        if (Normalizador.noEsVacio(textoBusqueda)) {
             filtros.add(RowFilter.regexFilter("(?i)" + textoBusquedaQuotado, 1, 2));
         }
 
@@ -272,6 +271,11 @@ public class PanelHallazgos extends JPanel {
         campoBusqueda.setText("");
         comboSeveridad.setSelectedIndex(0);
         sorter.setRowFilter(null);
+        // Reset filter cache to ensure fresh state
+        textoBusquedaCacheado = "";
+        textoBusquedaQuotado = "";
+        severidadCacheada = "";
+        severidadQuotada = "";
     }
 
     private void exportarCSV() {
@@ -307,8 +311,8 @@ public class PanelHallazgos extends JPanel {
             return I18nUI.Hallazgos.MSG_ERROR_SIN_PERMISO_ESCRITURA_DIRECTORIO(directorioPadre.getAbsolutePath());
         }
 
-        // Validación 3: Espacio en disco disponible (estimación conservadora: 1 MB por hallazgo)
-        long espacioNecesarioBytes = (long) modelo.getRowCount() * 1024 * 1024;
+        // Validación 3: Espacio en disco disponible (estimación: 10 KB por hallazgo)
+        long espacioNecesarioBytes = (long) modelo.getRowCount() * 10 * 1024;
         long espacioLibreBytes = directorioPadre.getFreeSpace();
         if (espacioLibreBytes < espacioNecesarioBytes) {
             long espacioNecesarioMB = espacioNecesarioBytes / (1024 * 1024);
@@ -498,9 +502,8 @@ public class PanelHallazgos extends JPanel {
     }
 
     public void limpiar() {
-        ejecutarEnEdt(() -> {
-            modelo.limpiar();
-        });
+        // El modelo ya maneja EDT internamente, no es necesario envolver
+        modelo.limpiar();
     }
 
     private void crearMenuContextual() {
@@ -1249,7 +1252,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private String normalizarUrlTexto(String url) {
-        return (url == null || url.isBlank()) ? I18nUI.Hallazgos.URL_DESCONOCIDA() : url;
+        return Normalizador.esVacio(url) ? I18nUI.Hallazgos.URL_DESCONOCIDA() : url;
     }
 
     @FunctionalInterface
@@ -1260,7 +1263,8 @@ public class PanelHallazgos extends JPanel {
     private ExecutorService crearEjecutorAcciones() {
         return Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable);
-            thread.setName(I18nUI.General.HILO_HALLAZGOS());
+            // Usar nombre constante para consistencia en logs y debugging
+            thread.setName("BurpIA-PanelHallazgos");
             thread.setDaemon(true);
             return thread;
         });

@@ -24,12 +24,9 @@ final class AgentTerminalSettingsProvider extends DefaultSettingsProvider {
         if (fondoBase == null) {
             fondoBase = EstilosUI.obtenerFondoPanel();
         }
-        if (fondoBase == null) {
-            fondoBase = new Color(36, 37, 41);
-        }
 
         boolean temaOscuro = EstilosUI.esTemaOscuro(fondoBase);
-        this.fondoTerminal = normalizar(fondoBase, temaOscuro ? new Color(36, 37, 41) : Color.WHITE);
+        this.fondoTerminal = fondoBase;
         this.textoTerminal = EstilosUI.colorTextoPrimario(fondoTerminal);
         this.colorEnlace = EstilosUI.colorEnlaceAccesible(fondoTerminal);
 
@@ -63,7 +60,7 @@ final class AgentTerminalSettingsProvider extends DefaultSettingsProvider {
 
     @Override
     public float getTerminalFontSize() {
-        return 14f;
+        return (float) EstilosUI.FUENTE_MONO.getSize();
     }
 
     @Override
@@ -146,10 +143,6 @@ final class AgentTerminalSettingsProvider extends DefaultSettingsProvider {
             new Color(43, 136, 141),
             new Color(250, 251, 252)
         };
-    }
-
-    private Color normalizar(Color color, Color fallback) {
-        return color != null ? color : fallback;
     }
 
     private static final class AgentColorPalette extends ColorPalette {

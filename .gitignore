@@ -30,12 +30,5 @@ BurpIA.zip
 
 # Documentation (generated)
 docs/
-
-# AI Agent documentation files
-**/AGENTS.md
-**/CLAUDE.md
-
-# Test directories
-/src/test/java/com/burpia/config
-AGENTS.md
 *.sh
+*.md

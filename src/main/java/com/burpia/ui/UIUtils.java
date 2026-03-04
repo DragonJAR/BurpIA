@@ -134,10 +134,6 @@ public class UIUtils {
         mostrarMensaje(parent, titulo, mensaje, JOptionPane.INFORMATION_MESSAGE);
     }
 
-    public static boolean debeMostrarAlertaConOptOut(boolean alertasHabilitadas) {
-        return alertasHabilitadas;
-    }
-
     public static boolean confirmarPregunta(Component parent, String titulo, String mensaje) {
         return confirmar(parent, titulo, mensaje, JOptionPane.QUESTION_MESSAGE);
     }
@@ -205,7 +201,7 @@ public class UIUtils {
                                                              String mensajePrincipal,
                                                              String textoEnlace,
                                                              String urlEnlace) {
-        ejecutarEnEDT(() -> {
+        ejecutarEnEdt(() -> {
             JPanel panel = new JPanel(new BorderLayout(0, 6));
             panel.setOpaque(false);
             panel.add(crearAreaMensajeDialogo(mensajePrincipal), BorderLayout.NORTH);
@@ -269,16 +265,13 @@ public class UIUtils {
     }
 
     static String extraerTextoVisibleEnlace(String textoEnlace) {
-        if (textoEnlace == null) {
+        if (Normalizador.esVacio(textoEnlace)) {
             return "";
         }
         String texto = textoEnlace.trim();
-        if (texto.isEmpty()) {
-            return "";
-        }
         String sinAnchor = texto.replaceAll("(?is)<a\\b[^>]*>(.*?)</a>", "$1");
         String sinHtml = sinAnchor.replaceAll("(?is)<[^>]+>", "").trim();
-        return sinHtml.isEmpty() ? texto : sinHtml;
+        return Normalizador.esVacio(sinHtml) ? texto : sinHtml;
     }
 
     private static Font crearFuenteSubrayada(Font fuenteBase) {
@@ -298,11 +291,11 @@ public class UIUtils {
     }
 
     public static boolean abrirUrlEnNavegador(String url) {
-        if (url == null) {
+        if (Normalizador.esVacio(url)) {
             return false;
         }
         String urlLimpia = url.trim();
-        if (urlLimpia.isEmpty() || !Desktop.isDesktopSupported()) {
+        if (!Desktop.isDesktopSupported()) {
             return false;
         }
         try {
@@ -328,14 +321,6 @@ public class UIUtils {
         return abierto;
     }
 
-    private static void ejecutarEnEDT(Runnable runnable) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            runnable.run();
-        } else {
-            SwingUtilities.invokeLater(runnable);
-        }
-    }
-
     private static void mostrarMensajeConOptOut(Component parent,
                                                 String titulo,
                                                 String mensaje,
@@ -352,7 +337,7 @@ public class UIUtils {
                                                 boolean alertasHabilitadas,
                                                 Runnable onDeshabilitar,
                                                 int delayMs) {
-        if (!debeMostrarAlertaConOptOut(alertasHabilitadas)) {
+        if (!alertasHabilitadas) {
             return;
         }
         if (GraphicsEnvironment.isHeadless()) {
@@ -379,7 +364,7 @@ public class UIUtils {
             return;
         }
         int delaySeguro = normalizarDelayMs(delayMs);
-        ejecutarEnEDT(() -> {
+        ejecutarEnEdt(() -> {
             if (delaySeguro <= 0) {
                 runnable.run();
                 return;
@@ -460,7 +445,7 @@ public class UIUtils {
         if (GraphicsEnvironment.isHeadless()) {
             return;
         }
-        ejecutarEnEDT(() -> {
+        ejecutarEnEdt(() -> {
             DialogoContenido contenido = crearContenidoDialogo(mensaje, false);
             mostrarDialogoConContenido(
                 parent,
@@ -570,7 +555,7 @@ public class UIUtils {
         if (icono != null) {
             contenedor.add(icono, BorderLayout.WEST);
         }
-        contenedor.add(contenido != null ? contenido : new JPanel(), BorderLayout.CENTER);
+        contenedor.add(contenido, BorderLayout.CENTER);
         return contenedor;
     }
 

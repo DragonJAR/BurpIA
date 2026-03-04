@@ -158,11 +158,9 @@ public class ModeloTablaTareas extends DefaultTableModel {
                 break;
             }
             Tarea tareaPurgada = datos.remove(indice);
-            if (tareaPurgada != null) {
-                String id = tareaPurgada.obtenerId();
-                if (id != null && !id.isEmpty()) {
-                    idsPurgadas.add(id);
-                }
+            String id = tareaPurgada.obtenerId();
+            if (Normalizador.noEsVacio(id)) {
+                idsPurgadas.add(id);
             }
         }
         return idsPurgadas;
@@ -226,6 +224,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
             if (indiceFila >= 0 && indiceFila < datos.size()) {
                 datos.remove(indiceFila);
                 eliminado = true;
+                marcarCambio();
             }
         } finally {
             lock.unlock();
@@ -234,7 +233,6 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (!eliminado) {
             return;
         }
-        marcarCambio();
         final int filaAEliminar = indiceFila;
         ejecutarEnEdt(() -> {
             if (filaAEliminar < getRowCount()) {
@@ -294,14 +292,13 @@ public class ModeloTablaTareas extends DefaultTableModel {
             return;
         }
         java.util.Set<String> estadosSet = new java.util.HashSet<>(java.util.Arrays.asList(estados));
-        
-        // OPTIMIZACIÓN: Usar removeIf() que es O(n) en lugar de múltiples remove(idx) que son O(n²)
+
         lock.lock();
         try {
-            boolean huboCambios = datos.removeIf(tarea -> 
+            boolean huboCambios = datos.removeIf(tarea ->
                 tarea != null && estadosSet.contains(tarea.obtenerEstado())
             );
-            
+
             if (!huboCambios) {
                 return;
             }
@@ -310,7 +307,6 @@ public class ModeloTablaTareas extends DefaultTableModel {
             lock.unlock();
         }
 
-        // Sincronizar tabla completa (setDataVector es más eficiente que múltiples removeRow)
         programarSincronizacionTabla();
     }
 
@@ -377,19 +373,13 @@ public class ModeloTablaTareas extends DefaultTableModel {
 
     public void establecerLimiteFilas(int nuevoLimite) {
         int limiteNormalizado = Math.max(1, nuevoLimite);
+        List<String> idsPurgadas;
         lock.lock();
         try {
             if (this.limiteFilas == limiteNormalizado) {
                 return;
             }
             this.limiteFilas = limiteNormalizado;
-        } finally {
-            lock.unlock();
-        }
-        // Aplicar el nuevo límite y sincronizar la tabla si se purgaron tareas
-        List<String> idsPurgadas = new ArrayList<>();
-        lock.lock();
-        try {
             idsPurgadas = aplicarLimiteFilasEnDatos();
             marcarCambio();
         } finally {

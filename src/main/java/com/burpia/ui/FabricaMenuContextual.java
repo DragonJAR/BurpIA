@@ -75,7 +75,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         if (solicitud == null || solicitudRespuestaOriginal == null) {
             return false;
         }
-        String contenido = solicitud != null ? solicitud.toString() : "null";
+        String contenido = solicitud.toString();
         String hash = String.valueOf(contenido.hashCode());
         long ahora = System.currentTimeMillis();
 
@@ -155,7 +155,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 }
             } catch (Exception ex) {
                 fallidas++;
-                api.logging().logToError("[BurpIA] Error enviando solicitud al agente: " + ex.getMessage());
+                api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()));
             }
         }
 

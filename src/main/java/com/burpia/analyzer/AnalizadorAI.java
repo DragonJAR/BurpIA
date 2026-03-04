@@ -53,6 +53,7 @@ public class AnalizadorAI implements Runnable {
     private static final int MAX_INTENTOS_RETRY = 5;
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
+    private static final long DELAY_ENTRE_PROVEEDORES_MS = 2000L; // 2 segundos entre proveedores
     private static final int MAX_CLIENTES_HTTP_CACHE = 8;
     private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = 
         Collections.synchronizedMap(new LinkedHashMap<String, OkHttpClient>(16, 0.75f, true) {
@@ -223,10 +224,22 @@ public class AnalizadorAI implements Runnable {
 
             registrar("Analizando: " + solicitud.obtenerUrl());
 
+            boolean multiHabilitado = config.esMultiProveedorHabilitado();
+            List<String> proveedoresConfig = config.obtenerProveedoresMultiConsulta();
+            rastrear("DIAGNOSTICO: multiHabilitado=" + multiHabilitado + ", proveedoresConfig=" +
+                     (proveedoresConfig != null ? proveedoresConfig.size() + " elementos" : "null"));
+
             ResultadoAnalisisMultiple resultadoMultiple;
-            if (config.esMultiProveedorHabilitado()) {
+            if (multiHabilitado && proveedoresConfig != null && proveedoresConfig.size() > 1) {
+                rastrear("DIAGNOSTICO: Ejecutando multi-proveedor con " + proveedoresConfig.size() + " proveedores");
                 resultadoMultiple = ejecutarAnalisisMultiProveedorSecuencial();
             } else {
+                if (multiHabilitado) {
+                    rastrear("DIAGNOSTICO: Multi-proveedor habilitado pero solo " +
+                             (proveedoresConfig != null ? proveedoresConfig.size() : 0) + " proveedor(es). Usando proveedor único.");
+                } else {
+                    rastrear("DIAGNOSTICO: Multi-proveedor no habilitado. Usando proveedor único.");
+                }
                 String respuesta = llamarAPIAIConRetries();
                 resultadoMultiple = parsearRespuesta(respuesta);
             }
@@ -495,6 +508,39 @@ public class AnalizadorAI implements Runnable {
             ultimaExcepcion.getMessage());
 
         throw ultimaExcepcion;
+    }
+
+    /**
+     * Llama a la API AI con una configuración específica del proveedor.
+     * <p>
+     * Este método está diseñado para el análisis multi-proveedor, donde cada
+     * proveedor necesita su propia configuración (API key, modelo, timeout).
+     * </p>
+     *
+     * <p>Usa un bloque try-finally para garantizar que la configuración original
+     * se restaura siempre, evitando race conditions en entornos concurrentes.</p>
+     *
+     * @param configProveedor Configuración específica del proveedor a usar
+     * @return Respuesta de la API como string
+     * @throws IOException Si la llamada falla o es cancelada
+     */
+    private String llamarAPIAIConRetriesConConfig(ConfiguracionAPI configProveedor)
+            throws IOException {
+        // CONFIABILIDAD: Guardar config actual antes de modificar
+        ConfiguracionAPI configBackup = this.config;
+
+        try {
+            // Establecer config temporal para este proveedor
+            this.config = configProveedor;
+
+            // Llamada original (sin modificaciones)
+            return llamarAPIAIConRetries();
+
+        } finally {
+            // CONFIABILIDAD: Limpieza de recursos garantizada
+            // Restaurar config SIEMPRE, sin importar el resultado
+            this.config = configBackup;
+        }
     }
 
     private void esperarReintento(long esperaMs) throws IOException {
@@ -1136,7 +1182,7 @@ public class AnalizadorAI implements Runnable {
         return normalizado;
     }
 
-    private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException {
+    private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {
         List<String> proveedores = config.obtenerProveedoresMultiConsulta();
         if (proveedores == null || proveedores.isEmpty()) {
             registrar("Multi-consulta: No hay proveedores seleccionados, usando proveedor único");
@@ -1150,10 +1196,15 @@ public class AnalizadorAI implements Runnable {
 
         registrar("PROVEEDOR: Multi-consulta iniciada con " + proveedores.size() + " proveedores");
         List<Hallazgo> todosHallazgos = new ArrayList<>();
+        List<String> proveedoresFallidos = new ArrayList<>();
         ConfiguracionAPI configOriginal = config;
 
         try {
             for (String proveedor : proveedores) {
+                // CONFIABILIDAD: Verificación de estado antes de cada proveedor
+                verificarCancelacion();
+                esperarSiPausada();
+
                 if (Normalizador.esVacio(proveedor)) {
                     continue;
                 }
@@ -1168,6 +1219,13 @@ public class AnalizadorAI implements Runnable {
                     continue;
                 }
 
+                // EFICIENCIA: Delay entre proveedores (excepto el primero)
+                if (!todosHallazgos.isEmpty()) {
+                    long delaySegundos = DELAY_ENTRE_PROVEEDORES_MS / 1000L;
+                    registrar("PROVEEDOR: Esperando " + delaySegundos + " segundos antes del siguiente proveedor");
+                    esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
+                }
+
                 registrar("PROVEEDOR: Analizando con proveedor: " + proveedor + " (" + modelo + ")");
 
                 try {
@@ -1175,9 +1233,8 @@ public class AnalizadorAI implements Runnable {
                     configProveedor.aplicarDesde(configOriginal);
                     configProveedor.establecerProveedorAI(proveedor);
 
-                    this.config = configProveedor;
-
-                    String respuesta = llamarAPIAIConRetries();
+                    // NUEVO MÉTODO: Llamada con config temporal (evita race condition)
+                    String respuesta = llamarAPIAIConRetriesConConfig(configProveedor);
                     ResultadoAnalisisMultiple resultado = parsearRespuestaConEtiqueta(respuesta, proveedor, modelo);
 
                     List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
@@ -1187,18 +1244,20 @@ public class AnalizadorAI implements Runnable {
 
                 } catch (Exception e) {
                     registrar("PROVEEDOR: Error con proveedor " + proveedor + ": " + e.getMessage());
+                    proveedoresFallidos.add(proveedor);
                 }
+            }
+
+            // Registro visible de errores parciales
+            if (!proveedoresFallidos.isEmpty()) {
+                registrarError("PROVEEDOR: " + proveedoresFallidos.size() +
+                             " proveedor(es) fallaron: " + String.join(", ", proveedoresFallidos));
             }
 
             registrar("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
 
-            if (todosHallazgos.isEmpty()) {
-                return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
-                    solicitud.obtenerSolicitudHttp());
-            }
-
             return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
-                solicitud.obtenerSolicitudHttp());
+                solicitud.obtenerSolicitudHttp(), proveedoresFallidos);
 
         } finally {
             this.config = configOriginal;

@@ -868,6 +868,30 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private void registrarEstadoInicialLlM() {
         ConfiguracionAPI.CodigoValidacionConsulta codigo = codigoValidacionConsulta();
         if (codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK) {
+            // Verificar si multi-proveedor está habilitado
+            if (config.esMultiProveedorHabilitado()) {
+                List<String> proveedores = config.obtenerProveedoresMultiConsulta();
+                if (proveedores != null && proveedores.size() > 1) {
+                    // Multi-proveedor con 2+ proveedores
+                    String proveedorPrincipal = config.obtenerProveedorAI();
+                    List<String> proveedoresAdicionales = new ArrayList<>();
+                    for (String p : proveedores) {
+                        if (!p.equals(proveedorPrincipal)) {
+                            proveedoresAdicionales.add(p);
+                        }
+                    }
+                    registrar(
+                        I18nUI.Consola.ESTADO_INICIAL_LLM_MULTIPROVEEDOR(
+                            proveedorPrincipal,
+                            config.obtenerModelo(),
+                            proveedoresAdicionales
+                        )
+                    );
+                    return;
+                }
+            }
+
+            // Caso normal: proveedor único
             registrar(
                 I18nUI.Consola.ESTADO_INICIAL_LLM_LISTO(
                     config.obtenerProveedorAI(),

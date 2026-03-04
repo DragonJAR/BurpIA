@@ -49,13 +49,6 @@ class UIUtilsTest {
     }
 
     @Test
-    @DisplayName("debeMostrarAlertaConOptOut respeta preferencia")
-    void testDebeMostrarAlertaConOptOut() {
-        assertTrue(UIUtils.debeMostrarAlertaConOptOut(true));
-        assertFalse(UIUtils.debeMostrarAlertaConOptOut(false));
-    }
-
-    @Test
     @DisplayName("abrirUrlConFallbackInfo retorna false con URL inválida")
     void testAbrirUrlConFallbackInfoUrlInvalida() {
         assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", null, "Mensaje"));

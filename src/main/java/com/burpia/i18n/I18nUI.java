@@ -2,6 +2,8 @@ package com.burpia.i18n;
 
 import com.burpia.util.Normalizador;
 
+import java.util.List;
+
 public final class I18nUI {
     private static volatile IdiomaUI idiomaActual = IdiomaUI.porDefecto();
     private static final String URL_DRAGONJAR_CONTACTO = "https://www.dragonjar.org/contactar-empresa-de-seguridad-informatica";
@@ -895,6 +897,26 @@ public final class I18nUI {
                     "Estado LLM al inicio: listo para analizar (Proveedor=%s, Modelo=%s)",
                     "LLM startup status: ready to analyze (Provider=%s, Model=%s)",
                     proveedor, modelo);
+        }
+
+        public static String ESTADO_INICIAL_LLM_MULTIPROVEEDOR(
+                String proveedorPrincipal,
+                String modeloPrincipal,
+                List<String> proveedoresAdicionales) {
+            if (proveedoresAdicionales == null || proveedoresAdicionales.isEmpty()) {
+                return ESTADO_INICIAL_LLM_LISTO(proveedorPrincipal, modeloPrincipal);
+            }
+            return trf(
+                    "Estado LLM al inicio: listo para analisis multi-proveedor" +
+                    "\n  - Proveedor principal: %s (%s)" +
+                    "\n  - Proveedores adicionales: %s",
+                    "LLM startup status: ready for multi-provider analysis" +
+                    "\n  - Primary provider: %s (%s)" +
+                    "\n  - Additional providers: %s",
+                    proveedorPrincipal,
+                    modeloPrincipal,
+                    String.join(", ", proveedoresAdicionales)
+            );
         }
 
         public static String ESTADO_INICIAL_LLM_BLOQUEADO(String razon) {
@@ -2014,6 +2036,12 @@ public final class I18nUI {
             return trf("Solicitudes enviadas a %s: %d/%d.",
                     "Requests sent to %s: %d/%d.",
                     agente, exitosas, total);
+        }
+
+        public static String LOG_ERROR_ENVIO_AGENTE(String error) {
+            return trf("[BurpIA] Error enviando solicitud al agente: %s",
+                    "[BurpIA] Error sending request to agent: %s",
+                    error);
         }
     }
 
