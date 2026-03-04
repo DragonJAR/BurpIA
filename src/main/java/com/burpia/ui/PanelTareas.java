@@ -26,7 +26,6 @@ public class PanelTareas extends JPanel {
     private JButton botonLimpiarCompletadas;
     private JLabel etiquetaEstadisticas;
     private final GestorTareas gestorTareas;
-    private ConfiguracionAPI config;
     private Timer timerActualizacion;
     private JPanel panelControles;
     private JPanel panelTablaWrapper;
@@ -309,7 +308,9 @@ public class PanelTareas extends JPanel {
                 I18nUI.Tareas.MENU_VER_DETALLES_ERROR(),
                 I18nUI.Tooltips.Tareas.MENU_VER_DETALLES_ERROR(),
                 e -> {
-                    String mensaje = I18nUI.Tareas.MSG_DETALLES_ERROR(seleccion.url, seleccion.duracion, estado);
+                    Tarea tarea = gestorTareas.obtenerTarea(tareaId);
+                    String mensajeError = (tarea != null) ? tarea.obtenerMensajeInfo() : "";
+                    String mensaje = I18nUI.Tareas.MSG_DETALLES_ERROR(seleccion.url, mensajeError, estado);
                     UIUtils.mostrarError(PanelTareas.this, I18nUI.Tareas.TITULO_DETALLES_ERROR(), mensaje);
                 }
             ));
@@ -518,8 +519,20 @@ public class PanelTareas extends JPanel {
     }
 
     private void eliminarTareasSeleccionadas(List<TareaSeleccionada> seleccion) {
-        int contador = procesarSeleccion(seleccion, Tarea::esEstadoEliminable, gestorTareas::limpiarTarea);
+        int total = contarSeleccion(seleccion, Tarea::esEstadoEliminable);
+        if (total <= 0) {
+            UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
+            return;
+        }
 
+        boolean confirmacion = UIUtils.confirmarPregunta(
+            this,
+            I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
+            I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(total)
+        );
+        if (!confirmacion) return;
+
+        int contador = procesarSeleccion(seleccion, Tarea::esEstadoEliminable, gestorTareas::limpiarTarea);
         actualizarEstadisticas();
         mostrarMensaje(I18nUI.Tareas.MSG_ELIMINADAS(contador));
     }
@@ -731,9 +744,7 @@ public class PanelTareas extends JPanel {
     }
 
     public void establecerConfiguracion(ConfiguracionAPI config) {
-        this.config = config;
-        // NOTE: limiteFilas is final in ModeloTablaTareas, set during construction
-        // To change the limit, the model would need to be recreated
+        // No-op: la configuración de límite de filas se establece en la construcción del modelo
     }
 
     private static final class TareaSeleccionada {

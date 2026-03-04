@@ -3,6 +3,7 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorConsolaGUI;
 import javax.swing.*;
 import java.awt.*;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class PanelConsola extends JPanel {
@@ -39,7 +40,7 @@ public class PanelConsola extends JPanel {
      */
     @SuppressWarnings("this-escape")
     public PanelConsola(GestorConsolaGUI gestorConsola) {
-        this.gestorConsola = gestorConsola;
+        this.gestorConsola = Objects.requireNonNull(gestorConsola, "gestorConsola no puede ser null");
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));

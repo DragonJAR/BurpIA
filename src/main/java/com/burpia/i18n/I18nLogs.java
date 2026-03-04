@@ -160,6 +160,8 @@ public final class I18nLogs {
         {"Payload en bufer usando escritura directa", "Payload buffered using direct write"},
         {"Se ha despachado la secuencia VK_ENTER", "VK_ENTER sequence dispatched"},
         {"Payload inicial encolado para inyeccion manual por el usuario", "Initial payload queued for manual injection by user"},
+        {"Error escritura raw PTY", "PTY raw write error"},
+        {"Error escritura directa PTY", "PTY direct write error"},
         {"Error al cambiar de agente", "Error while switching agent"},
         {"Esperando el delay establecido por el usuario", "Waiting for user-configured delay"},
         {"Captura pausada por usuario", "Capture paused by user"},

@@ -1,7 +1,6 @@
 package com.burpia.util;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaTareas;
-import com.burpia.util.Normalizador;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -9,11 +8,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class GestorTareas {
-    private static final Logger LOGGER = Logger.getLogger(GestorTareas.class.getName());
     private final Map<String, Tarea> tareas;
     private final ReentrantLock candado;
     private final ScheduledExecutorService monitorVerificacion;
@@ -481,15 +477,8 @@ public class GestorTareas {
     private void registrar(String mensaje) {
         try {
             logger.accept(mensaje);
-        } catch (Exception e) {
-            if (LOGGER.isLoggable(Level.WARNING)) {
-                LOGGER.log(
-                    Level.WARNING,
-                    "[GestorTareas] Error al registrar log: " +
-                        (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()),
-                    e
-                );
-            }
+        } catch (Exception ignored) {
+            // Silenciar errores de logging para evitar cascadas
         }
     }
 

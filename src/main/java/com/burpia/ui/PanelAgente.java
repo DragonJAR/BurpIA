@@ -261,7 +261,7 @@ public class PanelAgente extends JPanel {
             os.flush();
             return true;
         } catch (Exception e) {
-            registrarLog(Level.FINE, "Error escritura raw PTY", e);
+            registrarLog(Level.FINE, I18nLogs.tr("Error escritura raw PTY"), e);
             return false;
         }
     }
@@ -300,7 +300,7 @@ public class PanelAgente extends JPanel {
             os.flush();
             return true;
         } catch (Exception e) {
-            registrarLog(Level.FINE, "Error escritura directa PTY", e);
+            registrarLog(Level.FINE, I18nLogs.tr("Error escritura directa PTY"), e);
             return false;
         }
     }

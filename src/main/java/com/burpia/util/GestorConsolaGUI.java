@@ -85,8 +85,7 @@ public class GestorConsolaGUI {
         }
 
         Runnable aplicar = () -> {
-            this.consola = nuevaConsola;
-            this.documento = nuevaConsola.getStyledDocument();
+            StyledDocument doc = nuevaConsola.getStyledDocument();
 
             Color fondo = nuevaConsola.getBackground();
             if (fondo == null) {
@@ -106,42 +105,42 @@ public class GestorConsolaGUI {
             nuevaConsola.setForeground(colorInfo);
             nuevaConsola.setCaretColor(colorInfo);
 
-            estiloInfo = obtenerOCrearEstilo("Info", null);
+            estiloInfo = obtenerOCrearEstilo(doc, "Info", null);
             StyleConstants.setForeground(estiloInfo, colorInfo);
             StyleConstants.setFontFamily(estiloInfo, Font.MONOSPACED);
             StyleConstants.setFontSize(estiloInfo, nuevaConsola.getFont().getSize());
             StyleConstants.setBold(estiloInfo, false);
             StyleConstants.setItalic(estiloInfo, false);
 
-            estiloInfoDestacado = obtenerOCrearEstilo("InfoDestacado", estiloInfo);
+            estiloInfoDestacado = obtenerOCrearEstilo(doc, "InfoDestacado", estiloInfo);
             StyleConstants.setForeground(estiloInfoDestacado, colorInfo);
             StyleConstants.setFontFamily(estiloInfoDestacado, Font.MONOSPACED);
             StyleConstants.setFontSize(estiloInfoDestacado, nuevaConsola.getFont().getSize());
             StyleConstants.setBold(estiloInfoDestacado, true);
             StyleConstants.setItalic(estiloInfoDestacado, false);
 
-            estiloVerbose = obtenerOCrearEstilo("Verbose", null);
+            estiloVerbose = obtenerOCrearEstilo(doc, "Verbose", null);
             StyleConstants.setForeground(estiloVerbose, colorVerbose);
             StyleConstants.setFontFamily(estiloVerbose, Font.MONOSPACED);
             StyleConstants.setFontSize(estiloVerbose, nuevaConsola.getFont().getSize());
             StyleConstants.setItalic(estiloVerbose, true);
             StyleConstants.setBold(estiloVerbose, false);
 
-            estiloVerboseDestacado = obtenerOCrearEstilo("VerboseDestacado", estiloVerbose);
+            estiloVerboseDestacado = obtenerOCrearEstilo(doc, "VerboseDestacado", estiloVerbose);
             StyleConstants.setForeground(estiloVerboseDestacado, colorVerbose);
             StyleConstants.setFontFamily(estiloVerboseDestacado, Font.MONOSPACED);
             StyleConstants.setFontSize(estiloVerboseDestacado, nuevaConsola.getFont().getSize());
             StyleConstants.setItalic(estiloVerboseDestacado, true);
             StyleConstants.setBold(estiloVerboseDestacado, true);
 
-            estiloError = obtenerOCrearEstilo("Error", null);
+            estiloError = obtenerOCrearEstilo(doc, "Error", null);
             StyleConstants.setForeground(estiloError, colorError);
             StyleConstants.setFontFamily(estiloError, Font.MONOSPACED);
             StyleConstants.setFontSize(estiloError, nuevaConsola.getFont().getSize());
             StyleConstants.setBold(estiloError, true);
             StyleConstants.setItalic(estiloError, false);
 
-            estiloErrorDestacado = obtenerOCrearEstilo("ErrorDestacado", estiloError);
+            estiloErrorDestacado = obtenerOCrearEstilo(doc, "ErrorDestacado", estiloError);
             StyleConstants.setForeground(estiloErrorDestacado, colorError);
             StyleConstants.setFontFamily(estiloErrorDestacado, Font.MONOSPACED);
             StyleConstants.setFontSize(estiloErrorDestacado, nuevaConsola.getFont().getSize());
@@ -156,12 +155,16 @@ public class GestorConsolaGUI {
         }
     }
 
-    private Style obtenerOCrearEstilo(String nombre, Style padre) {
-        Style estilo = documento.getStyle(nombre);
+    private Style obtenerOCrearEstilo(StyledDocument doc, String nombre, Style padre) {
+        Style estilo = doc.getStyle(nombre);
         if (estilo == null) {
-            estilo = documento.addStyle(nombre, padre);
+            estilo = doc.addStyle(nombre, padre);
         }
         return estilo;
+    }
+
+    private Style obtenerOCrearEstilo(String nombre, Style padre) {
+        return obtenerOCrearEstilo(documento, nombre, padre);
     }
 
     public void capturarStreamsOriginales(PrintWriter stdout, PrintWriter stderr) {

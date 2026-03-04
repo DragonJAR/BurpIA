@@ -22,24 +22,37 @@ import java.util.Map;
 import java.util.Set;
 
 public class GestorConfiguracion {
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    
     private final Path rutaConfig;
-    private final Gson gson;
-    private final PrintWriter out;
-    private final PrintWriter err;
-    private final GestorLoggingUnificado gestorLogging;
+    private PrintWriter out;
+    private PrintWriter err;
+    private GestorLoggingUnificado gestorLogging;
+    private boolean loggingInicializado = false;
 
     public GestorConfiguracion() {
         this(null, null);
     }
 
     public GestorConfiguracion(PrintWriter out, PrintWriter err) {
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
-        this.out = out != null ? out : new PrintWriter(System.out, true);
-        this.err = err != null ? err : new PrintWriter(System.err, true);
         this.rutaConfig = RutasBurpIA.obtenerRutaConfig();
-        this.gestorLogging = GestorLoggingUnificado.crearMinimal(out, err);
-
-        logInfo("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
+        
+        if (out != null && err != null) {
+            this.out = out;
+            this.err = err;
+            this.gestorLogging = GestorLoggingUnificado.crearMinimal(out, err);
+            this.loggingInicializado = true;
+            logInfo("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
+        }
+    }
+    
+    private void inicializarLogging() {
+        if (!loggingInicializado) {
+            this.out = new PrintWriter(System.out, true);
+            this.err = new PrintWriter(System.err, true);
+            this.gestorLogging = GestorLoggingUnificado.crearMinimal(out, err);
+            this.loggingInicializado = true;
+        }
     }
 
     public ConfiguracionAPI cargarConfiguracion() {
@@ -50,8 +63,6 @@ public class GestorConfiguracion {
                 logInfo("[Configuracion] Archivo no existe, creando configuracion por defecto");
                 return new ConfiguracionAPI();
             }
-
-            asegurarPermisosPrivados(path);
 
             if (!Files.isReadable(path)) {
                 logError("[Configuracion] Archivo no es legible: " + path);
@@ -65,7 +76,7 @@ public class GestorConfiguracion {
                 return new ConfiguracionAPI();
             }
 
-            ArchivoConfiguracion archivo = gson.fromJson(json, ArchivoConfiguracion.class);
+            ArchivoConfiguracion archivo = GSON.fromJson(json, ArchivoConfiguracion.class);
             if (archivo == null) {
                 logInfo("[Configuracion] Error al parsear JSON, usando configuracion por defecto");
                 return new ConfiguracionAPI();
@@ -104,6 +115,7 @@ public class GestorConfiguracion {
                 return false;
             }
             Path path = rutaConfig.toAbsolutePath();
+            boolean archivoNuevo = !Files.exists(path);
 
             Path directorioPadre = path.getParent();
             if (directorioPadre != null && !Files.exists(directorioPadre)) {
@@ -129,20 +141,17 @@ public class GestorConfiguracion {
             }
 
             ArchivoConfiguracion archivo = construirArchivo(config);
-            String json = gson.toJson(archivo);
+            String json = GSON.toJson(archivo);
 
             tempPath = Paths.get(path.toString() + ".tmp");
 
             Files.write(tempPath, json.getBytes(StandardCharsets.UTF_8));
-            asegurarPermisosPrivados(tempPath);
 
-            try {
-                Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING,
-                        java.nio.file.StandardCopyOption.ATOMIC_MOVE);
-            } catch (java.nio.file.AtomicMoveNotSupportedException ex) {
-                Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            if (archivoNuevo) {
+                asegurarPermisosPrivados(path);
             }
-            asegurarPermisosPrivados(path);
 
             logInfo("[Configuracion] Configuracion guardada exitosamente en: " + path);
             return true;
@@ -171,10 +180,12 @@ public class GestorConfiguracion {
     }
 
     private void logInfo(String mensaje) {
+        inicializarLogging();
         gestorLogging.info("Configuracion", mensaje);
     }
 
     private void logError(String mensaje) {
+        inicializarLogging();
         gestorLogging.error("Configuracion", mensaje);
     }
 
