@@ -37,6 +37,7 @@ class EstadisticasTest {
             assertEquals(0, stats.obtenerHallazgosMedium());
             assertEquals(0, stats.obtenerHallazgosLow());
             assertEquals(0, stats.obtenerHallazgosInfo());
+            assertEquals(0, stats.obtenerHallazgosDesconocidos());
         }
     }
 
@@ -121,7 +122,7 @@ class EstadisticasTest {
         }
 
         @Test
-        @DisplayName("Severidad desconocida solo incrementa creados")
+        @DisplayName("Severidad desconocida incrementa creados y desconocidos")
         void severidadDesconocida() {
             stats.incrementarHallazgoSeveridad("Unknown");
             assertEquals(0, stats.obtenerHallazgosCritical());
@@ -130,6 +131,23 @@ class EstadisticasTest {
             assertEquals(0, stats.obtenerHallazgosLow());
             assertEquals(0, stats.obtenerHallazgosInfo());
             assertEquals(1, stats.obtenerHallazgosCreados());
+            assertEquals(1, stats.obtenerHallazgosDesconocidos());
+        }
+
+        @Test
+        @DisplayName("Severidad null incrementa creados y desconocidos")
+        void severidadNull() {
+            stats.incrementarHallazgoSeveridad(null);
+            assertEquals(1, stats.obtenerHallazgosCreados());
+            assertEquals(1, stats.obtenerHallazgosDesconocidos());
+        }
+
+        @Test
+        @DisplayName("Severidad vacia incrementa creados y desconocidos")
+        void severidadVacia() {
+            stats.incrementarHallazgoSeveridad("");
+            assertEquals(1, stats.obtenerHallazgosCreados());
+            assertEquals(1, stats.obtenerHallazgosDesconocidos());
         }
 
         @Test
@@ -170,6 +188,45 @@ class EstadisticasTest {
             assertTrue(resumen.contains("Omitidos: 1"));
             assertTrue(resumen.contains("Hallazgos: 1"));
             assertTrue(resumen.contains("Errores: 1"));
+        }
+    }
+
+    @Nested
+    @DisplayName("Reinicio")
+    class Reinicio {
+        @Test
+        @DisplayName("Reiniciar pone todos los contadores a cero")
+        void reiniciarPoneContadoresACero() {
+            stats.incrementarTotalSolicitudes();
+            stats.incrementarAnalizados();
+            stats.incrementarErrores();
+            stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_CRITICAL);
+            stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_HIGH);
+            stats.incrementarHallazgoSeveridad("Unknown");
+            stats.incrementarOmitidosDuplicado();
+            stats.incrementarOmitidosBajaConfianza();
+
+            stats.reiniciar();
+
+            assertEquals(0, stats.obtenerTotalSolicitudes());
+            assertEquals(0, stats.obtenerAnalizados());
+            assertEquals(0, stats.obtenerHallazgosCreados());
+            assertEquals(0, stats.obtenerErrores());
+            assertEquals(0, stats.obtenerTotalOmitidos());
+            assertEquals(0, stats.obtenerHallazgosCritical());
+            assertEquals(0, stats.obtenerHallazgosHigh());
+            assertEquals(0, stats.obtenerHallazgosMedium());
+            assertEquals(0, stats.obtenerHallazgosLow());
+            assertEquals(0, stats.obtenerHallazgosInfo());
+            assertEquals(0, stats.obtenerHallazgosDesconocidos());
+        }
+
+        @Test
+        @DisplayName("Reiniciar incrementa version")
+        void reiniciarIncrementaVersion() {
+            int versionInicial = stats.obtenerVersion();
+            stats.reiniciar();
+            assertTrue(stats.obtenerVersion() > versionInicial);
         }
     }
 

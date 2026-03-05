@@ -1,9 +1,9 @@
 package com.burpia.model;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+
 import static org.junit.jupiter.api.Assertions.*;
-
-
 
 @DisplayName("Tarea Model Tests")
 class TareaTest {
@@ -18,6 +18,64 @@ class TareaTest {
         assertEquals("Analisis HTTP", tarea.obtenerTipo());
         assertEquals("https://example.com", tarea.obtenerUrl());
         assertEquals(Tarea.ESTADO_EN_COLA, tarea.obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Constructor con ID nulo lanza excepcion")
+    void testConstructorIdNulo() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new Tarea(null, "Test", "url", Tarea.ESTADO_EN_COLA));
+    }
+
+    @Test
+    @DisplayName("Constructor con ID vacio lanza excepcion")
+    void testConstructorIdVacio() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new Tarea("", "Test", "url", Tarea.ESTADO_EN_COLA));
+        assertThrows(IllegalArgumentException.class, () ->
+                new Tarea("   ", "Test", "url", Tarea.ESTADO_EN_COLA));
+    }
+
+    @Test
+    @DisplayName("Constructor con tipo nulo lanza excepcion")
+    void testConstructorTipoNulo() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new Tarea("id", null, "url", Tarea.ESTADO_EN_COLA));
+    }
+
+    @Test
+    @DisplayName("Constructor con tipo vacio lanza excepcion")
+    void testConstructorTipoVacio() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new Tarea("id", "", "url", Tarea.ESTADO_EN_COLA));
+    }
+
+    @Test
+    @DisplayName("Constructor con URL nula lanza excepcion")
+    void testConstructorUrlNula() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new Tarea("id", "Test", null, Tarea.ESTADO_EN_COLA));
+    }
+
+    @Test
+    @DisplayName("Constructor con URL vacia lanza excepcion")
+    void testConstructorUrlVacia() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new Tarea("id", "Test", "", Tarea.ESTADO_EN_COLA));
+    }
+
+    @Test
+    @DisplayName("Constructor con estado invalido establece ERROR")
+    void testConstructorEstadoInvalido() {
+        Tarea tarea = new Tarea("id", "Test", "url", "EstadoInvalido");
+        assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Constructor con estado nulo establece ERROR")
+    void testConstructorEstadoNulo() {
+        Tarea tarea = new Tarea("id", "Test", "url", null);
+        assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
     }
 
     @Test
@@ -103,6 +161,33 @@ class TareaTest {
     }
 
     @Test
+    @DisplayName("Establecer estado invalido establece ERROR")
+    void testEstablecerEstadoInvalido() {
+        Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
+        tarea.establecerEstado("EstadoInvalido");
+
+        assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Establecer estado nulo establece ERROR")
+    void testEstablecerEstadoNulo() {
+        Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
+        tarea.establecerEstado(null);
+
+        assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Establecer estado vacio establece ERROR")
+    void testEstablecerEstadoVacio() {
+        Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
+        tarea.establecerEstado("");
+
+        assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+    }
+
+    @Test
     @DisplayName("Establecer mensaje info")
     void testMensajeInfo() {
         Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
@@ -122,5 +207,23 @@ class TareaTest {
         assertEquals("https://example.com", fila[1]);
         assertEquals(Tarea.ESTADO_EN_COLA, fila[2]);
         assertNotNull(fila[3]);
+    }
+
+    @Test
+    @DisplayName("Obtener color estado con estado nulo")
+    void testObtenerColorEstadoNulo() {
+        assertEquals(java.awt.Color.BLACK, Tarea.obtenerColorEstado(null));
+    }
+
+    @Test
+    @DisplayName("Obtener color estado con estado vacio")
+    void testObtenerColorEstadoVacio() {
+        assertEquals(java.awt.Color.BLACK, Tarea.obtenerColorEstado(""));
+    }
+
+    @Test
+    @DisplayName("Obtener color estado con estado invalido")
+    void testObtenerColorEstadoInvalido() {
+        assertEquals(java.awt.Color.BLACK, Tarea.obtenerColorEstado("Invalido"));
     }
 }

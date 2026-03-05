@@ -1,5 +1,7 @@
 package com.burpia.config;
 
+import com.burpia.util.Normalizador;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -7,49 +9,112 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ProveedorAI {
+/**
+ * Registro centralizado de proveedores de IA soportados por BurpIA.
+ * <p>
+ * Esta clase proporciona configuraciones predefinidas para múltiples proveedores
+ * de IA, incluyendo URLs de API, modelos disponibles y parámetros por defecto.
+ * </p>
+ *
+ * @see ConfiguracionProveedor
+ * @see Normalizador
+ */
+public final class ProveedorAI {
+
+    /** Nombre del proveedor personalizado para configuraciones custom */
     public static final String PROVEEDOR_CUSTOM = "-- Custom --";
+
+    /** URL por defecto para proveedor custom en inglés */
     public static final String URL_CUSTOM_EN = "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1";
+
+    /** URL por defecto para proveedor custom en español */
     public static final String URL_CUSTOM_ES = "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1";
 
-    public static class ConfiguracionProveedor {
+    /**
+     * Configuración de un proveedor de IA.
+     * <p>
+     * Encapsula todos los parámetros necesarios para conectar con un proveedor
+     * de IA específico.
+     * </p>
+     */
+    public static final class ConfiguracionProveedor {
         private final String urlApi;
         private final String modeloPorDefecto;
         private final List<String> modelosDisponibles;
         private final boolean requiereClaveApi;
         private final int maxTokensPorDefecto;
 
+        /**
+         * Construye una configuración de proveedor.
+         *
+         * @param urlApi URL base de la API del proveedor
+         * @param modeloPorDefecto Modelo a usar por defecto
+         * @param modelosDisponibles Lista de modelos disponibles
+         * @param requiereClaveApi Si el proveedor requiere API key
+         * @param maxTokensPorDefecto Límite de tokens por defecto
+         */
         public ConfiguracionProveedor(String urlApi, String modeloPorDefecto,
                 List<String> modelosDisponibles, boolean requiereClaveApi,
                 int maxTokensPorDefecto) {
             this.urlApi = urlApi;
             this.modeloPorDefecto = modeloPorDefecto;
-            this.modelosDisponibles = new ArrayList<>(modelosDisponibles);
+            this.modelosDisponibles = modelosDisponibles != null
+                    ? new ArrayList<>(modelosDisponibles)
+                    : new ArrayList<>();
             this.requiereClaveApi = requiereClaveApi;
             this.maxTokensPorDefecto = maxTokensPorDefecto;
         }
 
+        /**
+         * Obtiene la URL base de la API del proveedor.
+         *
+         * @return URL de la API
+         */
         public String obtenerUrlApi() {
             return urlApi;
         }
 
+        /**
+         * Obtiene el modelo por defecto para este proveedor.
+         *
+         * @return Nombre del modelo por defecto
+         */
         public String obtenerModeloPorDefecto() {
             return modeloPorDefecto;
         }
 
+        /**
+         * Obtiene la lista de modelos disponibles para este proveedor.
+         * <p>
+         * Retorna una copia defensiva para preservar la inmutabilidad.
+         * </p>
+         *
+         * @return Copia de la lista de modelos disponibles
+         */
         public List<String> obtenerModelosDisponibles() {
             return new ArrayList<>(modelosDisponibles);
         }
 
+        /**
+         * Indica si este proveedor requiere API key para autenticación.
+         *
+         * @return {@code true} si requiere API key, {@code false} en caso contrario
+         */
         public boolean requiereClaveApi() {
             return requiereClaveApi;
         }
 
+        /**
+         * Obtiene el límite de tokens por defecto para este proveedor.
+         *
+         * @return Máximo de tokens por defecto
+         */
         public int obtenerMaxTokensPorDefecto() {
             return maxTokensPorDefecto;
         }
     }
 
+    /** Registro de proveedores disponibles, ordenado por inserción */
     private static final Map<String, ConfiguracionProveedor> PROVEEDORES = new LinkedHashMap<>();
 
     static {
@@ -130,7 +195,7 @@ public class ProveedorAI {
                 4096));
 
         PROVEEDORES.put("Moonshot (Kimi)", new ConfiguracionProveedor(
-                "https://api.moonshot.cn/v1",
+                "https://api.moonshot.ai/v1",
                 "kimi-k2.5",
                 Arrays.asList(
                         "kimi-k2.5",
@@ -157,19 +222,68 @@ public class ProveedorAI {
                 4096));
     }
 
+    /**
+     * Constructor privado para evitar instanciación.
+     * <p>
+     * Esta es una clase de utilidad con solo métodos estáticos.
+     * </p>
+     */
+    private ProveedorAI() {
+        // Clase de utilidad, no instanciable
+    }
+
+    /**
+     * Obtiene la configuración completa de un proveedor por su nombre.
+     *
+     * @param nombre Nombre del proveedor (ej: "OpenAI", "Claude", "Gemini")
+     * @return Configuración del proveedor, o {@code null} si no existe
+     */
     public static ConfiguracionProveedor obtenerProveedor(String nombre) {
+        if (Normalizador.esVacio(nombre)) {
+            return null;
+        }
         return PROVEEDORES.get(nombre);
     }
 
+    /**
+     * Obtiene la lista de nombres de todos los proveedores disponibles.
+     * <p>
+     * El proveedor custom ({@link #PROVEEDOR_CUSTOM}) siempre es el último.
+     * </p>
+     *
+     * @return Lista de nombres de proveedores
+     */
     public static List<String> obtenerNombresProveedores() {
         return new ArrayList<>(PROVEEDORES.keySet());
     }
 
+    /**
+     * Verifica si existe un proveedor con el nombre especificado.
+     *
+     * @param nombre Nombre del proveedor a verificar
+     * @return {@code true} si el proveedor existe, {@code false} en caso contrario
+     */
     public static boolean existeProveedor(String nombre) {
+        if (Normalizador.esVacio(nombre)) {
+            return false;
+        }
         return PROVEEDORES.containsKey(nombre);
     }
 
+    /**
+     * Obtiene la URL de API por defecto para un proveedor.
+     * <p>
+     * Para el proveedor custom, retorna la URL según el idioma de UI especificado.
+     * </p>
+     *
+     * @param nombreProveedor Nombre del proveedor
+     * @param idiomaUi Código de idioma ("es" o "en")
+     * @return URL de API por defecto, o {@code null} si el proveedor no existe
+     */
     public static String obtenerUrlApiPorDefecto(String nombreProveedor, String idiomaUi) {
+        if (Normalizador.esVacio(nombreProveedor)) {
+            return null;
+        }
         if (PROVEEDOR_CUSTOM.equals(nombreProveedor)) {
             return "en".equalsIgnoreCase(idiomaUi) ? URL_CUSTOM_EN : URL_CUSTOM_ES;
         }
@@ -177,13 +291,34 @@ public class ProveedorAI {
         return config != null ? config.obtenerUrlApi() : null;
     }
 
+    /**
+     * Obtiene el modelo por defecto para un proveedor.
+     *
+     * @param nombreProveedor Nombre del proveedor
+     * @return Nombre del modelo por defecto, o {@code null} si el proveedor no existe
+     */
     public static String obtenerModeloPorDefecto(String nombreProveedor) {
+        if (Normalizador.esVacio(nombreProveedor)) {
+            return null;
+        }
         ConfiguracionProveedor config = PROVEEDORES.get(nombreProveedor);
         return config != null ? config.obtenerModeloPorDefecto() : null;
     }
 
+    /**
+     * Obtiene la lista de modelos disponibles para un proveedor.
+     * <p>
+     * Retorna una lista vacía inmutable si el proveedor no existe.
+     * </p>
+     *
+     * @param nombreProveedor Nombre del proveedor
+     * @return Lista de modelos disponibles, o lista vacía si no existe
+     */
     public static List<String> obtenerModelosDisponibles(String nombreProveedor) {
+        if (Normalizador.esVacio(nombreProveedor)) {
+            return Collections.emptyList();
+        }
         ConfiguracionProveedor config = PROVEEDORES.get(nombreProveedor);
-        return config != null ? config.obtenerModelosDisponibles() : new ArrayList<>();
+        return config != null ? config.obtenerModelosDisponibles() : Collections.emptyList();
     }
 }

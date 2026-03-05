@@ -1,9 +1,25 @@
 package com.burpia.model;
+
 import burp.api.montoya.http.message.requests.HttpRequest;
+import com.burpia.util.Normalizador;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
+/**
+ * Resultado de un análisis de seguridad que puede incluir múltiples hallazgos.
+ * <p>
+ * Esta clase encapsula el resultado de analizar una solicitud HTTP con uno o más
+ * proveedores de IA, incluyendo los hallazgos detectados y cualquier error parcial
+ * durante el análisis multi-proveedor.
+ * </p>
+ * <p>
+ * La clase es inmutable: todas las listas se copian defensivamente y se exponen
+ * como listas no modificables.
+ * </p>
+ */
 public class ResultadoAnalisisMultiple {
     private final String url;
     private final List<Hallazgo> hallazgos;
@@ -13,16 +29,16 @@ public class ResultadoAnalisisMultiple {
     /**
      * Constructor completo con información de errores parciales durante análisis multi-proveedor.
      *
-     * @param url URL analizada
-     * @param hallazgos Lista de hallazgos encontrados (puede estar vacía)
-     * @param solicitudHttp Solicitud HTTP analizada
-     * @param proveedoresFallidos Lista de proveedores que fallaron durante el análisis (puede ser null o vacía)
+     * @param url                  URL analizada (puede ser null o vacía)
+     * @param hallazgos            Lista de hallazgos encontrados (puede ser null o vacía)
+     * @param solicitudHttp        Solicitud HTTP analizada (puede ser null)
+     * @param proveedoresFallidos  Lista de proveedores que fallaron durante el análisis (puede ser null o vacía)
      */
     public ResultadoAnalisisMultiple(String url,
                                       List<Hallazgo> hallazgos,
                                       HttpRequest solicitudHttp,
                                       List<String> proveedoresFallidos) {
-        this.url = url;
+        this.url = Normalizador.noEsVacio(url) ? url : "";
         this.hallazgos = hallazgos != null ? new ArrayList<>(hallazgos) : new ArrayList<>();
         this.solicitudHttp = solicitudHttp;
         this.proveedoresFallidos = proveedoresFallidos != null
@@ -32,7 +48,13 @@ public class ResultadoAnalisisMultiple {
 
     /**
      * Constructor para compatibilidad con código existente.
-     * Equivalentes a proveedoresFallidos = vacío (sin errores).
+     * <p>
+     * Equivalente a llamar al constructor completo con proveedoresFallidos vacío.
+     * </p>
+     *
+     * @param url           URL analizada (puede ser null o vacía)
+     * @param hallazgos     Lista de hallazgos encontrados (puede ser null o vacía)
+     * @param solicitudHttp Solicitud HTTP analizada (puede ser null)
      */
     public ResultadoAnalisisMultiple(String url, List<Hallazgo> hallazgos, HttpRequest solicitudHttp) {
         this(url, hallazgos, solicitudHttp, null);
@@ -72,25 +94,45 @@ public class ResultadoAnalisisMultiple {
         return hallazgos.size();
     }
 
+    /**
+     * Obtiene la severidad máxima de todos los hallazgos.
+     * <p>
+     * Los hallazgos nulos en la lista son ignorados.
+     * </p>
+     *
+     * @return La severidad máxima encontrada, o "Info" si no hay hallazgos válidos
+     */
     public String obtenerSeveridadMaxima() {
-        if (hallazgos.isEmpty()) {
-            return "Info";
-        }
+        return hallazgos.stream()
+            .filter(Objects::nonNull)
+            .map(Hallazgo::obtenerSeveridad)
+            .max((s1, s2) -> Integer.compare(
+                Hallazgo.obtenerPesoSeveridad(s1),
+                Hallazgo.obtenerPesoSeveridad(s2)))
+            .orElse(Hallazgo.SEVERIDAD_INFO);
+    }
 
-        int maxPeso = -1;
-        String severidadMax = "Info";
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ResultadoAnalisisMultiple other = (ResultadoAnalisisMultiple) o;
+        return Objects.equals(url, other.url) &&
+               Objects.equals(hallazgos, other.hallazgos) &&
+               Objects.equals(proveedoresFallidos, other.proveedoresFallidos);
+    }
 
-        for (Hallazgo hallazgo : hallazgos) {
-            if (hallazgo == null) {
-                continue;
-            }
-            int peso = Hallazgo.obtenerPesoSeveridad(hallazgo.obtenerSeveridad());
-            if (peso > maxPeso) {
-                maxPeso = peso;
-                severidadMax = hallazgo.obtenerSeveridad();
-            }
-        }
+    @Override
+    public int hashCode() {
+        return Objects.hash(url, hallazgos, proveedoresFallidos);
+    }
 
-        return severidadMax;
+    @Override
+    public String toString() {
+        return "ResultadoAnalisisMultiple{" +
+               "url='" + url + '\'' +
+               ", hallazgos=" + hallazgos.size() +
+               ", proveedoresFallidos=" + proveedoresFallidos +
+               '}';
     }
 }

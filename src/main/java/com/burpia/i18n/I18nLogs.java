@@ -1,8 +1,25 @@
 package com.burpia.i18n;
+
+import com.burpia.util.Normalizador;
+
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utilidad de internacionalización para mensajes de logging.
+ * <p>
+ * Esta clase proporciona traducción automática de mensajes de log de español a inglés
+ * basándose en el idioma configurado en {@link I18nUI}.
+ * </p>
+ * <p>
+ * Utiliza un sistema de reemplazos con patrones regex para palabras simples
+ * y reemplazo directo para frases complejas.
+ * </p>
+ *
+ * @see I18nUI
+ * @see IdiomaUI
+ */
 public final class I18nLogs {
     private static final String[][] REEMPLAZOS_INGLES = new String[][]{
         {"Inicialización", "Initialization"},
@@ -204,15 +221,229 @@ public final class I18nLogs {
         {"ALERTA: Modelo no configurado para", "ALERT: Model is not configured for"},
         {"ALERTA: Clave de API requerida para", "ALERT: API key is required for"},
         {"Configuracion", "Configuration"},
-        {"configuracion", "configuration"}
+        {"configuracion", "configuration"},
+        {"Complemento de Seguridad con IA", "AI Security Extension"},
+        {"[Configuration]", "[Configuration]"},
+        {"[Environment]", "[Environment]"},
+        {"[Multi-Provider Configuration]", "[Multi-Provider Configuration]"},
+        {"[Performance]", "[Performance]"},
+        {"[Agent]", "[Agent]"},
+        {"Proveedor Principal: ", "Main Provider: "},
+        {"Multi-proveedor: ", "Multi-provider: "},
+        {"Concurrencia: ", "Concurrency: "},
+        {"Modo detallado: ", "Verbose mode: "},
+        {"tareas", "tasks"},
+        {"retraso", "delay"},
+        {"max hallazgos: ", "max findings: "},
+        {"Agente: ", "Agent: "},
+        {"Sí", "Yes"},
+        {"No", "No"},
+        {"Burp Suite: ", "Burp Suite: "},
+        {"Java: ", "Java: "},
+        {"SO: ", "OS: "},
+        {"URL de API: ", "API URL: "},
+        {"Clave de API: ", "API Key: "},
+        {"Timeout: global ", "Timeout: global "},
+        {", timeout ", ", timeout "},
+        {"s, modelo ", "s, model "},
+        {" (efectivo: ", " (effective: "},
+        {"Verificación SSL: ", "SSL Verification: "},
+        {"Activado", "ON"},
+        {"Desactivado", "OFF"},
+        {"Modo solo proxy: ", "Proxy-only mode: "},
+        {"Idioma: ", "Language: "},
+        {"Tema: ", "Theme: "},
+        {"Habilitado: ", "Enabled: "},
+        {"Proveedores: ", "Providers: "},
+        {"Orden de ejecución: ", "Execution Order: "},
+        {"Max concurrente: ", "Max concurrent: "},
+        {"Max tareas: ", "Max tasks: "},
+        {"Retención: tareas completas ≤", "Retention: Completed tasks ≤"},
+        {"Tipo: ", "Type: "},
+        {"Binario: ", "Binary: "},
+        {"Consola GUI inicializada", "Console GUI initialized"},
+        {"UI registrada en ", "UI registered in "},
+        {"NOTA: Solo analiza tráfico en Scope. Agrega objetivos en Target > Scope",
+            "NOTE: Only analyzes traffic in Scope. Add targets in Target > Scope"},
+        {"Manejador HTTP inicializado (max concurrente=", "HTTP handler initialized (max concurrent="},
+        {"Inicialización completada exitosamente", "Initialization completed successfully"}
     };
 
+    /**
+     * Mensajes de logging relacionados con el agente Factory Droid.
+     */
     public static final class Agente {
+        private Agente() {
+        }
+
         public static String ERROR_DESHABILITADO() {
             return tr("Agente Factory Droid deshabilitado en ajustes.");
         }
     }
 
+    /**
+     * Mensajes de logging para la fase de inicialización de la extensión.
+     */
+    public static final class Inicializacion {
+        private Inicializacion() {
+        }
+
+        public static String SEPARADOR() {
+            return "==================================================";
+        }
+
+        public static String SECCION_CONFIGURACION() {
+            return tr("[Configuration]");
+        }
+
+        public static String SECCION_ENTORNO() {
+            return tr("[Environment]");
+        }
+
+        public static String SECCION_MULTI_PROVEEDOR() {
+            return tr("[Multi-Provider Configuration]");
+        }
+
+        public static String SECCION_RENDIMIENTO() {
+            return tr("[Performance]");
+        }
+
+        public static String SECCION_AGENTE() {
+            return tr("[Agent]");
+        }
+
+        public static String PROVEEDOR_PRINCIPAL() {
+            return tr("Proveedor Principal: ");
+        }
+
+        public static String MULTI_PROVEEDOR() {
+            return tr("Multi-proveedor: ");
+        }
+
+        public static String CONCURRENCIA() {
+            return tr("Concurrencia: ");
+        }
+
+        public static String MODO_DETALLADO() {
+            return tr("Modo detallado: ");
+        }
+
+        public static String AGENTE() {
+            return tr("Agente: ");
+        }
+
+        public static String TAREAS(String cantidad) {
+            return tr(cantidad) + " " + tr("tareas");
+        }
+
+        public static String RETRASO_SEGUNDOS(String segundos) {
+            return tr("retraso") + " " + segundos + "s";
+        }
+
+        public static String MAX_HALLAZGOS(String cantidad) {
+            return tr("max hallazgos: ") + cantidad;
+        }
+
+        public static String TIMEOUT_SEGUNDOS(String segundos) {
+            return tr("timeout") + " " + segundos + "s";
+        }
+
+        public static String SI() {
+            return tr("Sí");
+        }
+
+        public static String NO() {
+            return tr("No");
+        }
+
+        public static String ENTORNO_BURP_SUITE(String tipo, String version) {
+            return tr("Burp Suite: ") + tipo + " " + version;
+        }
+
+        public static String ENTORNO_JAVA(String version, String vendor) {
+            return tr("Java: ") + version + " (" + vendor + ")";
+        }
+
+        public static String ENTORNO_OS(String nombre, String version, String arch) {
+            return tr("SO: ") + nombre + " " + version + " (" + arch + ")";
+        }
+
+        public static String URL_API(String url) {
+            return tr("URL de API: ") + url;
+        }
+
+        public static String API_KEY(String keySanitizada) {
+            return tr("Clave de API: ") + keySanitizada;
+        }
+
+        public static String TIMEOUT_GLOBAL(String globalSegundos, String modeloSegundos, String efectivoSegundos) {
+            return tr("Timeout: global ") + globalSegundos + "s, modelo " + modeloSegundos + "s (efectivo: " + efectivoSegundos + "s)";
+        }
+
+        public static String SSL_VERIFICACION(boolean activado) {
+            return tr("Verificación SSL: ") + (activado ? tr("Activado") : tr("Desactivado"));
+        }
+
+        public static String MODO_SOLO_PROXY(boolean activado) {
+            return tr("Modo solo proxy: ") + (activado ? tr("Activado") : tr("Desactivado"));
+        }
+
+        public static String IDIOMA(String idioma, String codigo) {
+            return tr("Idioma: ") + idioma + " (" + codigo + ")";
+        }
+
+        public static String TEMA(String tema) {
+            return tr("Tema: ") + tema;
+        }
+
+        public static String MULTI_HABILITADO(boolean habilitado) {
+            return tr("Habilitado: ") + (habilitado ? SI() : NO());
+        }
+
+        public static String PROVEEDORES() {
+            return tr("Proveedores: ");
+        }
+
+        public static String ORDEN_EJECUCION() {
+            return tr("Orden de ejecución: ");
+        }
+
+        public static String CONCURRENCIA_MAX(String max) {
+            return tr("Max concurrente: ") + max;
+        }
+
+        public static String MAX_TAREAS(String max) {
+            return tr("Max tareas: ") + max;
+        }
+
+        public static String RETENCION(String max) {
+            return tr("Retención: tareas completas ≤") + max;
+        }
+
+        public static String AGENTE_TIPO(String tipo) {
+            return tr("Tipo: ") + tipo;
+        }
+
+        public static String AGENTE_BINARIO(String ruta) {
+            return tr("Binario: ") + ruta;
+        }
+
+        public static String UI_REGISTRADA_EN(String tipo, String version) {
+            return tr("UI registrada en ") + tipo + " " + version;
+        }
+
+        public static String INICIALIZACION_COMPLETA() {
+            return tr("Inicialización completada exitosamente");
+        }
+    }
+
+    /**
+     * Representa una entrada de reemplazo para la traducción de mensajes.
+     * <p>
+     * Contiene el texto origen, el texto destino, y opcionalmente un patrón
+     * regex compilado para reemplazos de palabras completas.
+     * </p>
+     */
     private static final class EntradaReemplazo {
         final String origen;
         final String destino;
@@ -243,6 +474,17 @@ public final class I18nLogs {
     private I18nLogs() {
     }
 
+    /**
+     * Traduce un mensaje de logging según el idioma configurado.
+     * <p>
+     * Si el idioma es español, devuelve el mensaje sin cambios.
+     * Si el idioma es inglés, aplica reemplazos de español a inglés.
+     * Para otros idiomas, devuelve el mensaje original.
+     * </p>
+     *
+     * @param mensaje el mensaje a traducir, puede ser {@code null}
+     * @return el mensaje traducido, o cadena vacía si el input es {@code null}
+     */
     public static String tr(String mensaje) {
         if (mensaje == null) {
             return "";
@@ -257,10 +499,31 @@ public final class I18nLogs {
         return aplicarReemplazos(mensaje, REEMPLAZOS_ES_A_EN);
     }
 
+    /**
+     * Devuelve un mensaje técnico sin traducción, sanitizando valores null.
+     * <p>
+     * Este método se utiliza para mensajes que no deben ser traducidos,
+     * como rutas de archivo, URLs, o contenido técnico.
+     * </p>
+     *
+     * @param mensaje el mensaje técnico, puede ser {@code null}
+     * @return el mensaje original, o cadena vacía si el input es {@code null}
+     */
     public static String trTecnico(String mensaje) {
         return mensaje != null ? mensaje : "";
     }
 
+    /**
+     * Aplica una serie de reemplazos a un texto.
+     * <p>
+     * Para palabras simples, usa patrones regex para coincidir palabras completas.
+     * Para frases complejas, usa reemplazo directo de strings.
+     * </p>
+     *
+     * @param texto el texto al que aplicar los reemplazos
+     * @param reemplazos array de entradas de reemplazo a aplicar
+     * @return el texto con todos los reemplazos aplicados
+     */
     private static String aplicarReemplazos(String texto, EntradaReemplazo[] reemplazos) {
         String resultado = texto;
         for (EntradaReemplazo r : reemplazos) {
@@ -273,6 +536,17 @@ public final class I18nLogs {
         return resultado;
     }
 
+    /**
+     * Crea un array de entradas de reemplazo ordenadas por longitud descendente.
+     * <p>
+     * El ordenamiento por longitud asegura que las cadenas más largas se
+     * reemplacen primero, evitando que substrings cortos interfieran con
+     * reemplazos de frases más largas.
+     * </p>
+     *
+     * @param indiceOrigen 0 para ES→EN, 1 para EN→ES
+     * @return array de entradas de reemplazo ordenadas
+     */
     private static EntradaReemplazo[] crearReemplazos(int indiceOrigen) {
         String[][] ordenados = new String[REEMPLAZOS_INGLES.length][2];
         for (int i = 0; i < REEMPLAZOS_INGLES.length; i++) {

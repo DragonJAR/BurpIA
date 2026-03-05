@@ -118,10 +118,12 @@ public class PanelHallazgos extends JPanel {
 
         JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
 
+        // EFICIENCIA: FILTRADO primero - flujo natural de trabajo
         etiquetaBusqueda = new JLabel(I18nUI.Hallazgos.ETIQUETA_BUSCAR());
         etiquetaBusqueda.setFont(EstilosUI.FUENTE_ESTANDAR);
         etiquetaBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
         panelTodosControles.add(etiquetaBusqueda);
+
         campoBusqueda = new JTextField(15);
         campoBusqueda.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
@@ -137,6 +139,10 @@ public class PanelHallazgos extends JPanel {
         botonLimpiarFiltro.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
         panelTodosControles.add(botonLimpiarFiltro);
 
+        // CONFIABILIDAD: Separador visual entre filtrado y exportación
+        panelTodosControles.add(new JLabel("  "));
+
+        // EFICIENCIA: EXPORTACIÓN agrupada - después de filtrar, usuario exporta
         botonExportarCSV = new JButton(I18nUI.Hallazgos.BOTON_EXPORTAR_CSV());
         botonExportarCSV.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonExportarCSV.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
@@ -147,6 +153,10 @@ public class PanelHallazgos extends JPanel {
         botonExportarJSON.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
         panelTodosControles.add(botonExportarJSON);
 
+        // CONFIABILIDAD: Separador visual antes de acción destructiva
+        panelTodosControles.add(new JLabel("  "));
+
+        // CONFIABILIDAD: Acción destructiva AISLADA al final
         botonLimpiarTodo = new JButton(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
         botonLimpiarTodo.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiarTodo.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());

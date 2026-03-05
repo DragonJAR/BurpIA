@@ -1,4 +1,5 @@
 package com.burpia.ui;
+
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.util.RutasBurpIA;
@@ -6,20 +7,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
 import javax.swing.JComboBox;
 import javax.swing.JPasswordField;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-
-import com.burpia.ui.TestDialogUtils;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -262,9 +262,17 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         }
     }
 
+    /**
+     * Espera a que el callback de guardado se ejecute, con timeout y procesamiento del EDT.
+     * Utiliza un bucle con espera activa corta para evitar condiciones de carrera.
+     *
+     * @param guardadoCallback Bandera atómica que indica si el guardado se completó
+     * @throws Exception si ocurre un error durante la espera
+     */
     private void esperarAlGuardado(AtomicBoolean guardadoCallback) throws Exception {
         long inicio = System.currentTimeMillis();
-        while (!guardadoCallback.get() && (System.currentTimeMillis() - inicio) < 5000) {
+        long timeoutMs = 5000;
+        while (!guardadoCallback.get() && (System.currentTimeMillis() - inicio) < timeoutMs) {
             Thread.sleep(50);
             flushEdt();
         }
@@ -277,8 +285,14 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         });
     }
 
+    /**
+     * Fuerza el procesamiento de todos los eventos pendientes en el EDT.
+     * El cuerpo vacío del Runnable es intencional: invokeAndWait bloquea hasta
+     * que todos los eventos pendientes se procesen, sincronizando el estado de la UI.
+     */
     private void flushEdt() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
+            // Cuerpo vacío intencional: fuerza el procesamiento de eventos pendientes
         });
     }
 }

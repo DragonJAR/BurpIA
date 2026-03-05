@@ -1,7 +1,17 @@
 package com.burpia.model;
+
 import com.burpia.ui.EstilosUI;
+import com.burpia.util.Normalizador;
+
 import java.awt.Color;
 
+/**
+ * Modelo que representa una tarea de análisis en la cola de procesamiento.
+ * <p>
+ * Esta clase es thread-safe y utiliza sincronización para proteger el acceso
+ * a estado mutable.
+ * </p>
+ */
 public class Tarea {
     public static final String ESTADO_EN_COLA = "En Cola";
     public static final String ESTADO_ANALIZANDO = "Analizando";
@@ -21,11 +31,30 @@ public class Tarea {
     private long tiempoUltimoInicioAnalisis;
     private final Object candado = new Object();
 
+    /**
+     * Crea una nueva tarea con los parámetros especificados.
+     *
+     * @param id     identificador único de la tarea (no puede ser null o vacío)
+     * @param tipo   tipo de análisis (no puede ser null o vacío)
+     * @param url    URL a analizar (no puede ser null o vacío)
+     * @param estado estado inicial de la tarea (debe ser un estado válido)
+     * @throws IllegalArgumentException si id, tipo o url están vacíos
+     */
     public Tarea(String id, String tipo, String url, String estado) {
+        if (Normalizador.esVacio(id)) {
+            throw new IllegalArgumentException("El ID de la tarea no puede estar vacío");
+        }
+        if (Normalizador.esVacio(tipo)) {
+            throw new IllegalArgumentException("El tipo de tarea no puede estar vacío");
+        }
+        if (Normalizador.esVacio(url)) {
+            throw new IllegalArgumentException("La URL de la tarea no puede estar vacía");
+        }
+
         this.id = id;
         this.tipo = tipo;
         this.url = url;
-        this.estado = estado;
+        this.estado = esEstadoValido(estado) ? estado : ESTADO_ERROR;
         this.tiempoInicio = System.currentTimeMillis();
         this.mensajeInfo = "";
         this.tiempoAcumulado = 0;
@@ -54,11 +83,19 @@ public class Tarea {
         }
     }
 
+    /**
+     * Establece un nuevo estado para la tarea.
+     * <p>
+     * Si el estado nuevo es inválido o vacío, se establece como ERROR.
+     * </p>
+     *
+     * @param estadoNuevo el nuevo estado de la tarea
+     */
     public void establecerEstado(String estadoNuevo) {
         synchronized (candado) {
             String estadoAnterior = this.estado;
 
-            this.estado = (estadoNuevo != null && esEstadoValido(estadoNuevo)) ? estadoNuevo : ESTADO_ERROR;
+            this.estado = (Normalizador.noEsVacio(estadoNuevo) && esEstadoValido(estadoNuevo)) ? estadoNuevo : ESTADO_ERROR;
 
             if (ESTADO_ANALIZANDO.equals(estadoAnterior) && !ESTADO_ANALIZANDO.equals(this.estado)) {
                 if (tiempoUltimoInicioAnalisis > 0) {
@@ -77,28 +114,64 @@ public class Tarea {
         }
     }
 
+    /**
+     * Verifica si un estado es final (no puede cambiar a otro estado).
+     *
+     * @param estado el estado a verificar
+     * @return {@code true} si el estado es COMPLETADO, ERROR o CANCELADO
+     */
     public static boolean esEstadoFinal(String estado) {
         return ESTADO_COMPLETADO.equals(estado) ||
                ESTADO_ERROR.equals(estado) ||
                ESTADO_CANCELADO.equals(estado);
     }
 
+    /**
+     * Verifica si un estado es reintentable.
+     *
+     * @param estado el estado a verificar
+     * @return {@code true} si el estado es ERROR o CANCELADO
+     */
     public static boolean esEstadoReintentable(String estado) {
         return ESTADO_ERROR.equals(estado) || ESTADO_CANCELADO.equals(estado);
     }
 
+    /**
+     * Verifica si un estado puede ser pausado.
+     *
+     * @param estado el estado a verificar
+     * @return {@code true} si el estado es EN_COLA o ANALIZANDO
+     */
     public static boolean esEstadoPausable(String estado) {
         return ESTADO_EN_COLA.equals(estado) || ESTADO_ANALIZANDO.equals(estado);
     }
 
+    /**
+     * Verifica si un estado puede ser reanudado.
+     *
+     * @param estado el estado a verificar
+     * @return {@code true} si el estado es PAUSADO
+     */
     public static boolean esEstadoReanudable(String estado) {
         return ESTADO_PAUSADO.equals(estado);
     }
 
+    /**
+     * Verifica si un estado puede ser cancelado.
+     *
+     * @param estado el estado a verificar
+     * @return {@code true} si el estado es pausable o reanudable
+     */
     public static boolean esEstadoCancelable(String estado) {
         return esEstadoPausable(estado) || esEstadoReanudable(estado);
     }
 
+    /**
+     * Verifica si un estado puede ser eliminado de la cola.
+     *
+     * @param estado el estado a verificar
+     * @return {@code true} si el estado es final
+     */
     public static boolean esEstadoEliminable(String estado) {
         return esEstadoFinal(estado);
     }
@@ -160,8 +233,17 @@ public class Tarea {
         };
     }
 
+    /**
+     * Obtiene el color asociado a un estado de tarea.
+     *
+     * @param estado el estado de la tarea
+     * @return el color correspondiente al estado, o negro si el estado es inválido
+     */
     public static Color obtenerColorEstado(String estado) {
-        if (estado == null) return Color.BLACK;
+        if (Normalizador.esVacio(estado) || !esEstadoValido(estado)) {
+            return Color.BLACK;
+        }
+
         switch (estado) {
             case ESTADO_EN_COLA:
                 return EstilosUI.COLOR_TASK_EN_COLA;
@@ -180,6 +262,12 @@ public class Tarea {
         }
     }
 
+    /**
+     * Verifica si un estado es válido.
+     *
+     * @param estado el estado a verificar
+     * @return {@code true} si el estado es uno de los estados definidos
+     */
     public static boolean esEstadoValido(String estado) {
         return ESTADO_EN_COLA.equals(estado) ||
                ESTADO_ANALIZANDO.equals(estado) ||

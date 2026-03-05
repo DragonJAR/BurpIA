@@ -163,7 +163,11 @@ class ManejadorHttpBurpIATest {
     @Test
     @DisplayName("Nota de scope incluye guia de Target > Scope")
     void testNotaScopeIncluyeGuia() {
-        SalidaManejador salida = crearManejadorConSalida(null, new ConfiguracionAPI());
+        // CONFIABILIDAD: Establecer idioma explícitamente para que el test sea determinista
+        com.burpia.i18n.I18nUI.establecerIdioma("es");
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerDetallado(true); // Habilitar modo detallado para ver notas de scope
+        SalidaManejador salida = crearManejadorConSalida(null, config);
         String info = salida.stdout.toString();
         assertTrue(info.contains("Target > Scope"));
     }
@@ -190,7 +194,11 @@ class ManejadorHttpBurpIATest {
 
     private SalidaManejador crearManejadorConSalida(MontoyaApi api, ConfiguracionAPI config) {
         ConfiguracionAPI configFinal = config != null ? config : new ConfiguracionAPI();
-        configFinal.establecerDetallado(false);
+        // CONFIABILIDAD: Solo sobrescribir detallado si no se pasó una configuración explícita
+        // Esto permite que los tests controlen el modo detallado según sea necesario
+        if (config == null) {
+            configFinal.establecerDetallado(false);
+        }
         StringWriter stdoutBuffer = new StringWriter();
         StringWriter stderrBuffer = new StringWriter();
         ManejadorHttpBurpIA manejador = new ManejadorHttpBurpIA(

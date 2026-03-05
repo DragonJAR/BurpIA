@@ -176,9 +176,7 @@ public class DialogoDetalleHallazgo extends JDialog {
         if (hallazgoOriginal != null) {
             resultado = hallazgoOriginal.editar(nuevaUrl, nuevoTitulo, nuevaDescripcion, nuevaSeveridad, nuevaConfianza);
         } else {
-            resultado = new Hallazgo(nuevaUrl, nuevoTitulo, nuevaDescripcion,
-                Hallazgo.normalizarSeveridad(nuevaSeveridad),
-                Hallazgo.normalizarConfianza(nuevaConfianza));
+            resultado = new Hallazgo(nuevaUrl, nuevoTitulo, nuevaDescripcion, nuevaSeveridad, nuevaConfianza);
         }
 
         if (alGuardar != null) {

@@ -358,11 +358,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerTodasLasRutasBinario(Map<String, String> rutas) {
-        this.rutasBinarioPorAgente = rutas != null ? nuevasRutas(rutas) : new HashMap<>();
-    }
-
-    private Map<String, String> nuevasRutas(Map<String, String> map) {
-        return new HashMap<>(map);
+        this.rutasBinarioPorAgente = rutas != null ? new HashMap<>(rutas) : new HashMap<>();
     }
 
     public String obtenerAgentePreflightPrompt() {
@@ -394,7 +390,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerNombreFuenteEstandar(String nombre) {
-        this.nombreFuenteEstandar = nombre;
+        this.nombreFuenteEstandar = Normalizador.noEsVacio(nombre) ? nombre : FUENTE_ESTANDAR_DEFECTO;
     }
 
     public int obtenerTamanioFuenteEstandar() {
@@ -402,7 +398,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerTamanioFuenteEstandar(int tamanio) {
-        this.tamanioFuenteEstandar = tamanio;
+        this.tamanioFuenteEstandar = tamanio > 0 ? tamanio : TAMANIO_FUENTE_ESTANDAR_DEFECTO;
     }
 
     public String obtenerNombreFuenteMono() {
@@ -410,7 +406,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerNombreFuenteMono(String nombre) {
-        this.nombreFuenteMono = nombre;
+        this.nombreFuenteMono = Normalizador.noEsVacio(nombre) ? nombre : FUENTE_MONO_DEFECTO;
     }
 
     public int obtenerTamanioFuenteMono() {
@@ -418,7 +414,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerTamanioFuenteMono(int tamanio) {
-        this.tamanioFuenteMono = tamanio;
+        this.tamanioFuenteMono = tamanio > 0 ? tamanio : TAMANIO_FUENTE_MONO_DEFECTO;
     }
 
     public void restaurarFuentesPorDefecto() {
@@ -1317,7 +1313,6 @@ public class ConfiguracionAPI {
         snapshot.maxTokensPorProveedor = new HashMap<>(this.maxTokensPorProveedor);
         snapshot.tiempoEsperaPorModelo = new HashMap<>(this.tiempoEsperaPorModelo);
 
-        // CONFIABILIDAD: Copiar campos de configuración faltantes en snapshot
         snapshot.maximoTareasTabla = this.maximoTareasTabla;
         snapshot.multiProveedorHabilitado = this.multiProveedorHabilitado;
         if (this.proveedoresMultiConsulta != null && !this.proveedoresMultiConsulta.isEmpty()) {
@@ -1336,6 +1331,7 @@ public class ConfiguracionAPI {
         this.retrasoSegundos = origen.retrasoSegundos;
         this.maximoConcurrente = origen.maximoConcurrente;
         this.maximoHallazgosTabla = origen.maximoHallazgosTabla;
+        this.maximoTareasTabla = origen.maximoTareasTabla;
         this.detallado = origen.detallado;
         this.proveedorAI = origen.proveedorAI;
         this.tiempoEsperaAI = origen.tiempoEsperaAI;

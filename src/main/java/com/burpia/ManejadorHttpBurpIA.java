@@ -145,8 +145,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             configSegura.obtenerRetrasoSegundos(),
             configSegura.esDetallado()
         ));
-        registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS());
-        registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS_ACCION());
+        // EFICIENCIA: Solo registrar notas de scope en modo detallado
+        if (configSegura.esDetallado()) {
+            registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS());
+            registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS_ACCION());
+        }
         registrarEstadoInicialLlM();
     }
 
@@ -471,16 +474,17 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private void ejecutarAnalisisExistente(String tareaId,
                                           SolicitudAnalisis solicitudAnalisis,
                                           String evidenciaId) {
-        if (tareaId == null || solicitudAnalisis == null) {
+        // CONFIABILIDAD: Usar Normalizador.esVacio() para Strings (principio DRY)
+        if (Normalizador.esVacio(tareaId) || solicitudAnalisis == null) {
             return;
         }
 
         final String url = solicitudAnalisis.obtenerUrl();
-        final AtomicReference<String> tareaIdRef = new AtomicReference<>(tareaId);
+        final String tareaIdFinal = tareaId;
         if (!puedeIniciarAnalisis("Reintento", url)) {
-            if (gestorTareas != null && tareaId != null) {
+            if (gestorTareas != null) {
                 gestorTareas.actualizarTarea(
-                    tareaId,
+                    tareaIdFinal,
                     Tarea.ESTADO_ERROR,
                     I18nUI.Consola.TAREA_BLOQUEADA_CONFIG_LLM()
                 );
@@ -494,6 +498,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             }
         });
 
+        // Usar AtomicReference solo donde es necesario (en ManejadorResultadoAI para consistencia con callback)
+        final AtomicReference<String> tareaIdRef = new AtomicReference<>(tareaIdFinal);
+
         AnalizadorAI analizador = new AnalizadorAI(
             solicitudAnalisis,
             config.crearSnapshot(),
@@ -502,50 +509,38 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             limitador,
             new ManejadorResultadoAI(tareaIdRef, url, evidenciaId),
             () -> {
-                final String id = tareaIdRef.get();
-                if (gestorTareas != null && id != null) {
-                    boolean marcada = gestorTareas.marcarTareaAnalizando(id, "Analizando");
+                // CONFIABILIDAD: Usar Normalizador.noEsVacio() para Strings
+                if (gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal)) {
+                    boolean marcada = gestorTareas.marcarTareaAnalizando(tareaIdFinal, "Analizando");
                     if (!marcada) {
-                        rastrear("No se pudo marcar tarea como analizando (estado no valido): " + id);
+                        rastrear("No se pudo marcar tarea como analizando (estado no valido): " + tareaIdFinal);
                     }
                 }
             },
             gestorConsola,
-            () -> {
-                final String id = tareaIdRef.get();
-                return gestorTareas != null && id != null && gestorTareas.estaTareaCancelada(id);
-            },
-            () -> {
-                final String id = tareaIdRef.get();
-                return gestorTareas != null && id != null && gestorTareas.estaTareaPausada(id);
-            },
+            () -> gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal) && gestorTareas.estaTareaCancelada(tareaIdFinal),
+            () -> gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal) && gestorTareas.estaTareaPausada(tareaIdFinal),
             controlBackpressure
         );
 
         Future<?> future = null;
-        String id = tareaIdRef.get();
+        String id = tareaIdFinal;
 
         try {
             // Almacenar analizador ANTES de ejecutar para permitir cancelación inmediata
-            if (id != null) {
-                analizadoresActivos.put(id, analizador);
-            }
+            analizadoresActivos.put(id, analizador);
 
             future = executorService.submit(analizador);
-            if (id != null) {
-                ejecucionesActivas.put(id, future);
-            }
+            ejecucionesActivas.put(id, future);
             registrar("Hilo de analisis iniciado para: " + url + " (ID: " + id + ")");
             rastrearEstadoCola();
         } catch (RejectedExecutionException ex) {
             // La cola está saturada, marcar error y limpiar recursos
-            if (id != null) {
-                analizadoresActivos.remove(id);
-                finalizarEjecucionActiva(id);
-            }
+            analizadoresActivos.remove(id);
+            finalizarEjecucionActiva(id);
             contextosReintento.remove(id);
             eliminarEvidenciaSiDisponible(evidenciaId);
-            if (gestorTareas != null && id != null) {
+            if (gestorTareas != null) {
                 gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Descartada por saturación de cola");
             }
             if (estadisticas != null) {
@@ -554,8 +549,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             registrarError("Cola de análisis saturada, solicitud descartada: " + url);
         } catch (Exception ex) {
             // Cualquier otra excepción durante el submit
-            if (id != null) {
-                analizadoresActivos.remove(id);
+            analizadoresActivos.remove(id);
+            if (gestorTareas != null) {
                 gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error al iniciar análisis: " + ex.getMessage());
             }
             finalizarEjecucionActiva(id);
@@ -662,8 +657,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             String tareaId = entry.getKey();
             ContextoReintento contexto = entry.getValue();
 
-            // Defensive: validar null
-            if (tareaId == null || contexto == null) {
+            // CONFIABILIDAD: Usar Normalizador.esVacio() para Strings (principio DRY)
+            if (Normalizador.esVacio(tareaId) || contexto == null) {
                 it.remove();
                 continue;
             }
@@ -872,13 +867,15 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             boolean multiHabilitado = config.esMultiProveedorHabilitado();
             List<String> proveedores = config.obtenerProveedoresMultiConsulta();
 
-            // LOG DE DIAGNÓSTICO: Siempre visible
-            rastrear("DIAGNOSTICO: Configuración multi-proveedor al inicio:");
-            rastrear("DIAGNOSTICO:   - Habilitado: " + multiHabilitado);
-            rastrear("DIAGNOSTICO:   - Proveedores: " +
-                     (proveedores != null ? proveedores.size() + " elemento(s)" : "null"));
-            if (proveedores != null && !proveedores.isEmpty()) {
-                rastrear("DIAGNOSTICO:   - Lista: " + String.join(", ", proveedores));
+            // CONFIABILIDAD: Logs de diagnóstico solo en modo detallado
+            if (config.esDetallado()) {
+                rastrear("DIAGNOSTICO: Configuración multi-proveedor al inicio:");
+                rastrear("DIAGNOSTICO:   - Habilitado: " + multiHabilitado);
+                rastrear("DIAGNOSTICO:   - Proveedores: " +
+                         (proveedores != null ? proveedores.size() + " elemento(s)" : "null"));
+                if (proveedores != null && !proveedores.isEmpty()) {
+                    rastrear("DIAGNOSTICO:   - Lista: " + String.join(", ", proveedores));
+                }
             }
 
             if (multiHabilitado && proveedores != null && proveedores.size() > 1) {
@@ -901,10 +898,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             }
 
             // Caso normal: proveedor único
-            if (multiHabilitado) {
-                registrar("AVISO: Multi-proveedor está habilitado pero solo hay " +
-                         (proveedores != null ? proveedores.size() : 0) +
-                         " proveedor(es) configurado(s). Se usará proveedor único: " + config.obtenerProveedorAI());
+            // CONFIABILIDAD: Solo advertir sobre multi-proveedor en modo detallado
+            if (multiHabilitado && config.esDetallado()) {
+                int numProveedores = proveedores != null ? proveedores.size() : 0;
+                if (numProveedores <= 1) {
+                    registrar("AVISO: Multi-proveedor habilitado con " + numProveedores +
+                             " proveedor(s). Se usará proveedor único: " + config.obtenerProveedorAI());
+                }
             }
 
             registrar(
@@ -1184,7 +1184,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
                 if (estadisticas != null) estadisticas.incrementarAnalizados();
 
-                if (gestorTareas != null && id != null) {
+                // CONFIABILIDAD: Usar Normalizador.noEsVacio() para Strings
+                if (gestorTareas != null && Normalizador.noEsVacio(id)) {
                     gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
                         "Completado: " + (resultado != null ? resultado.obtenerNumeroHallazgos() : 0) + " hallazgos");
                 }
@@ -1227,7 +1228,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 }
 
                 if (estadisticas != null) estadisticas.incrementarErrores();
-                if (gestorTareas != null && id != null) {
+                // CONFIABILIDAD: Usar Normalizador.noEsVacio() para Strings
+                if (gestorTareas != null && Normalizador.noEsVacio(id)) {
                     gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error: " + (error != null ? error : "Error desconocido"));
                 }
                 registrarError("Analisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
@@ -1242,7 +1244,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             final String id = tareaIdRef.get();
 
             try {
-                if (gestorTareas != null && id != null) {
+                // CONFIABILIDAD: Usar Normalizador.noEsVacio() para Strings
+                if (gestorTareas != null && Normalizador.noEsVacio(id)) {
                     gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
                 }
                 registrar("Analisis cancelado: " + url);

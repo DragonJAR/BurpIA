@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import javax.swing.*;
 import java.awt.event.ActionListener;
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -15,14 +16,15 @@ import static org.mockito.Mockito.mock;
 @DisplayName("PanelHallazgos Limpiar Todo Tests")
 class PanelHallazgosLimpiarTodoTest {
 
+    private static final String CAMPO_BOTON_LIMPIAR_TODO = "botonLimpiarTodo";
+    private static final String CAMPO_MODELO = "modelo";
+
     @Test
     @DisplayName("Botón limpiar todo existe y es clickable")
     void testBotonLimpiarTodoExiste() throws Exception {
-        // Arrange & Act
         PanelHallazgos panel = crearPanel();
-        JButton botonLimpiarTodo = obtenerBotonLimpiarTodo(panel);
+        JButton botonLimpiarTodo = obtenerCampo(panel, CAMPO_BOTON_LIMPIAR_TODO, JButton.class);
 
-        // Assert
         assertNotNull(botonLimpiarTodo);
         assertTrue(botonLimpiarTodo.isEnabled());
         assertNotNull(botonLimpiarTodo.getText());
@@ -32,113 +34,94 @@ class PanelHallazgosLimpiarTodoTest {
     @Test
     @DisplayName("Botón limpiar todo tiene action listener configurado")
     void testBotonLimpiarTodoTieneActionListener() throws Exception {
-        // Arrange
         PanelHallazgos panel = crearPanel();
-        JButton botonLimpiarTodo = obtenerBotonLimpiarTodo(panel);
+        JButton botonLimpiarTodo = obtenerCampo(panel, CAMPO_BOTON_LIMPIAR_TODO, JButton.class);
 
-        // Act
         ActionListener[] listeners = botonLimpiarTodo.getListeners(ActionListener.class);
 
-        // Assert
         assertTrue(listeners.length > 0, "El botón debe tener al menos un ActionListener");
     }
 
     @Test
     @DisplayName("Modelo de tabla puede eliminar todos los hallazgos")
     void testModeloTablaPuedeEliminarTodos() throws Exception {
-        // Arrange
         PanelHallazgos panel = crearPanel();
-        ModeloTablaHallazgos modelo = obtenerModeloTabla(panel);
+        ModeloTablaHallazgos modelo = obtenerCampo(panel, CAMPO_MODELO, ModeloTablaHallazgos.class);
 
-        // Agregar algunos hallazgos
-        Hallazgo h1 = new Hallazgo("https://test1.com", "Test 1", "Desc 1", "High", "Medium");
-        Hallazgo h2 = new Hallazgo("https://test2.com", "Test 2", "Desc 2", "Medium", "Low");
-        Hallazgo h3 = new Hallazgo("https://test3.com", "Test 3", "Desc 3", "Low", "High");
-
-        SwingUtilities.invokeAndWait(() -> {
-            modelo.agregarHallazgo(h1);
-            modelo.agregarHallazgo(h2);
-            modelo.agregarHallazgo(h3);
-        });
+        modelo.agregarHallazgos(List.of(
+            new Hallazgo("https://test1.com", "Test 1", "Desc 1", "High", "Medium"),
+            new Hallazgo("https://test2.com", "Test 2", "Desc 2", "Medium", "Low"),
+            new Hallazgo("https://test3.com", "Test 3", "Desc 3", "Low", "High")
+        ));
         flushEdt();
 
-        int hallazgosAntes = modelo.getRowCount();
-        assertTrue(hallazgosAntes >= 3, "Debe haber al menos 3 hallazgos");
+        assertTrue(modelo.getRowCount() >= 3, "Debe haber al menos 3 hallazgos");
 
-        // Act - Limpiar todo
         SwingUtilities.invokeAndWait(modelo::limpiar);
         flushEdt();
 
-        // Assert
         assertEquals(0, modelo.getRowCount(), "Todos los hallazgos deben ser eliminados");
     }
 
     @Test
     @DisplayName("Limpiar todo actualiza estadísticas del modelo")
     void testLimpiarTodoActualizaEstadisticas() throws Exception {
-        // Arrange
         PanelHallazgos panel = crearPanel();
-        ModeloTablaHallazgos modelo = obtenerModeloTabla(panel);
+        ModeloTablaHallazgos modelo = obtenerCampo(panel, CAMPO_MODELO, ModeloTablaHallazgos.class);
 
-        // Agregar hallazgos de diferentes severidades
-        SwingUtilities.invokeAndWait(() -> {
-            modelo.agregarHallazgo(new Hallazgo("https://crit.com", "Critical", "Desc", "Critical", "High"));
-            modelo.agregarHallazgo(new Hallazgo("https://high.com", "High", "Desc", "High", "Medium"));
-            modelo.agregarHallazgo(new Hallazgo("https://med.com", "Medium", "Desc", "Medium", "Low"));
-        });
+        modelo.agregarHallazgos(List.of(
+            new Hallazgo("https://crit.com", "Critical", "Desc", "Critical", "High"),
+            new Hallazgo("https://high.com", "High", "Desc", "High", "Medium"),
+            new Hallazgo("https://med.com", "Medium", "Desc", "Medium", "Low")
+        ));
         flushEdt();
 
-        int hallazgosAntes = modelo.getRowCount();
-        assertTrue(hallazgosAntes >= 3, "Debe haber al menos 3 hallazgos");
+        int[] estadisticasAntes = modelo.obtenerEstadisticasVisibles();
+        assertEquals(3, estadisticasAntes[0], "Debe haber 3 hallazgos totales antes de limpiar");
 
-        // Act
         SwingUtilities.invokeAndWait(modelo::limpiar);
         flushEdt();
 
-        // Assert
+        int[] estadisticasDespues = modelo.obtenerEstadisticasVisibles();
         assertEquals(0, modelo.getRowCount(), "No debe haber hallazgos después de limpiar");
+        assertArrayEquals(new int[6], estadisticasDespues, "Todas las estadísticas deben ser cero");
     }
 
     @Test
     @DisplayName("Limpiar todo con tabla vacía no causa errores")
     void testLimpiarTodoConTablaVacia() throws Exception {
-        // Arrange
         PanelHallazgos panel = crearPanel();
-        ModeloTablaHallazgos modelo = obtenerModeloTabla(panel);
+        ModeloTablaHallazgos modelo = obtenerCampo(panel, CAMPO_MODELO, ModeloTablaHallazgos.class);
 
-        // Asegurar que está vacío
         SwingUtilities.invokeAndWait(modelo::limpiar);
         flushEdt();
 
         assertEquals(0, modelo.getRowCount(), "La tabla debe estar vacía");
 
-        // Act - Limpiar de nuevo (no debe causar error)
-        SwingUtilities.invokeAndWait(modelo::limpiar);
-        flushEdt();
+        assertDoesNotThrow(() -> {
+            SwingUtilities.invokeAndWait(modelo::limpiar);
+            flushEdt();
+        });
 
-        // Assert
         assertEquals(0, modelo.getRowCount(), "La tabla debe seguir vacía");
     }
 
-    // ========== Helper Methods DRY ==========
+    // Métodos auxiliares
 
     private PanelHallazgos crearPanel() throws Exception {
-        MontoyaApi api = mock(burp.api.montoya.MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         final PanelHallazgos[] holder = new PanelHallazgos[1];
         SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, new ModeloTablaHallazgos(100), false));
-        return holder[0];
+        PanelHallazgos panel = holder[0];
+        assertNotNull(panel, "El panel debe haberse creado correctamente");
+        return panel;
     }
 
-    private JButton obtenerBotonLimpiarTodo(PanelHallazgos panel) throws Exception {
-        Field field = PanelHallazgos.class.getDeclaredField("botonLimpiarTodo");
+    @SuppressWarnings("unchecked")
+    private <T> T obtenerCampo(Object target, String nombreCampo, Class<T> tipo) throws Exception {
+        Field field = target.getClass().getDeclaredField(nombreCampo);
         field.setAccessible(true);
-        return (JButton) field.get(panel);
-    }
-
-    private ModeloTablaHallazgos obtenerModeloTabla(PanelHallazgos panel) throws Exception {
-        Field field = PanelHallazgos.class.getDeclaredField("modelo");
-        field.setAccessible(true);
-        return (ModeloTablaHallazgos) field.get(panel);
+        return (T) field.get(target);
     }
 
     private void flushEdt() throws Exception {

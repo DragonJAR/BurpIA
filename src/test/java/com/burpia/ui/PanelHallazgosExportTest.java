@@ -42,10 +42,10 @@ class PanelHallazgosExportTest {
         Hallazgo hallazgo = new Hallazgo(
             "10:00\"\\\n\t",
             "https://example.com/p?q=\"v\"\n",
-            "Titulo especial",
+            "Titulo \"especial\"\n",
             "Linea1\r\nLinea2\t\\\"",
-            "High\"\n",
-            "Low\\",
+            "High",
+            "Low",
             null
         );
 
@@ -53,10 +53,10 @@ class PanelHallazgosExportTest {
 
         assertTrue(json.contains("\"hora\": \"10:00\\\"\\\\\\n\\t\""));
         assertTrue(json.contains("\"url\": \"https://example.com/p?q=\\\"v\\\"\\n\""));
-        assertTrue(json.contains("\"titulo\": \"Titulo especial\""));
+        assertTrue(json.contains("\"titulo\": \"Titulo \\\"especial\\\"\\n\""));
         assertTrue(json.contains("\"hallazgo\": \"Linea1\\r\\nLinea2\\t\\\\\\\"\""));
-        assertTrue(json.contains("\"severidad\": \"High\\\"\\n\""));
-        assertTrue(json.contains("\"confianza\": \"Low\\\\\""));
+        assertTrue(json.contains("\"severidad\": \"High\""));
+        assertTrue(json.contains("\"confianza\": \"Low\""));
     }
 
     private PanelHallazgos crearPanel() throws Exception {

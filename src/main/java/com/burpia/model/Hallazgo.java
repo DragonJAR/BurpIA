@@ -4,6 +4,7 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.Normalizador;
 import java.util.Locale;
+import java.util.Objects;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -95,8 +96,8 @@ public class Hallazgo {
         this.url = url;
         this.titulo = titulo;
         this.hallazgo = hallazgo;
-        this.severidad = severidad;
-        this.confianza = confianza;
+        this.severidad = normalizarSeveridad(severidad);
+        this.confianza = normalizarConfianza(confianza);
         this.solicitudHttp = solicitudHttp;
         this.evidenciaHttp = evidenciaHttp;
         this.evidenciaId = evidenciaId;
@@ -196,8 +197,8 @@ public class Hallazgo {
             nuevaUrl,
             nuevoTitulo,
             nuevaDescripcion,
-            normalizarSeveridad(nuevaSeveridad),
-            normalizarConfianza(nuevaConfianza),
+            nuevaSeveridad,
+            nuevaConfianza,
             solicitudHttp,
             evidenciaHttp,
             evidenciaId
@@ -306,5 +307,35 @@ public class Hallazgo {
             return CONFIANZA_BAJA;
         }
         return valorPorDefecto;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Hallazgo other = (Hallazgo) o;
+        return Objects.equals(horaDescubrimiento, other.horaDescubrimiento) &&
+               Objects.equals(url, other.url) &&
+               Objects.equals(titulo, other.titulo) &&
+               Objects.equals(hallazgo, other.hallazgo) &&
+               Objects.equals(severidad, other.severidad) &&
+               Objects.equals(confianza, other.confianza) &&
+               Objects.equals(evidenciaId, other.evidenciaId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(horaDescubrimiento, url, titulo, hallazgo, severidad, confianza, evidenciaId);
+    }
+
+    @Override
+    public String toString() {
+        return "Hallazgo{" +
+               "hora='" + horaDescubrimiento + '\'' +
+               ", url='" + url + '\'' +
+               ", titulo='" + titulo + '\'' +
+               ", severidad='" + severidad + '\'' +
+               ", confianza='" + confianza + '\'' +
+               '}';
     }
 }

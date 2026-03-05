@@ -23,103 +23,162 @@ class PanelConsolaLimpiarTest {
     @Test
     @DisplayName("Botón limpiar existe y es clickable")
     void testBotonLimpiarExiste() throws Exception {
-        // Arrange & Act
         PanelConsola panel = crearPanel();
-        JButton botonLimpiar = obtenerBotonLimpiar(panel);
+        try {
+            JButton botonLimpiar = obtenerBotonLimpiar(panel);
 
-        // Assert
-        assertNotNull(botonLimpiar);
-        assertTrue(botonLimpiar.isEnabled());
-        assertEquals(I18nUI.Consola.BOTON_LIMPIAR(), botonLimpiar.getText());
-
-        panel.destruir();
+            assertNotNull(botonLimpiar);
+            assertTrue(botonLimpiar.isEnabled());
+            assertEquals(I18nUI.Consola.BOTON_LIMPIAR(), botonLimpiar.getText());
+        } finally {
+            panel.destruir();
+        }
     }
 
     @Test
-    @DisplayName("Click en botón limpiar tiene action listener configurado")
-    void testClickLimpiarConLogsRequiereConfirmacion() throws Exception {
-        // Arrange
+    @DisplayName("Botón limpiar tiene action listener configurado")
+    void testBotonLimpiarTieneActionListener() throws Exception {
         PanelConsola panel = crearPanel();
-        GestorConsolaGUI gestor = panel.obtenerGestorConsola();
+        try {
+            GestorConsolaGUI gestor = panel.obtenerGestorConsola();
 
-        // Agregar logs
-        gestor.registrarInfo("Log 1");
-        gestor.registrarInfo("Log 2");
-        gestor.registrarInfo("Log 3");
+            gestor.registrarInfo("Log 1");
+            gestor.registrarInfo("Log 2");
+            gestor.registrarInfo("Log 3");
 
-        int logsAntes = gestor.obtenerTotalLogs();
-        assertTrue(logsAntes >= 3, "Debe haber al menos 3 logs");
+            int logsAntes = gestor.obtenerTotalLogs();
+            assertTrue(logsAntes >= 3, "Debe haber al menos 3 logs");
 
-        // Act - Verificar que el botón tiene action listener
-        JButton botonLimpiar = obtenerBotonLimpiar(panel);
-        ActionListener[] listeners = botonLimpiar.getListeners(ActionListener.class);
+            JButton botonLimpiar = obtenerBotonLimpiar(panel);
+            ActionListener[] listeners = botonLimpiar.getListeners(ActionListener.class);
 
-        // Assert
-        assertTrue(listeners.length > 0, "El botón debe tener al menos un ActionListener");
-
-        panel.destruir();
+            assertTrue(listeners.length > 0, "El botón debe tener al menos un ActionListener");
+        } finally {
+            panel.destruir();
+        }
     }
 
     @Test
-    @DisplayName("Gestor de consola responde a limpiarConsola")
+    @DisplayName("Gestor de consola responde a limpiarConsola reseteando contadores")
     void testGestorConsolaRespondeALimpiar() throws Exception {
-        // Arrange
         PanelConsola panel = crearPanel();
-        GestorConsolaGUI gestor = panel.obtenerGestorConsola();
+        try {
+            GestorConsolaGUI gestor = panel.obtenerGestorConsola();
 
-        // Agregar logs
-        gestor.registrarInfo("Log 1");
-        gestor.registrarInfo("Log 2");
-        assertTrue(gestor.obtenerTotalLogs() >= 2, "Debe haber al menos 2 logs");
+            gestor.registrarInfo("Log 1");
+            gestor.registrarInfo("Log 2");
+            gestor.registrarError("Error 1");
+            assertTrue(gestor.obtenerTotalLogs() >= 3, "Debe haber al menos 3 logs");
 
-        // Act
-        gestor.limpiarConsola();
-        flushEdt();
+            gestor.limpiarConsola();
+            flushEdt();
 
-        // Assert
-        // limpiarConsola() puede agregar un log de confirmación, así que verificamos
-        // que el número de logs disminuyó significativamente
-        int logsDespues = gestor.obtenerTotalLogs();
-        assertTrue(logsDespues <= 1, "Debe haber 0 o 1 logs después de limpiar (log de confirmación)");
-
-        panel.destruir();
+            assertEquals(0, gestor.obtenerTotalLogs(), "Total de logs debe ser 0 después de limpiar");
+            assertEquals(0, gestor.obtenerContadorInfo(), "Contador info debe ser 0 después de limpiar");
+            assertEquals(0, gestor.obtenerContadorError(), "Contador error debe ser 0 después de limpiar");
+            assertEquals(0, gestor.obtenerContadorVerbose(), "Contador verbose debe ser 0 después de limpiar");
+        } finally {
+            panel.destruir();
+        }
     }
 
     @Test
-    @DisplayName("Limpiar actualiza resumen")
+    @DisplayName("Limpiar actualiza resumen a cero")
     void testLimpiarActualizaResumen() throws Exception {
-        // Arrange
         PanelConsola panel = crearPanel();
-        GestorConsolaGUI gestor = panel.obtenerGestorConsola();
-        JLabel etiquetaResumen = obtenerEtiquetaResumen(panel);
+        try {
+            GestorConsolaGUI gestor = panel.obtenerGestorConsola();
+            JLabel etiquetaResumen = obtenerEtiquetaResumen(panel);
 
-        // Limpiar para empezar desde un estado conocido
-        gestor.limpiarConsola();
+            // Limpiar primero para eliminar el log de inicialización del constructor
+            SwingUtilities.invokeAndWait(() -> gestor.limpiarConsola());
+            flushEdt();
 
-        // Agregar logs
-        gestor.registrarInfo("Info");
-        gestor.registrarError("Error");
-        gestor.registrarVerbose("Verbose");
+            // Agregar logs de prueba
+            gestor.registrarInfo("Info");
+            gestor.registrarError("Error");
+            gestor.registrarVerbose("Verbose");
 
-        // Forzar actualización del resumen
-        SwingUtilities.invokeAndWait(panel::aplicarIdioma);
-        flushEdt();
+            // Forzar actualización del resumen
+            SwingUtilities.invokeAndWait(panel::aplicarIdioma);
+            flushEdt();
 
-        String resumenAntes = etiquetaResumen.getText();
-        assertTrue(resumenAntes.contains("Total:"), "Resumen debe mostrar total antes de limpiar");
+            String resumenAntes = etiquetaResumen.getText();
+            assertTrue(resumenAntes.contains("Total: 3"), "Resumen debe mostrar Total: 3 antes de limpiar");
 
-        // Act
-        gestor.limpiarConsola();
+            // Limpiar consola
+            SwingUtilities.invokeAndWait(() -> gestor.limpiarConsola());
+            flushEdt();
 
-        // Forzar actualización del resumen después de limpiar
-        SwingUtilities.invokeAndWait(panel::aplicarIdioma);
-        flushEdt();
+            // Forzar actualización del resumen después de limpiar
+            SwingUtilities.invokeAndWait(panel::aplicarIdioma);
+            flushEdt();
 
-        // Assert
-        String resumenDespues = etiquetaResumen.getText();
-        assertTrue(resumenDespues.contains("Total:"), "Resumen debe mostrar total después de limpiar");
+            String resumenDespues = etiquetaResumen.getText();
+            assertTrue(resumenDespues.contains("Total: 0"), "Resumen debe mostrar Total: 0 después de limpiar");
+        } finally {
+            panel.destruir();
+        }
+    }
 
-        panel.destruir();
+    @Test
+    @DisplayName("Limpiar consola vacía mantiene estado válido")
+    void testLimpiarConsolaVaciaMantieneEstadoValido() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            GestorConsolaGUI gestor = panel.obtenerGestorConsola();
+
+            gestor.limpiarConsola();
+            flushEdt();
+
+            assertEquals(0, gestor.obtenerTotalLogs());
+
+            gestor.limpiarConsola();
+            flushEdt();
+
+            assertEquals(0, gestor.obtenerTotalLogs(), "Limpiar consola vacía no debe causar errores");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Contadores se reinician correctamente tras limpiar")
+    void testContadoresSeReinicianCorrectamente() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            GestorConsolaGUI gestor = panel.obtenerGestorConsola();
+
+            // Limpiar primero para eliminar el log de inicialización del constructor
+            SwingUtilities.invokeAndWait(() -> gestor.limpiarConsola());
+            flushEdt();
+
+            // Agregar logs de prueba
+            for (int i = 0; i < 5; i++) {
+                gestor.registrarInfo("Info " + i);
+            }
+            for (int i = 0; i < 3; i++) {
+                gestor.registrarError("Error " + i);
+            }
+            for (int i = 0; i < 2; i++) {
+                gestor.registrarVerbose("Verbose " + i);
+            }
+
+            assertEquals(5, gestor.obtenerContadorInfo());
+            assertEquals(3, gestor.obtenerContadorError());
+            assertEquals(2, gestor.obtenerContadorVerbose());
+            assertEquals(10, gestor.obtenerTotalLogs());
+
+            gestor.limpiarConsola();
+            flushEdt();
+
+            assertEquals(0, gestor.obtenerContadorInfo(), "Contador info debe reiniciarse a 0");
+            assertEquals(0, gestor.obtenerContadorError(), "Contador error debe reiniciarse a 0");
+            assertEquals(0, gestor.obtenerContadorVerbose(), "Contador verbose debe reiniciarse a 0");
+            assertEquals(0, gestor.obtenerTotalLogs(), "Total debe ser 0");
+        } finally {
+            panel.destruir();
+        }
     }
 
     // ========== Helper Methods DRY ==========

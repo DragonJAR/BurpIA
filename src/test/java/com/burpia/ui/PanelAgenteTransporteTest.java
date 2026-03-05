@@ -361,7 +361,7 @@ class PanelAgenteTransporteTest {
 
             config.establecerIdiomaUi("en");
             assertEquals(
-                "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-EN.md",
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-GEMINI-EN.md",
                 invocarResolverUrlGuia(panel)
             );
 

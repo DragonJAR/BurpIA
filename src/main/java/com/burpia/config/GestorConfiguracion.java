@@ -23,12 +23,12 @@ import java.util.Set;
 
 public class GestorConfiguracion {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    
+
     private final Path rutaConfig;
+    private final Object lockLogging = new Object();
     private PrintWriter out;
     private PrintWriter err;
-    private GestorLoggingUnificado gestorLogging;
-    private boolean loggingInicializado = false;
+    private volatile GestorLoggingUnificado gestorLogging;
 
     public GestorConfiguracion() {
         this(null, null);
@@ -36,22 +36,24 @@ public class GestorConfiguracion {
 
     public GestorConfiguracion(PrintWriter out, PrintWriter err) {
         this.rutaConfig = RutasBurpIA.obtenerRutaConfig();
-        
+
         if (out != null && err != null) {
             this.out = out;
             this.err = err;
             this.gestorLogging = GestorLoggingUnificado.crearMinimal(out, err);
-            this.loggingInicializado = true;
             logInfo("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
         }
     }
-    
+
     private void inicializarLogging() {
-        if (!loggingInicializado) {
-            this.out = new PrintWriter(System.out, true);
-            this.err = new PrintWriter(System.err, true);
-            this.gestorLogging = GestorLoggingUnificado.crearMinimal(out, err);
-            this.loggingInicializado = true;
+        if (gestorLogging == null) {
+            synchronized (lockLogging) {
+                if (gestorLogging == null) {
+                    this.out = new PrintWriter(System.out, true);
+                    this.err = new PrintWriter(System.err, true);
+                    this.gestorLogging = GestorLoggingUnificado.crearMinimal(out, err);
+                }
+            }
         }
     }
 
@@ -220,7 +222,7 @@ public class GestorConfiguracion {
     private ConfiguracionAPI construirDesdeArchivo(ArchivoConfiguracion archivo) {
         ConfiguracionAPI config = new ConfiguracionAPI();
 
-        if (archivo.proveedorAI != null && ProveedorAI.existeProveedor(archivo.proveedorAI)) {
+        if (Normalizador.noEsVacio(archivo.proveedorAI) && ProveedorAI.existeProveedor(archivo.proveedorAI)) {
             config.establecerProveedorAI(archivo.proveedorAI);
         }
 
@@ -307,23 +309,31 @@ public class GestorConfiguracion {
 
         config.establecerDetallado(Boolean.TRUE.equals(archivo.detallado));
 
-        if (archivo.nombreFuenteEstandar != null)
+        if (archivo.nombreFuenteEstandar != null) {
             config.establecerNombreFuenteEstandar(archivo.nombreFuenteEstandar);
-        if (archivo.tamanioFuenteEstandar != null)
+        }
+        if (archivo.tamanioFuenteEstandar != null) {
             config.establecerTamanioFuenteEstandar(archivo.tamanioFuenteEstandar);
-        if (archivo.nombreFuenteMono != null)
+        }
+        if (archivo.nombreFuenteMono != null) {
             config.establecerNombreFuenteMono(archivo.nombreFuenteMono);
-        if (archivo.tamanioFuenteMono != null)
+        }
+        if (archivo.tamanioFuenteMono != null) {
             config.establecerTamanioFuenteMono(archivo.tamanioFuenteMono);
+        }
 
-        if (archivo.textoFiltroHallazgos != null)
+        if (archivo.textoFiltroHallazgos != null) {
             config.establecerTextoFiltroHallazgos(archivo.textoFiltroHallazgos);
-        if (archivo.filtroSeveridadHallazgos != null)
+        }
+        if (archivo.filtroSeveridadHallazgos != null) {
             config.establecerFiltroSeveridadHallazgos(archivo.filtroSeveridadHallazgos);
-        if (archivo.persistirFiltroBusquedaHallazgos != null)
+        }
+        if (archivo.persistirFiltroBusquedaHallazgos != null) {
             config.establecerPersistirFiltroBusquedaHallazgos(archivo.persistirFiltroBusquedaHallazgos);
-        if (archivo.persistirFiltroSeveridadHallazgos != null)
+        }
+        if (archivo.persistirFiltroSeveridadHallazgos != null) {
             config.establecerPersistirFiltroSeveridadHallazgos(archivo.persistirFiltroSeveridadHallazgos);
+        }
 
         config.establecerApiKeysPorProveedor(sanitizarMapaString(archivo.apiKeysPorProveedor));
         config.establecerUrlsBasePorProveedor(sanitizarMapaString(archivo.urlsBasePorProveedor));
@@ -332,10 +342,12 @@ public class GestorConfiguracion {
         config.establecerTiempoEsperaPorModelo(sanitizarMapaTimeoutPorModelo(archivo.tiempoEsperaPorModelo));
 
         // Multi-Proveedor Configuration
-        if (archivo.multiProveedorHabilitado != null)
+        if (archivo.multiProveedorHabilitado != null) {
             config.establecerMultiProveedorHabilitado(archivo.multiProveedorHabilitado);
-        if (archivo.proveedoresMultiConsulta != null && !archivo.proveedoresMultiConsulta.isEmpty())
+        }
+        if (archivo.proveedoresMultiConsulta != null && !archivo.proveedoresMultiConsulta.isEmpty()) {
             config.establecerProveedoresMultiConsulta(archivo.proveedoresMultiConsulta);
+        }
 
         return config;
     }
@@ -408,7 +420,8 @@ public class GestorConfiguracion {
             return limpio;
         }
         for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
-            if (entry.getKey() != null && ProveedorAI.existeProveedor(entry.getKey()) && entry.getValue() != null) {
+            if (entry.getKey() != null && ProveedorAI.existeProveedor(entry.getKey())
+                    && entry.getValue() != null && entry.getValue() > 0) {
                 limpio.put(entry.getKey(), entry.getValue());
             }
         }
@@ -425,8 +438,9 @@ public class GestorConfiguracion {
                 continue;
             }
             String clave = entry.getKey().trim();
-            if (!clave.isEmpty()) {
-                limpio.put(clave, entry.getValue());
+            int valor = entry.getValue();
+            if (!clave.isEmpty() && valor > 0) {
+                limpio.put(clave, valor);
             }
         }
         return limpio;

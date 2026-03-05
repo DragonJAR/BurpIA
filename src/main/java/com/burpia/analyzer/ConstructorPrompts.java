@@ -1,22 +1,62 @@
 package com.burpia.analyzer;
+
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.SolicitudAnalisis;
+import com.burpia.util.Normalizador;
 import com.burpia.util.PoliticaMemoria;
 
+import java.util.Objects;
+
+/**
+ * Constructor de prompts para análisis de seguridad con IA.
+ * <p>
+ * Esta clase se encarga de construir prompts dinámicos para enviar a los
+ * proveedores de IA, incluyendo la solicitud HTTP, respuesta, instrucciones
+ * de formato y configuración de idioma.
+ * </p>
+ *
+ * @see ConfiguracionAPI
+ * @see SolicitudAnalisis
+ */
 public class ConstructorPrompts {
+
+    /** Token para reemplazar con el contenido de la solicitud HTTP. */
     private static final String TOKEN_REQUEST = "{REQUEST}";
+
+    /** Token para reemplazar con el contenido de la respuesta HTTP. */
     private static final String TOKEN_RESPONSE = "{RESPONSE}";
+
+    /** Token para reemplazar con el idioma de salida configurado. */
     private static final String TOKEN_OUTPUT_LANGUAGE = "{OUTPUT_LANGUAGE}";
 
     private final ConfiguracionAPI config;
 
+    /**
+     * Crea una nueva instancia del constructor de prompts.
+     *
+     * @param config la configuración de la API, no puede ser {@code null}
+     * @throws NullPointerException si la configuración es {@code null}
+     */
     public ConstructorPrompts(ConfiguracionAPI config) {
-        if (config == null) {
-            throw new IllegalArgumentException("ConfiguracionAPI no puede ser null");
-        }
-        this.config = config;
+        this.config = Objects.requireNonNull(config, "ConfiguracionAPI no puede ser null");
     }
 
+    /**
+     * Construye un prompt completo para análisis de seguridad.
+     * <p>
+     * El prompt incluye:
+     * </p>
+     * <ul>
+     *   <li>Template configurable del usuario</li>
+     *   <li>Solicitud HTTP (request)</li>
+     *   <li>Respuesta HTTP (response)</li>
+     *   <li>Instrucciones de idioma de salida</li>
+     *   <li>Instrucciones de formato JSON</li>
+     * </ul>
+     *
+     * @param solicitud la solicitud HTTP a analizar, puede ser {@code null}
+     * @return el prompt completo construido, nunca {@code null}
+     */
     public String construirPromptAnalisis(SolicitudAnalisis solicitud) {
         String promptTemplate = config.obtenerPromptConfigurable();
         if (promptTemplate == null) {
@@ -57,6 +97,11 @@ public class ConstructorPrompts {
         return promptFinal;
     }
 
+    /**
+     * Obtiene el idioma de salida configurado.
+     *
+     * @return "English" si el idioma UI es inglés, "Spanish" en caso contrario
+     */
     private String obtenerIdiomaSalida() {
         String idiomaUi = config.obtenerIdiomaUi();
         if ("en".equalsIgnoreCase(idiomaUi)) {
@@ -65,6 +110,16 @@ public class ConstructorPrompts {
         return "Spanish";
     }
 
+    /**
+     * Construye el bloque de texto para la solicitud HTTP.
+     * <p>
+     * Incluye línea inicial (método + URL), encabezados y cuerpo si están disponibles.
+     * El cuerpo se trunca si excede el límite configurado.
+     * </p>
+     *
+     * @param solicitud la solicitud HTTP, puede ser {@code null}
+     * @return el bloque de request formateado
+     */
     private String construirBloqueRequest(SolicitudAnalisis solicitud) {
         if (solicitud == null) {
             return trPrompt("[REQUEST NO DISPONIBLE]", "[REQUEST NOT AVAILABLE]");
@@ -96,6 +151,16 @@ public class ConstructorPrompts {
         return requestBuilder.toString();
     }
 
+    /**
+     * Construye el bloque de texto para la respuesta HTTP.
+     * <p>
+     * Incluye código de estado, encabezados y cuerpo si están disponibles.
+     * El cuerpo se trunca si excede el límite configurado.
+     * </p>
+     *
+     * @param solicitud la solicitud HTTP con datos de respuesta, puede ser {@code null}
+     * @return el bloque de response formateado
+     */
     private String construirBloqueResponse(SolicitudAnalisis solicitud) {
         if (solicitud == null) {
             return "STATUS: N/A\n" + trPrompt("[RESPONSE NO DISPONIBLE]", "[RESPONSE NOT AVAILABLE]");
@@ -132,6 +197,18 @@ public class ConstructorPrompts {
         return responseBuilder.toString();
     }
 
+    /**
+     * Trunca un texto si excede el número máximo de caracteres.
+     * <p>
+     * Si el texto se trunca, se agrega un mensaje indicando cuántos caracteres
+     * fueron omitidos.
+     * </p>
+     *
+     * @param texto el texto a truncar, puede ser {@code null}
+     * @param maxCaracteres el número máximo de caracteres permitidos
+     * @param etiqueta la etiqueta para el mensaje de truncado (ej: "request body")
+     * @return el texto truncado con mensaje si aplica, o cadena vacía si el input es {@code null}
+     */
     private String truncarTexto(String texto, int maxCaracteres, String etiqueta) {
         if (texto == null) {
             return "";
@@ -147,18 +224,48 @@ public class ConstructorPrompts {
         );
     }
 
+    /**
+     * Traduce un texto según el idioma de la UI configurado.
+     * <p>
+     * Este método es específico para traducir texto dentro de los prompts,
+     * no para la UI de la aplicación.
+     * </p>
+     *
+     * @param textoEs texto en español
+     * @param textoEn texto en inglés
+     * @return el texto en el idioma configurado (español por defecto)
+     */
     private String trPrompt(String textoEs, String textoEn) {
         return "en".equalsIgnoreCase(config.obtenerIdiomaUi()) ? textoEn : textoEs;
     }
 
+    /**
+     * Retorna el valor si no está vacío, o un valor por defecto en caso contrario.
+     * <p>
+     * Utiliza {@link Normalizador#esVacio(String)} para la validación siguiendo
+     * el principio DRY.
+     * </p>
+     *
+     * @param valor el valor a verificar, puede ser {@code null}
+     * @param valorDefecto el valor por defecto si el valor está vacío
+     * @return el valor trimado si tiene contenido, o el valor por defecto
+     */
     private String valorNoVacio(String valor, String valorDefecto) {
-        if (valor == null) {
+        if (Normalizador.esVacio(valor)) {
             return valorDefecto;
         }
-        String limpio = valor.trim();
-        return limpio.isEmpty() ? valorDefecto : valor;
+        return valor.trim();
     }
 
+    /**
+     * Construye las instrucciones de formato JSON para el prompt.
+     * <p>
+     * Las instrucciones incluyen reglas críticas para el escape correcto de
+     * caracteres especiales en contenido HTML dentro de JSON.
+     * </p>
+     *
+     * @return las instrucciones de formato JSON en el idioma configurado
+     */
     private String construirInstruccionesFormatoJson() {
         return trPrompt(
             "<json_formatting>" +

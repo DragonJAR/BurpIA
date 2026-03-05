@@ -186,7 +186,7 @@ public final class I18nUI {
         }
 
         public static String TRADUCIR_ESTADO(String estadoOriginal) {
-            if (estadoOriginal == null)
+            if (Normalizador.esVacio(estadoOriginal))
                 return "";
             switch (estadoOriginal) {
                 case com.burpia.model.Tarea.ESTADO_EN_COLA:
@@ -391,7 +391,7 @@ public final class I18nUI {
         }
 
         public static String TRADUCIR_SEVERIDAD(String severidad) {
-            if (severidad == null)
+            if (Normalizador.esVacio(severidad))
                 return "";
             switch (severidad) {
                 case com.burpia.model.Hallazgo.SEVERIDAD_CRITICAL:
@@ -432,7 +432,7 @@ public final class I18nUI {
         }
 
         public static String TRADUCIR_CONFIANZA(String confianza) {
-            if (confianza == null)
+            if (Normalizador.esVacio(confianza))
                 return "";
             switch (confianza) {
                 case com.burpia.model.Hallazgo.CONFIANZA_ALTA:
@@ -748,8 +748,10 @@ public final class I18nUI {
         }
 
         private static String construirLineaEstadoAlerta(String etiqueta, String texto) {
-            String contenido = texto != null ? texto : "";
-            return contenido.isBlank() ? etiqueta : etiqueta + " " + contenido;
+            if (Normalizador.esVacio(texto) || texto.isBlank()) {
+                return etiqueta;
+            }
+            return etiqueta + " " + texto;
         }
 
         public static String MSG_ACCION_SOLO_IGNORADOS(int total) {

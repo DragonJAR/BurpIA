@@ -82,11 +82,22 @@ public class PanelTareas extends JPanel {
             }
         };
 
+        // EFICIENCIA: Estadísticas PRIMERO para dar contexto inmediato al usuario
+        etiquetaEstadisticas = new JLabel(I18nUI.Tareas.ESTADISTICAS(0, 0, 0));
+        etiquetaEstadisticas.setFont(EstilosUI.FUENTE_MONO);
+        etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
+        panelTodosControles.add(etiquetaEstadisticas);
+
+        // CONFIABILIDAD: Separador visual entre información y acciones
+        panelTodosControles.add(new JLabel("  "));
+
+        // Control de flujo (toggle pausar/reanudar)
         botonPausarReanudar = new JButton(I18nUI.Tareas.BOTON_PAUSAR_TODO());
         botonPausarReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.PAUSAR_REANUDAR());
         panelTodosControles.add(botonPausarReanudar);
 
+        // Acciones destructivas agrupadas (cancelar y limpiar)
         botonCancelar = new JButton(I18nUI.Tareas.BOTON_CANCELAR_TODO());
         botonCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonCancelar.setToolTipText(I18nUI.Tooltips.Tareas.CANCELAR());
@@ -96,11 +107,6 @@ public class PanelTareas extends JPanel {
         botonLimpiarCompletadas.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiarCompletadas.setToolTipText(I18nUI.Tooltips.Tareas.LIMPIAR());
         panelTodosControles.add(botonLimpiarCompletadas);
-
-        etiquetaEstadisticas = new JLabel(I18nUI.Tareas.ESTADISTICAS(0, 0, 0));
-        etiquetaEstadisticas.setFont(EstilosUI.FUENTE_MONO);
-        etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
-        panelTodosControles.add(etiquetaEstadisticas);
 
         panelControles.add(panelTodosControles);
 

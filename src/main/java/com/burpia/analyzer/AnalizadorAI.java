@@ -54,6 +54,9 @@ public class AnalizadorAI implements Runnable {
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
     private static final long DELAY_ENTRE_PROVEEDORES_MS = 2000L; // 2 segundos entre proveedores
+    private static final int CAPACIDAD_EXTRA_BUILDER = 32; // Capacidad extra para StringBuilder de descripción
+    private static final int MAX_LONGITUD_TITULO_RESUMIDO = 30; // Longitud máxima para títulos truncados
+    private static final int PROFUNDIDAD_MAXIMA_JSON = 5; // Límite de profundidad recursiva en parsing JSON
     private static final String LINEA_SEPARADORA_PROVEEDOR = "========================================";
     private static final int MAX_CLIENTES_HTTP_CACHE = 8;
     private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = 
@@ -82,9 +85,26 @@ public class AnalizadorAI implements Runnable {
     private static final Pattern PATRON_ETIQUETA_SEVERIDAD = Pattern.compile("(?i)(severidad:|severity:)");
     private static final Pattern PATRON_ETIQUETA_DESCRIPCION = Pattern.compile("(?i)(vulnerabilidad|descripcion:|description:)");
 
+    /**
+     * Interfaz de callback para recibir notificaciones del análisis.
+     */
     public interface Callback {
+        /**
+         * Called when analysis completes successfully.
+         * @param resultado The analysis result containing findings
+         */
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
+
+        /**
+         * Called when analysis encounters an error.
+         * @param error Error message describing the failure
+         */
         void alErrorAnalisis(String error);
+
+        /**
+         * Called when analysis is cancelled by user.
+         * Default implementation does nothing.
+         */
         default void alCanceladoAnalisis() {}
     }
 
@@ -120,6 +140,21 @@ public class AnalizadorAI implements Runnable {
         return I18nUI.tr("Hallazgo Plano", "Plain Finding");
     }
 
+    /**
+     * Constructor principal del analizador AI.
+     *
+     * @param solicitud          Solicitud HTTP a analizar
+     * @param config             Configuración de API (si es null, se crea una por defecto)
+     * @param stdout             PrintWriter para salida estándar (si es null, se usa null output)
+     * @param stderr             PrintWriter para errores (si es null, se usa null output)
+     * @param limitador          Limitador de tasa para controlar concurrencia (si es null, se crea con límite 1)
+     * @param callback           Callback para notificar resultados (si es null, se usa callback vacío)
+     * @param alInicioAnalisis   Runnable a ejecutar al inicio del análisis (puede ser null)
+     * @param gestorConsola      Gestor de consola GUI para logging (puede ser null)
+     * @param tareaCancelada     Supplier que indica si la tarea fue cancelada (si es null, siempre false)
+     * @param tareaPausada       Supplier que indica si la tarea está pausada (si es null, siempre false)
+     * @param controlBackpressure Control global de backpressure para rate limiting (puede ser null)
+     */
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
                      LimitadorTasa limitador, Callback callback, Runnable alInicioAnalisis,
                      GestorConsolaGUI gestorConsola, BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada,
@@ -1089,7 +1124,7 @@ public class AnalizadorAI implements Runnable {
     }
 
     private String extraerCampoComoTexto(JsonElement elemento, int profundidad) {
-        if (elemento == null || elemento.isJsonNull() || profundidad > 5) {
+        if (elemento == null || elemento.isJsonNull() || profundidad > PROFUNDIDAD_MAXIMA_JSON) {
             return "";
         }
         if (elemento.isJsonPrimitive()) {
@@ -1151,7 +1186,8 @@ public class AnalizadorAI implements Runnable {
         if (Normalizador.esVacio(descripcion)) {
             descripcion = evidencia;
         } else if (Normalizador.noEsVacio(evidencia) && !descripcion.contains(evidencia)) {
-            StringBuilder sb = new StringBuilder(descripcion.length() + evidencia.length() + 32);
+            StringBuilder sb = new StringBuilder(
+                descripcion.length() + evidencia.length() + CAPACIDAD_EXTRA_BUILDER);
             sb.append(descripcion).append("\n").append(etiquetaEvidencia()).append(": ").append(evidencia);
             descripcion = sb.toString();
         }
@@ -1347,15 +1383,15 @@ public class AnalizadorAI implements Runnable {
 
             if (descripcion.length() > 0) {
                 String descStr = descripcion.toString().trim();
-                String t = descStr;
-                if (t.contains(" - ")) {
-                    String[] partes = t.split(" - ", 2);
-                    t = partes[0];
+                String titulo = descStr;
+                if (titulo.contains(" - ")) {
+                    String[] partes = titulo.split(" - ", 2);
+                    titulo = partes[0];
                     descStr = partes[1];
                 } else {
-                    t = descStr.substring(0, Math.min(30, descStr.length())) + "...";
+                    titulo = descStr.substring(0, Math.min(MAX_LONGITUD_TITULO_RESUMIDO, descStr.length())) + "...";
                 }
-                hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), t, descStr, severidad, confianza, solicitud.obtenerSolicitudHttp()));
+                hallazgos.add(new Hallazgo(solicitud.obtenerUrl(), titulo, descStr, severidad, confianza, solicitud.obtenerSolicitudHttp()));
             }
 
             if (hallazgos.isEmpty() && contenido.length() > 0) {
@@ -1397,7 +1433,8 @@ public class AnalizadorAI implements Runnable {
         if (descripcionLimpia.isEmpty()) {
             return;
         }
-        String titulo = descripcionLimpia.substring(0, Math.min(30, descripcionLimpia.length())) + "...";
+        String titulo = descripcionLimpia.substring(0,
+            Math.min(MAX_LONGITUD_TITULO_RESUMIDO, descripcionLimpia.length())) + "...";
         hallazgos.add(new Hallazgo(
             solicitud.obtenerUrl(),
             titulo,
@@ -1408,6 +1445,17 @@ public class AnalizadorAI implements Runnable {
         ));
     }
 
+    /**
+     * Extrae y normaliza la severidad del contenido.
+     * <p>
+     * Si no se puede determinar la severidad (resulta en INFO), se usa LOW como mínimo
+     * para texto plano, ya que si hay contenido que no pudo parsearse como JSON,
+     * probablemente representa un hallazgo de seguridad al menos de bajo impacto.
+     * </p>
+     *
+     * @param contenido Contenido del cual extraer la severidad
+     * @return Severidad normalizada (nunca INFO para texto plano)
+     */
     private String extraerSeveridad(String contenido) {
         String severidad = Hallazgo.normalizarSeveridad(contenido);
         if (Hallazgo.SEVERIDAD_INFO.equals(severidad)) {
@@ -1470,14 +1518,6 @@ public class AnalizadorAI implements Runnable {
         PrintWriter destinoStr;
 
         synchronized (logLock) {
-            if (this.gestorConsola != null) {
-                if (mensajeTecnico) {
-                    this.gestorConsola.registrarTecnico(ORIGEN_LOG, mensajeSeguro, tipo);
-                } else {
-                    this.gestorConsola.registrar(ORIGEN_LOG, mensajeSeguro, tipo);
-                }
-                return;
-            }
             destinoStr = esError ? stderr : stdout;
             if (destinoStr != null) {
                 destinoStr.println(prefijoLocalizado + mensajeLocalizado);

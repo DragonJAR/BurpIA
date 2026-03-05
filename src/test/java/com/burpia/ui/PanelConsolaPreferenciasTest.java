@@ -1,22 +1,21 @@
 package com.burpia.ui;
+
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorConsolaGUI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
 import javax.swing.JLabel;
 import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicReference;
-import static org.junit.jupiter.api.Assertions.assertNull;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-
-
-
 
 @DisplayName("PanelConsola Preferencias Tests")
 class PanelConsolaPreferenciasTest {

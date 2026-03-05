@@ -67,9 +67,12 @@ class ModeloTablaHallazgosNotificacionTest {
     @Test
     @DisplayName("Agregar escucha recibe notificación al eliminar hallazgo")
     void agregarEscuchaRecibeNotificacionAlEliminarHallazgo() throws Exception {
+        // Agregar hallazgos primero y esperar a que se procesen las notificaciones
         modelo.agregarHallazgo(crearHallazgoPrueba());
         modelo.agregarHallazgo(crearHallazgoPrueba());
+        SwingUtilities.invokeAndWait(() -> {}); // Esperar notificaciones de agregar
 
+        // Ahora agregar el escucha y eliminar
         AtomicInteger contador = new AtomicInteger(0);
         modelo.agregarEscucha(() -> contador.incrementAndGet());
 

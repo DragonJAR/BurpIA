@@ -70,13 +70,41 @@ public class PanelConsola extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // CONFIABILIDAD: Responsive con threshold-based layout switching
+        // Mismo patrón que PanelTareas y PanelEstadisticas
         panelControles = new JPanel();
         panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
         panelControles.setBorder(UIUtils.crearBordeTitulado(
             I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
 
-        // EFICIENCIA: Todos los controles en una sola línea para mejor uso de espacio
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
+        // EFICIENCIA: Layout responsive que se adapta al ancho disponible
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4)) {
+            private static final int UMBRAL_RESPONSIVE = 900;
+            private boolean ultimoLayoutHorizontal = true;
+
+            @Override
+            public void doLayout() {
+                // CONFIABILIDAD: Obtener ancho del contenedor padre
+                int anchoPadre = getParent() != null ? getParent().getWidth() : getWidth();
+                int anchoDisponible = anchoPadre - 40; // 40 = margen total de bordes
+                boolean esLayoutHorizontal = anchoDisponible >= UMBRAL_RESPONSIVE;
+
+                // EFICIENCIA: Solo cambiar layout si es necesario (cache de último estado)
+                if (esLayoutHorizontal != ultimoLayoutHorizontal) {
+                    if (esLayoutHorizontal) {
+                        setLayout(new FlowLayout(FlowLayout.LEFT, 8, 4));
+                    } else {
+                        // DRY: 3 filas agrupadas lógicamente:
+                        // Fila 1: checkbox, limpiar, resumen
+                        // Fila 2: búsqueda, buscar, <, >, resultados
+                        // Fila 3: (vacía para futuro)
+                        setLayout(new GridLayout(3, 1, 0, 8));
+                    }
+                    ultimoLayoutHorizontal = esLayoutHorizontal;
+                }
+                super.doLayout();
+            }
+        };
 
         // Checkbox de autoscroll
         checkboxAutoScroll = new JCheckBox(I18nUI.Consola.CHECK_AUTO_SCROLL(), true);
