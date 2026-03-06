@@ -56,66 +56,56 @@ public final class ConstructorSolicitudesProveedor {
             .addHeader("Accept", "application/json");
         String advertencia = null;
 
-        switch (proveedor) {
-            case "Claude":
-                endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/messages";
-                carga.addProperty("model", modeloUsado);
-                carga.addProperty("max_tokens", config.obtenerMaxTokensParaProveedor(proveedor));
-                JsonArray mensajesClaude = new JsonArray();
-                JsonObject mensajeClaude = new JsonObject();
-                mensajeClaude.addProperty("role", "user");
-                mensajeClaude.addProperty("content", prompt);
-                mensajesClaude.add(mensajeClaude);
-                carga.add("messages", mensajesClaude);
-                builder.addHeader("x-api-key", config.obtenerClaveApi());
-                builder.addHeader("anthropic-version", "2023-06-01");
-                break;
-
-            case "Gemini":
-                String modeloConfigurado = modeloUsado;
-                List<String> modelosValidosGemini = listarModelosGemini(
-                    ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()),
-                    config.obtenerClaveApi(),
-                    clienteHttp
-                );
-                if (!modelosValidosGemini.contains(modeloConfigurado)) {
-                    modeloUsado = modelosValidosGemini.get(0);
-                    advertencia = "Modelo Gemini \"" + modeloConfigurado +
-                        "\" no soportado para generateContent. Se usó \"" + modeloUsado + "\".";
-                }
-                endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) +
-                    "/models/" + modeloUsado + ":generateContent";
-                JsonArray contenidos = new JsonArray();
-                JsonObject contenido = new JsonObject();
-                JsonArray partes = new JsonArray();
-                JsonObject parte = new JsonObject();
-                parte.addProperty("text", prompt);
-                partes.add(parte);
-                contenido.add("parts", partes);
-                contenidos.add(contenido);
-                carga.add("contents", contenidos);
-                builder.addHeader("x-goog-api-key", config.obtenerClaveApi());
-                break;
-
-            case "Ollama":
-                endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/api/chat";
-                carga.addProperty("model", modeloUsado);
-                carga.addProperty("stream", false);
-                agregarMensajeUsuario(carga, prompt);
-                break;
-
-            case "OpenAI":
-            case ProveedorAI.PROVEEDOR_CUSTOM:
-            case "Z.ai":
-            case "minimax":
-                endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
-                prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);
-                break;
-
-            default:
-                endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
-                prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);
-                break;
+        if ("Claude".equals(proveedor)) {
+            endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/messages";
+            carga.addProperty("model", modeloUsado);
+            carga.addProperty("max_tokens", config.obtenerMaxTokensParaProveedor(proveedor));
+            JsonArray mensajesClaude = new JsonArray();
+            JsonObject mensajeClaude = new JsonObject();
+            mensajeClaude.addProperty("role", "user");
+            mensajeClaude.addProperty("content", prompt);
+            mensajesClaude.add(mensajeClaude);
+            carga.add("messages", mensajesClaude);
+            builder.addHeader("x-api-key", config.obtenerClaveApi());
+            builder.addHeader("anthropic-version", "2023-06-01");
+        } else if ("Gemini".equals(proveedor)) {
+            String modeloConfigurado = modeloUsado;
+            List<String> modelosValidosGemini = listarModelosGemini(
+                ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()),
+                config.obtenerClaveApi(),
+                clienteHttp
+            );
+            if (!modelosValidosGemini.contains(modeloConfigurado)) {
+                modeloUsado = modelosValidosGemini.get(0);
+                advertencia = "Modelo Gemini \"" + modeloConfigurado +
+                    "\" no soportado para generateContent. Se usó \"" + modeloUsado + "\".";
+            }
+            endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) +
+                "/models/" + modeloUsado + ":generateContent";
+            JsonArray contenidos = new JsonArray();
+            JsonObject contenido = new JsonObject();
+            JsonArray partes = new JsonArray();
+            JsonObject parte = new JsonObject();
+            parte.addProperty("text", prompt);
+            partes.add(parte);
+            contenido.add("parts", partes);
+            contenidos.add(contenido);
+            carga.add("contents", contenidos);
+            builder.addHeader("x-goog-api-key", config.obtenerClaveApi());
+        } else if ("Ollama".equals(proveedor)) {
+            endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/api/chat";
+            carga.addProperty("model", modeloUsado);
+            carga.addProperty("stream", false);
+            agregarMensajeUsuario(carga, prompt);
+        } else if ("OpenAI".equals(proveedor)
+            || "Z.ai".equals(proveedor)
+            || "minimax".equals(proveedor)
+            || ProveedorAI.esProveedorCustom(proveedor)) {
+            endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
+            prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);
+        } else {
+            endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
+            prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);
         }
 
         Request request = builder

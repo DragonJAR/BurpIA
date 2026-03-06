@@ -158,7 +158,7 @@ public class ExtensionBurpIA implements BurpExtension {
         limitador = new LimitadorTasa(config.obtenerMaximoConcurrente());
 
         estadisticas = new Estadisticas();
-        modeloTablaTareas = new ModeloTablaTareas();
+        modeloTablaTareas = new ModeloTablaTareas(config.obtenerMaximoTareasTabla());
         modeloTablaHallazgos = new ModeloTablaHallazgos(config.obtenerMaximoHallazgosTabla());
 
         gestorTareas = new GestorTareas(modeloTablaTareas,
@@ -498,6 +498,9 @@ public class ExtensionBurpIA implements BurpExtension {
                         if (modeloTablaHallazgos != null) {
                             modeloTablaHallazgos.establecerLimiteFilas(configActual.obtenerMaximoHallazgosTabla());
                         }
+                        if (modeloTablaTareas != null) {
+                            modeloTablaTareas.establecerLimiteFilas(configActual.obtenerMaximoTareasTabla());
+                        }
                         if (manejadorHttp != null) {
                             manejadorHttp.actualizarConfiguracion(configActual);
                         }
@@ -515,7 +518,8 @@ public class ExtensionBurpIA implements BurpExtension {
                         registrar("Configuracion actualizada: detallado=" + configActual.esDetallado() +
                                 ", maximoConcurrente=" + configActual.obtenerMaximoConcurrente() +
                                 ", retraso=" + configActual.obtenerRetrasoSegundos() + "s" +
-                                ", maximoHallazgos=" + configActual.obtenerMaximoHallazgosTabla());
+                                ", maximoHallazgos=" + configActual.obtenerMaximoHallazgosTabla() +
+                                ", maximoTareas=" + configActual.obtenerMaximoTareasTabla());
 
                         pestaniaActual.actualizarVisibilidadAgentes();
                     });
@@ -666,7 +670,7 @@ public class ExtensionBurpIA implements BurpExtension {
             // Agent details
             gestorLogging.info("");
             gestorLogging.info(I18nLogs.Inicializacion.SECCION_AGENTE());
-            gestorLogging.info("  " + I18nLogs.Inicializacion.MULTI_HABILITADO(config.agenteHabilitado()));
+            gestorLogging.info("  " + I18nLogs.Inicializacion.AGENTE_HABILITADO(config.agenteHabilitado()));
             if (config.agenteHabilitado()) {
                 gestorLogging.info("  " + I18nLogs.Inicializacion.AGENTE_TIPO(config.obtenerTipoAgente()));
                 String rutaBinario = config.obtenerRutaBinarioAgente(config.obtenerTipoAgente());

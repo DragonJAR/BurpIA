@@ -1,5 +1,6 @@
 package com.burpia.ui;
 import burp.api.montoya.MontoyaApi;
+import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import org.junit.jupiter.api.AfterEach;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -222,6 +224,34 @@ class PanelHallazgosFiltrosTest {
         flushEdt();
 
         assertEquals(0, tabla.getSelectedRowCount());
+    }
+
+    @Test
+    @DisplayName("Restaurar filtros respeta flags de persistencia deshabilitados")
+    void testRestaurarFiltrosRespetaFlagsPersistencia() throws Exception {
+        I18nUI.establecerIdioma("es");
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTextoFiltroHallazgos("sql");
+        config.establecerFiltroSeveridadHallazgos(I18nUI.Hallazgos.SEVERIDAD_HIGH());
+        config.establecerPersistirFiltroBusquedaHallazgos(false);
+        config.establecerPersistirFiltroSeveridadHallazgos(false);
+
+        SwingUtilities.invokeAndWait(() -> panel.establecerConfiguracion(config));
+        flushEdt();
+
+        JTextField campoBusqueda = obtenerCampo(panel, "campoBusqueda", JTextField.class);
+        JComboBox<?> comboSeveridad = obtenerCampo(panel, "comboSeveridad", JComboBox.class);
+
+        assertEquals("", campoBusqueda.getText(), "No debe restaurar texto cuando la persistencia está deshabilitada");
+        assertEquals(0, comboSeveridad.getSelectedIndex(),
+            "No debe restaurar severidad cuando la persistencia está deshabilitada");
     }
 
     @SuppressWarnings("unchecked")

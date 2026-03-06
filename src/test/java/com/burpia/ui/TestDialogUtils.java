@@ -112,15 +112,6 @@ public class TestDialogUtils {
     }
 
     /**
-     * Método de compatibilidad - usar desregistrarCapturaDialogos().
-     * @deprecated Usar {@link #desregistrarCapturaDialogos()} en su lugar.
-     */
-    @Deprecated
-    public static void deregistrarCapturaDialogos() {
-        desregistrarCapturaDialogos();
-    }
-
-    /**
      * Ejecuta una accion que puede mostrar dialogos, cierra automaticamente
      * todos los dialogos abiertos despues del tiempo especificado.
      *

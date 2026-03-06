@@ -222,7 +222,8 @@ public class ConfiguracionAPI {
     }
 
     public void establecerProveedorAI(String proveedorAI) {
-        this.proveedorAI = (proveedorAI != null && ProveedorAI.existeProveedor(proveedorAI)) ? proveedorAI : "Z.ai";
+        String proveedorNormalizado = normalizarProveedor(proveedorAI);
+        this.proveedorAI = ProveedorAI.existeProveedor(proveedorNormalizado) ? proveedorNormalizado : "Z.ai";
         asegurarMapas();
     }
 
@@ -655,102 +656,112 @@ public class ConfiguracionAPI {
 
     public String obtenerApiKeyParaProveedor(String proveedor) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return "";
         }
-        String key = apiKeysPorProveedor.get(proveedor);
+        String key = apiKeysPorProveedor.get(proveedorNormalizado);
         return key != null ? key : "";
     }
 
     public void establecerApiKeyParaProveedor(String proveedor, String apiKey) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return;
         }
-        apiKeysPorProveedor.put(proveedor, apiKey);
+        apiKeysPorProveedor.put(proveedorNormalizado, apiKey);
     }
 
     public String obtenerUrlBaseParaProveedor(String proveedor) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return "";
         }
-        if (urlsBasePorProveedor.containsKey(proveedor)) {
-            String urlGuardada = urlsBasePorProveedor.get(proveedor);
+        if (urlsBasePorProveedor.containsKey(proveedorNormalizado)) {
+            String urlGuardada = urlsBasePorProveedor.get(proveedorNormalizado);
             if (Normalizador.noEsVacio(urlGuardada)) {
                 return urlGuardada;
             }
         }
-        String urlPorDefecto = ProveedorAI.obtenerUrlApiPorDefecto(proveedor, idiomaUi);
+        String urlPorDefecto = ProveedorAI.obtenerUrlApiPorDefecto(proveedorNormalizado, idiomaUi);
         return urlPorDefecto != null ? urlPorDefecto : "";
     }
 
     public void establecerUrlBaseParaProveedor(String proveedor, String urlBase) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return;
         }
-        urlsBasePorProveedor.put(proveedor, urlBase);
+        urlsBasePorProveedor.put(proveedorNormalizado, urlBase);
     }
 
     public String obtenerModeloParaProveedor(String proveedor) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return "";
         }
-        if (modelosPorProveedor.containsKey(proveedor)) {
-            String modelo = modelosPorProveedor.get(proveedor);
+        if (modelosPorProveedor.containsKey(proveedorNormalizado)) {
+            String modelo = modelosPorProveedor.get(proveedorNormalizado);
             return modelo != null ? modelo : "";
         }
-        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
+        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedorNormalizado);
         return config != null ? config.obtenerModeloPorDefecto() : "";
     }
 
     public void establecerModeloParaProveedor(String proveedor, String modelo) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return;
         }
-        modelosPorProveedor.put(proveedor, modelo != null ? modelo : "");
+        modelosPorProveedor.put(proveedorNormalizado, modelo != null ? modelo : "");
     }
 
     public String obtenerUrlBaseGuardadaParaProveedor(String proveedor) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return null;
         }
-        return urlsBasePorProveedor.get(proveedor);
+        return urlsBasePorProveedor.get(proveedorNormalizado);
     }
 
     public Integer obtenerMaxTokensConfiguradoParaProveedor(String proveedor) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return null;
         }
-        return maxTokensPorProveedor.get(proveedor);
+        return maxTokensPorProveedor.get(proveedorNormalizado);
     }
 
     public int obtenerMaxTokensParaProveedor(String proveedor) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return 4096;
         }
-        if (maxTokensPorProveedor.containsKey(proveedor)) {
-            Integer valor = maxTokensPorProveedor.get(proveedor);
+        if (maxTokensPorProveedor.containsKey(proveedorNormalizado)) {
+            Integer valor = maxTokensPorProveedor.get(proveedorNormalizado);
             if (valor != null && valor > 0) {
                 return valor;
             }
         }
-        return obtenerMaxTokensPorDefectoProveedor(proveedor);
+        return obtenerMaxTokensPorDefectoProveedor(proveedorNormalizado);
     }
 
     public void establecerMaxTokensParaProveedor(String proveedor, int maxTokens) {
         asegurarMapas();
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return;
         }
-        int valorNormalizado = maxTokens > 0 ? maxTokens : obtenerMaxTokensPorDefectoProveedor(proveedor);
-        maxTokensPorProveedor.put(proveedor, valorNormalizado);
+        int valorNormalizado = maxTokens > 0 ? maxTokens : obtenerMaxTokensPorDefectoProveedor(proveedorNormalizado);
+        maxTokensPorProveedor.put(proveedorNormalizado, valorNormalizado);
     }
 
     public Integer obtenerTiempoEsperaConfiguradoParaModelo(String proveedor, String modelo) {
@@ -1060,7 +1071,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerApiKeysPorProveedor(Map<String, String> apiKeysPorProveedor) {
-        this.apiKeysPorProveedor = apiKeysPorProveedor != null ? new HashMap<>(apiKeysPorProveedor) : new HashMap<>();
+        this.apiKeysPorProveedor = normalizarMapaStringPorProveedor(apiKeysPorProveedor);
     }
 
     public Map<String, String> obtenerUrlsBasePorProveedor() {
@@ -1069,8 +1080,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerUrlsBasePorProveedor(Map<String, String> urlsBasePorProveedor) {
-        this.urlsBasePorProveedor = urlsBasePorProveedor != null ? new HashMap<>(urlsBasePorProveedor)
-                : new HashMap<>();
+        this.urlsBasePorProveedor = normalizarMapaStringPorProveedor(urlsBasePorProveedor);
     }
 
     public Map<String, String> obtenerModelosPorProveedor() {
@@ -1079,7 +1089,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerModelosPorProveedor(Map<String, String> modelosPorProveedor) {
-        this.modelosPorProveedor = modelosPorProveedor != null ? new HashMap<>(modelosPorProveedor) : new HashMap<>();
+        this.modelosPorProveedor = normalizarMapaStringPorProveedor(modelosPorProveedor);
     }
 
     public Map<String, Integer> obtenerMaxTokensPorProveedor() {
@@ -1088,8 +1098,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerMaxTokensPorProveedor(Map<String, Integer> maxTokensPorProveedor) {
-        this.maxTokensPorProveedor = maxTokensPorProveedor != null ? new HashMap<>(maxTokensPorProveedor)
-                : new HashMap<>();
+        this.maxTokensPorProveedor = normalizarMapaIntPorProveedor(maxTokensPorProveedor);
     }
 
     public Map<String, Integer> obtenerTiempoEsperaPorModelo() {
@@ -1122,8 +1131,10 @@ public class ConfiguracionAPI {
         } else {
             List<String> normalizados = new ArrayList<>();
             for (String proveedor : proveedores) {
-                if (Normalizador.noEsVacio(proveedor) && ProveedorAI.existeProveedor(proveedor)) {
-                    normalizados.add(proveedor);
+                String proveedorNormalizado = normalizarProveedor(proveedor);
+                if (!proveedorNormalizado.isEmpty() && ProveedorAI.existeProveedor(proveedorNormalizado)
+                        && !normalizados.contains(proveedorNormalizado)) {
+                    normalizados.add(proveedorNormalizado);
                 }
             }
             this.proveedoresMultiConsulta = normalizados;
@@ -1131,23 +1142,25 @@ public class ConfiguracionAPI {
     }
 
     public void agregarProveedorMultiConsulta(String proveedor) {
-        if (Normalizador.esVacio(proveedor)) {
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return;
         }
-        if (!ProveedorAI.existeProveedor(proveedor)) {
+        if (!ProveedorAI.existeProveedor(proveedorNormalizado)) {
             return;
         }
         if (proveedoresMultiConsulta == null) {
             proveedoresMultiConsulta = new ArrayList<>();
         }
-        if (!proveedoresMultiConsulta.contains(proveedor)) {
-            proveedoresMultiConsulta.add(proveedor);
+        if (!proveedoresMultiConsulta.contains(proveedorNormalizado)) {
+            proveedoresMultiConsulta.add(proveedorNormalizado);
         }
     }
 
     public void removerProveedorMultiConsulta(String proveedor) {
         if (proveedoresMultiConsulta != null) {
-            proveedoresMultiConsulta.remove(proveedor);
+            String proveedorNormalizado = normalizarProveedor(proveedor);
+            proveedoresMultiConsulta.remove(proveedorNormalizado);
         }
     }
 
@@ -1164,10 +1177,16 @@ public class ConfiguracionAPI {
         if (maxTokensPorProveedor == null) {
             maxTokensPorProveedor = new HashMap<>();
         }
+        apiKeysPorProveedor = normalizarMapaStringPorProveedor(apiKeysPorProveedor);
+        urlsBasePorProveedor = normalizarMapaStringPorProveedor(urlsBasePorProveedor);
+        modelosPorProveedor = normalizarMapaStringPorProveedor(modelosPorProveedor);
+        maxTokensPorProveedor = normalizarMapaIntPorProveedor(maxTokensPorProveedor);
         tiempoEsperaPorModelo = normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo);
+        proveedorAI = normalizarProveedor(proveedorAI);
         if (Normalizador.esVacio(proveedorAI) || !ProveedorAI.existeProveedor(proveedorAI)) {
             proveedorAI = "Z.ai";
         }
+        proveedoresMultiConsulta = normalizarListaProveedores(proveedoresMultiConsulta);
         idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo();
         tiempoEsperaAI = normalizarTiempoEspera(tiempoEsperaAI);
         tema = normalizarTema(tema);
@@ -1215,7 +1234,7 @@ public class ConfiguracionAPI {
             if (entry == null || entry.getValue() == null) {
                 continue;
             }
-            String clave = entry.getKey() != null ? entry.getKey().trim() : "";
+            String clave = normalizarClaveTiempoEsperaModelo(entry.getKey());
             if (clave.isEmpty()) {
                 continue;
             }
@@ -1225,9 +1244,11 @@ public class ConfiguracionAPI {
     }
 
     private static String construirClaveTiempoEsperaModelo(String proveedor, String modelo) {
-        String proveedorNormalizado = proveedor != null ? proveedor.trim() : "";
+        String proveedorNormalizado = normalizarProveedor(proveedor);
         String modeloNormalizado = modelo != null ? modelo.trim() : "";
-        if (proveedorNormalizado.isEmpty() || modeloNormalizado.isEmpty()) {
+        if (proveedorNormalizado.isEmpty()
+                || !ProveedorAI.existeProveedor(proveedorNormalizado)
+                || modeloNormalizado.isEmpty()) {
             return "";
         }
         return proveedorNormalizado + "::" + modeloNormalizado;
@@ -1263,8 +1284,78 @@ public class ConfiguracionAPI {
     }
 
     private int obtenerMaxTokensPorDefectoProveedor(String proveedor) {
-        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
+        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(normalizarProveedor(proveedor));
         return config != null ? config.obtenerMaxTokensPorDefecto() : 4096;
+    }
+
+    private static String normalizarProveedor(String proveedor) {
+        return ProveedorAI.normalizarProveedor(proveedor);
+    }
+
+    private static Map<String, String> normalizarMapaStringPorProveedor(Map<String, String> mapa) {
+        Map<String, String> limpio = new HashMap<>();
+        if (mapa == null) {
+            return limpio;
+        }
+        for (Map.Entry<String, String> entry : mapa.entrySet()) {
+            if (entry == null) {
+                continue;
+            }
+            String proveedor = normalizarProveedor(entry.getKey());
+            if (proveedor.isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
+                continue;
+            }
+            limpio.put(proveedor, entry.getValue() != null ? entry.getValue() : "");
+        }
+        return limpio;
+    }
+
+    private static Map<String, Integer> normalizarMapaIntPorProveedor(Map<String, Integer> mapa) {
+        Map<String, Integer> limpio = new HashMap<>();
+        if (mapa == null) {
+            return limpio;
+        }
+        for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
+            if (entry == null || entry.getValue() == null) {
+                continue;
+            }
+            String proveedor = normalizarProveedor(entry.getKey());
+            if (proveedor.isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
+                continue;
+            }
+            limpio.put(proveedor, entry.getValue());
+        }
+        return limpio;
+    }
+
+    private static List<String> normalizarListaProveedores(List<String> proveedores) {
+        List<String> normalizados = new ArrayList<>();
+        if (proveedores == null) {
+            return normalizados;
+        }
+        for (String proveedor : proveedores) {
+            String proveedorNormalizado = normalizarProveedor(proveedor);
+            if (!proveedorNormalizado.isEmpty()
+                    && ProveedorAI.existeProveedor(proveedorNormalizado)
+                    && !normalizados.contains(proveedorNormalizado)) {
+                normalizados.add(proveedorNormalizado);
+            }
+        }
+        return normalizados;
+    }
+
+    private static String normalizarClaveTiempoEsperaModelo(String clave) {
+        if (Normalizador.esVacio(clave)) {
+            return "";
+        }
+        String limpia = clave.trim();
+        int separador = limpia.indexOf("::");
+        if (separador <= 0) {
+            return "";
+        }
+        String proveedor = limpia.substring(0, separador);
+        String modelo = limpia.substring(separador + 2);
+        return construirClaveTiempoEsperaModelo(proveedor, modelo);
     }
 
     public ConfiguracionAPI crearSnapshot() {

@@ -21,8 +21,14 @@ import java.util.Map;
  */
 public final class ProveedorAI {
 
-    /** Nombre del proveedor personalizado para configuraciones custom */
-    public static final String PROVEEDOR_CUSTOM = "-- Custom --";
+    /** Proveedor custom canónico #1 (OpenAI-compatible) */
+    public static final String PROVEEDOR_CUSTOM_01 = "-- Custom 01 --";
+
+    /** Proveedor custom canónico #2 (OpenAI-compatible) */
+    public static final String PROVEEDOR_CUSTOM_02 = "-- Custom 02 --";
+
+    /** Proveedor custom canónico #3 (OpenAI-compatible) */
+    public static final String PROVEEDOR_CUSTOM_03 = "-- Custom 03 --";
 
     /** URL por defecto para proveedor custom en inglés */
     public static final String URL_CUSTOM_EN = "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1";
@@ -214,7 +220,21 @@ public final class ProveedorAI {
                 true,
                 4096));
 
-        PROVEEDORES.put(PROVEEDOR_CUSTOM, new ConfiguracionProveedor(
+        PROVEEDORES.put(PROVEEDOR_CUSTOM_01, new ConfiguracionProveedor(
+                URL_CUSTOM_ES,
+                "",
+                Collections.emptyList(),
+                false,
+                4096));
+
+        PROVEEDORES.put(PROVEEDOR_CUSTOM_02, new ConfiguracionProveedor(
+                URL_CUSTOM_ES,
+                "",
+                Collections.emptyList(),
+                false,
+                4096));
+
+        PROVEEDORES.put(PROVEEDOR_CUSTOM_03, new ConfiguracionProveedor(
                 URL_CUSTOM_ES,
                 "",
                 Collections.emptyList(),
@@ -239,16 +259,19 @@ public final class ProveedorAI {
      * @return Configuración del proveedor, o {@code null} si no existe
      */
     public static ConfiguracionProveedor obtenerProveedor(String nombre) {
-        if (Normalizador.esVacio(nombre)) {
+        String proveedorNormalizado = normalizarProveedor(nombre);
+        if (proveedorNormalizado.isEmpty()) {
             return null;
         }
-        return PROVEEDORES.get(nombre);
+        return PROVEEDORES.get(proveedorNormalizado);
     }
 
     /**
      * Obtiene la lista de nombres de todos los proveedores disponibles.
      * <p>
-     * El proveedor custom ({@link #PROVEEDOR_CUSTOM}) siempre es el último.
+     * Los proveedores custom canónicos ({@link #PROVEEDOR_CUSTOM_01},
+     * {@link #PROVEEDOR_CUSTOM_02}, {@link #PROVEEDOR_CUSTOM_03})
+     * siempre se publican al final y en ese orden.
      * </p>
      *
      * @return Lista de nombres de proveedores
@@ -264,10 +287,11 @@ public final class ProveedorAI {
      * @return {@code true} si el proveedor existe, {@code false} en caso contrario
      */
     public static boolean existeProveedor(String nombre) {
-        if (Normalizador.esVacio(nombre)) {
+        String proveedorNormalizado = normalizarProveedor(nombre);
+        if (proveedorNormalizado.isEmpty()) {
             return false;
         }
-        return PROVEEDORES.containsKey(nombre);
+        return PROVEEDORES.containsKey(proveedorNormalizado);
     }
 
     /**
@@ -281,13 +305,14 @@ public final class ProveedorAI {
      * @return URL de API por defecto, o {@code null} si el proveedor no existe
      */
     public static String obtenerUrlApiPorDefecto(String nombreProveedor, String idiomaUi) {
-        if (Normalizador.esVacio(nombreProveedor)) {
+        String proveedorNormalizado = normalizarProveedor(nombreProveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return null;
         }
-        if (PROVEEDOR_CUSTOM.equals(nombreProveedor)) {
+        if (esProveedorCustom(proveedorNormalizado)) {
             return "en".equalsIgnoreCase(idiomaUi) ? URL_CUSTOM_EN : URL_CUSTOM_ES;
         }
-        ConfiguracionProveedor config = PROVEEDORES.get(nombreProveedor);
+        ConfiguracionProveedor config = PROVEEDORES.get(proveedorNormalizado);
         return config != null ? config.obtenerUrlApi() : null;
     }
 
@@ -298,10 +323,11 @@ public final class ProveedorAI {
      * @return Nombre del modelo por defecto, o {@code null} si el proveedor no existe
      */
     public static String obtenerModeloPorDefecto(String nombreProveedor) {
-        if (Normalizador.esVacio(nombreProveedor)) {
+        String proveedorNormalizado = normalizarProveedor(nombreProveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return null;
         }
-        ConfiguracionProveedor config = PROVEEDORES.get(nombreProveedor);
+        ConfiguracionProveedor config = PROVEEDORES.get(proveedorNormalizado);
         return config != null ? config.obtenerModeloPorDefecto() : null;
     }
 
@@ -315,10 +341,41 @@ public final class ProveedorAI {
      * @return Lista de modelos disponibles, o lista vacía si no existe
      */
     public static List<String> obtenerModelosDisponibles(String nombreProveedor) {
-        if (Normalizador.esVacio(nombreProveedor)) {
+        String proveedorNormalizado = normalizarProveedor(nombreProveedor);
+        if (proveedorNormalizado.isEmpty()) {
             return Collections.emptyList();
         }
-        ConfiguracionProveedor config = PROVEEDORES.get(nombreProveedor);
+        ConfiguracionProveedor config = PROVEEDORES.get(proveedorNormalizado);
         return config != null ? config.obtenerModelosDisponibles() : Collections.emptyList();
+    }
+
+    /**
+     * Indica si un nombre corresponde a cualquier proveedor custom soportado.
+     *
+     * @param nombreProveedor Nombre de proveedor
+     * @return {@code true} si es un proveedor custom
+     */
+    public static boolean esProveedorCustom(String nombreProveedor) {
+        String proveedorNormalizado = normalizarProveedor(nombreProveedor);
+        if (proveedorNormalizado.isEmpty()) {
+            return false;
+        }
+        return PROVEEDOR_CUSTOM_01.equals(proveedorNormalizado)
+            || PROVEEDOR_CUSTOM_02.equals(proveedorNormalizado)
+            || PROVEEDOR_CUSTOM_03.equals(proveedorNormalizado);
+    }
+
+    /**
+     * Normaliza el nombre de proveedor recibido desde UI/config.
+     *
+     * @param nombreProveedor Nombre recibido desde UI/config
+     * @return nombre canónico, o cadena vacía si entrada inválida
+     */
+    public static String normalizarProveedor(String nombreProveedor) {
+        if (Normalizador.esVacio(nombreProveedor)) {
+            return "";
+        }
+        String limpio = nombreProveedor.trim();
+        return limpio;
     }
 }

@@ -2572,6 +2572,26 @@ public final class I18nUI {
                         "When checked, the severity filter in Findings is saved when closing Burp Suite.");
             }
 
+            public static String MULTI_PROVEEDOR_AGREGAR() {
+                return I18nUI.tr("Agregar proveedor seleccionado al orden de multi-consulta.",
+                        "Add selected provider to the multi-query order.");
+            }
+
+            public static String MULTI_PROVEEDOR_QUITAR() {
+                return I18nUI.tr("Quitar proveedor seleccionado del orden de multi-consulta.",
+                        "Remove selected provider from the multi-query order.");
+            }
+
+            public static String MULTI_PROVEEDOR_SUBIR() {
+                return I18nUI.tr("Subir proveedor seleccionado en el orden de ejecución.",
+                        "Move selected provider up in execution order.");
+            }
+
+            public static String MULTI_PROVEEDOR_BAJAR() {
+                return I18nUI.tr("Bajar proveedor seleccionado en el orden de ejecución.",
+                        "Move selected provider down in execution order.");
+            }
+
             public static String RESTAURAR_PROMPT_AGENTE() {
                 return I18nUI.tr("Restaura el prompt de validación del agente al valor por defecto.",
                         "Restores the agent validation prompt to its default value.");

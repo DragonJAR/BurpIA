@@ -1,4 +1,5 @@
 package com.burpia.ui;
+import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
 import com.burpia.util.GestorTareas;
@@ -194,6 +195,17 @@ class PanelTareasAccionesTest {
         flushEdt();
 
         assertEquals("▶️ Resume All", boton.getText());
+    }
+
+    @Test
+    @DisplayName("establecerConfiguracion aplica limite de filas de tareas desde ajustes")
+    void testEstablecerConfiguracionAplicaLimiteFilas() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerMaximoTareasTabla(321);
+
+        SwingUtilities.invokeAndWait(() -> panel.establecerConfiguracion(config));
+
+        assertEquals(321, modelo.obtenerLimiteFilas());
     }
 
     private JButton obtenerBotonPrincipal() throws Exception {

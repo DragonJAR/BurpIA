@@ -35,7 +35,7 @@ class ProbadorConexionAITest {
         servidorActivo = true;
 
         config = new ConfiguracionAPI();
-        config.establecerProveedorAI(ProveedorAI.PROVEEDOR_CUSTOM);
+        config.establecerProveedorAI(ProveedorAI.PROVEEDOR_CUSTOM_02);
         config.establecerClaveApi("test-key");
         config.establecerUrlApi(mockWebServer.url("/v1/chat/completions").toString());
         config.establecerModelo("gpt-3.5-mock");

@@ -789,7 +789,12 @@ public class AnalizadorAI implements Runnable {
 
             rastrear("Total de hallazgos parseados: " + hallazgos.size());
 
-            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), hallazgos, solicitud.obtenerSolicitudHttp());
+            return new ResultadoAnalisisMultiple(
+                solicitud.obtenerUrl(),
+                hallazgos,
+                solicitud.obtenerSolicitudHttp(),
+                Collections.emptyList()
+            );
 
         } catch (Exception e) {
             registrarError("Error al parsear respuesta de API: " + e.getMessage());
@@ -805,7 +810,12 @@ public class AnalizadorAI implements Runnable {
                 solicitud.obtenerSolicitudHttp()
             ));
 
-            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), hallazgosError, solicitud.obtenerSolicitudHttp());
+            return new ResultadoAnalisisMultiple(
+                solicitud.obtenerUrl(),
+                hallazgosError,
+                solicitud.obtenerSolicitudHttp(),
+                Collections.emptyList()
+            );
         }
     }
 
@@ -839,7 +849,7 @@ public class AnalizadorAI implements Runnable {
             return convertirArrayAHallazgos(arrayRecuperado);
         }
 
-        // Fallback final: parseo campo por campo (DEPRECATED, mantener por compatibilidad)
+        // Fallback final: parseo campo por campo para respuestas extremadamente malformadas
         return parsearHallazgosCampoPorCampo(contenido);
     }
 
@@ -872,7 +882,6 @@ public class AnalizadorAI implements Runnable {
      * NOTA: Este método es llamado DESPUÉS de que extraerArrayJsonInteligente() falla,
      * por lo que NO reintenta esa estrategia (evita duplicación de logs y procesamiento).
      */
-    @Deprecated
     private List<Hallazgo> parsearHallazgosCampoPorCampo(String contenido) {
         List<Hallazgo> hallazgos = new ArrayList<>();
 
@@ -1333,8 +1342,12 @@ public class AnalizadorAI implements Runnable {
             hallazgosConEtiqueta.add(hallazgoEtiquetado);
         }
 
-        return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), hallazgosConEtiqueta,
-            solicitud.obtenerSolicitudHttp());
+        return new ResultadoAnalisisMultiple(
+            solicitud.obtenerUrl(),
+            hallazgosConEtiqueta,
+            solicitud.obtenerSolicitudHttp(),
+            Collections.emptyList()
+        );
     }
 
     private List<Hallazgo> parsearTextoPlano(String contenido) {

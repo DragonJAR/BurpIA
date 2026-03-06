@@ -18,13 +18,13 @@ import java.nio.file.Path;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests para GestorConfiguracion.
  * <p>
  * Verifica la persistencia y carga de configuración, incluyendo:
- * - Campos legacy y migración
  * - Preferencias runtime de usuario
  * - Prompts de agente
  * - Timeouts por modelo
@@ -89,8 +89,8 @@ class GestorConfiguracionTest {
     }
 
     @Test
-    @DisplayName("Guarda configuración sin campos legacy de proveedor")
-    void testGuardarSinCamposLegacy() throws Exception {
+    @DisplayName("Guarda configuración sin campos obsoletos de proveedor")
+    void testGuardarSinCamposObsoletos() throws Exception {
         configurarDirectorioTemporalComoHome();
 
         GestorConfiguracion gestor = new GestorConfiguracion();
@@ -254,8 +254,8 @@ class GestorConfiguracionTest {
     }
 
     @Test
-    @DisplayName("JSON legacy sin timeout por modelo mantiene fallback global")
-    void testLegacySinTimeoutPorModeloMantieneFallback() throws Exception {
+    @DisplayName("JSON sin timeout por modelo mantiene fallback global")
+    void testJsonSinTimeoutPorModeloMantieneFallback() throws Exception {
         configurarDirectorioTemporalComoHome();
 
         String json = "{\n" +
@@ -327,5 +327,39 @@ class GestorConfiguracionTest {
 
         assertFalse(config.esPromptModificado());
         assertEquals(ConfiguracionAPI.obtenerPromptPorDefecto(), config.obtenerPromptConfigurable());
+    }
+
+    @Test
+    @DisplayName("Carga configuración con proveedor desconocido y descarta valores inválidos")
+    void testCargaProveedorDesconocidoDescartaValoresInvalidos() throws Exception {
+        configurarDirectorioTemporalComoHome();
+
+        String json = "{\n" +
+            "  \"proveedorAI\": \"-- Custom --\",\n" +
+            "  \"apiKeysPorProveedor\": {\"-- Custom --\": \"legacy-key\"},\n" +
+            "  \"urlsBasePorProveedor\": {\"-- Custom --\": \"https://legacy.local/v1\"},\n" +
+            "  \"modelosPorProveedor\": {\"-- Custom --\": \"legacy-model\"},\n" +
+            "  \"maxTokensPorProveedor\": {\"-- Custom --\": 3500},\n" +
+            "  \"tiempoEsperaPorModelo\": {\"-- Custom --::legacy-model\": 210},\n" +
+            "  \"multiProveedorHabilitado\": true,\n" +
+            "  \"proveedoresMultiConsulta\": [\"-- Custom --\", \"OpenAI\"]\n" +
+            "}";
+        escribirConfigJson(json);
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI cargada = gestor.cargarConfiguracion();
+
+        assertEquals("Z.ai", cargada.obtenerProveedorAI());
+        assertEquals("", cargada.obtenerApiKeyParaProveedor("-- Custom --"));
+        assertNull(cargada.obtenerUrlBaseGuardadaParaProveedor("-- Custom --"));
+        assertEquals("", cargada.obtenerModeloParaProveedor("-- Custom --"));
+        assertEquals(4096, cargada.obtenerMaxTokensParaProveedor("-- Custom --"));
+        assertNull(cargada.obtenerTiempoEsperaConfiguradoParaModelo("-- Custom --", "legacy-model"));
+        assertEquals(1, cargada.obtenerProveedoresMultiConsulta().size());
+        assertEquals("OpenAI", cargada.obtenerProveedoresMultiConsulta().get(0));
+
+        assertTrue(gestor.guardarConfiguracion(cargada));
+        String jsonMigrado = leerConfigJson();
+        assertFalse(jsonMigrado.contains("\"-- Custom --\""));
     }
 }

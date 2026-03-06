@@ -740,7 +740,10 @@ public class PanelTareas extends JPanel {
     }
 
     public void establecerConfiguracion(ConfiguracionAPI config) {
-        // No-op: la configuración de límite de filas se establece en la construcción del modelo
+        if (config == null) {
+            return;
+        }
+        modelo.establecerLimiteFilas(config.obtenerMaximoTareasTabla());
     }
 
     private static final class TareaSeleccionada {

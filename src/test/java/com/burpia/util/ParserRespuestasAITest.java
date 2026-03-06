@@ -1,5 +1,6 @@
 package com.burpia.util;
 
+import com.burpia.config.ProveedorAI;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import org.junit.jupiter.api.DisplayName;
@@ -20,7 +21,9 @@ class ParserRespuestasAITest {
         String json = "{\"choices\":[{\"message\":{\"content\":\"OK desde OpenAI\"}}]}";
         assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
         assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "Z.ai"));
-        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "-- Custom --"));
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_01));
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_02));
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_03));
     }
 
     @Test

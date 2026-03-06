@@ -112,29 +112,19 @@ public class ParserRespuestasAI {
 
             String proveedorNormalizado = proveedor != null ? proveedor : "";
 
-            switch (proveedorNormalizado) {
-                case "Ollama":
-                    contenido = extraerContenidoOllama(raiz);
-                    break;
-
-                case "OpenAI":
-                case "Z.ai":
-                case "minimax":
-                case ProveedorAI.PROVEEDOR_CUSTOM:
-                    contenido = extraerContenidoOpenAI(raiz);
-                    break;
-
-                case "Claude":
-                    contenido = extraerContenidoClaude(raiz);
-                    break;
-
-                case "Gemini":
-                    contenido = extraerContenidoGemini(raiz);
-                    break;
-
-                default:
-                    contenido = extraerContenidoGenerico(raiz);
-                    break;
+            if ("Ollama".equals(proveedorNormalizado)) {
+                contenido = extraerContenidoOllama(raiz);
+            } else if ("OpenAI".equals(proveedorNormalizado)
+                    || "Z.ai".equals(proveedorNormalizado)
+                    || "minimax".equals(proveedorNormalizado)
+                    || ProveedorAI.esProveedorCustom(proveedorNormalizado)) {
+                contenido = extraerContenidoOpenAI(raiz);
+            } else if ("Claude".equals(proveedorNormalizado)) {
+                contenido = extraerContenidoClaude(raiz);
+            } else if ("Gemini".equals(proveedorNormalizado)) {
+                contenido = extraerContenidoGemini(raiz);
+            } else {
+                contenido = extraerContenidoGenerico(raiz);
             }
 
             if (Normalizador.noEsVacio(contenido)) {

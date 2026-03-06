@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.JMenuItem;
 import java.awt.Component;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -38,6 +39,7 @@ class FabricaMenuContextualTest {
         api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         config = mock(ConfiguracionAPI.class);
         when(config.agenteHabilitado()).thenReturn(false);
+        when(config.alertasHabilitadas()).thenReturn(true);
         when(config.alertasClickDerechoEnviarAHabilitadas()).thenReturn(false);
     }
 
@@ -406,6 +408,20 @@ class FabricaMenuContextualTest {
             // Verificar que el callback esta configurado
             assertNotNull(fabrica);
             assertEquals(0, cambios.get());
+        }
+
+        @Test
+        @DisplayName("alertas contextuales dependen del flag global de alertas")
+        void alertasContextualesRespetanFlagGlobal() throws Exception {
+            when(config.alertasHabilitadas()).thenReturn(false);
+            when(config.alertasClickDerechoEnviarAHabilitadas()).thenReturn(true);
+
+            FabricaMenuContextual fabrica = crearFabricaBasica();
+            Method metodo = FabricaMenuContextual.class.getDeclaredMethod("alertasEnviarAHabilitadas");
+            metodo.setAccessible(true);
+
+            boolean habilitadas = (boolean) metodo.invoke(fabrica);
+            assertFalse(habilitadas);
         }
     }
 

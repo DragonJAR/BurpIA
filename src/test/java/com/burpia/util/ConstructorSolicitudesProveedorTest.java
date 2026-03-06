@@ -1,6 +1,7 @@
 package com.burpia.util;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.ProveedorAI;
 import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -413,15 +414,22 @@ class ConstructorSolicitudesProveedorTest {
         }
 
         @Test
-        @DisplayName("Construye solicitud válida para proveedor Custom")
+        @DisplayName("Construye solicitud válida para proveedor Custom 02")
         void construyeSolicitudCustom() throws Exception {
-            ConfiguracionAPI config = crearConfiguracionTest("Custom", "custom-model", "https://custom.api/v1", "custom-key");
+            ConfiguracionAPI config = crearConfiguracionTest(
+                ProveedorAI.PROVEEDOR_CUSTOM_02,
+                "custom-model",
+                "https://custom.api/v1",
+                "custom-key"
+            );
 
             ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
                 ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
 
             assertNotNull(solicitud.request);
             assertEquals("custom-model", solicitud.modeloUsado);
+            assertTrue(solicitud.endpoint.endsWith("/chat/completions"));
+            assertNotNull(solicitud.request.header("Authorization"));
         }
     }
 

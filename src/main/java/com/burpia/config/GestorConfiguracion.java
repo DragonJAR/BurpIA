@@ -277,8 +277,6 @@ public class GestorConfiguracion {
 
         if (archivo.agenteHabilitado != null) {
             config.establecerAgenteHabilitado(archivo.agenteHabilitado);
-        } else if (archivo.agenteFactoryDroidHabilitado != null) {
-            config.establecerAgenteHabilitado(archivo.agenteFactoryDroidHabilitado);
         }
 
         if (archivo.tipoAgente != null) {
@@ -287,14 +285,10 @@ public class GestorConfiguracion {
 
         if (archivo.rutasBinarioPorAgente != null) {
             config.establecerTodasLasRutasBinario(archivo.rutasBinarioPorAgente);
-        } else if (archivo.agenteFactoryDroidBinario != null) {
-            config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), archivo.agenteFactoryDroidBinario);
         }
 
         if (archivo.agentePrompt != null) {
             config.establecerAgentePrompt(archivo.agentePrompt);
-        } else if (archivo.agenteFactoryDroidPrompt != null) {
-            config.establecerAgentePrompt(archivo.agenteFactoryDroidPrompt);
         }
 
         if (archivo.agentePreflightPrompt != null) {
@@ -303,8 +297,6 @@ public class GestorConfiguracion {
 
         if (archivo.agenteDelay != null) {
             config.establecerAgenteDelay(archivo.agenteDelay);
-        } else if (archivo.agenteFactoryDroidDelay != null) {
-            config.establecerAgenteDelay(archivo.agenteFactoryDroidDelay);
         }
 
         config.establecerDetallado(Boolean.TRUE.equals(archivo.detallado));
@@ -407,8 +399,9 @@ public class GestorConfiguracion {
             return limpio;
         }
         for (Map.Entry<String, String> entry : mapa.entrySet()) {
-            if (entry.getKey() != null && ProveedorAI.existeProveedor(entry.getKey())) {
-                limpio.put(entry.getKey(), entry.getValue() != null ? entry.getValue() : "");
+            String proveedor = ProveedorAI.normalizarProveedor(entry.getKey());
+            if (Normalizador.noEsVacio(proveedor) && ProveedorAI.existeProveedor(proveedor)) {
+                limpio.put(proveedor, entry.getValue() != null ? entry.getValue() : "");
             }
         }
         return limpio;
@@ -420,9 +413,10 @@ public class GestorConfiguracion {
             return limpio;
         }
         for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
-            if (entry.getKey() != null && ProveedorAI.existeProveedor(entry.getKey())
+            String proveedor = ProveedorAI.normalizarProveedor(entry.getKey());
+            if (Normalizador.noEsVacio(proveedor) && ProveedorAI.existeProveedor(proveedor)
                     && entry.getValue() != null && entry.getValue() > 0) {
-                limpio.put(entry.getKey(), entry.getValue());
+                limpio.put(proveedor, entry.getValue());
             }
         }
         return limpio;
@@ -437,13 +431,36 @@ public class GestorConfiguracion {
             if (entry.getKey() == null || entry.getValue() == null) {
                 continue;
             }
-            String clave = entry.getKey().trim();
+            String clave = normalizarClaveTimeoutProveedorModelo(entry.getKey());
             int valor = entry.getValue();
             if (!clave.isEmpty() && valor > 0) {
                 limpio.put(clave, valor);
             }
         }
         return limpio;
+    }
+
+    private String normalizarClaveTimeoutProveedorModelo(String claveOriginal) {
+        if (Normalizador.esVacio(claveOriginal)) {
+            return "";
+        }
+        String clave = claveOriginal.trim();
+        int separador = clave.indexOf("::");
+        if (separador <= 0) {
+            return clave;
+        }
+
+        String proveedor = ProveedorAI.normalizarProveedor(clave.substring(0, separador));
+        if (Normalizador.esVacio(proveedor) || !ProveedorAI.existeProveedor(proveedor)) {
+            return "";
+        }
+
+        String modelo = clave.substring(separador + 2).trim();
+        if (Normalizador.esVacio(modelo)) {
+            return "";
+        }
+
+        return proveedor + "::" + modelo;
     }
 
     private static class ArchivoConfiguracion {
@@ -464,11 +481,6 @@ public class GestorConfiguracion {
         private Boolean promptModificado;
         private Boolean ignorarErroresSSL;
         private Boolean soloProxy;
-        private Boolean agenteFactoryDroidHabilitado;
-        private String agenteFactoryDroidBinario;
-        private String agenteFactoryDroidPrompt;
-        private Integer agenteFactoryDroidDelay;
-
         private Boolean agenteHabilitado;
         private String tipoAgente;
         private String agentePreflightPrompt;

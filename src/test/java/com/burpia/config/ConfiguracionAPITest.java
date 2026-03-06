@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -342,15 +344,59 @@ class ConfiguracionAPITest {
         configEs.establecerIdiomaUi("es");
         assertEquals(
             "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1",
-            configEs.obtenerUrlBaseParaProveedor("-- Custom --")
+            configEs.obtenerUrlBaseParaProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01)
         );
 
         ConfiguracionAPI configEn = new ConfiguracionAPI();
         configEn.establecerIdiomaUi("en");
         assertEquals(
             "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1",
-            configEn.obtenerUrlBaseParaProveedor("-- Custom --")
+            configEn.obtenerUrlBaseParaProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01)
         );
+    }
+
+    @Test
+    @DisplayName("Proveedor desconocido no se acepta y vuelve a default")
+    void testProveedorDesconocidoNoSeAcepta() {
+        config.establecerProveedorAI("-- Custom --");
+        assertEquals("Z.ai", config.obtenerProveedorAI());
+    }
+
+    @Test
+    @DisplayName("Lista multi-proveedor descarta proveedores desconocidos")
+    void testListaMultiProveedorDescartaDesconocidos() {
+        config.establecerProveedoresMultiConsulta(Arrays.asList(
+            ProveedorAI.PROVEEDOR_CUSTOM_02,
+            "OpenAI",
+            "NoExiste"
+        ));
+
+        List<String> proveedores = config.obtenerProveedoresMultiConsulta();
+        assertEquals(2, proveedores.size());
+        assertEquals(ProveedorAI.PROVEEDOR_CUSTOM_02, proveedores.get(0));
+        assertEquals("OpenAI", proveedores.get(1));
+    }
+
+    @Test
+    @DisplayName("Mapas por proveedor descartan claves de proveedor desconocido")
+    void testMapasPorProveedorDescartanProveedorDesconocido() {
+        java.util.HashMap<String, String> urls = new java.util.HashMap<>();
+        urls.put("-- Custom --", "https://legacy.local/v1");
+        urls.put(ProveedorAI.PROVEEDOR_CUSTOM_01, "https://custom01.local/v1");
+        config.establecerUrlsBasePorProveedor(urls);
+
+        assertEquals("https://custom01.local/v1",
+            config.obtenerUrlBaseGuardadaParaProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01));
+        assertNull(config.obtenerUrlBaseGuardadaParaProveedor("-- Custom --"));
+    }
+
+    @Test
+    @DisplayName("Timeout por modelo descarta proveedor desconocido")
+    void testTimeoutPorModeloDescartaProveedorDesconocido() {
+        int timeoutGlobal = config.obtenerTiempoEsperaAI();
+        config.establecerTiempoEsperaParaModelo("-- Custom --", "custom-model", 180);
+        assertEquals(timeoutGlobal, config.obtenerTiempoEsperaParaModelo("-- Custom --", "custom-model"));
+        assertNull(config.obtenerTiempoEsperaConfiguradoParaModelo("-- Custom --", "custom-model"));
     }
 
     @Test

@@ -401,6 +401,10 @@ public final class I18nLogs {
             return tr("Habilitado: ") + (habilitado ? SI() : NO());
         }
 
+        public static String AGENTE_HABILITADO(boolean habilitado) {
+            return tr("Habilitado: ") + (habilitado ? SI() : NO());
+        }
+
         public static String PROVEEDORES() {
             return tr("Proveedores: ");
         }

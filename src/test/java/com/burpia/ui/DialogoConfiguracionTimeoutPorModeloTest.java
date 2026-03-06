@@ -2,6 +2,7 @@ package com.burpia.ui;
 
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.config.ProveedorAI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.RutasBurpIA;
@@ -92,6 +93,36 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             SwingUtilities.invokeAndWait(() -> comboModelo.setSelectedItem("glm-4-air"));
             flushEdt();
             assertEquals("120", txtTimeoutModelo.getText());
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Lista de proveedores muestra Custom 01/02/03 y al seleccionar custom aplica URL default")
+    void testListaProveedoresCustomYUrlDefault() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerIdiomaUi("es");
+        GestorConfiguracion gestor = new GestorConfiguracion();
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JTextField txtUrl = obtenerCampo(dialogo, "txtUrl", JTextField.class);
+
+            List<String> proveedores = new ArrayList<>();
+            for (int i = 0; i < comboProveedor.getItemCount(); i++) {
+                proveedores.add(comboProveedor.getItemAt(i));
+            }
+
+            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_01));
+            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_02));
+            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_03));
+            assertFalse(proveedores.contains("-- Custom --"));
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem(ProveedorAI.PROVEEDOR_CUSTOM_02));
+            flushEdt();
+            assertEquals(ProveedorAI.URL_CUSTOM_ES, txtUrl.getText());
         } finally {
             destruirDialogo(dialogo);
         }
@@ -464,12 +495,59 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
 
         try {
-            JComboBox<IdiomaUI> comboIdioma = obtenerCampo(dialogo, "comboIdioma", JComboBox.class);
+            JComboBox<?> comboIdioma = obtenerCampo(dialogo, "comboIdioma", JComboBox.class);
             SwingUtilities.invokeAndWait(() -> comboIdioma.setSelectedItem(IdiomaUI.EN));
             flushEdt();
 
             assertEquals("es", config.obtenerIdiomaUi(),
                     "El idioma de configuración no debe mutar hasta pulsar Guardar");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Guardar con número inválido en límites no lanza error y no persiste cambios")
+    void testGuardarConNumeroInvalidoNoPersiste() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-numero-invalido");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> guardadoCallback.set(true));
+
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+            JTextField txtMaximoTareas = obtenerCampo(dialogo, "txtMaximoTareas", JTextField.class);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("Z.ai");
+                comboModelo.setSelectedItem("glm-5");
+                comboModelo.getEditor().setItem("glm-5");
+                txtClave.setText("test-key");
+                txtTimeoutModelo.setText("120");
+                txtMaximoTareas.setText("abc");
+            });
+            flushEdt();
+
+            Method guardar = DialogoConfiguracion.class.getDeclaredMethod("guardarConfiguracion");
+            guardar.setAccessible(true);
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    guardar.invoke(dialogo);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            flushEdt();
+
+            assertFalse(guardadoCallback.get(), "Con formato inválido no debe ejecutar guardado");
+            assertTrue(dialogo.isDisplayable(), "El diálogo debe permanecer abierto tras validación fallida");
         } finally {
             destruirDialogo(dialogo);
         }

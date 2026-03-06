@@ -77,11 +77,19 @@ class ConfiguracionAPIEndpointsTest {
     }
 
     @Test
-    @DisplayName("Construye endpoint Custom OpenAI-compatible")
+    @DisplayName("Construye endpoint Custom 01/02/03 OpenAI-compatible")
     void testEndpointCustom() {
         assertEquals(
             "https://example.local/v1/chat/completions",
-            ConfiguracionAPI.construirUrlApiProveedor("-- Custom --", "https://example.local/v1", "my-model")
+            ConfiguracionAPI.construirUrlApiProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01, "https://example.local/v1", "my-model")
+        );
+        assertEquals(
+            "https://example.local/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor(ProveedorAI.PROVEEDOR_CUSTOM_02, "https://example.local/v1", "my-model")
+        );
+        assertEquals(
+            "https://example.local/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor(ProveedorAI.PROVEEDOR_CUSTOM_03, "https://example.local/v1", "my-model")
         );
     }
 

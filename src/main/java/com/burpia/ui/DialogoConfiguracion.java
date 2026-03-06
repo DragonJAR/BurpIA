@@ -531,7 +531,7 @@ public class DialogoConfiguracion extends JDialog {
         panelApariencia.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelApariencia.getPreferredSize().height));
         contenido.add(panelApariencia);
 
-        root.add(new JScrollPane(contenido), BorderLayout.CENTER);
+        root.add(contenido, BorderLayout.CENTER);
         return root;
     }
 
@@ -587,27 +587,6 @@ public class DialogoConfiguracion extends JDialog {
         panelBoton.setOpaque(false);
         panelBoton.add(btnRestaurarFuentes);
         panel.add(panelBoton, gbc);
-
-        return panel;
-    }
-
-    private JPanel crearPanelPersistenciaUI() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(UIUtils.crearBordeTitulado(
-                I18nUI.Configuracion.TITULO_PERSISTENCIA_UI(), 12, 16));
-
-        JPanel panelChecks = new JPanel(new GridLayout(0, 2, 12, 8));
-        panelChecks.setOpaque(false);
-
-        chkPersistirBusqueda.setFont(EstilosUI.FUENTE_ESTANDAR);
-        chkPersistirSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
-
-        panelChecks.add(chkPersistirBusqueda);
-        panelChecks.add(chkPersistirSeveridad);
-
-        panelChecks.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panel.add(panelChecks);
 
         return panel;
     }
@@ -691,13 +670,13 @@ public class DialogoConfiguracion extends JDialog {
 
         JPanel panelBotonesCentro = new JPanel(new GridLayout(4, 1, 5, 5));
         btnAgregarProveedor = new JButton("→");
-        btnAgregarProveedor.setToolTipText("Agregar proveedor seleccionado");
+        btnAgregarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_AGREGAR());
         btnAgregarProveedor.setEnabled(false);
         btnAgregarProveedor.addActionListener(e -> agregarProveedorSeleccionado());
         panelBotonesCentro.add(btnAgregarProveedor);
 
         btnQuitarProveedor = new JButton("←");
-        btnQuitarProveedor.setToolTipText("Quitar proveedor seleccionado");
+        btnQuitarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_QUITAR());
         btnQuitarProveedor.setEnabled(false);
         btnQuitarProveedor.addActionListener(e -> quitarProveedorSeleccionado());
         panelBotonesCentro.add(btnQuitarProveedor);
@@ -742,14 +721,14 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panelBotonesReordenar = new JPanel(new GridLayout(1, 2, 5, 0));
         btnSubirProveedor = new JButton("▲");
         btnSubirProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
-        btnSubirProveedor.setToolTipText("Subir proveedor en el orden");
+        btnSubirProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_SUBIR());
         btnSubirProveedor.setEnabled(false);
         btnSubirProveedor.addActionListener(e -> subirProveedor());
         panelBotonesReordenar.add(btnSubirProveedor);
 
         btnBajarProveedor = new JButton("▼");
         btnBajarProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
-        btnBajarProveedor.setToolTipText("Bajar proveedor en el orden");
+        btnBajarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_BAJAR());
         btnBajarProveedor.setEnabled(false);
         btnBajarProveedor.addActionListener(e -> bajarProveedor());
         panelBotonesReordenar.add(btnBajarProveedor);
@@ -1202,9 +1181,6 @@ public class DialogoConfiguracion extends JDialog {
 
         main.add(heroPanel, BorderLayout.NORTH);
 
-        JPanel contentScroll = new JPanel(new BorderLayout());
-        contentScroll.setOpaque(false);
-
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBorder(BorderFactory.createEmptyBorder(25, 30, 25, 30));
@@ -1433,6 +1409,37 @@ public class DialogoConfiguracion extends JDialog {
         final int tamanioFuenteEstandar = (int) spinnerTamanioEstandar.getValue();
         final String nombreFuenteMono = (String) comboFuenteMono.getSelectedItem();
         final int tamanioFuenteMono = (int) spinnerTamanioMono.getValue();
+        final Integer retrasoSegundos = parsearEntero(retrasoTexto);
+        if (retrasoSegundos == null) {
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
+                    I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO());
+            txtRetraso.requestFocusInWindow();
+            return;
+        }
+
+        final Integer maximoConcurrente = parsearEntero(maximoConcurrenteTexto);
+        if (maximoConcurrente == null) {
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
+                    I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO());
+            txtMaximoConcurrente.requestFocusInWindow();
+            return;
+        }
+
+        final Integer maximoHallazgos = parsearEntero(maximoHallazgosTexto);
+        if (maximoHallazgos == null) {
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
+                    I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO());
+            txtMaximoHallazgosTabla.requestFocusInWindow();
+            return;
+        }
+
+        final Integer maximoTareas = parsearEntero(maximoTareasTexto);
+        if (maximoTareas == null) {
+            UIUtils.mostrarError(this, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
+                    I18nUI.Configuracion.MSG_ERROR_FORMATO_NUMERO());
+            txtMaximoTareas.requestFocusInWindow();
+            return;
+        }
 
         final boolean multiProveedorHabilitado = chkHabilitarMultiProveedor.isSelected();
         final List<String> proveedoresMultiConsulta = new ArrayList<>();
@@ -1441,6 +1448,8 @@ public class DialogoConfiguracion extends JDialog {
         }
 
         final Map<String, String> rutasTemporalesCopy = new HashMap<>(rutasBinarioAgenteTemporal);
+        final Map<String, EstadoProveedorUI> estadosProveedorGuardar = new HashMap<>(estadoProveedorTemporal);
+        estadosProveedorGuardar.put(proveedorSeleccionado, estadoUI);
         final String promptPorDefecto = ConfiguracionAPI.obtenerPromptPorDefecto();
 
         // Validar binario del agente si está habilitado
@@ -1479,11 +1488,8 @@ public class DialogoConfiguracion extends JDialog {
                             idiomaSeleccionado != null ? idiomaSeleccionado.codigo() : IdiomaUI.porDefecto().codigo());
                     snapshot.establecerProveedorAI(proveedorSeleccionado);
 
-                    // CONFIABILIDAD: Guardar estado actual del proveedor seleccionado antes de procesar todos
-                    estadoProveedorTemporal.put(proveedorSeleccionado, extraerEstadoActualRapido());
-
                     // CONFIABILIDAD: Guardar TODOS los proveedores configurados, no solo el seleccionado
-                    for (Map.Entry<String, EstadoProveedorUI> entry : estadoProveedorTemporal.entrySet()) {
+                    for (Map.Entry<String, EstadoProveedorUI> entry : estadosProveedorGuardar.entrySet()) {
                         String nombreProveedor = entry.getKey();
                         EstadoProveedorUI estadoProveedor = entry.getValue();
 
@@ -1515,10 +1521,10 @@ public class DialogoConfiguracion extends JDialog {
                     snapshot.establecerPromptConfigurable(promptActual);
                     snapshot.establecerPromptModificado(!promptActual.equals(promptPorDefecto));
 
-                    snapshot.establecerRetrasoSegundos(parsearEntero(retrasoTexto));
-                    snapshot.establecerMaximoConcurrente(parsearEntero(maximoConcurrenteTexto));
-                    snapshot.establecerMaximoHallazgosTabla(parsearEntero(maximoHallazgosTexto));
-                    snapshot.establecerMaximoTareasTabla(parsearEntero(maximoTareasTexto));
+                    snapshot.establecerRetrasoSegundos(retrasoSegundos);
+                    snapshot.establecerMaximoConcurrente(maximoConcurrente);
+                    snapshot.establecerMaximoHallazgosTabla(maximoHallazgos);
+                    snapshot.establecerMaximoTareasTabla(maximoTareas);
 
                     snapshot.establecerNombreFuenteEstandar(nombreFuenteEstandar);
                     snapshot.establecerTamanioFuenteEstandar(tamanioFuenteEstandar);
@@ -1707,7 +1713,7 @@ public class DialogoConfiguracion extends JDialog {
         } else {
             String urlGuardada = config.obtenerUrlBaseGuardadaParaProveedor(proveedor);
             boolean tieneUrlGuardada = Normalizador.noEsVacio(urlGuardada);
-            if (!tieneUrlGuardada && ProveedorAI.PROVEEDOR_CUSTOM.equals(proveedor)) {
+            if (!tieneUrlGuardada && ProveedorAI.esProveedorCustom(proveedor)) {
                 IdiomaUI idioma = (IdiomaUI) comboIdioma.getSelectedItem();
                 String codigo = idioma != null ? idioma.codigo() : config.obtenerIdiomaUi();
                 txtUrl.setText(ProveedorAI.obtenerUrlApiPorDefecto(proveedor, codigo));
@@ -1825,9 +1831,7 @@ public class DialogoConfiguracion extends JDialog {
     }
 
     private boolean esOpcionModeloCustom(String valor) {
-        return I18nUI.Configuracion.OPCION_MODELO_CUSTOM().equals(valor)
-                || "-- Custom --".equals(valor)
-                || "-- Personalizado --".equals(valor);
+        return I18nUI.Configuracion.OPCION_MODELO_CUSTOM().equals(valor);
     }
 
     private void actualizarTimeoutModeloSeleccionado() {
@@ -1895,7 +1899,7 @@ public class DialogoConfiguracion extends JDialog {
             }
         }
         if ("OpenAI".equals(proveedor) || "Z.ai".equals(proveedor) || "minimax".equals(proveedor)
-                || ProveedorAI.PROVEEDOR_CUSTOM.equals(proveedor)) {
+                || ProveedorAI.esProveedorCustom(proveedor)) {
             try {
                 return ConstructorSolicitudesProveedor.listarModelosOpenAI(
                         txtUrl.getText().trim(),
@@ -2492,6 +2496,8 @@ public class DialogoConfiguracion extends JDialog {
             txtMaximoConcurrente.setToolTipText(I18nUI.Tooltips.Configuracion.MAXIMO_CONCURRENTE());
         if (txtMaximoHallazgosTabla != null)
             txtMaximoHallazgosTabla.setToolTipText(I18nUI.Tooltips.Configuracion.MAXIMO_HALLAZGOS());
+        if (txtMaximoTareas != null)
+            txtMaximoTareas.setToolTipText(I18nUI.Tooltips.Configuracion.MAXIMO_TAREAS());
         if (chkDetallado != null)
             chkDetallado.setToolTipText(I18nUI.Tooltips.Configuracion.DETALLADO());
         if (chkIgnorarSSL != null)
@@ -2529,6 +2535,14 @@ public class DialogoConfiguracion extends JDialog {
                     .setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_INICIAL_AGENTE());
         if (btnRestaurarPromptAgente != null)
             btnRestaurarPromptAgente.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_AGENTE());
+        if (btnAgregarProveedor != null)
+            btnAgregarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_AGREGAR());
+        if (btnQuitarProveedor != null)
+            btnQuitarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_QUITAR());
+        if (btnSubirProveedor != null)
+            btnSubirProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_SUBIR());
+        if (btnBajarProveedor != null)
+            btnBajarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_BAJAR());
 
         // Tab Acerca De
         if (btnBuscarActualizaciones != null)

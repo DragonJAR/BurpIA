@@ -1145,12 +1145,14 @@ public class PanelHallazgos extends JPanel {
             return;
         }
         ejecutarEnEdt(() -> {
-            String textoGuardado = config.obtenerTextoFiltroHallazgos();
-            if (Normalizador.noEsVacio(textoGuardado)) {
-                campoBusqueda.setText(textoGuardado);
-            }
+            String textoGuardado = config.persistirFiltroBusquedaHallazgos()
+                ? config.obtenerTextoFiltroHallazgos()
+                : "";
+            campoBusqueda.setText(Normalizador.noEsVacio(textoGuardado) ? textoGuardado : "");
 
-            String severidadGuardada = config.obtenerFiltroSeveridadHallazgos();
+            String severidadGuardada = config.persistirFiltroSeveridadHallazgos()
+                ? config.obtenerFiltroSeveridadHallazgos()
+                : "";
             if (Normalizador.noEsVacio(severidadGuardada)) {
                 DefaultComboBoxModel<String> modelo = (DefaultComboBoxModel<String>) comboSeveridad.getModel();
                 for (int i = 0; i < modelo.getSize(); i++) {
@@ -1159,6 +1161,8 @@ public class PanelHallazgos extends JPanel {
                         break;
                     }
                 }
+            } else if (comboSeveridad.getItemCount() > 0) {
+                comboSeveridad.setSelectedIndex(0);
             }
             aplicarFiltros();
         });
@@ -1310,7 +1314,8 @@ public class PanelHallazgos extends JPanel {
     }
 
     private boolean alertasEnviarAHabilitadas() {
-        return config == null || config.alertasClickDerechoEnviarAHabilitadas();
+        return config == null
+            || (config.alertasHabilitadas() && config.alertasClickDerechoEnviarAHabilitadas());
     }
 
     private void deshabilitarAlertasEnviarA() {

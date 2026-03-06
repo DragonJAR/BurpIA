@@ -45,12 +45,13 @@ class ResultadoAnalisisMultipleTest {
     }
 
     @Test
-    @DisplayName("Constructor de 3 parámetros inicializa proveedores fallidos vacío")
-    void testConstructorTresParametros_inicializaProveedoresFallidosVacio() {
+    @DisplayName("Constructor requiere lista de proveedores fallidos y la inicializa vacía")
+    void testConstructorInicializaProveedoresFallidosVacio() {
         ResultadoAnalisisMultiple resultado = new ResultadoAnalisisMultiple(
             URL_TEST,
             Collections.emptyList(),
-            null
+            null,
+            Collections.emptyList()
         );
 
         assertEquals(URL_TEST, resultado.obtenerUrl());
@@ -96,7 +97,8 @@ class ResultadoAnalisisMultipleTest {
         ResultadoAnalisisMultiple resultado = new ResultadoAnalisisMultiple(
             URL_TEST,
             hallazgos,
-            null
+            null,
+            Collections.emptyList()
         );
 
         List<Hallazgo> hallazgosObtenidos = resultado.obtenerHallazgos();
@@ -129,7 +131,8 @@ class ResultadoAnalisisMultipleTest {
         ResultadoAnalisisMultiple resultado = new ResultadoAnalisisMultiple(
             URL_TEST,
             Collections.emptyList(),
-            null
+            null,
+            Collections.emptyList()
         );
 
         assertEquals(Hallazgo.SEVERIDAD_INFO, resultado.obtenerSeveridadMaxima());
@@ -145,7 +148,8 @@ class ResultadoAnalisisMultipleTest {
                 crearHallazgo(Hallazgo.SEVERIDAD_MEDIUM),
                 null
             ),
-            null
+            null,
+            Collections.emptyList()
         );
 
         assertEquals(Hallazgo.SEVERIDAD_MEDIUM, resultado.obtenerSeveridadMaxima());
@@ -162,7 +166,8 @@ class ResultadoAnalisisMultipleTest {
                 crearHallazgo(Hallazgo.SEVERIDAD_MEDIUM),
                 crearHallazgo(Hallazgo.SEVERIDAD_HIGH)
             ),
-            null
+            null,
+            Collections.emptyList()
         );
 
         assertEquals(Hallazgo.SEVERIDAD_CRITICAL, resultado.obtenerSeveridadMaxima());
@@ -178,7 +183,8 @@ class ResultadoAnalisisMultipleTest {
                 crearHallazgo(Hallazgo.SEVERIDAD_CRITICAL),
                 crearHallazgo(Hallazgo.SEVERIDAD_LOW)
             ),
-            null
+            null,
+            Collections.emptyList()
         );
         assertEquals(Hallazgo.SEVERIDAD_CRITICAL, conCritical.obtenerSeveridadMaxima());
 
@@ -190,7 +196,8 @@ class ResultadoAnalisisMultipleTest {
                 crearHallazgo(Hallazgo.SEVERIDAD_HIGH),
                 crearHallazgo(Hallazgo.SEVERIDAD_LOW)
             ),
-            null
+            null,
+            Collections.emptyList()
         );
         assertEquals(Hallazgo.SEVERIDAD_HIGH, conHigh.obtenerSeveridadMaxima());
     }

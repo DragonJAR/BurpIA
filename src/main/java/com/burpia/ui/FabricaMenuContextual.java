@@ -183,7 +183,8 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
 
     private boolean alertasEnviarAHabilitadas() {
-        return config == null || config.alertasClickDerechoEnviarAHabilitadas();
+        return config == null
+            || (config.alertasHabilitadas() && config.alertasClickDerechoEnviarAHabilitadas());
     }
 
     private void deshabilitarAlertasEnviarA() {

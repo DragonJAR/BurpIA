@@ -46,20 +46,6 @@ public class ResultadoAnalisisMultiple {
             : new ArrayList<>();
     }
 
-    /**
-     * Constructor para compatibilidad con código existente.
-     * <p>
-     * Equivalente a llamar al constructor completo con proveedoresFallidos vacío.
-     * </p>
-     *
-     * @param url           URL analizada (puede ser null o vacía)
-     * @param hallazgos     Lista de hallazgos encontrados (puede ser null o vacía)
-     * @param solicitudHttp Solicitud HTTP analizada (puede ser null)
-     */
-    public ResultadoAnalisisMultiple(String url, List<Hallazgo> hallazgos, HttpRequest solicitudHttp) {
-        this(url, hallazgos, solicitudHttp, null);
-    }
-
     public String obtenerUrl() {
         return url;
     }

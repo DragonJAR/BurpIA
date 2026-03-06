@@ -24,15 +24,23 @@ class ProveedorAITest {
             assertTrue(ProveedorAI.existeProveedor("Z.ai"), "Z.ai deberia existir");
             assertTrue(ProveedorAI.existeProveedor("minimax"), "minimax deberia existir");
             assertTrue(ProveedorAI.existeProveedor("Moonshot (Kimi)"), "Moonshot (Kimi) deberia existir");
-            assertTrue(ProveedorAI.existeProveedor(ProveedorAI.PROVEEDOR_CUSTOM), "Custom deberia existir");
+            assertTrue(ProveedorAI.existeProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01), "Custom 01 deberia existir");
+            assertTrue(ProveedorAI.existeProveedor(ProveedorAI.PROVEEDOR_CUSTOM_02), "Custom 02 deberia existir");
+            assertTrue(ProveedorAI.existeProveedor(ProveedorAI.PROVEEDOR_CUSTOM_03), "Custom 03 deberia existir");
         }
 
         @Test
-        @DisplayName("Custom es el ultimo proveedor")
+        @DisplayName("Custom 01/02/03 son los ultimos proveedores en orden")
         void customEsUltimo() {
             List<String> nombres = ProveedorAI.obtenerNombresProveedores();
-            assertEquals(ProveedorAI.PROVEEDOR_CUSTOM, nombres.get(nombres.size() - 1),
-                "Custom deberia ser el ultimo proveedor de la lista");
+            assertEquals(ProveedorAI.PROVEEDOR_CUSTOM_01, nombres.get(nombres.size() - 3),
+                "Custom 01 deberia estar en la antepenultima posicion");
+            assertEquals(ProveedorAI.PROVEEDOR_CUSTOM_02, nombres.get(nombres.size() - 2),
+                "Custom 02 deberia estar en la penultima posicion");
+            assertEquals(ProveedorAI.PROVEEDOR_CUSTOM_03, nombres.get(nombres.size() - 1),
+                "Custom 03 deberia ser el ultimo proveedor de la lista");
+            assertFalse(nombres.contains("-- Custom --"),
+                "No debe aparecer alias antiguo en la lista visual");
         }
 
         @Test
@@ -68,17 +76,25 @@ class ProveedorAITest {
         }
 
         @Test
-        @DisplayName("Custom devuelve URL en español por defecto")
+        @DisplayName("Custom 01/02/03 devuelven URL en español por defecto")
         void customDevuelveUrlEspanol() {
-            String url = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM, "es");
-            assertEquals(ProveedorAI.URL_CUSTOM_ES, url, "Custom en español deberia usar URL_CUSTOM_ES");
+            String url1 = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_01, "es");
+            String url2 = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_02, "es");
+            String url3 = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_03, "es");
+            assertEquals(ProveedorAI.URL_CUSTOM_ES, url1, "Custom 01 en español deberia usar URL_CUSTOM_ES");
+            assertEquals(ProveedorAI.URL_CUSTOM_ES, url2, "Custom 02 en español deberia usar URL_CUSTOM_ES");
+            assertEquals(ProveedorAI.URL_CUSTOM_ES, url3, "Custom 03 en español deberia usar URL_CUSTOM_ES");
         }
 
         @Test
-        @DisplayName("Custom devuelve URL en inglés cuando idioma es en")
+        @DisplayName("Custom 01/02/03 devuelven URL en inglés cuando idioma es en")
         void customDevuelveUrlIngles() {
-            String url = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM, "en");
-            assertEquals(ProveedorAI.URL_CUSTOM_EN, url, "Custom en ingles deberia usar URL_CUSTOM_EN");
+            String url1 = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_01, "en");
+            String url2 = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_02, "en");
+            String url3 = ProveedorAI.obtenerUrlApiPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_03, "en");
+            assertEquals(ProveedorAI.URL_CUSTOM_EN, url1, "Custom 01 en ingles deberia usar URL_CUSTOM_EN");
+            assertEquals(ProveedorAI.URL_CUSTOM_EN, url2, "Custom 02 en ingles deberia usar URL_CUSTOM_EN");
+            assertEquals(ProveedorAI.URL_CUSTOM_EN, url3, "Custom 03 en ingles deberia usar URL_CUSTOM_EN");
         }
 
         @Test
@@ -97,7 +113,7 @@ class ProveedorAITest {
         void cadaProveedorTieneModelos() {
             List<String> nombres = ProveedorAI.obtenerNombresProveedores();
             for (String nombre : nombres) {
-                if (!ProveedorAI.PROVEEDOR_CUSTOM.equals(nombre)) {
+                if (!ProveedorAI.esProveedorCustom(nombre)) {
                     List<String> modelos = ProveedorAI.obtenerModelosDisponibles(nombre);
                     assertFalse(modelos.isEmpty(), nombre + " no tiene modelos");
                 }
@@ -109,7 +125,7 @@ class ProveedorAITest {
         void modeloPorDefectoEstaEnLista() {
             List<String> nombres = ProveedorAI.obtenerNombresProveedores();
             for (String nombre : nombres) {
-                if (ProveedorAI.PROVEEDOR_CUSTOM.equals(nombre)) continue;
+                if (ProveedorAI.esProveedorCustom(nombre)) continue;
                 String modeloDefault = ProveedorAI.obtenerModeloPorDefecto(nombre);
                 assertNotNull(modeloDefault, nombre + " no tiene modelo por defecto");
                 List<String> disponibles = ProveedorAI.obtenerModelosDisponibles(nombre);
@@ -119,12 +135,20 @@ class ProveedorAITest {
         }
 
         @Test
-        @DisplayName("Custom no tiene modelos ni modelo por defecto")
+        @DisplayName("Custom 01/02/03 no tienen modelos ni modelo por defecto")
         void customNoTieneModelos() {
-            List<String> modelos = ProveedorAI.obtenerModelosDisponibles(ProveedorAI.PROVEEDOR_CUSTOM);
-            assertTrue(modelos.isEmpty(), "Custom no deberia tener modelos predefinidos");
-            String modeloDefault = ProveedorAI.obtenerModeloPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM);
-            assertEquals("", modeloDefault, "Custom deberia tener modelo vacio");
+            List<String> modelos1 = ProveedorAI.obtenerModelosDisponibles(ProveedorAI.PROVEEDOR_CUSTOM_01);
+            List<String> modelos2 = ProveedorAI.obtenerModelosDisponibles(ProveedorAI.PROVEEDOR_CUSTOM_02);
+            List<String> modelos3 = ProveedorAI.obtenerModelosDisponibles(ProveedorAI.PROVEEDOR_CUSTOM_03);
+            assertTrue(modelos1.isEmpty(), "Custom 01 no deberia tener modelos predefinidos");
+            assertTrue(modelos2.isEmpty(), "Custom 02 no deberia tener modelos predefinidos");
+            assertTrue(modelos3.isEmpty(), "Custom 03 no deberia tener modelos predefinidos");
+            assertEquals("", ProveedorAI.obtenerModeloPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_01),
+                "Custom 01 deberia tener modelo vacio");
+            assertEquals("", ProveedorAI.obtenerModeloPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_02),
+                "Custom 02 deberia tener modelo vacio");
+            assertEquals("", ProveedorAI.obtenerModeloPorDefecto(ProveedorAI.PROVEEDOR_CUSTOM_03),
+                "Custom 03 deberia tener modelo vacio");
         }
 
         @Test
