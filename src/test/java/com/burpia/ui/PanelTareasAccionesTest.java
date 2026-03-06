@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("PanelTareas Acciones Tests")
@@ -24,6 +25,8 @@ class PanelTareasAccionesTest {
     private ModeloTablaTareas modelo;
     private GestorTareas gestor;
     private PanelTareas panel;
+    private Method metodoReencolarTarea;
+    private Method metodoCapturarSeleccion;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -32,6 +35,12 @@ class PanelTareasAccionesTest {
         List<String> logs = new ArrayList<>();
         gestor = new GestorTareas(modelo, logs::add);
         SwingUtilities.invokeAndWait(() -> panel = new PanelTareas(gestor, modelo));
+        
+        // DRY: Inicializar métodos de reflexión una sola vez
+        metodoReencolarTarea = PanelTareas.class.getDeclaredMethod("reencolarTarea", String.class);
+        metodoReencolarTarea.setAccessible(true);
+        metodoCapturarSeleccion = PanelTareas.class.getDeclaredMethod("capturarSeleccion", int[].class);
+        metodoCapturarSeleccion.setAccessible(true);
     }
 
     @AfterEach
@@ -81,10 +90,7 @@ class PanelTareasAccionesTest {
         Tarea enCola = gestor.crearTarea("A", "https://example.com/cola", Tarea.ESTADO_EN_COLA, "");
         flushEdt();
 
-        Method metodo = PanelTareas.class.getDeclaredMethod("capturarSeleccion", int[].class);
-        metodo.setAccessible(true);
-
-        Object resultado = assertDoesNotThrow(() -> metodo.invoke(panel, (Object) new int[]{0, -1, 999, 0}));
+        Object resultado = assertDoesNotThrow(() -> metodoCapturarSeleccion.invoke(panel, (Object) new int[]{0, -1, 999, 0}));
         @SuppressWarnings("unchecked")
         List<Object> seleccion = (List<Object>) resultado;
         assertEquals(1, seleccion.size());
@@ -99,6 +105,31 @@ class PanelTareasAccionesTest {
     }
 
     @Test
+    @DisplayName("Captura de seleccion retorna lista vacia con array vacio")
+    void testCapturarSeleccionVacia() throws Exception {
+        flushEdt();
+
+        Object resultado = metodoCapturarSeleccion.invoke(panel, (Object) new int[]{});
+        @SuppressWarnings("unchecked")
+        List<Object> seleccion = (List<Object>) resultado;
+        assertNotNull(seleccion);
+        assertTrue(seleccion.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Captura de seleccion con todos indices invalidos retorna lista vacia")
+    void testCapturarSeleccionSoloInvalidos() throws Exception {
+        gestor.crearTarea("A", "https://example.com/cola", Tarea.ESTADO_EN_COLA, "");
+        flushEdt();
+
+        Object resultado = metodoCapturarSeleccion.invoke(panel, (Object) new int[]{-1, -5, 999, -100});
+        @SuppressWarnings("unchecked")
+        List<Object> seleccion = (List<Object>) resultado;
+        assertNotNull(seleccion);
+        assertTrue(seleccion.isEmpty());
+    }
+
+    @Test
     @DisplayName("Reintentar usa manejador real de reencolado cuando existe")
     void testReintentarUsaManejadorReencolado() throws Exception {
         Tarea error = gestor.crearTarea("A", "https://example.com/error", Tarea.ESTADO_ERROR, "");
@@ -110,9 +141,7 @@ class PanelTareasAccionesTest {
             return true;
         }));
 
-        Method reencolar = PanelTareas.class.getDeclaredMethod("reencolarTarea", String.class);
-        reencolar.setAccessible(true);
-        boolean resultado = (boolean) reencolar.invoke(panel, error.obtenerId());
+        boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, error.obtenerId());
 
         assertTrue(resultado);
         assertEquals(error.obtenerId(), tareaReintentada.get());
@@ -125,12 +154,24 @@ class PanelTareasAccionesTest {
         Tarea completada = gestor.crearTarea("A", "https://example.com/done", Tarea.ESTADO_COMPLETADO, "");
         flushEdt();
 
-        Method reencolar = PanelTareas.class.getDeclaredMethod("reencolarTarea", String.class);
-        reencolar.setAccessible(true);
-        boolean resultado = (boolean) reencolar.invoke(panel, completada.obtenerId());
+        boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, completada.obtenerId());
 
         assertFalse(resultado);
         assertEquals(Tarea.ESTADO_COMPLETADO, gestor.obtenerTarea(completada.obtenerId()).obtenerEstado());
+    }
+
+    @Test
+    @DisplayName("Reencolar tarea con id null retorna false")
+    void testReencolarTareaIdNull() throws Exception {
+        boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, (String) null);
+        assertFalse(resultado);
+    }
+
+    @Test
+    @DisplayName("Reencolar tarea con id vacio retorna false")
+    void testReencolarTareaIdVacio() throws Exception {
+        boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, "");
+        assertFalse(resultado);
     }
 
     @Test
@@ -140,8 +181,7 @@ class PanelTareasAccionesTest {
         flushEdt();
 
         JButton boton = obtenerBotonPrincipal();
-        Method actualizar = PanelTareas.class.getDeclaredMethod("actualizarEstadisticas");
-        actualizar.setAccessible(true);
+        Method actualizar = obtenerMetodoActualizarEstadisticas();
         actualizar.invoke(panel);
         flushEdt();
 
@@ -160,6 +200,12 @@ class PanelTareasAccionesTest {
         Field field = PanelTareas.class.getDeclaredField("botonPausarReanudar");
         field.setAccessible(true);
         return (JButton) field.get(panel);
+    }
+
+    private Method obtenerMetodoActualizarEstadisticas() throws Exception {
+        Method metodo = PanelTareas.class.getDeclaredMethod("actualizarEstadisticas");
+        metodo.setAccessible(true);
+        return metodo;
     }
 
     private void flushEdt() throws Exception {

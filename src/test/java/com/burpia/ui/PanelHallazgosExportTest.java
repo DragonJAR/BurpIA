@@ -1,18 +1,24 @@
 package com.burpia.ui;
+
 import burp.api.montoya.MontoyaApi;
 import com.burpia.model.Hallazgo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Method;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-
-
-
-
+/**
+ * Tests unitarios para las funciones de exportación de PanelHallazgos.
+ * <p>
+ * Verifica que los métodos de escape CSV y JSON manejen correctamente
+ * caracteres especiales como comillas, comas, saltos de línea y barras invertidas.
+ * </p>
+ */
 @DisplayName("PanelHallazgos Export Tests")
 class PanelHallazgosExportTest {
 
@@ -59,6 +65,16 @@ class PanelHallazgosExportTest {
         assertTrue(json.contains("\"confianza\": \"Low\""));
     }
 
+    /**
+     * Crea una instancia de PanelHallazgos para testing.
+     * <p>
+     * Utiliza invokeAndWait para asegurar que el componente Swing se crea
+     * en el Event Dispatch Thread (EDT).
+     * </p>
+     *
+     * @return PanelHallazgos configurado para testing
+     * @throws Exception si ocurre error en la creación del panel
+     */
     private PanelHallazgos crearPanel() throws Exception {
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         final PanelHallazgos[] holder = new PanelHallazgos[1];
@@ -66,6 +82,18 @@ class PanelHallazgosExportTest {
         return holder[0];
     }
 
+    /**
+     * Invoca un método privado de PanelHallazgos usando reflexión.
+     * <p>
+     * Permite testear métodos de escape CSV/JSON que son privados.
+     * </p>
+     *
+     * @param panel        Instancia de PanelHallazgos
+     * @param nombreMetodo Nombre del método a invocar
+     * @param hallazgo     Hallazgo a pasar como parámetro
+     * @return Resultado del método invocado
+     * @throws Exception si el método no existe o falla la invocación
+     */
     private String invocarMetodoPrivado(PanelHallazgos panel, String nombreMetodo, Hallazgo hallazgo) throws Exception {
         Method metodo = PanelHallazgos.class.getDeclaredMethod(nombreMetodo, Hallazgo.class);
         metodo.setAccessible(true);

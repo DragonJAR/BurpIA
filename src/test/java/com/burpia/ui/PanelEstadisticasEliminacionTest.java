@@ -1,11 +1,10 @@
 package com.burpia.ui;
 
-import com.burpia.ExtensionBurpIA;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.persistence.PersistedObject;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,6 +52,13 @@ class PanelEstadisticasEliminacionTest {
         );
     }
 
+    @AfterEach
+    void tearDown() {
+        if (panelEstadisticas != null) {
+            panelEstadisticas.destruir();
+        }
+    }
+
     @Test
     @DisplayName("Al eliminar todos los hallazgos, estadísticas muestran 0")
     void alEliminarTodosLosHallazgosEstadisticasMuestranCero() throws Exception {
@@ -76,11 +82,14 @@ class PanelEstadisticasEliminacionTest {
         SwingUtilities.invokeAndWait(() -> {});
 
         // Verificar que las estadísticas se actualizaron a 0
+        // Array: [total, critical, high, medium, low, info]
         int[] statsDespues = panelHallazgos.obtenerEstadisticasVisibles();
         assertEquals(0, statsDespues[0], "Debería haber 0 hallazgos visibles después de limpiar");
         assertEquals(0, statsDespues[1], "Debería haber 0 Critical después de limpiar");
         assertEquals(0, statsDespues[2], "Debería haber 0 High después de limpiar");
         assertEquals(0, statsDespues[3], "Debería haber 0 Medium después de limpiar");
+        assertEquals(0, statsDespues[4], "Debería haber 0 Low después de limpiar");
+        assertEquals(0, statsDespues[5], "Debería haber 0 Info después de limpiar");
     }
 
     @Test
@@ -96,11 +105,14 @@ class PanelEstadisticasEliminacionTest {
         SwingUtilities.invokeAndWait(() -> {});
 
         // Verificar estadísticas iniciales
+        // Array: [total, critical, high, medium, low, info]
         int[] statsAntes = panelHallazgos.obtenerEstadisticasVisibles();
         assertEquals(3, statsAntes[0], "Debería haber 3 hallazgos antes de eliminar");
         assertEquals(1, statsAntes[1], "Debería haber 1 Critical antes de eliminar");
         assertEquals(1, statsAntes[2], "Debería haber 1 High antes de eliminar");
         assertEquals(1, statsAntes[3], "Debería haber 1 Medium antes de eliminar");
+        assertEquals(0, statsAntes[4], "Debería haber 0 Low antes de eliminar");
+        assertEquals(0, statsAntes[5], "Debería haber 0 Info antes de eliminar");
 
         // Eliminar el hallazgo Critical (índice 0)
         modelo.eliminarHallazgo(0);
@@ -114,6 +126,8 @@ class PanelEstadisticasEliminacionTest {
         assertEquals(0, statsDespues[1], "Debería haber 0 Critical después de eliminar");
         assertEquals(1, statsDespues[2], "Debería seguir habiendo 1 High");
         assertEquals(1, statsDespues[3], "Debería seguir habiendo 1 Medium");
+        assertEquals(0, statsDespues[4], "Debería seguir habiendo 0 Low");
+        assertEquals(0, statsDespues[5], "Debería seguir habiendo 0 Info");
     }
 
     @Test
@@ -121,30 +135,41 @@ class PanelEstadisticasEliminacionTest {
     void alAgregarYEliminarMultiplesVecesEstadisticasSonConsistentes() throws Exception {
         // Ciclo de agregar y eliminar
         for (int ciclo = 0; ciclo < 3; ciclo++) {
-            // Agregar 2 hallazgos
+            // Agregar 2 hallazgos con severidades diferentes
             modelo.agregarHallazgo(crearHallazgoPrueba("H" + ciclo + "A", "Critical"));
             modelo.agregarHallazgo(crearHallazgoPrueba("H" + ciclo + "B", "High"));
 
             SwingUtilities.invokeAndWait(() -> {});
 
+            // Verificar estadísticas con hallazgos
             int[] statsConHallazgos = panelHallazgos.obtenerEstadisticasVisibles();
             assertEquals(2, statsConHallazgos[0], "Ciclo " + ciclo + ": Debería haber 2 hallazgos");
+            assertEquals(1, statsConHallazgos[1], "Ciclo " + ciclo + ": Debería haber 1 Critical");
+            assertEquals(1, statsConHallazgos[2], "Ciclo " + ciclo + ": Debería haber 1 High");
+            assertEquals(0, statsConHallazgos[3], "Ciclo " + ciclo + ": Debería haber 0 Medium");
+            assertEquals(0, statsConHallazgos[4], "Ciclo " + ciclo + ": Debería haber 0 Low");
+            assertEquals(0, statsConHallazgos[5], "Ciclo " + ciclo + ": Debería haber 0 Info");
 
             // Eliminar uno
             modelo.eliminarHallazgo(0);
 
             SwingUtilities.invokeAndWait(() -> {});
 
+            // Verificar estadísticas con un hallazgo
             int[] statsConUno = panelHallazgos.obtenerEstadisticasVisibles();
             assertEquals(1, statsConUno[0], "Ciclo " + ciclo + ": Debería quedar 1 hallazgo");
+            assertEquals(0, statsConUno[1], "Ciclo " + ciclo + ": Debería haber 0 Critical después de eliminar");
 
             // Limpiar todo
             modelo.limpiar();
 
             SwingUtilities.invokeAndWait(() -> {});
 
+            // Verificar estadísticas vacías
             int[] statsVacios = panelHallazgos.obtenerEstadisticasVisibles();
             assertEquals(0, statsVacios[0], "Ciclo " + ciclo + ": Debería haber 0 hallazgos");
+            assertEquals(0, statsVacios[1], "Ciclo " + ciclo + ": Debería haber 0 Critical");
+            assertEquals(0, statsVacios[2], "Ciclo " + ciclo + ": Debería haber 0 High");
         }
     }
 

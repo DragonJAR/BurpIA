@@ -223,7 +223,7 @@ public final class I18nLogs {
         {"Configuracion", "Configuration"},
         {"configuracion", "configuration"},
         {"Complemento de Seguridad con IA", "AI Security Extension"},
-        {"[Configuration]", "[Configuration]"},
+        {"[Configuracion]", "[Configuration]"},
         {"[Environment]", "[Environment]"},
         {"[Multi-Provider Configuration]", "[Multi-Provider Configuration]"},
         {"[Performance]", "[Performance]"},
@@ -266,6 +266,7 @@ public final class I18nLogs {
         {"NOTA: Solo analiza tráfico en Scope. Agrega objetivos en Target > Scope",
             "NOTE: Only analyzes traffic in Scope. Add targets in Target > Scope"},
         {"Manejador HTTP inicializado (max concurrente=", "HTTP handler initialized (max concurrent="},
+        {"Agente Factory Droid deshabilitado en ajustes.", "Factory Droid agent disabled in settings."},
         {"Inicialización completada exitosamente", "Initialization completed successfully"}
     };
 

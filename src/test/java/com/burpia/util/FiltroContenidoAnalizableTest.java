@@ -4,6 +4,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -16,28 +18,58 @@ class FiltroContenidoAnalizableTest {
     @DisplayName("Por tipo de contenido multimedia")
     class MultimediaTests {
 
-        @Test
-        @DisplayName("image/jpeg no es analizable")
-        void imageJpeg_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("image/jpeg", "GET", 200));
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "image/svg+xml",
+            "image/bmp",
+            "image/tiff"
+        })
+        @DisplayName("Tipos image/* no son analizables")
+        void imageTypes_noSonAnalizables(String contentType) {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable(contentType, "GET", 200));
         }
 
-        @Test
-        @DisplayName("video/mp4 no es analizable")
-        void videoMp4_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("video/mp4", "GET", 200));
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "video/mp4",
+            "video/webm",
+            "video/ogg",
+            "video/quicktime",
+            "video/x-msvideo"
+        })
+        @DisplayName("Tipos video/* no son analizables")
+        void videoTypes_noSonAnalizables(String contentType) {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable(contentType, "GET", 200));
         }
 
-        @Test
-        @DisplayName("audio/mpeg no es analizable")
-        void audioMpeg_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("audio/mpeg", "GET", 200));
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "audio/mpeg",
+            "audio/ogg",
+            "audio/wav",
+            "audio/flac",
+            "audio/aac"
+        })
+        @DisplayName("Tipos audio/* no son analizables")
+        void audioTypes_noSonAnalizables(String contentType) {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable(contentType, "GET", 200));
         }
 
-        @Test
-        @DisplayName("font/woff2 no es analizable")
-        void fontWoff2_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("font/woff2", "GET", 200));
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "font/woff",
+            "font/woff2",
+            "font/ttf",
+            "font/otf",
+            "font/eot"
+        })
+        @DisplayName("Tipos font/* no son analizables")
+        void fontTypes_noSonAnalizables(String contentType) {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable(contentType, "GET", 200));
         }
     }
 
@@ -45,40 +77,39 @@ class FiltroContenidoAnalizableTest {
     @DisplayName("Por tipo de contenido binario/archivo")
     class BinariosTests {
 
-        @Test
-        @DisplayName("application/octet-stream no es analizable")
-        void octetStream_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("application/octet-stream", "GET", 200));
-        }
-
-        @Test
-        @DisplayName("application/zip no es analizable")
-        void zip_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("application/zip", "GET", 200));
-        }
-
-        @Test
-        @DisplayName("application/pdf no es analizable")
-        void pdf_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("application/pdf", "GET", 200));
-        }
-
-        @Test
-        @DisplayName("application/java-archive no es analizable")
-        void jar_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("application/java-archive", "GET", 200));
-        }
-
-        @Test
-        @DisplayName("application/x-rar-compressed no es analizable")
-        void rar_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("application/x-rar-compressed", "GET", 200));
-        }
-
-        @Test
-        @DisplayName("application/vnd.android.package-archive no es analizable")
-        void apk_noEsAnalizable() {
-            assertFalse(FiltroContenidoAnalizable.esAnalizable("application/vnd.android.package-archive", "GET", 200));
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "application/octet-stream",
+            "application/zip",
+            "application/x-gzip",
+            "application/gzip",
+            "application/pdf",
+            "application/java-archive",
+            "application/x-rar-compressed",
+            "application/vnd.android.package-archive",
+            "application/vnd.ms-fontobject",
+            "application/x-tar",
+            "application/x-7z-compressed",
+            "application/x-bzip2",
+            "application/x-bzip",
+            "application/x-shockwave-flash",
+            "application/x-msdownload",
+            "application/x-iso9660-image",
+            "application/x-msi",
+            "application/x-dosexec",
+            "application/x-executable",
+            "application/x-sharedlib",
+            "application/epub+zip",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        })
+        @DisplayName("Tipos binarios/archivo no son analizables")
+        void binaryTypes_noSonAnalizables(String contentType) {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable(contentType, "GET", 200));
         }
     }
 
@@ -105,22 +136,40 @@ class FiltroContenidoAnalizableTest {
             assertFalse(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 304));
         }
 
-        @Test
-        @DisplayName("Código 200 (OK) con texto es analizable")
-        void codigo200_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 200));
+        @ParameterizedTest
+        @CsvSource({
+            "text/html, GET, 200",
+            "text/html, GET, 201",
+            "text/html, GET, 301",
+            "text/html, GET, 400",
+            "application/json, GET, 401",
+            "application/json, GET, 403",
+            "text/html, GET, 404",
+            "application/json, GET, 500",
+            "application/json, GET, 502",
+            "application/json, GET, 503"
+        })
+        @DisplayName("Códigos con contenido son analizables")
+        void codigosConContenido_sonAnalizables(String contentType, String metodo, int codigo) {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable(contentType, metodo, codigo));
         }
 
         @Test
-        @DisplayName("Código 404 (Not Found) con texto es analizable")
-        void codigo404_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 404));
+        @DisplayName("Códigos negativos se consideran analizables (sin cuerpo definido)")
+        void codigoNegativo_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", -1));
         }
 
         @Test
-        @DisplayName("Código 500 (Internal Server Error) con texto es analizable")
-        void codigo500_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("application/json", "GET", 500));
+        @DisplayName("Código cero se considera analizable (sin cuerpo definido)")
+        void codigoCero_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 0));
+        }
+
+        @Test
+        @DisplayName("Código muy alto se considera analizable")
+        void codigoAlto_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 999));
         }
     }
 
@@ -141,21 +190,46 @@ class FiltroContenidoAnalizableTest {
         }
 
         @Test
-        @DisplayName("GET con texto es analizable")
-        void get_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 200));
+        @DisplayName("HEAD en mixto también se omite")
+        void headMixto_seOmite() {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable("text/html", "HeAd", 200));
         }
 
         @Test
-        @DisplayName("POST con JSON es analizable")
-        void post_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("application/json", "POST", 200));
+        @DisplayName("Método null se considera analizable")
+        void metodoNull_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", null, 200));
+        }
+
+        @Test
+        @DisplayName("Método vacío se considera analizable")
+        void metodoVacio_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", "", 200));
+        }
+
+        @Test
+        @DisplayName("Método solo espacios se considera analizable")
+        void metodoSoloEspacios_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html", "   ", 200));
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+            "text/html, GET",
+            "application/json, POST",
+            "application/xml, PUT",
+            "text/plain, DELETE",
+            "application/json, PATCH"
+        })
+        @DisplayName("Métodos estándar con texto son analizables")
+        void metodosEstandar_sonAnalizables(String contentType, String metodo) {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable(contentType, metodo, 200));
         }
     }
 
     @Nested
-    @DisplayName("Casos edge")
-    class EdgeCasesTests {
+    @DisplayName("Casos edge de Content-Type")
+    class EdgeCasesContentTypeTests {
 
         @Test
         @DisplayName("text/html con charset es analizable")
@@ -164,15 +238,42 @@ class FiltroContenidoAnalizableTest {
         }
 
         @Test
-        @DisplayName("Sin content-type se considera analizable")
-        void sinContentType_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable(null, "GET", 200));
+        @DisplayName("Content-type con múltiples parámetros es analizable")
+        void contentTypeConMultiplesParametros_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable(
+                "text/html; charset=UTF-8; boundary=something", "GET", 200));
         }
 
         @Test
-        @DisplayName("Content-type vacío se considera analizable")
-        void contentTypeVacio_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("", "GET", 200));
+        @DisplayName("Content-type con espacios alrededor de punto y coma es analizable")
+        void contentTypeConEspaciosAlrededorSemicolon_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable(
+                "text/html ; charset=UTF-8", "GET", 200));
+            assertTrue(FiltroContenidoAnalizable.esAnalizable(
+                "text/html; charset=UTF-8 ", "GET", 200));
+        }
+
+        @Test
+        @DisplayName("Content-type en mayúsculas se normaliza correctamente")
+        void contentTypeMayusculas_seNormaliza() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("TEXT/HTML", "GET", 200));
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("APPLICATION/JSON", "GET", 200));
+            assertFalse(FiltroContenidoAnalizable.esAnalizable("IMAGE/JPEG", "GET", 200));
+            assertFalse(FiltroContenidoAnalizable.esAnalizable("APPLICATION/PDF", "GET", 200));
+        }
+
+        @Test
+        @DisplayName("Content-type mixto mayúsculas/minúsculas se normaliza")
+        void contentTypeMixto_seNormaliza() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("Text/Html", "GET", 200));
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("Application/Json", "GET", 200));
+        }
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @DisplayName("Sin content-type se considera analizable")
+        void sinContentType_esAnalizable(String contentType) {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable(contentType, "GET", 200));
         }
 
         @Test
@@ -182,21 +283,42 @@ class FiltroContenidoAnalizableTest {
         }
 
         @Test
-        @DisplayName("application/json es analizable")
-        void json_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("application/json", "GET", 200));
+        @DisplayName("Content-type con solo punto y coma se considera analizable")
+        void contentTypeConSoloSemicolon_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable(";", "GET", 200));
         }
 
         @Test
-        @DisplayName("application/xml es analizable")
-        void xml_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("application/xml", "GET", 200));
+        @DisplayName("Content-type terminando en punto y coma se maneja correctamente")
+        void contentTypeTerminandoEnSemicolon_esAnalizable() {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/html;", "GET", 200));
         }
+    }
 
-        @Test
-        @DisplayName("text/plain es analizable")
-        void textPlain_esAnalizable() {
-            assertTrue(FiltroContenidoAnalizable.esAnalizable("text/plain", "GET", 200));
+    @Nested
+    @DisplayName("Tipos de contenido analizables")
+    class TiposAnalizablesTests {
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "application/json",
+            "application/xml",
+            "text/plain",
+            "text/html",
+            "text/css",
+            "text/javascript",
+            "application/javascript",
+            "application/x-www-form-urlencoded",
+            "multipart/form-data",
+            "application/ld+json",
+            "application/rss+xml",
+            "application/atom+xml",
+            "text/xml",
+            "text/csv"
+        })
+        @DisplayName("Tipos de contenido de texto son analizables")
+        void textContentTypes_sonAnalizables(String contentType) {
+            assertTrue(FiltroContenidoAnalizable.esAnalizable(contentType, "GET", 200));
         }
 
         @Test
@@ -209,6 +331,35 @@ class FiltroContenidoAnalizableTest {
         @DisplayName("application/x-www-form-urlencoded es analizable")
         void urlEncoded_esAnalizable() {
             assertTrue(FiltroContenidoAnalizable.esAnalizable("application/x-www-form-urlencoded", "POST", 200));
+        }
+    }
+
+    @Nested
+    @DisplayName("Combinaciones de filtros")
+    class CombinacionesTests {
+
+        @Test
+        @DisplayName("Binario con código de error sigue siendo no analizable")
+        void binarioConError_noEsAnalizable() {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable("application/pdf", "GET", 500));
+        }
+
+        @Test
+        @DisplayName("Texto con código sin contenido no es analizable")
+        void textoConCodigoSinContenido_noEsAnalizable() {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 204));
+        }
+
+        @Test
+        @DisplayName("HEAD con código de error sigue siendo no analizable")
+        void headConError_noEsAnalizable() {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable("text/html", "HEAD", 500));
+        }
+
+        @Test
+        @DisplayName("Multimedia con charset sigue siendo no analizable")
+        void multimediaConCharset_noEsAnalizable() {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable("image/jpeg; charset=binary", "GET", 200));
         }
     }
 }

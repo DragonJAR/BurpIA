@@ -1,20 +1,19 @@
 package com.burpia.ui;
+
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
-
-
-
 
 @DisplayName("PanelEstadisticas Captura Tests")
 class PanelEstadisticasCapturaTest {
@@ -103,9 +102,7 @@ class PanelEstadisticasCapturaTest {
     }
 
     private JLabel obtenerEtiquetaLimite(PanelEstadisticas panel) throws Exception {
-        Field field = PanelEstadisticas.class.getDeclaredField("etiquetaLimiteHallazgos");
-        field.setAccessible(true);
-        return (JLabel) field.get(panel);
+        return obtenerEtiqueta(panel, "etiquetaLimiteHallazgos");
     }
 
     private JLabel obtenerEtiqueta(PanelEstadisticas panel, String campo) throws Exception {

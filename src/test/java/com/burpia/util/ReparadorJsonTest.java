@@ -95,9 +95,19 @@ class ReparadorJsonTest {
         @Test
         @DisplayName("Extrae pares clave-valor de texto semi-estructurado")
         void extraeParesClaveValor() {
-            String semiJson = "titulo: \"XSS\", severidad: \"High\"";
-            String resultado = ReparadorJson.repararJson("{" + semiJson + "}");
+            String semiJson = "\"titulo\": \"XSS\", \"severidad\": \"High\"";
+            String resultado = ReparadorJson.repararJson(semiJson);
             assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+
+        @Test
+        @DisplayName("Extrae pares clave-valor con booleanos y numeros")
+        void extraeParesClaveValorConBooleanosYNumeros() {
+            String semiJson = "\"activo\": true, \"contador\": 42";
+            String resultado = ReparadorJson.repararJson(semiJson);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
         }
     }
 
@@ -182,6 +192,73 @@ class ReparadorJsonTest {
         void manejaMultiplesBloquesMarkdown() {
             String respuesta = "```json\n{\"a\": 1}\n```\n\nY tambien:\n```\n{\"b\": 2}\n```";
             String resultado = ReparadorJson.repararJson(respuesta);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+    }
+
+    @Nested
+    @DisplayName("Casos especiales y edge cases")
+    class CasosEspeciales {
+        @Test
+        @DisplayName("Maneja HTML en campo evidencia escapando comillas")
+        void manejaHtmlEnEvidencia() {
+            String conHtml = "{\"titulo\": \"XSS\", \"evidencia\": \"<a href=\"test\">link</a>\"}";
+            String resultado = ReparadorJson.repararJson(conHtml);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+
+        @Test
+        @DisplayName("Maneja caracteres Unicode en JSON")
+        void manejaCaracteresUnicode() {
+            String conUnicode = "{\"titulo\": \"Inyección SQL\", \"descripcion\": \"Caracteres: ñáéíóú 日本語\"}";
+            String resultado = ReparadorJson.repararJson(conUnicode);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+
+        @Test
+        @DisplayName("Maneja caracteres especiales escapados en valores")
+        void manejaCaracteresEspecialesEscapados() {
+            String conEspeciales = "{\"descripcion\": \"Linea1\\nLinea2\\tTab\"}";
+            String resultado = ReparadorJson.repararJson(conEspeciales);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+
+        @Test
+        @DisplayName("Maneja comillas anidadas en valores JSON")
+        void manejaComillasAnidadas() {
+            String conComillas = "{\"mensaje\": \"El usuario dijo \\\"hola\\\"\"}";
+            String resultado = ReparadorJson.repararJson(conComillas);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+
+        @Test
+        @DisplayName("Maneja JSON profundamente anidado")
+        void manejaJsonProfundamenteAnidado() {
+            String anidado = "{\"a\": {\"b\": {\"c\": {\"d\": {\"e\": \"valor\"}}}}}";
+            String resultado = ReparadorJson.repararJson(anidado);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+
+        @Test
+        @DisplayName("Maneja campo evidence en ingles con HTML")
+        void manejaEvidenceEnInglesConHtml() {
+            String conHtml = "{\"title\": \"XSS\", \"evidence\": \"<div class=\"test\">content</div>\"}";
+            String resultado = ReparadorJson.repararJson(conHtml);
+            assertNotNull(resultado);
+            assertTrue(ReparadorJson.esJsonValido(resultado));
+        }
+
+        @Test
+        @DisplayName("Maneja JSON con saltos de linea literales en valores")
+        void manejaSaltosDeLineaLiterales() {
+            String conSaltos = "{\"titulo\": \"XSS\", \"descripcion\": \"Linea1\nLinea2\"}";
+            String resultado = ReparadorJson.repararJson(conSaltos);
             assertNotNull(resultado);
             assertTrue(ReparadorJson.esJsonValido(resultado));
         }

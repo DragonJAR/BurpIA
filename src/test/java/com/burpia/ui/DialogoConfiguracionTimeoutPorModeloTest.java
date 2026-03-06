@@ -2,6 +2,7 @@ package com.burpia.ui;
 
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.i18n.I18nUI;
 import com.burpia.util.RutasBurpIA;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,10 +10,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import java.awt.Component;
+import java.awt.Container;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +27,8 @@ import java.nio.file.Path;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -41,7 +49,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
     @AfterEach
     void tearDown() {
         TestDialogUtils.limpiarDialogosPendientes();
-        TestDialogUtils.deregistrarCapturaDialogos();
+        TestDialogUtils.desregistrarCapturaDialogos();
         if (userHomeOriginal != null) {
             System.setProperty("user.home", userHomeOriginal);
         }
@@ -201,6 +209,38 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         }
     }
 
+    @Test
+    @DisplayName("Pestaña Agentes usa layout compacto sin scroll global")
+    void testPestaniaAgentesSinScrollGlobal() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-agentes-layout");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            final Component[] panelAgentesHolder = new Component[1];
+            SwingUtilities.invokeAndWait(() -> {
+                JTabbedPane tabsPrincipal = buscarPrimerComponente(dialogo.getContentPane(), JTabbedPane.class);
+                assertNotNull(tabsPrincipal, "El diálogo debe contener pestañas principales");
+                int indiceAgentes = tabsPrincipal.indexOfTab(I18nUI.Configuracion.TAB_AGENTES());
+                assertTrue(indiceAgentes >= 0, "La pestaña Agentes debe existir");
+                panelAgentesHolder[0] = tabsPrincipal.getComponentAt(indiceAgentes);
+            });
+
+            Component panelAgentes = panelAgentesHolder[0];
+            assertNotNull(panelAgentes, "La vista de Agentes no puede ser nula");
+            assertFalse(contieneComponente(panelAgentes, JScrollPane.class),
+                    "La pestaña Agentes no debe usar scroll global");
+            assertTrue(contieneComponente(panelAgentes, JTabbedPane.class),
+                    "Los prompts de agente deben estar organizados en subpestañas");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
     private DialogoConfiguracion crearDialogo(ConfiguracionAPI config,
                                               GestorConfiguracion gestor,
                                               Runnable alGuardar) throws Exception {
@@ -283,6 +323,35 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             dialogo.setVisible(false);
             dialogo.dispose();
         });
+    }
+
+    private <T extends JComponent> T buscarPrimerComponente(Container raiz, Class<T> tipo) {
+        for (Component componente : raiz.getComponents()) {
+            if (tipo.isInstance(componente)) {
+                return tipo.cast(componente);
+            }
+            if (componente instanceof Container) {
+                T encontrado = buscarPrimerComponente((Container) componente, tipo);
+                if (encontrado != null) {
+                    return encontrado;
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean contieneComponente(Component raiz, Class<? extends Component> tipo) {
+        if (tipo.isInstance(raiz)) {
+            return true;
+        }
+        if (raiz instanceof Container) {
+            for (Component hijo : ((Container) raiz).getComponents()) {
+                if (contieneComponente(hijo, tipo)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

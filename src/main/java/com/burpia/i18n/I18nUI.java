@@ -910,15 +910,14 @@ public final class I18nUI {
             }
             return trf(
                     "Estado LLM al inicio: listo para analisis multi-proveedor" +
-                    "\n  - Proveedor principal: %s (%s)" +
-                    "\n  - Proveedores adicionales: %s",
+                            "\n  - Proveedor principal: %s (%s)" +
+                            "\n  - Proveedores adicionales: %s",
                     "LLM startup status: ready for multi-provider analysis" +
-                    "\n  - Primary provider: %s (%s)" +
-                    "\n  - Additional providers: %s",
+                            "\n  - Primary provider: %s (%s)" +
+                            "\n  - Additional providers: %s",
                     proveedorPrincipal,
                     modeloPrincipal,
-                    String.join(", ", proveedoresAdicionales)
-            );
+                    String.join(", ", proveedoresAdicionales));
         }
 
         public static String ESTADO_INICIAL_LLM_BLOQUEADO(String razon) {
@@ -1009,7 +1008,7 @@ public final class I18nUI {
 
         public static String MSG_BUSQUENA_REGEX_INVALIDA(String regex, String error) {
             return trf("Expresión regular inválida: \"%s\"\nError: %s",
-                       "Invalid regular expression: \"%s\"\nError: %s", regex, error);
+                    "Invalid regular expression: \"%s\"\nError: %s", regex, error);
         }
 
         public static String RESUMEN(int total, int info, int detallados, int errores) {
@@ -1301,7 +1300,8 @@ public final class I18nUI {
         }
 
         public static String MSG_NO_QUITAR_PROVEEDOR_PRINCIPAL() {
-            return tr("El proveedor principal (seleccionado en CONFIGURACION DE PROVEEDOR AI) no puede quitarse de la primera posición.",
+            return tr(
+                    "El proveedor principal (seleccionado en CONFIGURACION DE PROVEEDOR AI) no puede quitarse de la primera posición.",
                     "The main provider (selected in AI PROVIDER CONFIGURATION) cannot be removed from the first position.");
         }
 
@@ -1365,6 +1365,26 @@ public final class I18nUI {
 
         public static String LABEL_ALERTAS() {
             return tr("Alertas:", "Alerts:");
+        }
+
+        public static String TITULO_PREFERENCIAS_USUARIO() {
+            return tr("👤 PREFERENCIAS DE USUARIO", "👤 USER PREFERENCES");
+        }
+
+        public static String LABEL_PERSISTIR_BUSQUEDA() {
+            return tr("Guardar filtro de búsqueda:", "Save search filter:");
+        }
+
+        public static String LABEL_PERSISTIR_SEVERIDAD() {
+            return tr("Guardar filtro de severidad:", "Save severity filter:");
+        }
+
+        public static String TITULO_LIMITES_SEGURIDAD() {
+            return tr("🔒 LÍMITES Y SEGURIDAD", "🔒 LIMITS AND SECURITY");
+        }
+
+        public static String TITULO_APARIENCIA() {
+            return tr("🎨 APARIENCIA", "🎨 APPEARANCE");
         }
 
         public static String TITULO_PERSISTENCIA_UI() {
@@ -1555,8 +1575,8 @@ public final class I18nUI {
         }
 
         public static String CHECK_DETALLADO() {
-            return tr("Activar registro detallado (recomendado para depuración)",
-                    "Enable verbose logging (recommended for troubleshooting)");
+            return tr("Registro detallado",
+                    "Verbose logging");
         }
 
         public static String DESCRIPCION_DETALLADO() {
@@ -1639,8 +1659,8 @@ public final class I18nUI {
         }
 
         public static String ADVERTENCIA_PROMPT() {
-            return tr("⚠️ Importante: {REQUEST} es obligatorio. Se recomienda incluir {RESPONSE} para mejor contexto.",
-                    "⚠️ Important: {REQUEST} is required. {RESPONSE} is recommended for better context.");
+            return tr("⚠️ Importante: {REQUEST} y el JSON son obligatorios, el {RESPONSE} es recomendado para mejorar contexto.",
+                    "⚠️ Important: {REQUEST} and JSON are required, {RESPONSE} is recommended for better context.");
         }
 
         public static String TITULO_APP() {
@@ -2494,8 +2514,8 @@ public final class I18nUI {
             }
 
             public static String PROMPT_EDITOR() {
-                return I18nUI.tr("Define las instrucciones que recibe el modelo.",
-                        "Define instructions sent to the model.");
+                return I18nUI.tr("Define las instrucciones que recibe el modelo.\n\nRequisitos obligatorios:\n- {REQUEST}: Datos de la petición HTTP\n- JSON: Formato de salida válido\n\nOpcional pero recomendado:\n- {RESPONSE}: Datos de la respuesta HTTP\n\nFormato JSON esperado:\n{\"hallazgos\":[{\"titulo\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"descripcion\":\"string. References: [CWE-XXX] [OWASP A0X:2021 - Category]\",\"evidencia\":\"string\"}]}",
+                        "Define instructions sent to the model.\n\nRequired elements:\n- {REQUEST}: HTTP request data\n- JSON: Valid output format\n\nOptional but recommended:\n- {RESPONSE}: HTTP response data\n\nExpected JSON format:\n{\"hallazgos\":[{\"titulo\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"descripcion\":\"string. References: [CWE-XXX] [OWASP A0X:2021 - Category]\",\"evidencia\":\"string\"}]}");
             }
 
             public static String RESTAURAR_PROMPT() {

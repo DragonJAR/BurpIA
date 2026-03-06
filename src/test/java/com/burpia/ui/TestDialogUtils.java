@@ -2,10 +2,8 @@ package com.burpia.ui;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.List;
 
 /**
@@ -38,20 +36,20 @@ import java.util.List;
  */
 public class TestDialogUtils {
 
-    private static final List<Window> ventanasAbiertas = new ArrayList<>();
-    private static boolean capturaActiva = false;
-    private static Thread backgroundCleaner;
+    private static final List<Window> ventanasCapturadas = new CopyOnWriteArrayList<>();
+    private static final AtomicBoolean capturaActiva = new AtomicBoolean(false);
+    private static volatile Thread backgroundCleaner;
 
     /**
      * Registra listener para capturar todas las ventanas abiertas durante los tests.
      * Debe llamarse en @BeforeEach.
      */
     public static void registrarCapturaDialogos() {
-        if (capturaActiva) {
+        if (capturaActiva.get()) {
             return;
         }
-        capturaActiva = true;
-        ventanasAbiertas.clear();
+        capturaActiva.set(true);
+        ventanasCapturadas.clear();
 
         // Iniciar thread en background que cierra diálogos automáticamente
         iniciarBackgroundCleaner();
@@ -62,12 +60,16 @@ public class TestDialogUtils {
      */
     private static void iniciarBackgroundCleaner() {
         backgroundCleaner = new Thread(() -> {
-            while (capturaActiva) {
+            while (capturaActiva.get()) {
                 try {
                     SwingUtilities.invokeAndWait(() -> {
                         Window[] ventanas = Window.getWindows();
                         for (Window ventana : ventanas) {
-                            if (ventana.isVisible() && (ventana instanceof JDialog)) {
+                            if (ventana.isVisible() && ventana instanceof JDialog) {
+                                // Rastrear ventana capturada
+                                if (!ventanasCapturadas.contains(ventana)) {
+                                    ventanasCapturadas.add(ventana);
+                                }
                                 // Cerrar diálogos modales automáticamente
                                 ventana.dispose();
                             }
@@ -76,6 +78,9 @@ public class TestDialogUtils {
                     Thread.sleep(50); // Revisar cada 50ms
                 } catch (Exception e) {
                     // Ignorar errores y continuar
+                    if (Thread.currentThread().isInterrupted()) {
+                        break;
+                    }
                 }
             }
         });
@@ -88,8 +93,8 @@ public class TestDialogUtils {
      * Desregistra captura de diálogos y limpia ventanas pendientes.
      * Debe llamarse en @AfterEach.
      */
-    public static void deregistrarCapturaDialogos() {
-        capturaActiva = false;
+    public static void desregistrarCapturaDialogos() {
+        capturaActiva.set(false);
 
         // Detener thread background
         if (backgroundCleaner != null) {
@@ -103,26 +108,39 @@ public class TestDialogUtils {
         }
 
         limpiarDialogosPendientes();
-        ventanasAbiertas.clear();
+        ventanasCapturadas.clear();
     }
 
     /**
-     * Ejecuta una acción que puede mostrar diálogos, cierra automáticamente
-     * todos los diálogos abiertos después del tiempo especificado.
+     * Método de compatibilidad - usar desregistrarCapturaDialogos().
+     * @deprecated Usar {@link #desregistrarCapturaDialogos()} en su lugar.
+     */
+    @Deprecated
+    public static void deregistrarCapturaDialogos() {
+        desregistrarCapturaDialogos();
+    }
+
+    /**
+     * Ejecuta una accion que puede mostrar dialogos, cierra automaticamente
+     * todos los dialogos abiertos despues del tiempo especificado.
      *
-     * @param acción Acción a ejecutar que puede mostrar diálogos
-     * @param delayMs Milisegundos a esperar antes de cerrar diálogos (default: 100ms)
+     * @param accion Accion a ejecutar que puede mostrar dialogos
+     * @param delayMs Milisegundos a esperar antes de cerrar dialogos (default: 100ms)
      */
     public static void ejecutarConDialogoAutoCerrado(Runnable accion, long delayMs) {
-        if (!capturaActiva) {
+        if (!capturaActiva.get()) {
             throw new IllegalStateException("Debe llamar registrarCapturaDialogos() primero en @BeforeEach");
         }
 
+        if (accion == null) {
+            throw new IllegalArgumentException("La accion no puede ser null");
+        }
+
         try {
-            // Ejecutar la acción
+            // Ejecutar la accion
             accion.run();
 
-            // Esperar un momento para que los diálogos se muestren y procesen
+            // Esperar un momento para que los dialogos se muestren y procesen
             if (delayMs > 0) {
                 try {
                     Thread.sleep(delayMs);
@@ -131,11 +149,11 @@ public class TestDialogUtils {
                 }
             }
 
-            // Cerrar todas las ventanas abiertas durante la acción
+            // Cerrar todas las ventanas abiertas durante la accion
             limpiarDialogosPendientes();
 
         } catch (Exception e) {
-            // Asegurarnos de limpiar incluso si hay excepción
+            // Asegurarnos de limpiar incluso si hay excepcion
             limpiarDialogosPendientes();
             throw new RuntimeException(e);
         }
@@ -149,7 +167,7 @@ public class TestDialogUtils {
     }
 
     /**
-     * Cerrra todos los diálogos/ventanas abiertas durante los tests.
+     * Cierra todos los dialogos/ventanas abiertas durante los tests.
      * Llamar en @AfterEach o manualmente cuando sea necesario.
      */
     public static void limpiarDialogosPendientes() {
@@ -158,11 +176,11 @@ public class TestDialogUtils {
                 // Cerrar TODAS las ventanas visibles (JDialog, JOptionPane, etc.)
                 Window[] todasLasVentanas = Window.getWindows();
 
-                // Cerrar en orden inverso para evitar problemas con diálogos modales
+                // Cerrar en orden inverso para evitar problemas con dialogos modales
                 for (int i = todasLasVentanas.length - 1; i >= 0; i--) {
                     Window ventana = todasLasVentanas[i];
                     if (ventana != null && ventana.isVisible()) {
-                        // Cerrar cualquier tipo de diálogo o alerta
+                        // Cerrar cualquier tipo de dialogo o alerta
                         ventana.dispose();
                     }
                 }
@@ -171,15 +189,33 @@ public class TestDialogUtils {
             // Ignorar errores en cierre, pero registrar
             System.err.println("TestDialogUtils: Error cerrando ventanas: " + e.getMessage());
         } finally {
-            ventanasAbiertas.clear();
+            ventanasCapturadas.clear();
         }
     }
 
     /**
      * Verifica si hay ventanas pendientes por cerrar.
-     * Útil para debugging de tests.
+     * Util para debugging de tests.
+     *
+     * @return Numero de ventanas capturadas durante el test
      */
     public static int contarVentanasPendientes() {
-        return ventanasAbiertas.size();
+        return ventanasCapturadas.size();
+    }
+
+    /**
+     * Cuenta el numero de ventanas visibles actualmente.
+     * Util para debugging y validacion de limpieza.
+     *
+     * @return Numero de ventanas visibles
+     */
+    public static int contarVentanasVisibles() {
+        int count = 0;
+        for (Window ventana : Window.getWindows()) {
+            if (ventana != null && ventana.isVisible()) {
+                count++;
+            }
+        }
+        return count;
     }
 }

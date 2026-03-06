@@ -6,15 +6,21 @@ import com.burpia.model.Hallazgo;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import javax.swing.SwingUtilities;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,6 +39,78 @@ class PerformanceBenchmarkTest {
     private static final int WARMUP_ITERATIONS = 100;
     private static final int MEASUREMENT_ITERATIONS = 1000;
     private static final long NANOS_PER_MS = TimeUnit.MILLISECONDS.toNanos(1);
+    private static final int CAPACIDAD_MODELO_HALLAZGOS = 10000;
+    private static final int CAPACIDAD_MODELO_TAREAS = 1000;
+    private static final int CANTIDAD_ELEMENTOS_BATCH = 100;
+    private static final long UMBRAL_MS_JSON_VALIDO = 1;
+    private static final long UMBRAL_MS_GUARDAR_CONFIG = 100;
+    private static final long UMBRAL_MS_CARGAR_CONFIG = 50;
+    private static final long UMBRAL_MS_BATCH_TAREAS = 5;
+
+    private String userHomeOriginal;
+    private Path tempDirActual;
+    private ModeloTablaHallazgos modeloHallazgos;
+    private ModeloTablaTareas modeloTareas;
+
+    @BeforeAll
+    static void mostrarConfiguracionBenchmark() {
+        System.out.println("\n========== REPORTE DE BENCHMARKS ==========");
+        System.out.println("Iteraciones de calentamiento: " + WARMUP_ITERATIONS);
+        System.out.println("Iteraciones de medicion: " + MEASUREMENT_ITERATIONS);
+        System.out.println("==========================================\n");
+    }
+
+    @BeforeEach
+    void setUp() {
+        userHomeOriginal = System.getProperty("user.home");
+        modeloHallazgos = null;
+        modeloTareas = null;
+        tempDirActual = null;
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        if (userHomeOriginal != null) {
+            System.setProperty("user.home", userHomeOriginal);
+        }
+        limpiarModelosSwing();
+        limpiarDirectorioTemporal();
+    }
+
+    private void limpiarModelosSwing() throws Exception {
+        if (modeloHallazgos != null || modeloTareas != null) {
+            SwingUtilities.invokeAndWait(() -> {
+                if (modeloHallazgos != null) {
+                    modeloHallazgos.limpiar();
+                }
+                if (modeloTareas != null) {
+                    modeloTareas.limpiar();
+                }
+            });
+        }
+    }
+
+    private void limpiarDirectorioTemporal() {
+        if (tempDirActual != null && Files.exists(tempDirActual)) {
+            eliminarDirectorioRecursivo(tempDirActual);
+        }
+    }
+
+    private void eliminarDirectorioRecursivo(Path directorio) {
+        try {
+            Files.walk(directorio)
+                .sorted((a, b) -> b.compareTo(a))
+                .forEach(path -> {
+                    try {
+                        Files.deleteIfExists(path);
+                    } catch (IOException e) {
+                        System.err.println("No se pudo eliminar: " + path);
+                    }
+                });
+        } catch (IOException e) {
+            System.err.println("Error limpiando directorio temporal: " + e.getMessage());
+        }
+    }
 
     private static class BenchmarkResult {
         final String operation;
@@ -42,11 +120,14 @@ class PerformanceBenchmarkTest {
         final double avgTimeNs;
 
         BenchmarkResult(String operation, long totalTimeNs, long minTimeNs, long maxTimeNs, int iterations) {
+            if (Normalizador.esVacio(operation)) {
+                throw new IllegalArgumentException("El nombre de la operacion no puede estar vacio");
+            }
             this.operation = operation;
             this.totalTimeNs = totalTimeNs;
             this.minTimeNs = minTimeNs;
             this.maxTimeNs = maxTimeNs;
-            this.avgTimeNs = (double) totalTimeNs / iterations;
+            this.avgTimeNs = iterations > 0 ? (double) totalTimeNs / iterations : 0;
         }
 
         @Override
@@ -61,6 +142,10 @@ class PerformanceBenchmarkTest {
     }
 
     private BenchmarkResult runBenchmark(String name, Runnable operation) {
+        if (operation == null) {
+            throw new IllegalArgumentException("La operacion no puede ser null");
+        }
+
         // Warmup
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
             operation.run();
@@ -83,6 +168,42 @@ class PerformanceBenchmarkTest {
         return new BenchmarkResult(name, totalTime, minTime, maxTime, MEASUREMENT_ITERATIONS);
     }
 
+    private List<Hallazgo> crearHallazgosDePrueba(int cantidad) {
+        List<Hallazgo> hallazgos = new ArrayList<>();
+        for (int i = 0; i < cantidad; i++) {
+            hallazgos.add(new Hallazgo(
+                "https://example.com/api/" + i,
+                "Vulnerabilidad " + i,
+                "Descripcion " + i,
+                "High",
+                "High",
+                null
+            ));
+        }
+        return hallazgos;
+    }
+
+    private List<Tarea> crearTareasDePrueba(int cantidad) {
+        List<Tarea> tareas = new ArrayList<>();
+        for (int i = 0; i < cantidad; i++) {
+            tareas.add(new Tarea(
+                "tarea-" + i,
+                "analisis",
+                "https://example.com/" + i,
+                "En proceso"
+            ));
+        }
+        return tareas;
+    }
+
+    private Path crearDirectorioTemporalConfig() throws IOException {
+        tempDirActual = Files.createTempDirectory("burpia-benchmark");
+        Path configDir = tempDirActual.resolve(".burpia");
+        Files.createDirectories(configDir);
+        System.setProperty("user.home", tempDirActual.toString());
+        return tempDirActual;
+    }
+
     @Test
     @DisplayName("ReparadorJson - JSON valido sin reparacion")
     void benchmarkReparadorJsonValido() {
@@ -94,10 +215,9 @@ class PerformanceBenchmarkTest {
         });
 
         System.out.println(result);
-        
-        // Umbral: debe ser menor a 1ms en promedio para JSON pequeño válido
-        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(1),
-            "JSON valido debe procesarse en <1ms promedio. " + result);
+
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(UMBRAL_MS_JSON_VALIDO),
+            "JSON valido debe procesarse en <" + UMBRAL_MS_JSON_VALIDO + "ms promedio. " + result);
     }
 
     @Test
@@ -111,6 +231,9 @@ class PerformanceBenchmarkTest {
         });
 
         System.out.println(result);
+
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(2),
+            "JSON con markdown debe procesarse en <2ms promedio. " + result);
     }
 
     @Test
@@ -124,6 +247,9 @@ class PerformanceBenchmarkTest {
         });
 
         System.out.println(result);
+
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(3),
+            "JSON danado complejo debe procesarse en <3ms promedio. " + result);
     }
 
     @Test
@@ -137,6 +263,9 @@ class PerformanceBenchmarkTest {
         });
 
         System.out.println(result);
+
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(UMBRAL_MS_JSON_VALIDO),
+            "Parseo OpenAI debe ser <" + UMBRAL_MS_JSON_VALIDO + "ms promedio. " + result);
     }
 
     @Test
@@ -150,6 +279,9 @@ class PerformanceBenchmarkTest {
         });
 
         System.out.println(result);
+
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(UMBRAL_MS_JSON_VALIDO),
+            "Parseo Claude debe ser <" + UMBRAL_MS_JSON_VALIDO + "ms promedio. " + result);
     }
 
     @Test
@@ -163,6 +295,9 @@ class PerformanceBenchmarkTest {
         });
 
         System.out.println(result);
+
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(UMBRAL_MS_JSON_VALIDO),
+            "Normalizar texto debe ser <" + UMBRAL_MS_JSON_VALIDO + "ms promedio. " + result);
     }
 
     @Test
@@ -176,42 +311,37 @@ class PerformanceBenchmarkTest {
         });
 
         System.out.println(result);
+
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(1),
+            "esVacio debe ser <1ms promedio (deberia ser microsegundos). " + result);
     }
 
     @Test
     @DisplayName("ModeloTablaHallazgos - agregarHallazgo")
-    void benchmarkModeloTablaHallazgos() {
-        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(10000);
-        List<Hallazgo> hallazgos = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
-            hallazgos.add(new Hallazgo(
-                "https://example.com/api/" + i,
-                "Vulnerabilidad " + i,
-                "Descripcion " + i,
-                "High",
-                "High",
-                null
-            ));
-        }
+    void benchmarkModeloTablaHallazgos() throws Exception {
+        modeloHallazgos = new ModeloTablaHallazgos(CAPACIDAD_MODELO_HALLAZGOS);
+        List<Hallazgo> hallazgos = crearHallazgosDePrueba(CANTIDAD_ELEMENTOS_BATCH);
 
-        BenchmarkResult result = runBenchmark("ModeloTablaHallazgos.agregar", () -> {
-            modelo.agregarHallazgos(hallazgos);
+        AtomicReference<BenchmarkResult> resultRef = new AtomicReference<>();
+
+        SwingUtilities.invokeAndWait(() -> {
+            BenchmarkResult result = runBenchmark("ModeloTablaHallazgos.agregar", () -> {
+                modeloHallazgos.agregarHallazgos(hallazgos);
+                modeloHallazgos.limpiar();
+            });
+            resultRef.set(result);
+            System.out.println(result);
         });
 
-        System.out.println(result);
-
-        // Limpiar para siguiente test
-        while (modelo.getRowCount() > 0) {
-            modelo.eliminarHallazgo(0);
-        }
+        assertNotNull(resultRef.get());
+        assertTrue(resultRef.get().avgTimeNs < TimeUnit.MILLISECONDS.toNanos(10),
+            "Agregar 100 hallazgos debe ser <10ms promedio. " + resultRef.get());
     }
 
     @Test
     @DisplayName("I/O Configuration - Guardar configuracion")
     void benchmarkGuardarConfiguracion() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-benchmark-io");
-        Path configDir = tempDir.resolve(".burpia");
-        Files.createDirectories(configDir);
+        crearDirectorioTemporalConfig();
 
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("OpenAI");
@@ -223,30 +353,21 @@ class PerformanceBenchmarkTest {
         config.establecerTema("oscuro");
         config.establecerIdiomaUi("es");
 
-        String userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        BenchmarkResult result = runBenchmark("I/O.guardarConfiguracion", () -> {
+            GestorConfiguracion gestor = new GestorConfiguracion();
+            gestor.guardarConfiguracion(config);
+        });
 
-        try {
-            BenchmarkResult result = runBenchmark("I/O.guardarConfiguracion", () -> {
-                GestorConfiguracion gestor = new GestorConfiguracion();
-                gestor.guardarConfiguracion(config);
-            });
+        System.out.println(result);
 
-            System.out.println(result);
-
-            assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(100),
-                "Guardar configuracion debe ser <100ms promedio. " + result);
-        } finally {
-            System.setProperty("user.home", userHomeOriginal);
-        }
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(UMBRAL_MS_GUARDAR_CONFIG),
+            "Guardar configuracion debe ser <" + UMBRAL_MS_GUARDAR_CONFIG + "ms promedio. " + result);
     }
 
     @Test
     @DisplayName("I/O Configuration - Cargar configuracion")
     void benchmarkCargarConfiguracion() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-benchmark-io-load");
-        Path configDir = tempDir.resolve(".burpia");
-        Files.createDirectories(configDir);
+        crearDirectorioTemporalConfig();
 
         ConfiguracionAPI configOriginal = new ConfiguracionAPI();
         configOriginal.establecerProveedorAI("OpenAI");
@@ -258,115 +379,91 @@ class PerformanceBenchmarkTest {
         configOriginal.establecerTema("oscuro");
         configOriginal.establecerIdiomaUi("es");
 
-        String userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        GestorConfiguracion gestorSetup = new GestorConfiguracion();
+        gestorSetup.guardarConfiguracion(configOriginal);
 
-        try {
-            GestorConfiguracion gestorSetup = new GestorConfiguracion();
-            gestorSetup.guardarConfiguracion(configOriginal);
+        BenchmarkResult result = runBenchmark("I/O.cargarConfiguracion", () -> {
+            GestorConfiguracion gestor = new GestorConfiguracion();
+            ConfiguracionAPI loaded = gestor.cargarConfiguracion();
+            assertNotNull(loaded);
+        });
 
-            BenchmarkResult result = runBenchmark("I/O.cargarConfiguracion", () -> {
-                GestorConfiguracion gestor = new GestorConfiguracion();
-                ConfiguracionAPI loaded = gestor.cargarConfiguracion();
-                assertNotNull(loaded);
-            });
+        System.out.println(result);
 
-            System.out.println(result);
-
-            assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(50),
-                "Cargar configuracion debe ser <50ms promedio. " + result);
-        } finally {
-            System.setProperty("user.home", userHomeOriginal);
-        }
+        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(UMBRAL_MS_CARGAR_CONFIG),
+            "Cargar configuracion debe ser <" + UMBRAL_MS_CARGAR_CONFIG + "ms promedio. " + result);
     }
 
     @Test
     @DisplayName("ModeloTablaTareas - Agregar multiples tareas (individual)")
-    void benchmarkModeloTablaTareasAgregarIndividual() {
-        ModeloTablaTareas modelo = new ModeloTablaTareas(1000);
+    void benchmarkModeloTablaTareasAgregarIndividual() throws Exception {
+        modeloTareas = new ModeloTablaTareas(CAPACIDAD_MODELO_TAREAS);
+        List<Tarea> tareas = crearTareasDePrueba(CANTIDAD_ELEMENTOS_BATCH);
 
-        List<Tarea> tareas = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
-            tareas.add(new Tarea(
-                "tarea-" + i,
-                "analisis",
-                "https://example.com/" + i,
-                "En proceso"
-            ));
-        }
+        AtomicReference<BenchmarkResult> resultRef = new AtomicReference<>();
 
-        BenchmarkResult result = runBenchmark("ModeloTablaTareas.agregar100.individual", () -> {
-            for (Tarea tarea : tareas) {
-                modelo.agregarTarea(tarea);
-            }
-            modelo.limpiar();
+        SwingUtilities.invokeAndWait(() -> {
+            BenchmarkResult result = runBenchmark("ModeloTablaTareas.agregar100.individual", () -> {
+                for (Tarea tarea : tareas) {
+                    modeloTareas.agregarTarea(tarea);
+                }
+                modeloTareas.limpiar();
+            });
+            resultRef.set(result);
+            System.out.println(result);
         });
 
-        System.out.println(result);
+        assertNotNull(resultRef.get());
     }
 
     @Test
     @DisplayName("ModeloTablaTareas - Agregar multiples tareas (batch)")
-    void benchmarkModeloTablaTareasAgregarBatch() {
-        ModeloTablaTareas modelo = new ModeloTablaTareas(1000);
+    void benchmarkModeloTablaTareasAgregarBatch() throws Exception {
+        modeloTareas = new ModeloTablaTareas(CAPACIDAD_MODELO_TAREAS);
+        List<Tarea> tareas = crearTareasDePrueba(CANTIDAD_ELEMENTOS_BATCH);
 
-        List<Tarea> tareas = new ArrayList<>();
-        for (int i = 0; i < 100; i++) {
-            tareas.add(new Tarea(
-                "tarea-" + i,
-                "analisis",
-                "https://example.com/" + i,
-                "En proceso"
-            ));
-        }
+        AtomicReference<BenchmarkResult> resultRef = new AtomicReference<>();
 
-        BenchmarkResult result = runBenchmark("ModeloTablaTareas.agregar100.batch", () -> {
-            modelo.agregarTareas(tareas);
-            modelo.limpiar();
+        SwingUtilities.invokeAndWait(() -> {
+            BenchmarkResult result = runBenchmark("ModeloTablaTareas.agregar100.batch", () -> {
+                modeloTareas.agregarTareas(tareas);
+                modeloTareas.limpiar();
+            });
+            resultRef.set(result);
+            System.out.println(result);
         });
 
-        System.out.println(result);
-
-        assertTrue(result.avgTimeNs < TimeUnit.MILLISECONDS.toNanos(5),
-            "Agregar 100 tareas en batch debe ser <5ms promedio. " + result);
+        assertNotNull(resultRef.get());
+        assertTrue(resultRef.get().avgTimeNs < TimeUnit.MILLISECONDS.toNanos(UMBRAL_MS_BATCH_TAREAS),
+            "Agregar 100 tareas en batch debe ser <" + UMBRAL_MS_BATCH_TAREAS + "ms promedio. " + resultRef.get());
     }
 
     @Test
     @DisplayName("ModeloTablaTareas - Eliminar por estado")
-    void benchmarkModeloTablaTareasEliminarPorEstado() {
-        ModeloTablaTareas modelo = new ModeloTablaTareas(1000);
+    void benchmarkModeloTablaTareasEliminarPorEstado() throws Exception {
+        modeloTareas = new ModeloTablaTareas(CAPACIDAD_MODELO_TAREAS);
 
-        for (int i = 0; i < 100; i++) {
-            modelo.agregarTarea(new Tarea(
-                "tarea-" + i,
-                "analisis",
-                "https://example.com/" + i,
-                i % 2 == 0 ? "Completada" : "En proceso"
-            ));
-        }
+        AtomicReference<BenchmarkResult> resultRef = new AtomicReference<>();
 
-        BenchmarkResult result = runBenchmark("ModeloTablaTareas.eliminarPorEstado", () -> {
-            modelo.eliminarPorEstado("Completada");
-            modelo.limpiar();
-            for (int i = 0; i < 100; i++) {
-                modelo.agregarTarea(new Tarea(
-                    "tarea-" + i,
-                    "analisis",
-                    "https://example.com/" + i,
-                    i % 2 == 0 ? "Completada" : "En proceso"
-                ));
-            }
+        SwingUtilities.invokeAndWait(() -> {
+            BenchmarkResult result = runBenchmark("ModeloTablaTareas.eliminarPorEstado", () -> {
+                // Pre-poblar DENTRO del benchmark (incluido en la medicion)
+                for (int i = 0; i < CANTIDAD_ELEMENTOS_BATCH; i++) {
+                    modeloTareas.agregarTarea(new Tarea(
+                        "tarea-" + i,
+                        "analisis",
+                        "https://example.com/" + i,
+                        i % 2 == 0 ? "Completada" : "En proceso"
+                    ));
+                }
+                // Medir eliminacion
+                modeloTareas.eliminarPorEstado("Completada");
+                modeloTareas.limpiar();
+            });
+            resultRef.set(result);
+            System.out.println(result);
         });
 
-        System.out.println(result);
-    }
-
-    @Test
-    @DisplayName("Reporte de benchmarks")
-    void generarReporteBenchmarks() {
-        System.out.println("\n========== REPORTE DE BENCHMARKS ==========");
-        System.out.println("Iteraciones de calentamiento: " + WARMUP_ITERATIONS);
-        System.out.println("Iteraciones de medicion: " + MEASUREMENT_ITERATIONS);
-        System.out.println("==========================================\n");
+        assertNotNull(resultRef.get());
     }
 }

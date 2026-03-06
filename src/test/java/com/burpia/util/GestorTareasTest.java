@@ -19,10 +19,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
-
-
-
 @DisplayName("GestorTareas Integration Tests")
 class GestorTareasTest {
 
@@ -198,12 +194,13 @@ class GestorTareasTest {
             flushEdt();
 
             gestorRetencion.actualizarTarea(t1.obtenerId(), Tarea.ESTADO_COMPLETADO, "ok");
-            Thread.sleep(5);
+            Thread.sleep(10);
             gestorRetencion.actualizarTarea(t2.obtenerId(), Tarea.ESTADO_ERROR, "err");
-            Thread.sleep(5);
+            Thread.sleep(10);
             gestorRetencion.actualizarTarea(t3.obtenerId(), Tarea.ESTADO_CANCELADO, "cancel");
             flushEdt();
 
+            // Usa reflection para invocar metodo privado de verificacion y probar logica interna
             Method verificar = GestorTareas.class.getDeclaredMethod("verificarTareasAtascadas");
             verificar.setAccessible(true);
             verificar.invoke(gestorRetencion);
@@ -257,10 +254,12 @@ class GestorTareasTest {
         Tarea tarea = gestor.crearTarea("A", "https://example.com/stuck", Tarea.ESTADO_ANALIZANDO, "");
         flushEdt();
 
+        // Usa reflection para simular tarea atascada modificando timestamp interno
         Field tiempoUltimoInicioAnalisisField = Tarea.class.getDeclaredField("tiempoUltimoInicioAnalisis");
         tiempoUltimoInicioAnalisisField.setAccessible(true);
         tiempoUltimoInicioAnalisisField.setLong(tarea, System.currentTimeMillis() - 600_000L);
 
+        // Invoca metodo privado de verificacion mediante reflection
         Method verificar = GestorTareas.class.getDeclaredMethod("verificarTareasAtascadas");
         verificar.setAccessible(true);
         verificar.invoke(gestor);

@@ -1,13 +1,15 @@
 package com.burpia.util;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-
-
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("ParserRespuestasAI Tests")
 class ParserRespuestasAITest {
@@ -162,11 +164,8 @@ class ParserRespuestasAITest {
             "\"descripcion\":\"...Injection]\", \"severidad\":\"High\", " +
             "{\"titulo\":\"XSS\", \"severidad\":\"Medium\"}]}";
 
-        com.google.gson.Gson gson = new com.google.gson.Gson();
-        com.google.gson.JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores(
-            jsonRoto,
-            gson
-        );
+        Gson gson = new Gson();
+        JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores(jsonRoto, gson);
 
         assertEquals(2, hallazgos.size(), "Debe recuperar 2 hallazgos");
         assertEquals("SQL Injection",
@@ -178,8 +177,8 @@ class ParserRespuestasAITest {
     @Test
     @DisplayName("extraerHallazgosPorDelimitadores retorna null si contenido es vacío")
     void testExtraerHallazgosPorDelimitadores_ContenidoVacio() {
-        com.google.gson.Gson gson = new com.google.gson.Gson();
-        com.google.gson.JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores("", gson);
+        Gson gson = new Gson();
+        JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores("", gson);
 
         assertNull(hallazgos, "Debe retornar null");
     }
@@ -189,12 +188,42 @@ class ParserRespuestasAITest {
     void testExtraerHallazgosPorDelimitadores_SinTitulos() {
         String sinTitulos = "{\"severidad\":\"High\", \"confianza\":\"Medium\"}";
 
-        com.google.gson.Gson gson = new com.google.gson.Gson();
-        com.google.gson.JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores(
-            sinTitulos,
-            gson
-        );
+        Gson gson = new Gson();
+        JsonArray hallazgos = ParserRespuestasAI.extraerHallazgosPorDelimitadores(sinTitulos, gson);
 
         assertNull(hallazgos, "Debe retornar null");
+    }
+
+    @Test
+    @DisplayName("extraerArrayJsonInteligente extrae array de JSON válido")
+    void testExtraerArrayJsonInteligente_Directo() {
+        String json = "{\"hallazgos\":[{\"titulo\":\"XSS\",\"severidad\":\"Medium\"}]}";
+        Gson gson = new Gson();
+
+        JsonArray resultado = ParserRespuestasAI.extraerArrayJsonInteligente(json, gson);
+
+        assertNotNull(resultado, "Debe retornar un array no nulo");
+        assertEquals(1, resultado.size(), "Debe tener 1 hallazgo");
+    }
+
+    @Test
+    @DisplayName("extraerArrayJsonInteligente retorna null para contenido vacío")
+    void testExtraerArrayJsonInteligente_ContenidoVacio() {
+        Gson gson = new Gson();
+
+        assertNull(ParserRespuestasAI.extraerArrayJsonInteligente("", gson));
+        assertNull(ParserRespuestasAI.extraerArrayJsonInteligente(null, gson));
+    }
+
+    @Test
+    @DisplayName("extraerArrayJsonInteligente extrae JSON de texto libre")
+    void testExtraerArrayJsonInteligente_TextoLibre() {
+        String textoLibre = "Aquí está el análisis: [{\"titulo\":\"SQLi\",\"severidad\":\"High\"}]";
+        Gson gson = new Gson();
+
+        JsonArray resultado = ParserRespuestasAI.extraerArrayJsonInteligente(textoLibre, gson);
+
+        assertNotNull(resultado, "Debe extraer el JSON del texto libre");
+        assertEquals(1, resultado.size(), "Debe tener 1 hallazgo");
     }
 }

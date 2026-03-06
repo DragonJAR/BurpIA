@@ -3,6 +3,7 @@ package com.burpia.ui;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
 import com.jediterm.terminal.TtyConnector;
 import org.junit.jupiter.api.DisplayName;
@@ -24,9 +25,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -545,15 +546,19 @@ class PanelAgenteTransporteTest {
     }
 
     private int buscarPrimeraCoincidencia(List<String> valores, String fragmento) {
-        if (valores == null || fragmento == null) {
+        if (valores == null || valores.isEmpty() || Normalizador.esVacio(fragmento)) {
             return -1;
         }
         for (int i = 0; i < valores.size(); i++) {
             String actual = valores.get(i);
-            if (actual != null && actual.contains(fragmento)) {
+            if (Normalizador.noEsVacio(actual) && actual.contains(fragmento)) {
                 return i;
             }
         }
         return -1;
+    }
+
+    private void flushEdt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {});
     }
 }

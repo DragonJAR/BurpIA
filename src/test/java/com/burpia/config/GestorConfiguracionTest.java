@@ -1,48 +1,97 @@
 package com.burpia.config;
+
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.RutasBurpIA;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
-
-
-
+/**
+ * Tests para GestorConfiguracion.
+ * <p>
+ * Verifica la persistencia y carga de configuración, incluyendo:
+ * - Campos legacy y migración
+ * - Preferencias runtime de usuario
+ * - Prompts de agente
+ * - Timeouts por modelo
+ * - Localización de logs
+ * </p>
+ */
 @DisplayName("GestorConfiguracion Tests")
 class GestorConfiguracionTest {
 
+    @TempDir
+    Path tempDir;
+
     private String userHomeOriginal;
+    private Path configDir;
 
     @BeforeEach
     void setUp() {
         RutasBurpIA.limpiarCacheParaTests();
+        userHomeOriginal = System.getProperty("user.home");
     }
 
     @AfterEach
     void tearDown() {
+        restaurarUserHome();
+        I18nUI.establecerIdioma("es");
+    }
+
+    /**
+     * Helper para configurar el directorio temporal como home del usuario.
+     * Centraliza la lógica de setup para tests que manipulan configuración.
+     */
+    private void configurarDirectorioTemporalComoHome() {
+        System.setProperty("user.home", tempDir.toString());
+        configDir = tempDir.resolve(".burpia");
+    }
+
+    /**
+     * Helper para restaurar el user.home original.
+     * Garantiza limpieza incluso si el test falla.
+     */
+    private void restaurarUserHome() {
         if (userHomeOriginal != null) {
             System.setProperty("user.home", userHomeOriginal);
         }
-        I18nUI.establecerIdioma("es");
+    }
+
+    /**
+     * Helper para escribir un archivo JSON de configuración.
+     */
+    private void escribirConfigJson(String json) throws IOException {
+        Files.createDirectories(configDir);
+        Path configPath = configDir.resolve("config.json");
+        Files.writeString(configPath, json, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Helper para leer el contenido del archivo de configuración.
+     */
+    private String leerConfigJson() throws IOException {
+        Path configPath = configDir.resolve("config.json");
+        return Files.readString(configPath, StandardCharsets.UTF_8);
     }
 
     @Test
     @DisplayName("Guarda configuración sin campos legacy de proveedor")
     void testGuardarSinCamposLegacy() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -56,8 +105,7 @@ class GestorConfiguracionTest {
 
         assertTrue(gestor.guardarConfiguracion(config));
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
-        String json = Files.readString(configPath, StandardCharsets.UTF_8);
+        String json = leerConfigJson();
 
         assertFalse(json.contains("\"urlApi\""));
         assertFalse(json.contains("\"claveApi\""));
@@ -71,11 +119,8 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("Cuando detallado no existe en JSON queda deshabilitado por defecto")
     void testDetalladoDefaultFalseSinCampo() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = "{\n" +
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"retrasoSegundos\": 5,\n" +
@@ -86,8 +131,7 @@ class GestorConfiguracionTest {
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
             "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
             "}";
-        Files.createDirectories(configPath.getParent());
-        Files.writeString(configPath, json, StandardCharsets.UTF_8);
+        escribirConfigJson(json);
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = gestor.cargarConfiguracion();
@@ -99,9 +143,7 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("Guarda y carga preferencias runtime de usuario")
     void testPersistenciaPreferenciasRuntimeUsuario() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -118,8 +160,7 @@ class GestorConfiguracionTest {
         assertFalse(cargada.autoScrollConsolaHabilitado());
         assertFalse(cargada.alertasClickDerechoEnviarAHabilitadas());
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
-        String json = Files.readString(configPath, StandardCharsets.UTF_8);
+        String json = leerConfigJson();
         assertTrue(json.contains("\"escaneoPasivoHabilitado\": false"));
         assertTrue(json.contains("\"autoGuardadoIssuesHabilitado\": false"));
         assertTrue(json.contains("\"autoScrollConsolaHabilitado\": false"));
@@ -129,9 +170,7 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("Guarda y carga prompts de agente inicial y validacion")
     void testPersistenciaPromptsAgente() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -140,8 +179,7 @@ class GestorConfiguracionTest {
 
         assertTrue(gestor.guardarConfiguracion(config));
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
-        String json = Files.readString(configPath, StandardCharsets.UTF_8);
+        String json = leerConfigJson();
         assertTrue(json.contains("\"agentePreflightPrompt\": \"PRE_FLIGHT_CUSTOM\""));
         assertTrue(json.contains("\"agentePrompt\": \"VALIDACION_CUSTOM\""));
 
@@ -153,11 +191,8 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("Sin agenteDelay en JSON usa el valor por defecto")
     void testAgenteDelayUsaDefaultCuandoNoExisteEnJson() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = "{\n" +
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"apiKeysPorProveedor\": {\"OpenAI\": \"\"},\n" +
@@ -165,8 +200,7 @@ class GestorConfiguracionTest {
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
             "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
             "}";
-        Files.createDirectories(configPath.getParent());
-        Files.writeString(configPath, json, StandardCharsets.UTF_8);
+        escribirConfigJson(json);
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
@@ -177,11 +211,8 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("agenteDelay en JSON respeta exactamente el valor del usuario")
     void testAgenteDelayJsonRespetaValorUsuario() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = "{\n" +
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"agenteDelay\": 75000,\n" +
@@ -190,8 +221,7 @@ class GestorConfiguracionTest {
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
             "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
             "}";
-        Files.createDirectories(configPath.getParent());
-        Files.writeString(configPath, json, StandardCharsets.UTF_8);
+        escribirConfigJson(json);
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
@@ -202,9 +232,7 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("Guarda y carga timeout por modelo en JSON")
     void testPersistenciaTimeoutPorModelo() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -214,8 +242,7 @@ class GestorConfiguracionTest {
 
         assertTrue(gestor.guardarConfiguracion(config));
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
-        String json = Files.readString(configPath, StandardCharsets.UTF_8);
+        String json = leerConfigJson();
         assertTrue(json.contains("\"tiempoEsperaPorModelo\""));
         assertTrue(json.contains("\"Z.ai::glm-5\": 180"));
         assertTrue(json.contains("\"OpenAI::gpt-5-mini\": 240"));
@@ -229,11 +256,8 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("JSON legacy sin timeout por modelo mantiene fallback global")
     void testLegacySinTimeoutPorModeloMantieneFallback() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = "{\n" +
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"tiempoEsperaAI\": 120,\n" +
@@ -242,8 +266,7 @@ class GestorConfiguracionTest {
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-5-mini\"},\n" +
             "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
             "}";
-        Files.createDirectories(configPath.getParent());
-        Files.writeString(configPath, json, StandardCharsets.UTF_8);
+        escribirConfigJson(json);
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
@@ -255,6 +278,7 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("Logs de configuración se localizan a inglés cuando idioma UI es EN")
     void testLogsConfiguracionEnIngles() {
+        // Este test no requiere manipular user.home, solo verificar localización
         I18nUI.establecerIdioma("en");
         StringWriter salida = new StringWriter();
         StringWriter errores = new StringWriter();
@@ -269,9 +293,7 @@ class GestorConfiguracionTest {
     @Test
     @DisplayName("Guardar configuración nula devuelve error controlado")
     void testGuardarConfiguracionNula() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         StringBuilder mensajeError = new StringBuilder();
@@ -280,18 +302,15 @@ class GestorConfiguracionTest {
         assertNotNull(mensajeError.toString());
         assertTrue(mensajeError.toString().toLowerCase().contains("null")
             || mensajeError.toString().toLowerCase().contains("nula"));
-        assertFalse(Files.exists(tempDir.resolve(".burpia/config.json")));
-        assertFalse(Files.exists(tempDir.resolve(".burpia/config.json.tmp")));
+        assertFalse(Files.exists(configDir.resolve("config.json")));
+        assertFalse(Files.exists(configDir.resolve("config.json.tmp")));
     }
 
     @Test
     @DisplayName("Si prompt no esta modificado se aplica prompt por defecto vigente al cargar")
     void testPromptNoModificadoUsaDefaultVigente() throws Exception {
-        Path tempDir = Files.createTempDirectory("burpia-config-test");
-        userHomeOriginal = System.getProperty("user.home");
-        System.setProperty("user.home", tempDir.toString());
+        configurarDirectorioTemporalComoHome();
 
-        Path configPath = tempDir.resolve(".burpia/config.json");
         String json = "{\n" +
             "  \"proveedorAI\": \"OpenAI\",\n" +
             "  \"promptConfigurable\": \"PROMPT_ANTIGUO\",\n" +
@@ -301,8 +320,7 @@ class GestorConfiguracionTest {
             "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
             "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
             "}";
-        Files.createDirectories(configPath.getParent());
-        Files.writeString(configPath, json, StandardCharsets.UTF_8);
+        escribirConfigJson(json);
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = gestor.cargarConfiguracion();

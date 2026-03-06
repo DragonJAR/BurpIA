@@ -4,10 +4,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -151,6 +153,14 @@ class EstadisticasTest {
         }
 
         @Test
+        @DisplayName("Severidad con solo espacios incrementa creados y desconocidos")
+        void severidadSoloEspacios() {
+            stats.incrementarHallazgoSeveridad("   ");
+            assertEquals(1, stats.obtenerHallazgosCreados());
+            assertEquals(1, stats.obtenerHallazgosDesconocidos());
+        }
+
+        @Test
         @DisplayName("Multiples severidades se acumulan correctamente")
         void multiplesSeveridades() {
             stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_CRITICAL);
@@ -188,6 +198,17 @@ class EstadisticasTest {
             assertTrue(resumen.contains("Omitidos: 1"));
             assertTrue(resumen.contains("Hallazgos: 1"));
             assertTrue(resumen.contains("Errores: 1"));
+        }
+
+        @Test
+        @DisplayName("Genera resumen con todos los valores en cero")
+        void generaResumenConCeros() {
+            String resumen = stats.generarResumen();
+            assertTrue(resumen.contains("Solicitudes: 0"));
+            assertTrue(resumen.contains("Analizados: 0"));
+            assertTrue(resumen.contains("Omitidos: 0"));
+            assertTrue(resumen.contains("Hallazgos: 0"));
+            assertTrue(resumen.contains("Errores: 0"));
         }
     }
 
@@ -231,10 +252,44 @@ class EstadisticasTest {
     }
 
     @Nested
+    @DisplayName("Versionado")
+    class Versionado {
+        @Test
+        @DisplayName("Version incrementa con cada operacion de incremento")
+        void versionIncrementaConOperaciones() {
+            int versionInicial = stats.obtenerVersion();
+            
+            stats.incrementarTotalSolicitudes();
+            assertTrue(stats.obtenerVersion() > versionInicial, "Version debe incrementar con incrementarTotalSolicitudes");
+            
+            int versionActual = stats.obtenerVersion();
+            stats.incrementarAnalizados();
+            assertTrue(stats.obtenerVersion() > versionActual, "Version debe incrementar con incrementarAnalizados");
+            
+            versionActual = stats.obtenerVersion();
+            stats.incrementarErrores();
+            assertTrue(stats.obtenerVersion() > versionActual, "Version debe incrementar con incrementarErrores");
+            
+            versionActual = stats.obtenerVersion();
+            stats.incrementarOmitidosDuplicado();
+            assertTrue(stats.obtenerVersion() > versionActual, "Version debe incrementar con incrementarOmitidosDuplicado");
+            
+            versionActual = stats.obtenerVersion();
+            stats.incrementarOmitidosBajaConfianza();
+            assertTrue(stats.obtenerVersion() > versionActual, "Version debe incrementar con incrementarOmitidosBajaConfianza");
+            
+            versionActual = stats.obtenerVersion();
+            stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_HIGH);
+            assertTrue(stats.obtenerVersion() > versionActual, "Version debe incrementar con incrementarHallazgoSeveridad");
+        }
+    }
+
+    @Nested
     @DisplayName("Concurrencia")
     class Concurrencia {
         @Test
         @DisplayName("Incrementos concurrentes son atomicos")
+        @Timeout(value = 10, unit = TimeUnit.SECONDS)
         void incrementosConcurrentesSonAtomicos() throws InterruptedException {
             int hilos = 10;
             int incrementosPorHilo = 1000;
@@ -254,6 +309,7 @@ class EstadisticasTest {
 
             latch.await();
             executor.shutdown();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Executor debe terminar en tiempo");
 
             assertEquals(hilos * incrementosPorHilo, stats.obtenerTotalSolicitudes());
             assertEquals(hilos * incrementosPorHilo, stats.obtenerAnalizados());
@@ -262,6 +318,7 @@ class EstadisticasTest {
 
         @Test
         @DisplayName("Hallazgos por severidad son atomicos bajo concurrencia")
+        @Timeout(value = 10, unit = TimeUnit.SECONDS)
         void hallazgosConcurrentesSonAtomicos() throws InterruptedException {
             int hilos = 8;
             int incrementosPorHilo = 500;
@@ -279,9 +336,66 @@ class EstadisticasTest {
 
             latch.await();
             executor.shutdown();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Executor debe terminar en tiempo");
 
             assertEquals(hilos * incrementosPorHilo, stats.obtenerHallazgosHigh());
             assertEquals(hilos * incrementosPorHilo, stats.obtenerHallazgosCreados());
+        }
+
+        @Test
+        @DisplayName("Reiniciar durante incrementos concurrentes no causa inconsistencias")
+        @Timeout(value = 10, unit = TimeUnit.SECONDS)
+        void reiniciarDuranteIncrementosConcurrentes() throws InterruptedException {
+            int hilosIncrementadores = 6;
+            int incrementosPorHilo = 500;
+            ExecutorService executor = Executors.newFixedThreadPool(hilosIncrementadores + 1);
+            CountDownLatch latchInicio = new CountDownLatch(1);
+            CountDownLatch latchFin = new CountDownLatch(hilosIncrementadores + 1);
+
+            // Hilos que incrementan
+            for (int i = 0; i < hilosIncrementadores; i++) {
+                executor.submit(() -> {
+                    try {
+                        latchInicio.await();
+                        for (int j = 0; j < incrementosPorHilo; j++) {
+                            stats.incrementarTotalSolicitudes();
+                            stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_MEDIUM);
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        latchFin.countDown();
+                    }
+                });
+            }
+
+            // Hilo que reinicia periodicamente
+            executor.submit(() -> {
+                try {
+                    latchInicio.await();
+                    for (int i = 0; i < 10; i++) {
+                        Thread.sleep(5);
+                        stats.reiniciar();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    latchFin.countDown();
+                }
+            });
+
+            latchInicio.countDown(); // Iniciar todos los hilos
+            latchFin.await();
+            executor.shutdown();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Executor debe terminar en tiempo");
+
+            // Verificar que los contadores son consistentes (hallazgosCreados >= suma de severidades especificas)
+            int sumaSeveridades = stats.obtenerHallazgosCritical() + stats.obtenerHallazgosHigh() +
+                                  stats.obtenerHallazgosMedium() + stats.obtenerHallazgosLow() +
+                                  stats.obtenerHallazgosInfo() + stats.obtenerHallazgosDesconocidos();
+            assertEquals(sumaSeveridades, stats.obtenerHallazgosCreados(), 
+                "La suma de hallazgos por severidad debe igualar el total de hallazgos creados");
+            assertTrue(stats.obtenerVersion() >= 0, "Version debe ser no negativa");
         }
     }
 }

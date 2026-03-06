@@ -10,8 +10,6 @@ import org.junit.jupiter.api.Test;
 import javax.swing.*;
 import java.awt.*;
 import java.lang.reflect.Field;
-
-import com.burpia.ui.TestDialogUtils;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -29,7 +27,7 @@ class DialogoDetalleHallazgoTest {
     @AfterEach
     void resetIdioma() {
         TestDialogUtils.limpiarDialogosPendientes();
-        TestDialogUtils.deregistrarCapturaDialogos();
+        TestDialogUtils.desregistrarCapturaDialogos();
         I18nUI.establecerIdioma("es");
     }
 
@@ -77,7 +75,7 @@ class DialogoDetalleHallazgoTest {
             assertEquals("Critical", guardado.get().obtenerSeveridad()); // Internal value is normalized
             assertEquals("High", guardado.get().obtenerConfianza());
         } finally {
-            dialogo.dispose();
+            destruirDialogo(dialogo);
         }
     }
 
@@ -108,10 +106,9 @@ class DialogoDetalleHallazgoTest {
 
             // Assert
             assertFalse(guardadoLlamado.get(), "alGuardar no debe ser llamado al cancelar");
-            assertTrue(dialogo.isVisible() == false || dialogo.isActive() == false,
-                "El diálogo debe cerrarse al cancelar");
+            assertFalse(dialogo.isVisible(), "El diálogo debe cerrarse al cancelar");
         } finally {
-            dialogo.dispose();
+            destruirDialogo(dialogo);
         }
     }
 
@@ -143,7 +140,7 @@ class DialogoDetalleHallazgoTest {
             // Assert
             assertNull(guardado.get(), "alGuardar no debe ser llamado con campos vacíos");
         } finally {
-            dialogo.dispose();
+            destruirDialogo(dialogo);
         }
     }
 
@@ -178,7 +175,7 @@ class DialogoDetalleHallazgoTest {
                 assertEquals("Media", comboConfianza.getSelectedItem());
             });
         } finally {
-            dialogo.dispose();
+            destruirDialogo(dialogo);
         }
     }
 
@@ -203,7 +200,7 @@ class DialogoDetalleHallazgoTest {
                 assertEquals("Media", comboConfianza.getSelectedItem());
             });
         } finally {
-            dialogo.dispose();
+            destruirDialogo(dialogo);
         }
     }
 
@@ -232,7 +229,7 @@ class DialogoDetalleHallazgoTest {
                 assertTrue(btnCancelar.getText().contains("Cancelar"));
             });
         } finally {
-            dialogo.dispose();
+            destruirDialogo(dialogo);
         }
 
         // Arrange & Act - Test con idioma inglés
@@ -248,20 +245,33 @@ class DialogoDetalleHallazgoTest {
                 assertTrue(btnCancelarEn.getText().contains("Cancel"));
             });
         } finally {
-            dialogoEn.dispose();
+            destruirDialogo(dialogoEn);
         }
     }
 
     // ========== Helper Methods DRY ==========
 
+    /**
+     * Crea un diálogo sin ventana padre (null) para evitar fugas de recursos.
+     * El diálogo debe ser destruido con {@link #destruirDialogo(DialogoDetalleHallazgo)}
+     * en el bloque finally de cada test.
+     */
     private DialogoDetalleHallazgo crearDialogo(Hallazgo hallazgo, Consumer<Hallazgo> alGuardar) throws Exception {
         final DialogoDetalleHallazgo[] holder = new DialogoDetalleHallazgo[1];
-        SwingUtilities.invokeAndWait(() -> {
-            JFrame ventanaPadre = new JFrame();
-            ventanaPadre.setVisible(true);
-            holder[0] = new DialogoDetalleHallazgo(ventanaPadre, hallazgo, alGuardar);
-        });
+        SwingUtilities.invokeAndWait(() ->
+            holder[0] = new DialogoDetalleHallazgo(null, hallazgo, alGuardar)
+        );
         return holder[0];
+    }
+
+    /**
+     * Destruye el diálogo de forma segura en el EDT.
+     */
+    private void destruirDialogo(DialogoDetalleHallazgo dialogo) throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            dialogo.setVisible(false);
+            dialogo.dispose();
+        });
     }
 
     /**
@@ -281,54 +291,43 @@ class DialogoDetalleHallazgoTest {
     }
 
     private JButton obtenerBotonGuardar(DialogoDetalleHallazgo dialogo) throws Exception {
-        JButton[] botones = obtenerBotonesDialogo(dialogo);
-        return botones[0]; // Guardar es el primer botón
+        return obtenerBotonPorTexto(dialogo, "Guardar", "Save");
     }
 
     private JButton obtenerBotonCancelar(DialogoDetalleHallazgo dialogo) throws Exception {
-        JButton[] botones = obtenerBotonesDialogo(dialogo);
-        return botones[1]; // Cancelar es el segundo botón
+        return obtenerBotonPorTexto(dialogo, "Cancelar", "Cancel");
     }
 
-    private JButton[] obtenerBotonesDialogo(DialogoDetalleHallazgo dialogo) throws Exception {
-        // Buscar botones en el panel sur (BorderLayout.SOUTH)
+    /**
+     * Busca un botón por su texto (soporta múltiples idiomas).
+     */
+    private JButton obtenerBotonPorTexto(DialogoDetalleHallazgo dialogo, String... textosEsperados) throws Exception {
         Component[] components = dialogo.getContentPane().getComponents();
-        JPanel panelBotones = null;
         for (Component comp : components) {
             if (comp instanceof JPanel) {
-                JPanel panel = (JPanel) comp;
-                // Verificar si es el panel de botones (FlowLayout con botones)
-                for (Component child : panel.getComponents()) {
+                for (Component child : ((JPanel) comp).getComponents()) {
                     if (child instanceof JButton) {
-                        panelBotones = panel;
-                        break;
+                        String texto = ((JButton) child).getText();
+                        for (String esperado : textosEsperados) {
+                            if (texto != null && texto.contains(esperado)) {
+                                return (JButton) child;
+                            }
+                        }
                     }
                 }
             }
         }
-
-        if (panelBotones == null) {
-            throw new RuntimeException("No se encontró el panel de botones");
-        }
-
-        JButton guardar = null;
-        JButton cancelar = null;
-        for (Component comp : panelBotones.getComponents()) {
-            if (comp instanceof JButton) {
-                JButton btn = (JButton) comp;
-                if (guardar == null) {
-                    guardar = btn;
-                } else {
-                    cancelar = btn;
-                    break;
-                }
-            }
-        }
-
-        return new JButton[]{guardar, cancelar};
+        throw new RuntimeException("No se encontró botón con textos: " + String.join(", ", textosEsperados));
     }
 
+    /**
+     * Fuerza el procesamiento de todos los eventos pendientes en el EDT.
+     * El cuerpo vacío del Runnable es intencional: invokeAndWait bloquea hasta
+     * que todos los eventos pendientes se procesen, sincronizando el estado de la UI.
+     */
     private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {});
+        SwingUtilities.invokeAndWait(() -> {
+            // Cuerpo vacío intencional: fuerza el procesamiento de eventos pendientes
+        });
     }
 }

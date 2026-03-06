@@ -534,8 +534,12 @@ public class PanelAgente extends JPanel {
         btnAyudaAgente = crearBoton("❓",
             resolverTooltipAyudaAgente(), e -> abrirGuiaAgenteActual());
 
-        panel.add(btnReiniciar);
+        // CONFIABILIDAD: Orden de menor a mayor impacto
+        // 1. Ctrl+C: Interrupción suave (detiene sin destruir)
+        // 2. Reiniciar: Recrear estado (destruye y recrea)
+        // 3. Inyectar: Acción productiva
         panel.add(btnCtrlC);
+        panel.add(btnReiniciar);
         panel.add(btnInyectarPayload);
         panel.add(new JSeparator(SwingConstants.VERTICAL));
         panel.add(btnCambiarAgente);

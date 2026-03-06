@@ -281,7 +281,7 @@ public class DialogoConfiguracion extends JDialog {
 
         int fila = 0;
 
-        // Proveedor AI
+        // 1. Proveedor AI - Define el contexto
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 1;
@@ -295,21 +295,7 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // URL de API
-        gbc.gridx = 0;
-        gbc.gridy = fila;
-        gbc.gridwidth = 1;
-        gbc.weightx = 0;
-        panel.add(new JLabel(I18nUI.Configuracion.LABEL_URL_API()), gbc);
-
-        gbc.gridx = 1;
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.weightx = 1.0;
-        panel.add(txtUrl, gbc);
-
-        fila++;
-
-        // Clave de API
+        // 2. Clave de API - Credencial principal (requerida)
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 1;
@@ -323,7 +309,7 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // Modelo
+        // 3. Modelo - Configuración específica del proveedor
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 1;
@@ -341,7 +327,21 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // FILA COMBINADA 1: Timeout + Retraso
+        // 4. URL de API - Configuración avanzada (opcional/custom)
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.weightx = 0;
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_URL_API()), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1.0;
+        panel.add(txtUrl, gbc);
+
+        fila++;
+
+        // 5. FILA COMBINADA: Timeout + Retraso - Configuración de rendimiento
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 1;
@@ -367,7 +367,7 @@ public class DialogoConfiguracion extends JDialog {
 
         fila++;
 
-        // FILA COMBINADA 2: Máximo Tokens + Máximo Concurrente
+        // 6. FILA COMBINADA: Máximo Tokens + Máximo Concurrente - Configuración de rendimiento
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 1;
@@ -409,95 +409,119 @@ public class DialogoConfiguracion extends JDialog {
         contenido.setBorder(BorderFactory.createEmptyBorder(16, 20, 8, 20));
         contenido.setOpaque(false);
 
-        JPanel panelAjustes = new JPanel(new GridBagLayout());
-        panelAjustes.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelAjustes.setBorder(UIUtils.crearBordeTitulado(
-                I18nUI.Configuracion.TITULO_AJUSTES_USUARIO(), 12, 16));
+        // EFICIENCIA: PANEL 1 - PREFERENCIAS DE USUARIO (lo que el usuario VE)
+        JPanel panelPreferencias = new JPanel(new GridBagLayout());
+        panelPreferencias.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelPreferencias.setBorder(UIUtils.crearBordeTitulado(
+                I18nUI.Configuracion.TITULO_PREFERENCIAS_USUARIO(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 12, 8, 12);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
+        // Idioma - y=0
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.weightx = 0;
-        panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_IDIOMA()), gbc);
+        panelPreferencias.add(new JLabel(I18nUI.Configuracion.LABEL_IDIOMA()), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1;
-        panelAjustes.add(comboIdioma, gbc);
+        panelPreferencias.add(comboIdioma, gbc);
+
+        // Opciones de preferencias - y=1 (3 checkbox en misma línea armónica)
+        JPanel panelOpcionesPreferencias = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panelOpcionesPreferencias.setOpaque(false);
+        panelOpcionesPreferencias.add(chkDetallado);
+        panelOpcionesPreferencias.add(Box.createHorizontalStrut(25));
+        panelOpcionesPreferencias.add(chkPersistirBusqueda);
+        panelOpcionesPreferencias.add(Box.createHorizontalStrut(25));
+        panelOpcionesPreferencias.add(chkPersistirSeveridad);
 
         gbc.gridx = 0;
         gbc.gridy = 1;
+        gbc.gridwidth = 2;
+        gbc.weightx = 1;
+        panelPreferencias.add(panelOpcionesPreferencias, gbc);
+
+        panelPreferencias.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelPreferencias.getPreferredSize().height));
+        contenido.add(panelPreferencias);
+        contenido.add(Box.createVerticalStrut(15));
+
+        // CONFIABILIDAD: PANEL 2 - LÍMITES Y SEGURIDAD (configuración técnica)
+        JPanel panelLimitesSeguridad = new JPanel(new GridBagLayout());
+        panelLimitesSeguridad.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelLimitesSeguridad.setBorder(UIUtils.crearBordeTitulado(
+                I18nUI.Configuracion.TITULO_LIMITES_SEGURIDAD(), 12, 16));
+
+        gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 12, 8, 12);
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Máximo hallazgos en tabla - y=0
+        gbc.gridx = 0;
+        gbc.gridy = 0;
         gbc.weightx = 0;
-        panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_MAX_HALLAZGOS_TABLA()), gbc);
+        panelLimitesSeguridad.add(new JLabel(I18nUI.Configuracion.LABEL_MAX_HALLAZGOS_TABLA()), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1;
-        panelAjustes.add(txtMaximoHallazgosTabla, gbc);
+        panelLimitesSeguridad.add(txtMaximoHallazgosTabla, gbc);
 
+        // Máximo tareas - y=1
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0;
+        panelLimitesSeguridad.add(new JLabel(I18nUI.Configuracion.LABEL_MAXIMO_TAREAS()), gbc);
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        panelLimitesSeguridad.add(txtMaximoTareas, gbc);
+
+        // Alertas - y=2
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.weightx = 0;
-        panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_MAXIMO_TAREAS()), gbc);
+        panelLimitesSeguridad.add(new JLabel(I18nUI.Configuracion.LABEL_ALERTAS()), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1;
-        panelAjustes.add(txtMaximoTareas, gbc);
+        panelLimitesSeguridad.add(chkAlertasHabilitadas, gbc);
 
+        // Seguridad SSL - y=3
         gbc.gridx = 0;
         gbc.gridy = 3;
         gbc.weightx = 0;
-        panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_MODO_DETALLADO()), gbc);
+        panelLimitesSeguridad.add(new JLabel(I18nUI.Configuracion.LABEL_SEGURIDAD_SSL()), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1;
-        panelAjustes.add(chkDetallado, gbc);
+        panelLimitesSeguridad.add(chkIgnorarSSL, gbc);
 
+        // Filtro herramientas - y=4
         gbc.gridx = 0;
         gbc.gridy = 4;
         gbc.weightx = 0;
-        panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_SEGURIDAD_SSL()), gbc);
+        panelLimitesSeguridad.add(new JLabel(I18nUI.Configuracion.LABEL_FILTRO_HERRAMIENTAS()), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1;
-        panelAjustes.add(chkIgnorarSSL, gbc);
+        panelLimitesSeguridad.add(chkSoloProxy, gbc);
 
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.weightx = 0;
-        panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_FILTRO_HERRAMIENTAS()), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        panelAjustes.add(chkSoloProxy, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 6;
-        gbc.weightx = 0;
-        panelAjustes.add(new JLabel(I18nUI.Configuracion.LABEL_ALERTAS()), gbc);
-        gbc.gridx = 1;
-        gbc.weightx = 1;
-        panelAjustes.add(chkAlertasHabilitadas, gbc);
-
-        panelAjustes.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelAjustes.getPreferredSize().height));
-        contenido.add(panelAjustes);
+        panelLimitesSeguridad.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelLimitesSeguridad.getPreferredSize().height));
+        contenido.add(panelLimitesSeguridad);
         contenido.add(Box.createVerticalStrut(15));
 
-        JPanel panelFuentes = crearPanelConfiguracionFuentes();
-        panelFuentes.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelFuentes.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelFuentes.getPreferredSize().height));
-        contenido.add(panelFuentes);
-        contenido.add(Box.createVerticalStrut(15));
-
-        JPanel panelPersistenciaUI = crearPanelPersistenciaUI();
-        panelPersistenciaUI.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelPersistenciaUI
-                .setMaximumSize(new Dimension(Integer.MAX_VALUE, panelPersistenciaUI.getPreferredSize().height));
-        contenido.add(panelPersistenciaUI);
+        // DRY: PANEL 3 - APARIENCIA (renombrado de panelFuentes)
+        JPanel panelApariencia = crearPanelConfiguracionApariencia();
+        panelApariencia.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelApariencia.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelApariencia.getPreferredSize().height));
+        contenido.add(panelApariencia);
 
         root.add(new JScrollPane(contenido), BorderLayout.CENTER);
         return root;
     }
 
-    private JPanel crearPanelConfiguracionFuentes() {
+    // DRY: Panel de apariencia -renombrado de crearPanelConfiguracionFuentes()
+    private JPanel crearPanelConfiguracionApariencia() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Configuracion.TITULO_FUENTES(), 12, 16));
+        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Configuracion.TITULO_APARIENCIA(), 12, 16));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 12, 8, 12);
@@ -913,42 +937,6 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(16, 20, 16, 20));
 
-        JPanel panelInstrucciones = new JPanel(new BorderLayout(0, 8));
-        panelInstrucciones.setBorder(UIUtils.crearBordeTitulado(
-                I18nUI.Configuracion.TITULO_INSTRUCCIONES(), 12, 16));
-        panelInstrucciones.setBackground(EstilosUI.colorFondoSecundario(EstilosUI.obtenerFondoPanel()));
-
-        JTextArea txtInstrucciones = new JTextArea();
-        txtInstrucciones.setEditable(false);
-        txtInstrucciones.setOpaque(false);
-        txtInstrucciones.setWrapStyleWord(true);
-        txtInstrucciones.setLineWrap(true);
-        txtInstrucciones.setFont(EstilosUI.FUENTE_ESTANDAR);
-        txtInstrucciones.setForeground(EstilosUI.colorTextoPrimario(panelInstrucciones.getBackground()));
-        txtInstrucciones.setText(I18nUI.Configuracion.TEXTO_INSTRUCCIONES());
-        txtInstrucciones.setBorder(BorderFactory.createEmptyBorder(8, 10, 0, 10));
-
-        JTextArea ejemploJson = new JTextArea();
-        ejemploJson.setEditable(false);
-        ejemploJson.setFont(EstilosUI.FUENTE_TABLA);
-        ejemploJson.setBackground(
-                UIManager.getColor("TextPane.background") != null ? UIManager.getColor("TextPane.background")
-                        : Color.WHITE);
-        ejemploJson.setForeground(EstilosUI.colorTextoPrimario(ejemploJson.getBackground()));
-        ejemploJson.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(EstilosUI.colorSeparador(ejemploJson.getBackground()), 1),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
-        ejemploJson.setText(
-                "{\"hallazgos\":[{\"titulo\":\"string\",\"descripcion\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"evidencia\":\"string\"}]}");
-
-        JPanel bloqueInstrucciones = new JPanel(new BorderLayout(0, 8));
-        bloqueInstrucciones.setOpaque(false);
-        bloqueInstrucciones.add(txtInstrucciones, BorderLayout.NORTH);
-        bloqueInstrucciones.add(ejemploJson, BorderLayout.CENTER);
-        bloqueInstrucciones.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
-        panelInstrucciones.add(bloqueInstrucciones, BorderLayout.CENTER);
-        panel.add(panelInstrucciones, BorderLayout.NORTH);
-
         JPanel panelEditor = new JPanel(new BorderLayout());
         panelEditor.setBorder(UIUtils.crearBordeTitulado(
                 I18nUI.Configuracion.TITULO_PROMPT_ANALISIS(), 12, 16));
@@ -958,6 +946,7 @@ public class DialogoConfiguracion extends JDialog {
         txtPrompt.setLineWrap(false);
         txtPrompt.setWrapStyleWord(false);
         txtPrompt.setTabSize(2);
+        // Tooltip completo con instrucciones y ejemplo JSON
         txtPrompt.setToolTipText(I18nUI.Tooltips.Configuracion.PROMPT_EDITOR());
 
         JScrollPane scrollPrompt = new JScrollPane(txtPrompt);
@@ -968,24 +957,21 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panelSur = new JPanel(new BorderLayout(10, 6));
         panelSur.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
 
-        JPanel panelBotonesPrompt = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        // ARMONÍA: Botón y contador agrupados a la izquierda (proximidad)
+        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 0));
 
         btnRestaurarPrompt = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
         btnRestaurarPrompt.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnRestaurarPrompt.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT());
         btnRestaurarPrompt.addActionListener(e -> restaurarPromptPorDefecto());
-        panelBotonesPrompt.add(btnRestaurarPrompt);
+        panelAcciones.add(btnRestaurarPrompt);
 
-        JPanel panelContador = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         lblContadorPrompt = new JLabel(I18nUI.Configuracion.CONTADOR_CARACTERES(0));
         lblContadorPrompt.setFont(EstilosUI.FUENTE_TABLA);
         lblContadorPrompt.setToolTipText(I18nUI.Tooltips.Configuracion.CONTADOR_PROMPT());
-        panelContador.add(lblContadorPrompt);
+        panelAcciones.add(lblContadorPrompt);
 
-        JPanel barraAcciones = new JPanel(new BorderLayout());
-        barraAcciones.add(panelBotonesPrompt, BorderLayout.WEST);
-        barraAcciones.add(panelContador, BorderLayout.EAST);
-        panelSur.add(barraAcciones, BorderLayout.NORTH);
+        panelSur.add(panelAcciones, BorderLayout.NORTH);
 
         JLabel etiquetaAdvertencia = new JLabel(I18nUI.Configuracion.ADVERTENCIA_PROMPT());
         etiquetaAdvertencia.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -1002,7 +988,7 @@ public class DialogoConfiguracion extends JDialog {
     }
 
     private JPanel crearPanelAgentes() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(16, 20, 12, 20));
 
         JPanel panelAgenteGeneral = new JPanel(new GridBagLayout());
@@ -1014,6 +1000,7 @@ public class DialogoConfiguracion extends JDialog {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
+        // FASE 1: Configuración - Seleccionar Agente
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 1;
@@ -1028,34 +1015,36 @@ public class DialogoConfiguracion extends JDialog {
         gbc.weightx = 1.0;
         panelAgenteGeneral.add(comboAgente, gbc);
 
-        chkAgenteHabilitado = new JCheckBox(I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE());
-        chkAgenteHabilitado.setFont(EstilosUI.FUENTE_ESTANDAR);
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 2;
-        panelAgenteGeneral.add(chkAgenteHabilitado, gbc);
-
+        // FASE 1: Configuración - Ruta del Binario
         txtAgenteBinario = new JTextField(30);
         txtAgenteBinario.getDocument()
                 .addDocumentListener(UIUtils.crearDocumentListener(this::actualizarRutaEnMemoria));
 
-        gbc.gridwidth = 1;
-        gbc.gridy = 2;
         gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.gridwidth = 1;
         gbc.weightx = 0;
         panelAgenteGeneral.add(new JLabel(I18nUI.Configuracion.Agentes.LABEL_RUTA_BINARIO()), gbc);
         gbc.gridx = 1;
         gbc.weightx = 1.0;
         panelAgenteGeneral.add(txtAgenteBinario, gbc);
 
-        JPanel panelPrompts = new JPanel(new GridLayout(1, 2, 10, 10));
+        // FASE 2: Estado - Habilitar Agente (después de configurar)
+        chkAgenteHabilitado = new JCheckBox(I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE());
+        chkAgenteHabilitado.setFont(EstilosUI.FUENTE_ESTANDAR);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.gridwidth = 2;
+        gbc.weightx = 0;
+        panelAgenteGeneral.add(chkAgenteHabilitado, gbc);
+
+        JPanel panelPrompts = new JPanel(new BorderLayout());
+        panelPrompts.setBorder(UIUtils.crearBordeTitulado(
+                I18nUI.Configuracion.Agentes.TITULO_PROMPTS_AGENTE(), 8, 10));
 
         txtAgentePromptInicial = new JTextArea();
-        txtAgentePromptInicial.setFont(EstilosUI.FUENTE_MONO);
-        txtAgentePromptInicial.setLineWrap(true);
-        txtAgentePromptInicial.setWrapStyleWord(false);
-        txtAgentePromptInicial.setTabSize(2);
+        configurarAreaPromptAgente(txtAgentePromptInicial);
 
         btnRestaurarPromptAgenteInicial = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
         btnRestaurarPromptAgenteInicial.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -1063,48 +1052,58 @@ public class DialogoConfiguracion extends JDialog {
                 e -> txtAgentePromptInicial.setText(ConfiguracionAPI.obtenerAgentePreflightPromptPorDefecto()));
 
         txtAgentePrompt = new JTextArea();
-        txtAgentePrompt.setFont(EstilosUI.FUENTE_MONO);
-        txtAgentePrompt.setLineWrap(true);
-        txtAgentePrompt.setWrapStyleWord(false);
-        txtAgentePrompt.setTabSize(2);
+        configurarAreaPromptAgente(txtAgentePrompt);
 
         btnRestaurarPromptAgente = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
         btnRestaurarPromptAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnRestaurarPromptAgente.addActionListener(
                 e -> txtAgentePrompt.setText(ConfiguracionAPI.obtenerAgentePromptPorDefecto()));
 
-        panelPrompts.add(crearSeccionPromptAgente(
+        JTabbedPane tabsPrompts = new JTabbedPane();
+        tabsPrompts.setFont(EstilosUI.FUENTE_ESTANDAR);
+        tabsPrompts.addTab(
                 I18nUI.Configuracion.Agentes.TITULO_PROMPT_INICIAL_AGENTE(),
-                txtAgentePromptInicial,
-                btnRestaurarPromptAgenteInicial,
-                I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_INICIAL_AGENTE(),
-                FlowLayout.LEFT));
-        panelPrompts.add(crearSeccionPromptAgente(
+                crearSeccionPromptAgente(
+                        txtAgentePromptInicial,
+                        btnRestaurarPromptAgenteInicial,
+                        I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_INICIAL_AGENTE(),
+                        FlowLayout.LEFT));
+        tabsPrompts.addTab(
                 I18nUI.Configuracion.Agentes.TITULO_PROMPT_AGENTE(),
-                txtAgentePrompt,
-                btnRestaurarPromptAgente,
-                I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_VALIDACION_AGENTE(),
-                FlowLayout.RIGHT));
+                crearSeccionPromptAgente(
+                        txtAgentePrompt,
+                        btnRestaurarPromptAgente,
+                        I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_VALIDACION_AGENTE(),
+                        FlowLayout.RIGHT));
+        panelPrompts.add(tabsPrompts, BorderLayout.CENTER);
 
-        JPanel contenido = new JPanel(new BorderLayout(0, 10));
-        contenido.add(panelAgenteGeneral, BorderLayout.NORTH);
-        contenido.add(panelPrompts, BorderLayout.CENTER);
-
-        JScrollPane scroll = new JScrollPane(contenido);
-        scroll.setBorder(null);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
-        panel.add(scroll, BorderLayout.CENTER);
+        panel.add(panelAgenteGeneral, BorderLayout.NORTH);
+        panel.add(panelPrompts, BorderLayout.CENTER);
 
         return panel;
     }
 
-    private JPanel crearSeccionPromptAgente(String titulo,
-            JTextArea area,
+    private void configurarAreaPromptAgente(JTextArea area) {
+        if (area == null) {
+            return;
+        }
+        area.setFont(EstilosUI.FUENTE_MONO);
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        area.setTabSize(2);
+        area.setRows(14);
+        area.setColumns(1);
+        area.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(EstilosUI.colorSeparador(EstilosUI.obtenerFondoPanel()), 1),
+                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+    }
+
+    private JPanel crearSeccionPromptAgente(JTextArea area,
             JButton botonRestaurar,
             String descripcion,
             int alineacionBoton) {
-        JPanel seccion = new JPanel(new BorderLayout(0, 6));
-        seccion.setBorder(UIUtils.crearBordeTitulado(titulo, 8, 10));
+        JPanel seccion = new JPanel(new BorderLayout(0, 8));
+        seccion.setOpaque(false);
 
         if (Normalizador.noEsVacio(descripcion)) {
             JLabel lblDescripcion = new JLabel(descripcion);
@@ -1113,12 +1112,13 @@ public class DialogoConfiguracion extends JDialog {
             seccion.add(lblDescripcion, BorderLayout.NORTH);
         }
 
-        JScrollPane scroll = new JScrollPane(area);
-        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        seccion.add(scroll, BorderLayout.CENTER);
+        JPanel contenedorEditor = new JPanel(new BorderLayout());
+        contenedorEditor.setOpaque(false);
+        contenedorEditor.add(area, BorderLayout.CENTER);
+        seccion.add(contenedorEditor, BorderLayout.CENTER);
 
         JPanel acciones = new JPanel(new FlowLayout(alineacionBoton, 0, 0));
+        acciones.setOpaque(false);
         acciones.add(botonRestaurar);
         seccion.add(acciones, BorderLayout.SOUTH);
 

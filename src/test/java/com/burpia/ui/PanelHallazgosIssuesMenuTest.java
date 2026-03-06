@@ -1,23 +1,22 @@
 package com.burpia.ui;
+
 import burp.api.montoya.MontoyaApi;
 import com.burpia.i18n.I18nUI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
 import javax.swing.JCheckBox;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicReference;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-
-
-
-
 
 @DisplayName("PanelHallazgos Issues Menu Tests")
 class PanelHallazgosIssuesMenuTest {
@@ -30,7 +29,6 @@ class PanelHallazgosIssuesMenuTest {
     @Test
     @DisplayName("Toggle de guardado automatico sincroniza estado interno y checkbox")
     void testToggleGuardadoAutomaticoSincronizaEstado() throws Exception {
-        I18nUI.establecerIdioma("es");
         PanelHallazgos panel = crearPanel(true);
 
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
@@ -52,7 +50,6 @@ class PanelHallazgosIssuesMenuTest {
     @Test
     @DisplayName("Menu Issues se incluye dinamicamente cuando autoguardado desactivado en Pro")
     void testMenuIssuesVisibleEnMenuDinamicoCuandoAutoguardadoDesactivado() throws Exception {
-        I18nUI.establecerIdioma("es");
         PanelHallazgos panel = crearPanel(true);
 
         Method metodo = PanelHallazgos.class.getDeclaredMethod("obtenerEtiquetaMenuIssues");
@@ -89,7 +86,6 @@ class PanelHallazgosIssuesMenuTest {
     @Test
     @DisplayName("Community deshabilita integracion de Issues y muestra etiqueta solo Pro")
     void testCommunityDeshabilitaIntegracionIssues() throws Exception {
-        I18nUI.establecerIdioma("es");
         PanelHallazgos panel = crearPanel(false);
 
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
@@ -147,6 +143,12 @@ class PanelHallazgosIssuesMenuTest {
         assertFalse(checkAutoIssues.isSelected());
     }
 
+    /**
+     * Crea una instancia de PanelHallazgos con configuración mock.
+     *
+     * @param esBurpProfessional true para simular Burp Professional, false para Community
+     * @return instancia de PanelHallazgos creada en el EDT
+     */
     private PanelHallazgos crearPanel(boolean esBurpProfessional) throws Exception {
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         final PanelHallazgos[] holder = new PanelHallazgos[1];
@@ -154,6 +156,14 @@ class PanelHallazgosIssuesMenuTest {
         return holder[0];
     }
 
+    /**
+     * Obtiene el valor de un campo privado mediante reflexión.
+     *
+     * @param target objeto del que obtener el campo
+     * @param nombre nombre del campo
+     * @param tipo   clase del tipo esperado
+     * @return valor del campo casteado al tipo especificado
+     */
     @SuppressWarnings("unchecked")
     private <T> T obtenerCampo(Object target, String nombre, Class<T> tipo) throws Exception {
         Field field = target.getClass().getDeclaredField(nombre);
@@ -161,6 +171,9 @@ class PanelHallazgosIssuesMenuTest {
         return (T) field.get(target);
     }
 
+    /**
+     * Espera a que todos los eventos pendientes en el EDT sean procesados.
+     */
     private void flushEdt() throws Exception {
         SwingUtilities.invokeAndWait(() -> {});
     }

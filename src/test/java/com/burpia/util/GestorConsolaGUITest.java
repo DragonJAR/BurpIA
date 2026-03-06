@@ -2,7 +2,7 @@ package com.burpia.util;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.ui.EstilosUI;
-import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JTextPane;
@@ -16,22 +16,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
-
-
-
 @DisplayName("GestorConsolaGUI Tests")
 class GestorConsolaGUITest {
 
-    @AfterEach
-    void resetIdioma() {
+    @BeforeEach
+    void establecerIdiomaBase() {
         I18nUI.establecerIdioma(IdiomaUI.ES);
     }
 
     @Test
     @DisplayName("Genera resumen con contadores numéricos correctos")
     void testGenerarResumen() {
-        I18nUI.establecerIdioma(IdiomaUI.ES);
         GestorConsolaGUI gestor = new GestorConsolaGUI();
         gestor.registrarInfo("info");
         gestor.registrarVerbose("verbose");
@@ -50,13 +45,11 @@ class GestorConsolaGUITest {
         gestor.registrarError("error");
 
         assertEquals("Total: 3 | Info: 1 | Verbose: 1 | Errors: 1", gestor.generarResumen());
-        I18nUI.establecerIdioma(IdiomaUI.ES);
     }
 
     @Test
     @DisplayName("Preserva origen y nivel al duplicar a stream original")
     void testPreservaOrigenYNivelEnStream() {
-        I18nUI.establecerIdioma(IdiomaUI.ES);
         GestorConsolaGUI gestor = new GestorConsolaGUI();
         StringWriter out = new StringWriter();
         StringWriter err = new StringWriter();
@@ -89,7 +82,6 @@ class GestorConsolaGUITest {
     @Test
     @DisplayName("Conserva backlog previo y lo muestra al establecer consola")
     void testBacklogAntesDeConsola() throws Exception {
-        I18nUI.establecerIdioma(IdiomaUI.ES);
         GestorConsolaGUI gestor = new GestorConsolaGUI();
         gestor.registrarInfo("BurpIA", "Log previo 1");
         gestor.registrarError("BurpIA", "Log previo 2");
@@ -107,7 +99,6 @@ class GestorConsolaGUITest {
     @Test
     @DisplayName("NOTA/ACCION y NOTE/ACTION se resaltan en negrilla")
     void testEtiquetasNotaAccionEnNegrilla() throws Exception {
-        I18nUI.establecerIdioma(IdiomaUI.ES);
         GestorConsolaGUI gestor = new GestorConsolaGUI();
         JTextPane consola = new JTextPane();
         SwingUtilities.invokeAndWait(() -> gestor.establecerConsola(consola));

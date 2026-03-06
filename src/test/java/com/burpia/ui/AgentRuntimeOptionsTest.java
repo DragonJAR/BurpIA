@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@DisplayName("AgentRuntimeOptions Tests")
 class AgentRuntimeOptionsTest {
 
     @Test
@@ -30,6 +31,13 @@ class AgentRuntimeOptionsTest {
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar("GEMINI_CLI");
         assertEquals(AgenteTipo.GEMINI_CLI, opciones.tipoAgente());
         assertEquals(800, opciones.delaySubmitPostPasteMs());
+    }
+
+    @Test
+    @DisplayName("Cargar con codigo de agente con espacios lo normaliza")
+    void cargarConCodigoAgenteConEspaciosLoNormaliza() {
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar("  CLAUDE_CODE  ");
+        assertEquals(AgenteTipo.CLAUDE_CODE, opciones.tipoAgente());
     }
 
     @Test

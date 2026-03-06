@@ -1,17 +1,23 @@
 package com.burpia.core;
+
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.util.LimitadorTasa;
+import com.burpia.util.Normalizador;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,6 +40,16 @@ class ManejadorHttpBurpIATest {
             this.stdout = stdout;
             this.stderr = stderr;
         }
+    }
+
+    /**
+     * CONFIABILIDAD: Establecer idioma español antes de cada test para que sean deterministas.
+     * Los tests verifican mensajes localizados y deben ser consistentes sin importar
+     * el idioma del sistema.
+     */
+    @BeforeEach
+    void setUp() {
+        I18nUI.establecerIdioma("es");
     }
 
     @AfterEach
@@ -163,8 +179,6 @@ class ManejadorHttpBurpIATest {
     @Test
     @DisplayName("Nota de scope incluye guia de Target > Scope")
     void testNotaScopeIncluyeGuia() {
-        // CONFIABILIDAD: Establecer idioma explícitamente para que el test sea determinista
-        com.burpia.i18n.I18nUI.establecerIdioma("es");
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerDetallado(true); // Habilitar modo detallado para ver notas de scope
         SalidaManejador salida = crearManejadorConSalida(null, config);
@@ -213,20 +227,52 @@ class ManejadorHttpBurpIATest {
         return new SalidaManejador(manejador, stdoutBuffer, stderrBuffer);
     }
 
+    /**
+     * Invoca el método privado {@code esRecursoEstatico} mediante reflexión.
+     * <p>
+     * Se usa reflexión porque el método es de implementación interna y no está expuesto
+     * en la API pública, pero contiene lógica de filtrado importante que debe probarse.
+     * </p>
+     *
+     * @param manejador la instancia del manejador
+     * @param url la URL a verificar
+     * @return {@code true} si la URL corresponde a un recurso estático
+     * @throws Exception si falla la invocación por reflexión
+     */
     private boolean invocarEsRecursoEstatico(ManejadorHttpBurpIA manejador, String url) throws Exception {
         Method metodo = ManejadorHttpBurpIA.class.getDeclaredMethod("esRecursoEstatico", String.class);
         metodo.setAccessible(true);
         return (boolean) metodo.invoke(manejador, url);
     }
 
+    /**
+     * Invoca el método privado {@code estaEnScope} mediante reflexión.
+     * <p>
+     * Se usa reflexión porque el método es de implementación interna y no está expuesto
+     * en la API pública, pero contiene lógica de verificación de scope importante.
+     * </p>
+     *
+     * @param manejador la instancia del manejador
+     * @param solicitud la solicitud HTTP a verificar
+     * @return {@code true} si la solicitud está dentro del scope de Burp
+     * @throws Exception si falla la invocación por reflexión
+     */
     private boolean invocarEstaEnScope(ManejadorHttpBurpIA manejador, HttpRequest solicitud) throws Exception {
         Method metodo = ManejadorHttpBurpIA.class.getDeclaredMethod("estaEnScope", HttpRequest.class);
         metodo.setAccessible(true);
         return (boolean) metodo.invoke(manejador, solicitud);
     }
 
+    /**
+     * Cuenta el número de ocurrencias de un patrón en un texto.
+     * 
+     * @param texto el texto donde buscar (puede ser null o vacío)
+     * @param patron el patrón a buscar (puede ser null o vacío)
+     * @return el número de ocurrencias encontradas, 0 si texto o patrón están vacíos
+     */
     private int contarCoincidencias(String texto, String patron) {
-        if (texto == null || patron == null || patron.isEmpty()) {
+        // CONFIABILIDAD: Usar Normalizador.esVacio() para Strings (principio DRY)
+        if (Normalizador.esVacio(texto) || Normalizador.esVacio(patron)) {
             return 0;
         }
         int contador = 0;

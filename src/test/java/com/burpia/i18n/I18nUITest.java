@@ -40,8 +40,7 @@ class I18nUITest {
         I18nUI.establecerIdioma("es");
         String mensaje = "Analisis completado: https://target";
         assertEquals(mensaje, I18nLogs.tr(mensaje));
-        assertEquals("Analisis completado: https://target",
-            I18nLogs.tr("Analysis completed: https://target"));
+        assertEquals(mensaje, I18nLogs.tr("Analysis completed: https://target"));
         assertEquals("Configuracion guardada exitosamente en: /tmp/.burpia/config.json",
             I18nLogs.tr("Configuration saved successfully to: /tmp/.burpia/config.json"));
     }
@@ -162,8 +161,6 @@ class I18nUITest {
             "Requests sent to Claude Code: 1/2 (failed: 1).",
             I18nUI.Contexto.MSG_ENVIO_AGENTE_RESULTADO("Claude Code", 1, 2, 1)
         );
-
-        I18nUI.establecerIdioma("es");
     }
 
     @Test
@@ -200,7 +197,6 @@ class I18nUITest {
         assertFalse(ok.contains("✅"));
         assertFalse(aviso.contains("⚠"));
         assertFalse(error.contains("❌"));
-        I18nUI.establecerIdioma("es");
     }
 
     @Test

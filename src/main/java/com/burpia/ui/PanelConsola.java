@@ -106,40 +106,44 @@ public class PanelConsola extends JPanel {
             }
         };
 
-        // Checkbox de autoscroll
-        checkboxAutoScroll = new JCheckBox(I18nUI.Consola.CHECK_AUTO_SCROLL(), true);
-        checkboxAutoScroll.setFont(EstilosUI.FUENTE_ESTANDAR);
-        checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
-        panelBotones.add(checkboxAutoScroll);
-
-        // Botón limpiar
-        botonLimpiar = new JButton(I18nUI.Consola.BOTON_LIMPIAR());
-        botonLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
-        panelBotones.add(botonLimpiar);
-
-        // Etiqueta de resumen
+        // EFICIENCIA: ESTADÍSTICAS PRIMERO - contexto inmediato para decisiones informadas
         etiquetaResumen = new JLabel(I18nUI.Consola.RESUMEN(0, 0, 0, 0));
         etiquetaResumen.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
         panelBotones.add(etiquetaResumen);
 
-        // DRY: Separador visual entre controles principales y búsqueda
+        // CONFIABILIDAD: Configuración de visualización (toggle) después de contexto
+        checkboxAutoScroll = new JCheckBox(I18nUI.Consola.CHECK_AUTO_SCROLL(), true);
+        checkboxAutoScroll.setFont(EstilosUI.FUENTE_ESTANDAR);
+        checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
+        panelBotones.add(checkboxAutoScroll);
+
+        // Acción de limpieza (después de tener contexto para decisión informada)
+        botonLimpiar = new JButton(I18nUI.Consola.BOTON_LIMPIAR());
+        botonLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
+        botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
+        panelBotones.add(botonLimpiar);
+
+        // CONFIABILIDAD: Separador visual entre contexto/configuración y búsqueda
         panelBotones.add(new JLabel("  "));
 
-        // Campo de búsqueda
+        // EFICIENCIA: BÚSQUEDA agrupada lógicamente
         campoBusqueda = new JTextField(15);
         campoBusqueda.setFont(EstilosUI.FUENTE_MONO);
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Consola.CAMPO_BUSCAR());
         panelBotones.add(campoBusqueda);
 
-        // Botón de búsqueda
         botonBuscar = new JButton(I18nUI.Consola.BOTON_BUSCAR());
         botonBuscar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonBuscar.setToolTipText(I18nUI.Tooltips.Consola.BUSCAR());
         panelBotones.add(botonBuscar);
 
-        // Botón anterior (compacto "<")
+        // EFICIENCIA: Resultados ANTES de navegación - usuario sabe si hay algo que navegar
+        etiquetaResultadosBusqueda = new JLabel("");
+        etiquetaResultadosBusqueda.setFont(EstilosUI.FUENTE_MONO);
+        panelBotones.add(etiquetaResultadosBusqueda);
+
+        // Navegación al final (solo útil si hay resultados)
         botonAnterior = new JButton("<");
         botonAnterior.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonAnterior.setToolTipText(I18nUI.Tooltips.Consola.ANTERIOR());
@@ -147,18 +151,12 @@ public class PanelConsola extends JPanel {
         botonAnterior.setPreferredSize(new Dimension(40, 25));
         panelBotones.add(botonAnterior);
 
-        // Botón siguiente (compacto ">")
         botonSiguiente = new JButton(">");
         botonSiguiente.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonSiguiente.setToolTipText(I18nUI.Tooltips.Consola.SIGUIENTE());
         botonSiguiente.setEnabled(false);
         botonSiguiente.setPreferredSize(new Dimension(40, 25));
         panelBotones.add(botonSiguiente);
-
-        // Etiqueta de resultados de búsqueda
-        etiquetaResultadosBusqueda = new JLabel("");
-        etiquetaResultadosBusqueda.setFont(EstilosUI.FUENTE_MONO);
-        panelBotones.add(etiquetaResultadosBusqueda);
 
         panelControles.add(panelBotones);
 
