@@ -15,16 +15,23 @@ import javax.swing.*;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 public class DialogoConfiguracion extends JDialog {
     private static final int ANCHO_DIALOGO = 800;
     private static final int ALTO_DIALOGO = 720;
+    private static final int FILAS_PROMPT_AGENTE = 6;
+    private static final int ANCHO_SCROLL_PROMPT_AGENTE = 300;
+    private static final int ALTO_SCROLL_PROMPT_AGENTE = 180;
 
     private final ConfiguracionAPI config;
     private final GestorConfiguracion gestorConfig;
@@ -87,8 +94,8 @@ public class DialogoConfiguracion extends JDialog {
     private final Map<String, String> rutasBinarioAgenteTemporal = new HashMap<>();
     private final Map<String, EstadoProveedorUI> estadoProveedorTemporal = new HashMap<>();
     private final Map<String, List<String>> modelosProveedorTemporal = new HashMap<>();
+    private EstadoEdicionDialogo estadoInicialDialogo;
     private String proveedorActualUi;
-    private String codigoIdiomaUiActual;
     private boolean actualizandoProveedorUi = false;
     private boolean actualizandoListaMultiProveedor = false;
     private boolean guardandoConfiguracion = false;
@@ -121,6 +128,9 @@ public class DialogoConfiguracion extends JDialog {
         JTabbedPane tabbedPane = new JTabbedPane();
 
         inicializarCamposConfiguracion();
+        btnProbarConexion = new JButton(I18nUI.Configuracion.BOTON_PROBAR_CONEXION());
+        btnProbarConexion.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnProbarConexion.addActionListener(e -> probarConexion());
 
         JPanel tabAjustesUsuario = crearTabAjustesUsuario();
         tabbedPane.addTab(I18nUI.Configuracion.TAB_AJUSTES_USUARIO(), tabAjustesUsuario);
@@ -141,25 +151,28 @@ public class DialogoConfiguracion extends JDialog {
         btnGuardar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
         btnGuardar.addActionListener(e -> guardarConfiguracion());
 
-        btnProbarConexion = new JButton(I18nUI.Configuracion.BOTON_PROBAR_CONEXION());
-        btnProbarConexion.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
-        btnProbarConexion.addActionListener(e -> probarConexion());
-
         btnCerrar = new JButton(I18nUI.DetalleHallazgo.BOTON_CANCELAR());
         btnCerrar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
-        btnCerrar.addActionListener(e -> dispose());
+        btnCerrar.addActionListener(e -> intentarCerrarDialogo());
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 6));
         panelBotones.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-        panelBotones.add(btnProbarConexion);
         panelBotones.add(btnGuardar);
         panelBotones.add(btnCerrar);
 
         add(tabbedPane, BorderLayout.CENTER);
         add(panelBotones, BorderLayout.SOUTH);
 
+        setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                intentarCerrarDialogo();
+            }
+        });
+
         pack();
-        setSize(Math.max(getWidth(), ANCHO_DIALOGO), Math.max(getHeight(), ALTO_DIALOGO));
+        setSize(ANCHO_DIALOGO, ALTO_DIALOGO);
         setLocationRelativeTo(getParent());
     }
 
@@ -322,7 +335,11 @@ public class DialogoConfiguracion extends JDialog {
         JPanel panelModelo = new JPanel(new BorderLayout(5, 0));
         panelModelo.setOpaque(false);
         panelModelo.add(comboModelo, BorderLayout.CENTER);
-        panelModelo.add(btnRefrescarModelos, BorderLayout.EAST);
+        JPanel panelAccionesModelo = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        panelAccionesModelo.setOpaque(false);
+        panelAccionesModelo.add(btnRefrescarModelos);
+        panelAccionesModelo.add(btnProbarConexion);
+        panelModelo.add(panelAccionesModelo, BorderLayout.EAST);
         panel.add(panelModelo, gbc);
 
         fila++;
@@ -604,16 +621,11 @@ public class DialogoConfiguracion extends JDialog {
                 JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            config.restaurarFuentesPorDefecto();
-            actualizarCamposFuentes();
+            comboFuenteEstandar.setSelectedItem(ConfiguracionAPI.FUENTE_ESTANDAR_DEFECTO);
+            spinnerTamanioEstandar.setValue(ConfiguracionAPI.TAMANIO_FUENTE_ESTANDAR_DEFECTO);
+            comboFuenteMono.setSelectedItem(ConfiguracionAPI.FUENTE_MONO_DEFECTO);
+            spinnerTamanioMono.setValue(ConfiguracionAPI.TAMANIO_FUENTE_MONO_DEFECTO);
         }
-    }
-
-    private void actualizarCamposFuentes() {
-        comboFuenteEstandar.setSelectedItem(config.obtenerNombreFuenteEstandar());
-        spinnerTamanioEstandar.setValue(config.obtenerTamanioFuenteEstandar());
-        comboFuenteMono.setSelectedItem(config.obtenerNombreFuenteMono());
-        spinnerTamanioMono.setValue(config.obtenerTamanioFuenteMono());
     }
 
     private JPanel crearPanelMultiProveedor() {
@@ -988,19 +1000,18 @@ public class DialogoConfiguracion extends JDialog {
     }
 
     private JPanel crearPanelAgentes() {
-        JPanel panel = new JPanel(new BorderLayout(0, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(16, 20, 12, 20));
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 20, 10, 20));
 
         JPanel panelAgenteGeneral = new JPanel(new GridBagLayout());
         panelAgenteGeneral.setBorder(UIUtils.crearBordeTitulado(
-                I18nUI.Configuracion.Agentes.TITULO_EJECUCION_AGENTE(), 12, 16));
+                I18nUI.Configuracion.Agentes.TITULO_EJECUCION_AGENTE(), 10, 14));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6, 6, 6, 6);
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // FASE 1: Configuración - Seleccionar Agente
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.gridwidth = 1;
@@ -1015,7 +1026,6 @@ public class DialogoConfiguracion extends JDialog {
         gbc.weightx = 1.0;
         panelAgenteGeneral.add(comboAgente, gbc);
 
-        // FASE 1: Configuración - Ruta del Binario
         txtAgenteBinario = new JTextField(30);
         txtAgenteBinario.getDocument()
                 .addDocumentListener(UIUtils.crearDocumentListener(this::actualizarRutaEnMemoria));
@@ -1029,19 +1039,16 @@ public class DialogoConfiguracion extends JDialog {
         gbc.weightx = 1.0;
         panelAgenteGeneral.add(txtAgenteBinario, gbc);
 
-        // FASE 2: Estado - Habilitar Agente (después de configurar)
         chkAgenteHabilitado = new JCheckBox(I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE());
         chkAgenteHabilitado.setFont(EstilosUI.FUENTE_ESTANDAR);
-
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.gridwidth = 2;
         gbc.weightx = 0;
         panelAgenteGeneral.add(chkAgenteHabilitado, gbc);
 
-        JPanel panelPrompts = new JPanel(new BorderLayout());
-        panelPrompts.setBorder(UIUtils.crearBordeTitulado(
-                I18nUI.Configuracion.Agentes.TITULO_PROMPTS_AGENTE(), 8, 10));
+        JPanel panelPrompts = new JPanel(new GridLayout(1, 2, 10, 0));
+        panelPrompts.setOpaque(false);
 
         txtAgentePromptInicial = new JTextArea();
         configurarAreaPromptAgente(txtAgentePromptInicial);
@@ -1059,26 +1066,33 @@ public class DialogoConfiguracion extends JDialog {
         btnRestaurarPromptAgente.addActionListener(
                 e -> txtAgentePrompt.setText(ConfiguracionAPI.obtenerAgentePromptPorDefecto()));
 
-        JTabbedPane tabsPrompts = new JTabbedPane();
-        tabsPrompts.setFont(EstilosUI.FUENTE_ESTANDAR);
-        tabsPrompts.addTab(
+        panelPrompts.add(crearSeccionPromptAgente(
                 I18nUI.Configuracion.Agentes.TITULO_PROMPT_INICIAL_AGENTE(),
-                crearSeccionPromptAgente(
-                        txtAgentePromptInicial,
-                        btnRestaurarPromptAgenteInicial,
-                        I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_INICIAL_AGENTE(),
-                        FlowLayout.LEFT));
-        tabsPrompts.addTab(
+                txtAgentePromptInicial,
+                btnRestaurarPromptAgenteInicial,
+                I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_INICIAL_AGENTE(),
+                FlowLayout.LEFT));
+        panelPrompts.add(crearSeccionPromptAgente(
                 I18nUI.Configuracion.Agentes.TITULO_PROMPT_AGENTE(),
-                crearSeccionPromptAgente(
-                        txtAgentePrompt,
-                        btnRestaurarPromptAgente,
-                        I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_VALIDACION_AGENTE(),
-                        FlowLayout.RIGHT));
-        panelPrompts.add(tabsPrompts, BorderLayout.CENTER);
+                txtAgentePrompt,
+                btnRestaurarPromptAgente,
+                I18nUI.Configuracion.Agentes.DESCRIPCION_PROMPT_VALIDACION_AGENTE(),
+                FlowLayout.RIGHT));
 
-        panel.add(panelAgenteGeneral, BorderLayout.NORTH);
-        panel.add(panelPrompts, BorderLayout.CENTER);
+        GridBagConstraints gbcRoot = new GridBagConstraints();
+        gbcRoot.gridx = 0;
+        gbcRoot.gridy = 0;
+        gbcRoot.weightx = 1.0;
+        gbcRoot.weighty = 0;
+        gbcRoot.fill = GridBagConstraints.HORIZONTAL;
+        gbcRoot.anchor = GridBagConstraints.NORTHWEST;
+        panel.add(panelAgenteGeneral, gbcRoot);
+
+        gbcRoot.gridy = 1;
+        gbcRoot.insets = new Insets(10, 0, 0, 0);
+        gbcRoot.weighty = 1.0;
+        gbcRoot.fill = GridBagConstraints.BOTH;
+        panel.add(panelPrompts, gbcRoot);
 
         return panel;
     }
@@ -1091,19 +1105,28 @@ public class DialogoConfiguracion extends JDialog {
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
         area.setTabSize(2);
-        area.setRows(14);
+        area.setRows(FILAS_PROMPT_AGENTE);
         area.setColumns(1);
-        area.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(EstilosUI.colorSeparador(EstilosUI.obtenerFondoPanel()), 1),
-                BorderFactory.createEmptyBorder(8, 8, 8, 8)));
+        area.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
     }
 
-    private JPanel crearSeccionPromptAgente(JTextArea area,
+    private JScrollPane crearScrollPromptAgente(JTextArea area) {
+        JScrollPane scroll = new JScrollPane(area);
+        scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scroll.setPreferredSize(new Dimension(ANCHO_SCROLL_PROMPT_AGENTE, ALTO_SCROLL_PROMPT_AGENTE));
+        scroll.setMinimumSize(new Dimension(140, 120));
+        return scroll;
+    }
+
+    private JPanel crearSeccionPromptAgente(String titulo,
+            JTextArea area,
             JButton botonRestaurar,
             String descripcion,
             int alineacionBoton) {
-        JPanel seccion = new JPanel(new BorderLayout(0, 8));
+        JPanel seccion = new JPanel(new BorderLayout(0, 6));
         seccion.setOpaque(false);
+        seccion.setBorder(UIUtils.crearBordeTitulado(titulo, 8, 10));
 
         if (Normalizador.noEsVacio(descripcion)) {
             JLabel lblDescripcion = new JLabel(descripcion);
@@ -1112,10 +1135,7 @@ public class DialogoConfiguracion extends JDialog {
             seccion.add(lblDescripcion, BorderLayout.NORTH);
         }
 
-        JPanel contenedorEditor = new JPanel(new BorderLayout());
-        contenedorEditor.setOpaque(false);
-        contenedorEditor.add(area, BorderLayout.CENTER);
-        seccion.add(contenedorEditor, BorderLayout.CENTER);
+        seccion.add(crearScrollPromptAgente(area), BorderLayout.CENTER);
 
         JPanel acciones = new JPanel(new FlowLayout(alineacionBoton, 0, 0));
         acciones.setOpaque(false);
@@ -1367,6 +1387,7 @@ public class DialogoConfiguracion extends JDialog {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
+        estadoInicialDialogo = capturarEstadoEdicionActual();
     }
 
     private void guardarConfiguracion() {
@@ -1526,6 +1547,7 @@ public class DialogoConfiguracion extends JDialog {
                     if (get()) {
                         config.aplicarDesde(snapshot);
                         EstilosUI.actualizarFuentes(config);
+                        estadoInicialDialogo = capturarEstadoEdicionActual();
                         if (alGuardar != null)
                             alGuardar.run();
                         dispose();
@@ -2087,9 +2109,356 @@ public class DialogoConfiguracion extends JDialog {
     }
 
     private void alCambiarIdiomaUi() {
-        IdiomaUI idioma = (IdiomaUI) comboIdioma.getSelectedItem();
-        if (idioma != null) {
-            config.establecerIdiomaUi(idioma.codigo());
+        // Se conserva el idioma solo en la UI hasta que el usuario pulse Guardar.
+    }
+
+    private void intentarCerrarDialogo() {
+        if (guardandoConfiguracion) {
+            return;
+        }
+
+        if (!tieneCambiosSinGuardar()) {
+            dispose();
+            return;
+        }
+
+        boolean confirmarDescarte = UIUtils.confirmarAdvertencia(
+                this,
+                I18nUI.Configuracion.TITULO_CONFIRMAR_DESCARTE_CAMBIOS_AJUSTES(),
+                I18nUI.Configuracion.MSG_CONFIRMAR_DESCARTE_CAMBIOS_AJUSTES());
+        if (confirmarDescarte) {
+            dispose();
+        }
+    }
+
+    private boolean tieneCambiosSinGuardar() {
+        if (estadoInicialDialogo == null) {
+            return false;
+        }
+        EstadoEdicionDialogo estadoActual = capturarEstadoEdicionActual();
+        return !estadoInicialDialogo.equals(estadoActual);
+    }
+
+    private EstadoEdicionDialogo capturarEstadoEdicionActual() {
+        String proveedorSeleccionado = obtenerTextoSeleccionado(comboProveedor);
+        String agenteSeleccionado = obtenerTextoSeleccionado(comboAgente);
+
+        Map<String, String> rutasAgente = new HashMap<>(rutasBinarioAgenteTemporal);
+        if (Normalizador.noEsVacio(agenteSeleccionado) && txtAgenteBinario != null) {
+            rutasAgente.put(agenteSeleccionado, textoSeguro(txtAgenteBinario.getText()));
+        }
+
+        Map<String, EstadoProveedorUI> borradores = new HashMap<>(estadoProveedorTemporal);
+        if (Normalizador.noEsVacio(proveedorSeleccionado)) {
+            borradores.put(proveedorSeleccionado, extraerEstadoActualRapido());
+        }
+
+        Map<String, EstadoProveedorSnapshot> estadosProveedor = new HashMap<>();
+        for (String proveedor : ProveedorAI.obtenerNombresProveedores()) {
+            EstadoProveedorUI borrador = borradores.get(proveedor);
+            estadosProveedor.put(proveedor, crearEstadoProveedorSnapshot(proveedor, borrador));
+        }
+
+        List<String> proveedoresSeleccionados = new ArrayList<>();
+        if (modeloListaSeleccionados != null) {
+            for (int i = 0; i < modeloListaSeleccionados.getSize(); i++) {
+                proveedoresSeleccionados.add(modeloListaSeleccionados.getElementAt(i));
+            }
+        }
+
+        return new EstadoEdicionDialogo(
+                obtenerCodigoIdiomaSeleccionado(),
+                proveedorSeleccionado,
+                obtenerModeloSeleccionado(),
+                textoSeguro(txtUrl != null ? txtUrl.getText() : ""),
+                textoSeguro(txtClave != null ? new String(txtClave.getPassword()) : ""),
+                textoSeguro(txtMaxTokens != null ? txtMaxTokens.getText() : ""),
+                textoSeguro(txtTimeoutModelo != null ? txtTimeoutModelo.getText() : ""),
+                textoSeguro(txtRetraso != null ? txtRetraso.getText() : ""),
+                textoSeguro(txtMaximoConcurrente != null ? txtMaximoConcurrente.getText() : ""),
+                textoSeguro(txtMaximoHallazgosTabla != null ? txtMaximoHallazgosTabla.getText() : ""),
+                textoSeguro(txtMaximoTareas != null ? txtMaximoTareas.getText() : ""),
+                chkDetallado != null && chkDetallado.isSelected(),
+                chkIgnorarSSL != null && chkIgnorarSSL.isSelected(),
+                chkSoloProxy != null && chkSoloProxy.isSelected(),
+                chkAlertasHabilitadas != null && chkAlertasHabilitadas.isSelected(),
+                chkPersistirBusqueda != null && chkPersistirBusqueda.isSelected(),
+                chkPersistirSeveridad != null && chkPersistirSeveridad.isSelected(),
+                textoSeguro(txtPrompt != null ? txtPrompt.getText() : ""),
+                chkAgenteHabilitado != null && chkAgenteHabilitado.isSelected(),
+                agenteSeleccionado,
+                textoSeguro(txtAgentePromptInicial != null ? txtAgentePromptInicial.getText() : ""),
+                textoSeguro(txtAgentePrompt != null ? txtAgentePrompt.getText() : ""),
+                textoSeguro(comboFuenteEstandar != null ? (String) comboFuenteEstandar.getSelectedItem() : ""),
+                spinnerTamanioEstandar != null ? (int) spinnerTamanioEstandar.getValue() : 0,
+                textoSeguro(comboFuenteMono != null ? (String) comboFuenteMono.getSelectedItem() : ""),
+                spinnerTamanioMono != null ? (int) spinnerTamanioMono.getValue() : 0,
+                chkHabilitarMultiProveedor != null && chkHabilitarMultiProveedor.isSelected(),
+                rutasAgente,
+                proveedoresSeleccionados,
+                estadosProveedor);
+    }
+
+    private EstadoProveedorSnapshot crearEstadoProveedorSnapshot(String proveedor, EstadoProveedorUI borrador) {
+        if (borrador != null) {
+            return new EstadoProveedorSnapshot(
+                    textoSeguro(borrador.getApiKey()),
+                    textoSeguro(borrador.getModelo()),
+                    textoSeguro(borrador.getBaseUrl()),
+                    borrador.getMaxTokens(),
+                    borrador.getTimeout());
+        }
+
+        String apiKey = config.obtenerApiKeyParaProveedor(proveedor);
+        String modelo = config.obtenerModeloParaProveedor(proveedor);
+        ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedor);
+        if (Normalizador.esVacio(modelo) && configProveedor != null) {
+            modelo = configProveedor.obtenerModeloPorDefecto();
+        }
+
+        Integer maxTokensConfigurado = config.obtenerMaxTokensConfiguradoParaProveedor(proveedor);
+        int maxTokens = maxTokensConfigurado != null
+                ? maxTokensConfigurado
+                : (configProveedor != null ? configProveedor.obtenerMaxTokensPorDefecto() : EstadoProveedorUI.MAX_TOKENS_POR_DEFECTO);
+        int timeout = config.obtenerTiempoEsperaParaModelo(proveedor, modelo);
+
+        return new EstadoProveedorSnapshot(
+                textoSeguro(apiKey),
+                textoSeguro(modelo),
+                textoSeguro(config.obtenerUrlBaseParaProveedor(proveedor)),
+                maxTokens,
+                timeout);
+    }
+
+    private String obtenerCodigoIdiomaSeleccionado() {
+        IdiomaUI idioma = comboIdioma != null ? (IdiomaUI) comboIdioma.getSelectedItem() : null;
+        return idioma != null ? idioma.codigo() : config.obtenerIdiomaUi();
+    }
+
+    private String obtenerTextoSeleccionado(JComboBox<String> combo) {
+        if (combo == null) {
+            return "";
+        }
+        Object seleccionado = combo.getSelectedItem();
+        return seleccionado != null ? seleccionado.toString() : "";
+    }
+
+    private String textoSeguro(String valor) {
+        return valor != null ? valor : "";
+    }
+
+    private static final class EstadoProveedorSnapshot {
+        private final String apiKey;
+        private final String modelo;
+        private final String baseUrl;
+        private final int maxTokens;
+        private final int timeout;
+
+        private EstadoProveedorSnapshot(String apiKey, String modelo, String baseUrl, int maxTokens, int timeout) {
+            this.apiKey = apiKey;
+            this.modelo = modelo;
+            this.baseUrl = baseUrl;
+            this.maxTokens = maxTokens;
+            this.timeout = timeout;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof EstadoProveedorSnapshot)) {
+                return false;
+            }
+            EstadoProveedorSnapshot that = (EstadoProveedorSnapshot) o;
+            return maxTokens == that.maxTokens
+                    && timeout == that.timeout
+                    && Objects.equals(apiKey, that.apiKey)
+                    && Objects.equals(modelo, that.modelo)
+                    && Objects.equals(baseUrl, that.baseUrl);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(apiKey, modelo, baseUrl, maxTokens, timeout);
+        }
+    }
+
+    private static final class EstadoEdicionDialogo {
+        private final String idiomaUi;
+        private final String proveedorSeleccionado;
+        private final String modeloSeleccionado;
+        private final String urlActual;
+        private final String apiKeyActual;
+        private final String maxTokensTexto;
+        private final String timeoutTexto;
+        private final String retrasoTexto;
+        private final String maximoConcurrenteTexto;
+        private final String maximoHallazgosTexto;
+        private final String maximoTareasTexto;
+        private final boolean detallado;
+        private final boolean ignorarSsl;
+        private final boolean soloProxy;
+        private final boolean alertasHabilitadas;
+        private final boolean persistirBusqueda;
+        private final boolean persistirSeveridad;
+        private final String prompt;
+        private final boolean agenteHabilitado;
+        private final String tipoAgente;
+        private final String agentePromptInicial;
+        private final String agentePrompt;
+        private final String fuenteEstandar;
+        private final int tamanioFuenteEstandar;
+        private final String fuenteMono;
+        private final int tamanioFuenteMono;
+        private final boolean multiProveedorHabilitado;
+        private final Map<String, String> rutasBinarioAgente;
+        private final List<String> proveedoresMultiConsulta;
+        private final Map<String, EstadoProveedorSnapshot> estadosProveedor;
+
+        private EstadoEdicionDialogo(
+                String idiomaUi,
+                String proveedorSeleccionado,
+                String modeloSeleccionado,
+                String urlActual,
+                String apiKeyActual,
+                String maxTokensTexto,
+                String timeoutTexto,
+                String retrasoTexto,
+                String maximoConcurrenteTexto,
+                String maximoHallazgosTexto,
+                String maximoTareasTexto,
+                boolean detallado,
+                boolean ignorarSsl,
+                boolean soloProxy,
+                boolean alertasHabilitadas,
+                boolean persistirBusqueda,
+                boolean persistirSeveridad,
+                String prompt,
+                boolean agenteHabilitado,
+                String tipoAgente,
+                String agentePromptInicial,
+                String agentePrompt,
+                String fuenteEstandar,
+                int tamanioFuenteEstandar,
+                String fuenteMono,
+                int tamanioFuenteMono,
+                boolean multiProveedorHabilitado,
+                Map<String, String> rutasBinarioAgente,
+                List<String> proveedoresMultiConsulta,
+                Map<String, EstadoProveedorSnapshot> estadosProveedor) {
+            this.idiomaUi = idiomaUi;
+            this.proveedorSeleccionado = proveedorSeleccionado;
+            this.modeloSeleccionado = modeloSeleccionado;
+            this.urlActual = urlActual;
+            this.apiKeyActual = apiKeyActual;
+            this.maxTokensTexto = maxTokensTexto;
+            this.timeoutTexto = timeoutTexto;
+            this.retrasoTexto = retrasoTexto;
+            this.maximoConcurrenteTexto = maximoConcurrenteTexto;
+            this.maximoHallazgosTexto = maximoHallazgosTexto;
+            this.maximoTareasTexto = maximoTareasTexto;
+            this.detallado = detallado;
+            this.ignorarSsl = ignorarSsl;
+            this.soloProxy = soloProxy;
+            this.alertasHabilitadas = alertasHabilitadas;
+            this.persistirBusqueda = persistirBusqueda;
+            this.persistirSeveridad = persistirSeveridad;
+            this.prompt = prompt;
+            this.agenteHabilitado = agenteHabilitado;
+            this.tipoAgente = tipoAgente;
+            this.agentePromptInicial = agentePromptInicial;
+            this.agentePrompt = agentePrompt;
+            this.fuenteEstandar = fuenteEstandar;
+            this.tamanioFuenteEstandar = tamanioFuenteEstandar;
+            this.fuenteMono = fuenteMono;
+            this.tamanioFuenteMono = tamanioFuenteMono;
+            this.multiProveedorHabilitado = multiProveedorHabilitado;
+            this.rutasBinarioAgente = rutasBinarioAgente != null
+                    ? Collections.unmodifiableMap(new HashMap<>(rutasBinarioAgente))
+                    : Collections.emptyMap();
+            this.proveedoresMultiConsulta = proveedoresMultiConsulta != null
+                    ? Collections.unmodifiableList(new ArrayList<>(proveedoresMultiConsulta))
+                    : Collections.emptyList();
+            this.estadosProveedor = estadosProveedor != null
+                    ? Collections.unmodifiableMap(new HashMap<>(estadosProveedor))
+                    : Collections.emptyMap();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof EstadoEdicionDialogo)) {
+                return false;
+            }
+            EstadoEdicionDialogo that = (EstadoEdicionDialogo) o;
+            return detallado == that.detallado
+                    && ignorarSsl == that.ignorarSsl
+                    && soloProxy == that.soloProxy
+                    && alertasHabilitadas == that.alertasHabilitadas
+                    && persistirBusqueda == that.persistirBusqueda
+                    && persistirSeveridad == that.persistirSeveridad
+                    && agenteHabilitado == that.agenteHabilitado
+                    && tamanioFuenteEstandar == that.tamanioFuenteEstandar
+                    && tamanioFuenteMono == that.tamanioFuenteMono
+                    && multiProveedorHabilitado == that.multiProveedorHabilitado
+                    && Objects.equals(idiomaUi, that.idiomaUi)
+                    && Objects.equals(proveedorSeleccionado, that.proveedorSeleccionado)
+                    && Objects.equals(modeloSeleccionado, that.modeloSeleccionado)
+                    && Objects.equals(urlActual, that.urlActual)
+                    && Objects.equals(apiKeyActual, that.apiKeyActual)
+                    && Objects.equals(maxTokensTexto, that.maxTokensTexto)
+                    && Objects.equals(timeoutTexto, that.timeoutTexto)
+                    && Objects.equals(retrasoTexto, that.retrasoTexto)
+                    && Objects.equals(maximoConcurrenteTexto, that.maximoConcurrenteTexto)
+                    && Objects.equals(maximoHallazgosTexto, that.maximoHallazgosTexto)
+                    && Objects.equals(maximoTareasTexto, that.maximoTareasTexto)
+                    && Objects.equals(prompt, that.prompt)
+                    && Objects.equals(tipoAgente, that.tipoAgente)
+                    && Objects.equals(agentePromptInicial, that.agentePromptInicial)
+                    && Objects.equals(agentePrompt, that.agentePrompt)
+                    && Objects.equals(fuenteEstandar, that.fuenteEstandar)
+                    && Objects.equals(fuenteMono, that.fuenteMono)
+                    && Objects.equals(rutasBinarioAgente, that.rutasBinarioAgente)
+                    && Objects.equals(proveedoresMultiConsulta, that.proveedoresMultiConsulta)
+                    && Objects.equals(estadosProveedor, that.estadosProveedor);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(
+                    idiomaUi,
+                    proveedorSeleccionado,
+                    modeloSeleccionado,
+                    urlActual,
+                    apiKeyActual,
+                    maxTokensTexto,
+                    timeoutTexto,
+                    retrasoTexto,
+                    maximoConcurrenteTexto,
+                    maximoHallazgosTexto,
+                    maximoTareasTexto,
+                    detallado,
+                    ignorarSsl,
+                    soloProxy,
+                    alertasHabilitadas,
+                    persistirBusqueda,
+                    persistirSeveridad,
+                    prompt,
+                    agenteHabilitado,
+                    tipoAgente,
+                    agentePromptInicial,
+                    agentePrompt,
+                    fuenteEstandar,
+                    tamanioFuenteEstandar,
+                    fuenteMono,
+                    tamanioFuenteMono,
+                    multiProveedorHabilitado,
+                    rutasBinarioAgente,
+                    proveedoresMultiConsulta,
+                    estadosProveedor);
         }
     }
 

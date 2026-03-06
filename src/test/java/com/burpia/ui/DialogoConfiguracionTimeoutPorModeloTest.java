@@ -3,6 +3,7 @@ package com.burpia.ui;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.i18n.I18nUI;
+import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.RutasBurpIA;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,7 +12,10 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JPasswordField;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
@@ -19,11 +23,15 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.BorderLayout;
+import java.awt.event.WindowEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -210,7 +218,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
     }
 
     @Test
-    @DisplayName("Pestaña Agentes usa layout compacto sin scroll global")
+    @DisplayName("Pestaña Agentes usa scroll solo en cajas de prompt")
     void testPestaniaAgentesSinScrollGlobal() throws Exception {
         Path tempDir = Files.createTempDirectory("burpia-dialogo-agentes-layout");
         userHomeOriginal = System.getProperty("user.home");
@@ -221,6 +229,9 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
 
         try {
+            assertEquals(800, dialogo.getWidth(), "El ancho del diálogo debe mantenerse fijo");
+            assertEquals(720, dialogo.getHeight(), "El alto del diálogo debe mantenerse fijo");
+
             final Component[] panelAgentesHolder = new Component[1];
             SwingUtilities.invokeAndWait(() -> {
                 JTabbedPane tabsPrincipal = buscarPrimerComponente(dialogo.getContentPane(), JTabbedPane.class);
@@ -231,11 +242,308 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             });
 
             Component panelAgentes = panelAgentesHolder[0];
+            JTextArea txtAgentePromptInicial = obtenerCampo(dialogo, "txtAgentePromptInicial", JTextArea.class);
+            JTextArea txtAgentePrompt = obtenerCampo(dialogo, "txtAgentePrompt", JTextArea.class);
             assertNotNull(panelAgentes, "La vista de Agentes no puede ser nula");
-            assertFalse(contieneComponente(panelAgentes, JScrollPane.class),
-                    "La pestaña Agentes no debe usar scroll global");
-            assertTrue(contieneComponente(panelAgentes, JTabbedPane.class),
-                    "Los prompts de agente deben estar organizados en subpestañas");
+            assertFalse(panelAgentes instanceof JScrollPane,
+                    "La pestaña Agentes no debe estar envuelta en un scroll global");
+
+            List<JScrollPane> scrolls = new ArrayList<>();
+            recolectarComponentes(panelAgentes, JScrollPane.class, scrolls);
+            assertEquals(2, scrolls.size(), "Deben existir exactamente 2 scrolls (uno por caja de prompt)");
+
+            boolean preflightEnScroll = false;
+            boolean promptEnScroll = false;
+            for (JScrollPane scroll : scrolls) {
+                Component vista = scroll.getViewport().getView();
+                if (vista == txtAgentePromptInicial) {
+                    preflightEnScroll = true;
+                } else if (vista == txtAgentePrompt) {
+                    promptEnScroll = true;
+                }
+            }
+            assertTrue(preflightEnScroll, "El prompt inicial debe tener su propio scroll");
+            assertTrue(promptEnScroll, "El prompt del agente debe tener su propio scroll");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Probar conexión no aparece en footer global y queda en proveedor junto a cargar modelos")
+    void testBotonProbarConexionEsContextualProveedor() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-probar-conexion-contextual");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JButton btnProbarConexion = obtenerCampo(dialogo, "btnProbarConexion", JButton.class);
+            JButton btnRefrescarModelos = obtenerCampo(dialogo, "btnRefrescarModelos", JButton.class);
+            JButton btnGuardar = obtenerCampo(dialogo, "btnGuardar", JButton.class);
+            JButton btnCerrar = obtenerCampo(dialogo, "btnCerrar", JButton.class);
+
+            assertNotNull(btnProbarConexion, "El botón Probar Conexión debe existir");
+            assertNotNull(btnRefrescarModelos, "El botón Cargar Modelos debe existir");
+            assertNotNull(btnGuardar, "El botón Guardar debe existir");
+            assertNotNull(btnCerrar, "El botón Cerrar debe existir");
+
+            JPanel panelFooter = (JPanel) btnGuardar.getParent();
+            assertNotNull(panelFooter, "El panel footer debe existir");
+            assertEquals(panelFooter, btnCerrar.getParent(), "Guardar y Cerrar deben compartir footer");
+            assertFalse(panelFooter == btnProbarConexion.getParent(),
+                    "Probar Conexión no debe estar en el footer global");
+
+            Container contenedorAccionesModelo = btnRefrescarModelos.getParent();
+            assertNotNull(contenedorAccionesModelo, "Debe existir contenedor de acciones de modelo");
+            assertEquals(contenedorAccionesModelo, btnProbarConexion.getParent(),
+                    "Probar Conexión y Cargar Modelos deben compartir contenedor");
+
+            assertTrue(contenedorAccionesModelo.getLayout() instanceof java.awt.FlowLayout
+                            || contenedorAccionesModelo.getLayout() instanceof java.awt.GridLayout
+                            || contenedorAccionesModelo.getLayout() instanceof BorderLayout,
+                    "El contenedor de acciones debe tener layout de acciones horizontal");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Probar conexión conserva ciclo de estado del botón")
+    void testProbarConexionCicloBoton() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-probar-conexion-ciclo");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JButton btnProbarConexion = obtenerCampo(dialogo, "btnProbarConexion", JButton.class);
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
+            JTextField txtUrl = obtenerCampo(dialogo, "txtUrl", JTextField.class);
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+
+            Method probarConexion = DialogoConfiguracion.class.getDeclaredMethod("probarConexion");
+            probarConexion.setAccessible(true);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("OpenAI");
+                comboModelo.setSelectedItem("gpt-4o");
+                comboModelo.getEditor().setItem("gpt-4o");
+                txtClave.setText("sk-test");
+                txtUrl.setText("invalid-url");
+                txtTimeoutModelo.setText("1");
+            });
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    probarConexion.invoke(dialogo);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            flushEdt();
+
+            assertFalse(btnProbarConexion.isEnabled(), "El botón debe deshabilitarse durante la prueba");
+            assertEquals(I18nUI.Configuracion.BOTON_PROBANDO(), btnProbarConexion.getText(),
+                    "El botón debe mostrar estado 'probando'");
+
+            long inicio = System.currentTimeMillis();
+            long timeoutMs = 5000;
+            while ((!btnProbarConexion.isEnabled()
+                    || !I18nUI.Configuracion.BOTON_PROBAR_CONEXION().equals(btnProbarConexion.getText()))
+                    && (System.currentTimeMillis() - inicio) < timeoutMs) {
+                Thread.sleep(50);
+                flushEdt();
+            }
+
+            assertTrue(btnProbarConexion.isEnabled(),
+                    "El botón debe volver a estar habilitado tras finalizar la prueba");
+            assertEquals(I18nUI.Configuracion.BOTON_PROBAR_CONEXION(), btnProbarConexion.getText(),
+                    "El texto del botón debe restaurarse al finalizar");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Cambios en múltiples pestañas se guardan con un solo guardar")
+    void testCambiosMultiplesPestaniasSeGuardanConUnSoloGuardar() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-guardado-global");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> guardadoCallback.set(true));
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JTextField txtUrl = obtenerCampo(dialogo, "txtUrl", JTextField.class);
+            JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
+            JTextField txtMaxTokens = obtenerCampo(dialogo, "txtMaxTokens", JTextField.class);
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+            JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
+            JTextField txtMaximoConcurrente = obtenerCampo(dialogo, "txtMaximoConcurrente", JTextField.class);
+            JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogo, "txtMaximoHallazgosTabla", JTextField.class);
+            JTextField txtMaximoTareas = obtenerCampo(dialogo, "txtMaximoTareas", JTextField.class);
+            JTextArea txtPrompt = obtenerCampo(dialogo, "txtPrompt", JTextArea.class);
+            JTextArea txtAgentePromptInicial = obtenerCampo(dialogo, "txtAgentePromptInicial", JTextArea.class);
+            JTextArea txtAgentePrompt = obtenerCampo(dialogo, "txtAgentePrompt", JTextArea.class);
+            JCheckBox chkDetallado = obtenerCampo(dialogo, "chkDetallado", JCheckBox.class);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("OpenAI");
+                comboModelo.setSelectedItem("gpt-4o");
+                comboModelo.getEditor().setItem("gpt-4o");
+                txtUrl.setText("https://proxy.empresa.local/v1");
+                txtClave.setText("sk-test-global");
+                txtMaxTokens.setText("3072");
+                txtTimeoutModelo.setText("150");
+                txtRetraso.setText("7");
+                txtMaximoConcurrente.setText("2");
+                txtMaximoHallazgosTabla.setText("1200");
+                txtMaximoTareas.setText("800");
+                txtPrompt.setText("Analiza {REQUEST} y usa {RESPONSE} para evidencias");
+                txtAgentePromptInicial.setText("PRE_FLIGHT_GLOBAL");
+                txtAgentePrompt.setText("PROMPT_GLOBAL");
+                chkDetallado.setSelected(true);
+            });
+            flushEdt();
+
+            Method guardar = DialogoConfiguracion.class.getDeclaredMethod("guardarConfiguracion");
+            guardar.setAccessible(true);
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    guardar.invoke(dialogo);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            esperarAlGuardado(guardadoCallback);
+
+            assertTrue(guardadoCallback.get(), "El guardado global debe ejecutarse al guardar una sola vez");
+            assertEquals("OpenAI", config.obtenerProveedorAI());
+            assertEquals("https://proxy.empresa.local/v1", config.obtenerUrlBaseParaProveedor("OpenAI"));
+            assertEquals("sk-test-global", config.obtenerApiKeyParaProveedor("OpenAI"));
+            assertEquals(3072, config.obtenerMaxTokensParaProveedor("OpenAI"));
+            assertEquals(150, config.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-4o"));
+            assertEquals(7, config.obtenerRetrasoSegundos());
+            assertEquals(2, config.obtenerMaximoConcurrente());
+            assertEquals(1200, config.obtenerMaximoHallazgosTabla());
+            assertEquals(800, config.obtenerMaximoTareasTabla());
+            assertEquals("Analiza {REQUEST} y usa {RESPONSE} para evidencias", config.obtenerPromptConfigurable());
+            assertEquals("PRE_FLIGHT_GLOBAL", config.obtenerAgentePreflightPrompt());
+            assertEquals("PROMPT_GLOBAL", config.obtenerAgentePrompt());
+            assertTrue(config.esDetallado(), "Debe persistir cambios hechos en Ajustes de Usuario");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Cambiar idioma en ajustes no muta config hasta guardar")
+    void testIdiomaNoMutaConfigHastaGuardar() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-idioma-sin-guardar");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerIdiomaUi("es");
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JComboBox<IdiomaUI> comboIdioma = obtenerCampo(dialogo, "comboIdioma", JComboBox.class);
+            SwingUtilities.invokeAndWait(() -> comboIdioma.setSelectedItem(IdiomaUI.EN));
+            flushEdt();
+
+            assertEquals("es", config.obtenerIdiomaUi(),
+                    "El idioma de configuración no debe mutar hasta pulsar Guardar");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Cerrar sin cambios cierra el diálogo sin confirmación")
+    void testCerrarSinCambiosCierraSinConfirmacion() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-cierre-sin-cambios");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        JButton btnCerrar = obtenerCampo(dialogo, "btnCerrar", JButton.class);
+        SwingUtilities.invokeAndWait(btnCerrar::doClick);
+        flushEdt();
+
+        assertFalse(dialogo.isDisplayable(),
+                "Sin cambios pendientes, Cancelar debe cerrar el diálogo inmediatamente");
+    }
+
+    @Test
+    @DisplayName("Cerrar con cambios solicita descarte y mantiene diálogo si no se confirma")
+    void testCerrarConCambiosRequiereConfirmacionDescarte() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-cierre-con-cambios");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
+            JButton btnCerrar = obtenerCampo(dialogo, "btnCerrar", JButton.class);
+
+            SwingUtilities.invokeAndWait(() -> txtRetraso.setText("9"));
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(btnCerrar::doClick);
+            flushEdt();
+
+            assertTrue(dialogo.isDisplayable(),
+                    "Con cambios sin guardar y sin confirmación positiva, el diálogo debe seguir abierto");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Cerrar con X usa misma política de descarte que botón cancelar")
+    void testCierrePorXUsaMismaPoliticaDeDescarteQueCancelar() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-cierre-x");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
+            SwingUtilities.invokeAndWait(() -> txtRetraso.setText("11"));
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() ->
+                    dialogo.dispatchEvent(new WindowEvent(dialogo, WindowEvent.WINDOW_CLOSING)));
+            flushEdt();
+
+            assertTrue(dialogo.isDisplayable(),
+                    "El cierre por X debe respetar confirmación de descarte igual que Cancelar");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -340,18 +648,18 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         return null;
     }
 
-    private boolean contieneComponente(Component raiz, Class<? extends Component> tipo) {
+    private <T extends Component> void recolectarComponentes(Component raiz, Class<T> tipo, List<T> salida) {
+        if (raiz == null || tipo == null || salida == null) {
+            return;
+        }
         if (tipo.isInstance(raiz)) {
-            return true;
+            salida.add(tipo.cast(raiz));
         }
         if (raiz instanceof Container) {
             for (Component hijo : ((Container) raiz).getComponents()) {
-                if (contieneComponente(hijo, tipo)) {
-                    return true;
-                }
+                recolectarComponentes(hijo, tipo, salida);
             }
         }
-        return false;
     }
 
     /**

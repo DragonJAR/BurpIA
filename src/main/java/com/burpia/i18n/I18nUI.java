@@ -1925,6 +1925,15 @@ public final class I18nUI {
             return tr("Confirmar Restauración", "Confirm Restore");
         }
 
+        public static String TITULO_CONFIRMAR_DESCARTE_CAMBIOS_AJUSTES() {
+            return tr("Descartar cambios", "Discard changes");
+        }
+
+        public static String MSG_CONFIRMAR_DESCARTE_CAMBIOS_AJUSTES() {
+            return tr("Hay cambios sin guardar en Ajustes. Si cierras ahora, se perderán.\n\n¿Deseas descartarlos?",
+                    "There are unsaved changes in Settings. If you close now, they will be lost.\n\nDo you want to discard them?");
+        }
+
         public static String MSG_ERROR_PROMPT_SIN_REQUEST() {
             return tr(
                     "El prompt debe contener el token {REQUEST} para indicar donde se insertará la solicitud HTTP.\n" +
