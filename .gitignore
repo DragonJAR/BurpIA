@@ -5,12 +5,14 @@
 .idea/
 *.iml
 .vscode/
+.claude/
 
 # Build
 build/
 .gradle/
 .gradle-local/
 out/
+.venv-spell/
 
 # Compiled
 *.class
