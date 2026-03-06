@@ -33,18 +33,18 @@ class PanelHallazgosIssuesMenuTest {
 
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo());
-        assertTrue(checkAutoIssues.isSelected());
+        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:36");
+        assertTrue(checkAutoIssues.isSelected(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:37");
 
         SwingUtilities.invokeAndWait(checkAutoIssues::doClick);
         flushEdt();
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo());
-        assertFalse(checkAutoIssues.isSelected());
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:41");
+        assertFalse(checkAutoIssues.isSelected(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:42");
 
         SwingUtilities.invokeAndWait(checkAutoIssues::doClick);
         flushEdt();
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo());
-        assertTrue(checkAutoIssues.isSelected());
+        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:46");
+        assertTrue(checkAutoIssues.isSelected(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:47");
     }
 
     @Test
@@ -56,14 +56,14 @@ class PanelHallazgosIssuesMenuTest {
         metodo.setAccessible(true);
 
         String etiqueta = (String) metodo.invoke(panel);
-        assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), etiqueta);
+        assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), etiqueta, "assertEquals failed at PanelHallazgosIssuesMenuTest.java:59");
 
         SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
         flushEdt();
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo());
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:63");
 
         String etiquetaTrasDesactivar = (String) metodo.invoke(panel);
-        assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), etiquetaTrasDesactivar);
+        assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), etiquetaTrasDesactivar, "assertEquals failed at PanelHallazgosIssuesMenuTest.java:66");
     }
 
     @Test
@@ -74,13 +74,13 @@ class PanelHallazgosIssuesMenuTest {
 
         SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
         flushEdt();
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo());
-        assertFalse(checkAutoIssues.isSelected());
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:77");
+        assertFalse(checkAutoIssues.isSelected(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:78");
 
         SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(true));
         flushEdt();
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo());
-        assertTrue(checkAutoIssues.isSelected());
+        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:82");
+        assertTrue(checkAutoIssues.isSelected(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:83");
     }
 
     @Test
@@ -90,13 +90,13 @@ class PanelHallazgosIssuesMenuTest {
 
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
-        assertFalse(checkAutoIssues.isEnabled());
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo());
+        assertFalse(checkAutoIssues.isEnabled(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:93");
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:94");
 
         Method metodoTooltip = PanelHallazgos.class.getDeclaredMethod("obtenerTooltipMenuIssues");
         metodoTooltip.setAccessible(true);
         String tooltip = (String) metodoTooltip.invoke(panel);
-        assertEquals(I18nUI.Tooltips.Hallazgos.MENU_ISSUES_SOLO_PRO(), tooltip);
+        assertEquals(I18nUI.Tooltips.Hallazgos.MENU_ISSUES_SOLO_PRO(), tooltip, "assertEquals failed at PanelHallazgosIssuesMenuTest.java:99");
     }
 
     @Test
@@ -107,7 +107,7 @@ class PanelHallazgosIssuesMenuTest {
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
         String etiquetaInicial = checkAutoIssues.getText();
-        assertTrue(etiquetaInicial.contains("Issues") || etiquetaInicial.contains("automáticamente"));
+        assertTrue(etiquetaInicial.contains("Issues") || etiquetaInicial.contains("automáticamente"), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:110");
 
         SwingUtilities.invokeAndWait(() -> {
             I18nUI.establecerIdioma("en");
@@ -116,7 +116,7 @@ class PanelHallazgosIssuesMenuTest {
         flushEdt();
 
         String etiquetaIngles = checkAutoIssues.getText();
-        assertTrue(etiquetaIngles.contains("Issues") || etiquetaIngles.contains("automatically"));
+        assertTrue(etiquetaIngles.contains("Issues") || etiquetaIngles.contains("automatically"), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:119");
     }
 
     @Test
@@ -137,10 +137,10 @@ class PanelHallazgosIssuesMenuTest {
         hilo.join(1000);
         flushEdt();
 
-        assertFalse(hilo.isAlive());
-        assertNull(error.get());
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo());
-        assertFalse(checkAutoIssues.isSelected());
+        assertFalse(hilo.isAlive(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:140");
+        assertNull(error.get(), "assertNull failed at PanelHallazgosIssuesMenuTest.java:141");
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:142");
+        assertFalse(checkAutoIssues.isSelected(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:143");
     }
 
     /**
@@ -164,7 +164,7 @@ class PanelHallazgosIssuesMenuTest {
      * @param tipo   clase del tipo esperado
      * @return valor del campo casteado al tipo especificado
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
     private <T> T obtenerCampo(Object target, String nombre, Class<T> tipo) throws Exception {
         Field field = target.getClass().getDeclaredField(nombre);
         field.setAccessible(true);

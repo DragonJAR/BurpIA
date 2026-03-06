@@ -68,12 +68,12 @@ class DialogoDetalleHallazgoTest {
             flushEdt();
 
             // Assert
-            assertNotNull(guardado.get());
-            assertEquals("https://modificado.com", guardado.get().obtenerUrl());
-            assertEquals("Título Modificado", guardado.get().obtenerTitulo());
-            assertEquals("Descripción modificada", guardado.get().obtenerHallazgo());
-            assertEquals("Critical", guardado.get().obtenerSeveridad()); // Internal value is normalized
-            assertEquals("High", guardado.get().obtenerConfianza());
+            assertNotNull(guardado.get(), "assertNotNull failed at DialogoDetalleHallazgoTest.java:71");
+            assertEquals("https://modificado.com", guardado.get().obtenerUrl(), "assertEquals failed at DialogoDetalleHallazgoTest.java:72");
+            assertEquals("Título Modificado", guardado.get().obtenerTitulo(), "assertEquals failed at DialogoDetalleHallazgoTest.java:73");
+            assertEquals("Descripción modificada", guardado.get().obtenerHallazgo(), "assertEquals failed at DialogoDetalleHallazgoTest.java:74");
+            assertEquals("Critical", guardado.get().obtenerSeveridad(), "assertEquals failed at DialogoDetalleHallazgoTest.java:75"); // Internal value is normalized
+            assertEquals("High", guardado.get().obtenerConfianza(), "assertEquals failed at DialogoDetalleHallazgoTest.java:76");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -168,11 +168,11 @@ class DialogoDetalleHallazgoTest {
 
             // Assert
             SwingUtilities.invokeAndWait(() -> {
-                assertEquals("https://original.com", txtUrl.getText());
-                assertEquals("Título Original", txtTitulo.getText());
-                assertEquals("Descripción original", txtDescripcion.getText());
-                assertEquals("Alta", comboSeveridad.getSelectedItem());
-                assertEquals("Media", comboConfianza.getSelectedItem());
+                assertEquals("https://original.com", txtUrl.getText(), "assertEquals failed at DialogoDetalleHallazgoTest.java:171");
+                assertEquals("Título Original", txtTitulo.getText(), "assertEquals failed at DialogoDetalleHallazgoTest.java:172");
+                assertEquals("Descripción original", txtDescripcion.getText(), "assertEquals failed at DialogoDetalleHallazgoTest.java:173");
+                assertEquals("Alta", comboSeveridad.getSelectedItem(), "assertEquals failed at DialogoDetalleHallazgoTest.java:174");
+                assertEquals("Media", comboConfianza.getSelectedItem(), "assertEquals failed at DialogoDetalleHallazgoTest.java:175");
             });
         } finally {
             destruirDialogo(dialogo);
@@ -194,10 +194,10 @@ class DialogoDetalleHallazgoTest {
 
             // Assert
             SwingUtilities.invokeAndWait(() -> {
-                assertEquals("", txtUrl.getText());
-                assertEquals("", txtTitulo.getText());
-                assertEquals("Informativa", comboSeveridad.getSelectedItem());
-                assertEquals("Media", comboConfianza.getSelectedItem());
+                assertEquals("", txtUrl.getText(), "assertEquals failed at DialogoDetalleHallazgoTest.java:197");
+                assertEquals("", txtTitulo.getText(), "assertEquals failed at DialogoDetalleHallazgoTest.java:198");
+                assertEquals("Informativa", comboSeveridad.getSelectedItem(), "assertEquals failed at DialogoDetalleHallazgoTest.java:199");
+                assertEquals("Media", comboConfianza.getSelectedItem(), "assertEquals failed at DialogoDetalleHallazgoTest.java:200");
             });
         } finally {
             destruirDialogo(dialogo);
@@ -225,8 +225,8 @@ class DialogoDetalleHallazgoTest {
 
             // Assert - Verificar idioma español
             SwingUtilities.invokeAndWait(() -> {
-                assertTrue(btnGuardar.getText().contains("Guardar"));
-                assertTrue(btnCancelar.getText().contains("Cancelar"));
+                assertTrue(btnGuardar.getText().contains("Guardar"), "assertTrue failed at DialogoDetalleHallazgoTest.java:228");
+                assertTrue(btnCancelar.getText().contains("Cancelar"), "assertTrue failed at DialogoDetalleHallazgoTest.java:229");
             });
         } finally {
             destruirDialogo(dialogo);
@@ -241,8 +241,8 @@ class DialogoDetalleHallazgoTest {
 
             // Assert - Verificar idioma inglés
             SwingUtilities.invokeAndWait(() -> {
-                assertTrue(btnGuardarEn.getText().contains("Save"));
-                assertTrue(btnCancelarEn.getText().contains("Cancel"));
+                assertTrue(btnGuardarEn.getText().contains("Save"), "assertTrue failed at DialogoDetalleHallazgoTest.java:244");
+                assertTrue(btnCancelarEn.getText().contains("Cancel"), "assertTrue failed at DialogoDetalleHallazgoTest.java:245");
             });
         } finally {
             destruirDialogo(dialogoEn);

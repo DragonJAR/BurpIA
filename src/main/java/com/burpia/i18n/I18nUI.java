@@ -1721,7 +1721,7 @@ public final class I18nUI {
                     construirDescripcionApp(INTRO_DESCRIPCION_EN, "Key features", CARACTERISTICAS_APP_EN));
         }
 
-        private static String construirDescripcionApp(String introduccion, String titulo, String[] caracteristicas) {
+        private static String construirDescripcionApp(String introduccion, String titulo, String... caracteristicas) {
             StringBuilder descripcion = new StringBuilder();
             descripcion.append(introduccion).append("\n\n").append(titulo).append(":\n");
             if (caracteristicas != null) {

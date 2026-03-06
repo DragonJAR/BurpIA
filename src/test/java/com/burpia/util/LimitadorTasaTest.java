@@ -29,42 +29,42 @@ class LimitadorTasaTest {
         @DisplayName("Normaliza concurrencia cero a un permiso")
         void normalizaConcurrenciaCero() {
             LimitadorTasa limitador = new LimitadorTasa(0);
-            assertEquals(1, limitador.permisosDisponibles());
+            assertEquals(1, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:32");
         }
 
         @Test
         @DisplayName("Normaliza concurrencia negativa a un permiso")
         void normalizaConcurrenciaNegativa() {
             LimitadorTasa limitador = new LimitadorTasa(-5);
-            assertEquals(1, limitador.permisosDisponibles());
+            assertEquals(1, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:39");
         }
 
         @Test
         @DisplayName("Normaliza concurrencia Integer.MIN_VALUE a un permiso")
         void normalizaConcurrenciaMinValue() {
             LimitadorTasa limitador = new LimitadorTasa(Integer.MIN_VALUE);
-            assertEquals(1, limitador.permisosDisponibles());
+            assertEquals(1, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:46");
         }
 
         @Test
         @DisplayName("Mantiene concurrencia valida configurada")
         void mantieneConcurrenciaValida() {
             LimitadorTasa limitador = new LimitadorTasa(3);
-            assertEquals(3, limitador.permisosDisponibles());
+            assertEquals(3, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:53");
         }
 
         @Test
         @DisplayName("Acepta concurrencia de un permiso")
         void aceptaConcurrenciaUno() {
             LimitadorTasa limitador = new LimitadorTasa(1);
-            assertEquals(1, limitador.permisosDisponibles());
+            assertEquals(1, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:60");
         }
 
         @Test
         @DisplayName("Acepta concurrencia alta")
         void aceptaConcurrenciaAlta() {
             LimitadorTasa limitador = new LimitadorTasa(100);
-            assertEquals(100, limitador.permisosDisponibles());
+            assertEquals(100, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:67");
         }
     }
 
@@ -76,13 +76,13 @@ class LimitadorTasaTest {
         @DisplayName("Adquirir permiso reduce permisos disponibles")
         void adquirirReducePermisos() throws InterruptedException {
             LimitadorTasa limitador = new LimitadorTasa(3);
-            assertEquals(3, limitador.permisosDisponibles());
+            assertEquals(3, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:79");
 
             limitador.adquirir();
-            assertEquals(2, limitador.permisosDisponibles());
+            assertEquals(2, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:82");
 
             limitador.adquirir();
-            assertEquals(1, limitador.permisosDisponibles());
+            assertEquals(1, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:85");
         }
 
         @Test
@@ -90,10 +90,10 @@ class LimitadorTasaTest {
         void liberarIncrementaPermisos() throws InterruptedException {
             LimitadorTasa limitador = new LimitadorTasa(2);
             limitador.adquirir();
-            assertEquals(1, limitador.permisosDisponibles());
+            assertEquals(1, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:93");
 
             limitador.liberar();
-            assertEquals(2, limitador.permisosDisponibles());
+            assertEquals(2, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:96");
         }
 
         @Test
@@ -105,7 +105,7 @@ class LimitadorTasaTest {
             limitador.adquirir();
             limitador.liberar();
 
-            assertEquals(permisosIniciales, limitador.permisosDisponibles());
+            assertEquals(permisosIniciales, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:108");
         }
 
         @Test
@@ -117,7 +117,7 @@ class LimitadorTasaTest {
             limitador.adquirir();
             limitador.adquirir();
 
-            assertEquals(0, limitador.permisosDisponibles());
+            assertEquals(0, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:120");
         }
 
         @Test
@@ -126,7 +126,54 @@ class LimitadorTasaTest {
             LimitadorTasa limitador = new LimitadorTasa(2);
             // Semaphore permite liberar más permisos de los que se adquirieron
             limitador.liberar();
-            assertEquals(3, limitador.permisosDisponibles());
+            assertEquals(3, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:129");
+        }
+
+        @Test
+        @DisplayName("Ajustar maximo concurrente hacia arriba incrementa permisos disponibles")
+        void ajustarMaximoHaciaArribaIncrementaPermisos() {
+            LimitadorTasa limitador = new LimitadorTasa(1);
+
+            limitador.ajustarMaximoConcurrente(3);
+
+            assertEquals(3, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:139");
+        }
+
+        @Test
+        @DisplayName("Ajustar maximo concurrente hacia abajo respeta permisos en uso")
+        void ajustarMaximoHaciaAbajoRespetaPermisosEnUso() throws InterruptedException {
+            LimitadorTasa limitador = new LimitadorTasa(3);
+            limitador.adquirir();
+            limitador.adquirir();
+            assertEquals(1, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:148");
+
+            limitador.ajustarMaximoConcurrente(1);
+            assertEquals(-1, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:151");
+
+            CountDownLatch bloqueo = new CountDownLatch(1);
+            CountDownLatch termino = new CountDownLatch(1);
+
+            Thread hilo = new Thread(() -> {
+                bloqueo.countDown();
+                try {
+                    limitador.adquirir();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    termino.countDown();
+                }
+            });
+
+            hilo.start();
+            assertTrue(bloqueo.await(1, TimeUnit.SECONDS), "assertTrue failed at LimitadorTasaTest.java:168");
+            assertFalse(termino.await(100, TimeUnit.MILLISECONDS), "assertFalse failed at LimitadorTasaTest.java:169");
+
+            limitador.liberar();
+            assertFalse(termino.await(100, TimeUnit.MILLISECONDS), "assertFalse failed at LimitadorTasaTest.java:172");
+
+            limitador.liberar();
+            assertTrue(termino.await(1, TimeUnit.SECONDS), "assertTrue failed at LimitadorTasaTest.java:175");
+            assertEquals(0, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:176");
         }
     }
 
@@ -160,14 +207,14 @@ class LimitadorTasaTest {
             bloqueado.await(1, TimeUnit.SECONDS);
 
             // El hilo debería estar bloqueado, no ha terminado
-            assertFalse(terminado.await(100, TimeUnit.MILLISECONDS));
+            assertFalse(terminado.await(100, TimeUnit.MILLISECONDS), "assertFalse failed at LimitadorTasaTest.java:210");
 
             // Liberar permiso para desbloquear
             limitador.liberar();
             terminado.await(1, TimeUnit.SECONDS);
 
             // Ahora debería haber terminado
-            assertEquals(0, permisosAlFinal.get());
+            assertEquals(0, permisosAlFinal.get(), "assertEquals failed at LimitadorTasaTest.java:217");
         }
 
         @Test
@@ -205,7 +252,7 @@ class LimitadorTasaTest {
             listo.await(5, TimeUnit.SECONDS);
 
             // El máximo de concurrentes nunca debe exceder el límite
-            assertTrue(maxConcurrentes.get() <= 3);
+            assertTrue(maxConcurrentes.get() <= 3, "assertTrue failed at LimitadorTasaTest.java:255");
         }
     }
 
@@ -213,6 +260,7 @@ class LimitadorTasaTest {
     @DisplayName("Patrón try-finally")
     class PatronTryFinally {
 
+        @SuppressWarnings("PMD.JUnitUseExpected")
         @Test
         @DisplayName("Usar en try-finally garantiza liberación de permisos")
         void tryFinallyGarantizaLiberacion() throws InterruptedException {
@@ -229,7 +277,7 @@ class LimitadorTasaTest {
                 limitador.liberar();
             }
 
-            assertEquals(permisosIniciales, limitador.permisosDisponibles());
+            assertEquals(permisosIniciales, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:279");
         }
 
         @Test
@@ -241,7 +289,7 @@ class LimitadorTasaTest {
             try {
                 limitador.adquirir();
                 try {
-                    assertEquals(3, limitador.permisosDisponibles());
+                    assertEquals(3, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:291");
                 } finally {
                     limitador.liberar();
                 }
@@ -249,7 +297,7 @@ class LimitadorTasaTest {
                 limitador.liberar();
             }
 
-            assertEquals(5, limitador.permisosDisponibles());
+            assertEquals(5, limitador.permisosDisponibles(), "assertEquals failed at LimitadorTasaTest.java:299");
         }
     }
 }

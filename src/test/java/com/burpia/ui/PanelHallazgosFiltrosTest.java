@@ -53,15 +53,15 @@ class PanelHallazgosFiltrosTest {
         JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
         JComboBox<?> comboSeveridad = obtenerCampo(panel, "comboSeveridad", JComboBox.class);
 
-        assertEquals(2, tabla.getRowCount());
+        assertEquals(2, tabla.getRowCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:56");
 
         SwingUtilities.invokeAndWait(() -> comboSeveridad.setSelectedItem(I18nUI.Hallazgos.SEVERIDAD_HIGH()));
         flushEdt();
-        assertEquals(1, tabla.getRowCount());
+        assertEquals(1, tabla.getRowCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:60");
 
         SwingUtilities.invokeAndWait(() -> comboSeveridad.setSelectedItem(I18nUI.Hallazgos.OPCION_TODAS_CRITICIDADES()));
         flushEdt();
-        assertEquals(2, tabla.getRowCount());
+        assertEquals(2, tabla.getRowCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:64");
     }
 
     @Test
@@ -76,15 +76,15 @@ class PanelHallazgosFiltrosTest {
 
         JCheckBox checkbox = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo());
+        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosFiltrosTest.java:79");
 
         SwingUtilities.invokeAndWait(checkbox::doClick);
         flushEdt();
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo());
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosFiltrosTest.java:83");
 
         SwingUtilities.invokeAndWait(checkbox::doClick);
         flushEdt();
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo());
+        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosFiltrosTest.java:87");
     }
 
     @Test
@@ -98,27 +98,27 @@ class PanelHallazgosFiltrosTest {
         ));
         flushEdt();
 
-        assertEquals(2, modelo.obtenerNumeroHallazgos());
-        assertFalse(modelo.estaIgnorado(0));
-        assertFalse(modelo.estaIgnorado(1));
-        assertEquals(0, modelo.obtenerNumeroIgnorados());
+        assertEquals(2, modelo.obtenerNumeroHallazgos(), "assertEquals failed at PanelHallazgosFiltrosTest.java:101");
+        assertFalse(modelo.estaIgnorado(0), "assertFalse failed at PanelHallazgosFiltrosTest.java:102");
+        assertFalse(modelo.estaIgnorado(1), "assertFalse failed at PanelHallazgosFiltrosTest.java:103");
+        assertEquals(0, modelo.obtenerNumeroIgnorados(), "assertEquals failed at PanelHallazgosFiltrosTest.java:104");
 
         modelo.marcarComoIgnorado(0);
         flushEdt();
 
-        assertTrue(modelo.estaIgnorado(0));
-        assertFalse(modelo.estaIgnorado(1));
-        assertEquals(1, modelo.obtenerNumeroIgnorados());
+        assertTrue(modelo.estaIgnorado(0), "assertTrue failed at PanelHallazgosFiltrosTest.java:109");
+        assertFalse(modelo.estaIgnorado(1), "assertFalse failed at PanelHallazgosFiltrosTest.java:110");
+        assertEquals(1, modelo.obtenerNumeroIgnorados(), "assertEquals failed at PanelHallazgosFiltrosTest.java:111");
 
         List<Hallazgo> noIgnorados = modelo.obtenerHallazgosNoIgnorados();
-        assertEquals(1, noIgnorados.size());
-        assertEquals("TB", noIgnorados.get(0).obtenerTitulo());
+        assertEquals(1, noIgnorados.size(), "assertEquals failed at PanelHallazgosFiltrosTest.java:114");
+        assertEquals("TB", noIgnorados.get(0).obtenerTitulo(), "assertEquals failed at PanelHallazgosFiltrosTest.java:115");
 
         modelo.marcarComoIgnorado(1);
         flushEdt();
 
-        assertEquals(2, modelo.obtenerNumeroIgnorados());
-        assertTrue(modelo.obtenerHallazgosNoIgnorados().isEmpty());
+        assertEquals(2, modelo.obtenerNumeroIgnorados(), "assertEquals failed at PanelHallazgosFiltrosTest.java:120");
+        assertTrue(modelo.obtenerHallazgosNoIgnorados().isEmpty(), "assertTrue failed at PanelHallazgosFiltrosTest.java:121");
     }
 
     @Test
@@ -134,16 +134,16 @@ class PanelHallazgosFiltrosTest {
         flushEdt();
 
         modelo.marcarComoIgnorado(1);
-        assertTrue(modelo.estaIgnorado(1));
+        assertTrue(modelo.estaIgnorado(1), "assertTrue failed at PanelHallazgosFiltrosTest.java:137");
 
         modelo.eliminarHallazgo(0);
         flushEdt();
 
-        assertEquals(2, modelo.obtenerNumeroHallazgos());
-        assertTrue(modelo.estaIgnorado(0));
-        assertFalse(modelo.estaIgnorado(1));
+        assertEquals(2, modelo.obtenerNumeroHallazgos(), "assertEquals failed at PanelHallazgosFiltrosTest.java:142");
+        assertTrue(modelo.estaIgnorado(0), "assertTrue failed at PanelHallazgosFiltrosTest.java:143");
+        assertFalse(modelo.estaIgnorado(1), "assertFalse failed at PanelHallazgosFiltrosTest.java:144");
 
-        assertEquals(1, modelo.obtenerNumeroIgnorados());
+        assertEquals(1, modelo.obtenerNumeroIgnorados(), "assertEquals failed at PanelHallazgosFiltrosTest.java:146");
     }
 
     @Test
@@ -164,13 +164,13 @@ class PanelHallazgosFiltrosTest {
         });
         flushEdt();
 
-        assertEquals("All Severities", comboSeveridad.getItemAt(0));
-        assertEquals("Critical", comboSeveridad.getItemAt(1));
-        assertEquals("High", comboSeveridad.getItemAt(2));
-        assertEquals("Medium", comboSeveridad.getItemAt(3));
-        assertEquals("Low", comboSeveridad.getItemAt(4));
-        assertEquals("Info", comboSeveridad.getItemAt(5));
-        assertEquals(2, comboSeveridad.getSelectedIndex());
+        assertEquals("All Severities", comboSeveridad.getItemAt(0), "assertEquals failed at PanelHallazgosFiltrosTest.java:167");
+        assertEquals("Critical", comboSeveridad.getItemAt(1), "assertEquals failed at PanelHallazgosFiltrosTest.java:168");
+        assertEquals("High", comboSeveridad.getItemAt(2), "assertEquals failed at PanelHallazgosFiltrosTest.java:169");
+        assertEquals("Medium", comboSeveridad.getItemAt(3), "assertEquals failed at PanelHallazgosFiltrosTest.java:170");
+        assertEquals("Low", comboSeveridad.getItemAt(4), "assertEquals failed at PanelHallazgosFiltrosTest.java:171");
+        assertEquals("Info", comboSeveridad.getItemAt(5), "assertEquals failed at PanelHallazgosFiltrosTest.java:172");
+        assertEquals(2, comboSeveridad.getSelectedIndex(), "assertEquals failed at PanelHallazgosFiltrosTest.java:173");
     }
 
     @Test
@@ -208,7 +208,7 @@ class PanelHallazgosFiltrosTest {
 
         JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
         SwingUtilities.invokeAndWait(() -> tabla.setRowSelectionInterval(0, 0));
-        assertEquals(1, tabla.getSelectedRowCount());
+        assertEquals(1, tabla.getSelectedRowCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:211");
 
         Method ajustarSeleccion = PanelHallazgos.class.getDeclaredMethod(
             "ajustarSeleccionParaMenuContextual", int.class, boolean.class
@@ -223,7 +223,7 @@ class PanelHallazgosFiltrosTest {
         });
         flushEdt();
 
-        assertEquals(0, tabla.getSelectedRowCount());
+        assertEquals(0, tabla.getSelectedRowCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:226");
     }
 
     @Test
@@ -254,7 +254,7 @@ class PanelHallazgosFiltrosTest {
             "No debe restaurar severidad cuando la persistencia está deshabilitada");
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
     private <T> T obtenerCampo(Object target, String nombre, Class<T> tipo) throws Exception {
         Field field = target.getClass().getDeclaredField(nombre);
         field.setAccessible(true);

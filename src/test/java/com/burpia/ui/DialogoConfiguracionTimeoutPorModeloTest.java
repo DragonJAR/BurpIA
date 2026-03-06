@@ -88,11 +88,11 @@ class DialogoConfiguracionTimeoutPorModeloTest {
 
             SwingUtilities.invokeAndWait(() -> comboModelo.setSelectedItem("glm-5"));
             flushEdt();
-            assertEquals("180", txtTimeoutModelo.getText());
+            assertEquals("180", txtTimeoutModelo.getText(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:91");
 
             SwingUtilities.invokeAndWait(() -> comboModelo.setSelectedItem("glm-4-air"));
             flushEdt();
-            assertEquals("120", txtTimeoutModelo.getText());
+            assertEquals("120", txtTimeoutModelo.getText(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:95");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -115,14 +115,14 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 proveedores.add(comboProveedor.getItemAt(i));
             }
 
-            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_01));
-            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_02));
-            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_03));
-            assertFalse(proveedores.contains("-- Custom --"));
+            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_01), "assertTrue failed at DialogoConfiguracionTimeoutPorModeloTest.java:118");
+            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_02), "assertTrue failed at DialogoConfiguracionTimeoutPorModeloTest.java:119");
+            assertTrue(proveedores.contains(ProveedorAI.PROVEEDOR_CUSTOM_03), "assertTrue failed at DialogoConfiguracionTimeoutPorModeloTest.java:120");
+            assertFalse(proveedores.contains("-- Custom --"), "assertFalse failed at DialogoConfiguracionTimeoutPorModeloTest.java:121");
 
             SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem(ProveedorAI.PROVEEDOR_CUSTOM_02));
             flushEdt();
-            assertEquals(ProveedorAI.URL_CUSTOM_ES, txtUrl.getText());
+            assertEquals(ProveedorAI.URL_CUSTOM_ES, txtUrl.getText(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:125");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -177,12 +177,12 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             });
             esperarAlGuardado(guardadoCallback);
             assertTrue(guardadoCallback.get(), "El callback de guardado debería haberse ejecutado");
-            assertEquals(210, config.obtenerTiempoEsperaParaModelo("Z.ai", "glm-5"));
+            assertEquals(210, config.obtenerTiempoEsperaParaModelo("Z.ai", "glm-5"), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:180");
 
             Path configPath = tempDir.resolve(".burpia/config.json");
             String json = Files.readString(configPath, StandardCharsets.UTF_8);
-            assertTrue(json.contains("\"tiempoEsperaPorModelo\""));
-            assertTrue(json.contains("\"Z.ai::glm-5\": 210"));
+            assertTrue(json.contains("\"tiempoEsperaPorModelo\""), "assertTrue failed at DialogoConfiguracionTimeoutPorModeloTest.java:184");
+            assertTrue(json.contains("\"Z.ai::glm-5\": 210"), "assertTrue failed at DialogoConfiguracionTimeoutPorModeloTest.java:185");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -241,8 +241,8 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             });
             esperarAlGuardado(guardadoCallback);
             assertTrue(guardadoCallback.get(), "El callback de guardado debería haberse ejecutado");
-            assertEquals("PRE_FLIGHT_EDITADO", config.obtenerAgentePreflightPrompt());
-            assertEquals("PROMPT_VALIDACION_EDITADO", config.obtenerAgentePrompt());
+            assertEquals("PRE_FLIGHT_EDITADO", config.obtenerAgentePreflightPrompt(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:244");
+            assertEquals("PROMPT_VALIDACION_EDITADO", config.obtenerAgentePrompt(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:245");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -464,18 +464,18 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             esperarAlGuardado(guardadoCallback);
 
             assertTrue(guardadoCallback.get(), "El guardado global debe ejecutarse al guardar una sola vez");
-            assertEquals("OpenAI", config.obtenerProveedorAI());
-            assertEquals("https://proxy.empresa.local/v1", config.obtenerUrlBaseParaProveedor("OpenAI"));
-            assertEquals("sk-test-global", config.obtenerApiKeyParaProveedor("OpenAI"));
-            assertEquals(3072, config.obtenerMaxTokensParaProveedor("OpenAI"));
-            assertEquals(150, config.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-4o"));
-            assertEquals(7, config.obtenerRetrasoSegundos());
-            assertEquals(2, config.obtenerMaximoConcurrente());
-            assertEquals(1200, config.obtenerMaximoHallazgosTabla());
-            assertEquals(800, config.obtenerMaximoTareasTabla());
-            assertEquals("Analiza {REQUEST} y usa {RESPONSE} para evidencias", config.obtenerPromptConfigurable());
-            assertEquals("PRE_FLIGHT_GLOBAL", config.obtenerAgentePreflightPrompt());
-            assertEquals("PROMPT_GLOBAL", config.obtenerAgentePrompt());
+            assertEquals("OpenAI", config.obtenerProveedorAI(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:467");
+            assertEquals("https://proxy.empresa.local/v1", config.obtenerUrlBaseParaProveedor("OpenAI"), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:468");
+            assertEquals("sk-test-global", config.obtenerApiKeyParaProveedor("OpenAI"), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:469");
+            assertEquals(3072, config.obtenerMaxTokensParaProveedor("OpenAI"), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:470");
+            assertEquals(150, config.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-4o"), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:471");
+            assertEquals(7, config.obtenerRetrasoSegundos(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:472");
+            assertEquals(2, config.obtenerMaximoConcurrente(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:473");
+            assertEquals(1200, config.obtenerMaximoHallazgosTabla(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:474");
+            assertEquals(800, config.obtenerMaximoTareasTabla(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:475");
+            assertEquals("Analiza {REQUEST} y usa {RESPONSE} para evidencias", config.obtenerPromptConfigurable(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:476");
+            assertEquals("PRE_FLIGHT_GLOBAL", config.obtenerAgentePreflightPrompt(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:477");
+            assertEquals("PROMPT_GLOBAL", config.obtenerAgentePrompt(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:478");
             assertTrue(config.esDetallado(), "Debe persistir cambios hechos en Ajustes de Usuario");
         } finally {
             destruirDialogo(dialogo);
@@ -635,7 +635,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         return holder[0];
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
     private <T> T obtenerCampo(Object target, String nombreCampo, Class<T> tipo) throws Exception {
         Field field = target.getClass().getDeclaredField(nombreCampo);
         field.setAccessible(true);

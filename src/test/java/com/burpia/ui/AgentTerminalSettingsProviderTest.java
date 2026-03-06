@@ -70,14 +70,14 @@ class AgentTerminalSettingsProviderTest {
 
         TextStyle estiloDefault = provider.getDefaultStyle();
 
-        assertNotNull(estiloDefault.getForeground());
-        assertNotNull(estiloDefault.getBackground());
+        assertNotNull(estiloDefault.getForeground(), "assertNotNull failed at AgentTerminalSettingsProviderTest.java:73");
+        assertNotNull(estiloDefault.getBackground(), "assertNotNull failed at AgentTerminalSettingsProviderTest.java:74");
 
         Color fondo = estiloDefault.getBackground().toAwtColor();
         Color texto = estiloDefault.getForeground().toAwtColor();
 
-        assertNotNull(fondo);
-        assertNotNull(texto);
+        assertNotNull(fondo, "assertNotNull failed at AgentTerminalSettingsProviderTest.java:79");
+        assertNotNull(texto, "assertNotNull failed at AgentTerminalSettingsProviderTest.java:80");
         assertTrue(
             EstilosUI.ratioContraste(texto, fondo) >= EstilosUI.CONTRASTE_AA_NORMAL,
             () -> String.format("Contraste texto/fondo %.2f debe ser >= %.2f",
@@ -92,14 +92,14 @@ class AgentTerminalSettingsProviderTest {
 
         TextStyle estiloSeleccion = provider.getSelectionColor();
 
-        assertNotNull(estiloSeleccion.getForeground());
-        assertNotNull(estiloSeleccion.getBackground());
+        assertNotNull(estiloSeleccion.getForeground(), "assertNotNull failed at AgentTerminalSettingsProviderTest.java:95");
+        assertNotNull(estiloSeleccion.getBackground(), "assertNotNull failed at AgentTerminalSettingsProviderTest.java:96");
 
         Color fondo = estiloSeleccion.getBackground().toAwtColor();
         Color texto = estiloSeleccion.getForeground().toAwtColor();
 
-        assertNotNull(fondo);
-        assertNotNull(texto);
+        assertNotNull(fondo, "assertNotNull failed at AgentTerminalSettingsProviderTest.java:101");
+        assertNotNull(texto, "assertNotNull failed at AgentTerminalSettingsProviderTest.java:102");
         assertTrue(
             EstilosUI.ratioContraste(texto, fondo) >= EstilosUI.CONTRASTE_AA_NORMAL,
             () -> String.format("Contraste seleccion %.2f debe ser >= %.2f",
@@ -114,14 +114,14 @@ class AgentTerminalSettingsProviderTest {
 
         TextStyle estiloBusqueda = provider.getFoundPatternColor();
 
-        assertNotNull(estiloBusqueda.getForeground());
-        assertNotNull(estiloBusqueda.getBackground());
+        assertNotNull(estiloBusqueda.getForeground(), "assertNotNull failed at AgentTerminalSettingsProviderTest.java:117");
+        assertNotNull(estiloBusqueda.getBackground(), "assertNotNull failed at AgentTerminalSettingsProviderTest.java:118");
 
         Color fondo = estiloBusqueda.getBackground().toAwtColor();
         Color texto = estiloBusqueda.getForeground().toAwtColor();
 
-        assertNotNull(fondo);
-        assertNotNull(texto);
+        assertNotNull(fondo, "assertNotNull failed at AgentTerminalSettingsProviderTest.java:123");
+        assertNotNull(texto, "assertNotNull failed at AgentTerminalSettingsProviderTest.java:124");
         assertTrue(
             EstilosUI.ratioContraste(texto, fondo) >= EstilosUI.CONTRASTE_AA_NORMAL,
             () -> String.format("Contraste busqueda %.2f debe ser >= %.2f",

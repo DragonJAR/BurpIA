@@ -8,6 +8,7 @@ import java.awt.*;
 import java.io.PrintWriter;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -33,7 +34,7 @@ public class GestorConsolaGUI {
     private final AtomicInteger contadorVerbose;
     private final AtomicInteger contadorError;
     private final DateTimeFormatter formateadorHora;
-    private final ConcurrentLinkedQueue<EntradaLog> colaPendiente;
+    private final Queue<EntradaLog> colaPendiente;
     private final AtomicBoolean flushProgramado;
     private final AtomicInteger logsPendientes;
     private final AtomicInteger versionCambios;
@@ -162,10 +163,6 @@ public class GestorConsolaGUI {
         return estilo;
     }
 
-    private Style obtenerOCrearEstilo(String nombre, Style padre) {
-        return obtenerOCrearEstilo(documento, nombre, padre);
-    }
-
     public void capturarStreamsOriginales(PrintWriter stdout, PrintWriter stderr) {
         this.stdoutOriginal = stdout;
         this.stderrOriginal = stderr;
@@ -271,27 +268,33 @@ public class GestorConsolaGUI {
     }
 
     private Style obtenerEstilo(TipoLog tipo) {
+        if (tipo == null) {
+            return estiloInfo;
+        }
         switch (tipo) {
             case VERBOSE:
                 return estiloVerbose;
             case ERROR:
                 return estiloError;
             case INFO:
-            default:
                 return estiloInfo;
         }
+        return estiloInfo;
     }
 
     private Style obtenerEstiloDestacado(TipoLog tipo) {
+        if (tipo == null) {
+            return estiloInfoDestacado;
+        }
         switch (tipo) {
             case VERBOSE:
                 return estiloVerboseDestacado;
             case ERROR:
                 return estiloErrorDestacado;
             case INFO:
-            default:
                 return estiloInfoDestacado;
         }
+        return estiloInfoDestacado;
     }
 
     private void duplicarAStreamOriginal(String origen, String mensajeLocalizado, TipoLog tipo, String hora) {
@@ -388,6 +391,11 @@ public class GestorConsolaGUI {
     }
 
     private void incrementarContador(TipoLog tipo) {
+        if (tipo == null) {
+            contadorInfo.incrementAndGet();
+            marcarCambioVersion();
+            return;
+        }
         switch (tipo) {
             case VERBOSE:
                 contadorVerbose.incrementAndGet();
@@ -396,7 +404,6 @@ public class GestorConsolaGUI {
                 contadorError.incrementAndGet();
                 break;
             case INFO:
-            default:
                 contadorInfo.incrementAndGet();
                 break;
         }

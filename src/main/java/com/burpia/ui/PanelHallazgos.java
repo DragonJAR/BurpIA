@@ -52,6 +52,7 @@ public class PanelHallazgos extends JPanel {
     private static final int ANCHO_COLUMNA_TITULO = 400;
     private static final int ANCHO_COLUMNA_SEVERIDAD = 100;
     private static final int ANCHO_COLUMNA_CONFIANZA = 100;
+    private static final int DELAY_PERSISTENCIA_FILTROS_MS = 300;
 
     private final ModeloTablaHallazgos modelo;
     private final JTable tabla;
@@ -80,6 +81,7 @@ public class PanelHallazgos extends JPanel {
     private Runnable manejadorCambioAlertasEnviarA;
     private Runnable manejadorCambioFiltros;
     private final ExecutorService ejecutorAcciones;
+    private final Timer temporizadorPersistenciaFiltros;
 
     @SuppressWarnings("this-escape")
     public PanelHallazgos(MontoyaApi api) {
@@ -89,6 +91,7 @@ public class PanelHallazgos extends JPanel {
         this.modelo = new ModeloTablaHallazgos(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO);
         this.tabla = new JTable(modelo);
         this.ejecutorAcciones = crearEjecutorAcciones();
+        this.temporizadorPersistenciaFiltros = crearTemporizadorPersistenciaFiltros();
         initComponents();
     }
 
@@ -104,6 +107,7 @@ public class PanelHallazgos extends JPanel {
         this.modelo = modeloCompartido != null ? modeloCompartido : new ModeloTablaHallazgos(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO);
         this.tabla = new JTable(modelo);
         this.ejecutorAcciones = crearEjecutorAcciones();
+        this.temporizadorPersistenciaFiltros = crearTemporizadorPersistenciaFiltros();
         initComponents();
     }
 
@@ -273,7 +277,7 @@ public class PanelHallazgos extends JPanel {
             sorter.setRowFilter(null);
         }
 
-        guardarEstadoFiltros();
+        programarPersistenciaFiltros();
     }
 
     private void limpiarFiltros() {
@@ -710,7 +714,7 @@ public class PanelHallazgos extends JPanel {
                                 I18nUI.Tooltips.Hallazgos::MENU_ISSUES_SOLO_PRO);
     }
 
-    private void enviarAAgente(int[] filas) {
+    private void enviarAAgente(int... filas) {
         if (manejadorEnviarAAgente == null) {
             return;
         }
@@ -738,7 +742,7 @@ public class PanelHallazgos extends JPanel {
         );
     }
 
-    private void enviarARepeater(int[] filas) {
+    private void enviarARepeater(int... filas) {
         ejecutarAccionBurp(
             filas,
             "BurpIA-Repeater",
@@ -754,7 +758,7 @@ public class PanelHallazgos extends JPanel {
         );
     }
 
-    private void enviarAIntruder(int[] filas) {
+    private void enviarAIntruder(int... filas) {
         ejecutarAccionBurp(
             filas,
             "BurpIA-Intruder",
@@ -771,7 +775,7 @@ public class PanelHallazgos extends JPanel {
         );
     }
 
-    private void enviarAScanner(int[] filas) {
+    private void enviarAScanner(int... filas) {
         ejecutarAccionBurp(
             filas,
             "BurpIA-Scanner",
@@ -803,7 +807,7 @@ public class PanelHallazgos extends JPanel {
         );
     }
 
-    private void enviarAIssues(int[] filas) {
+    private void enviarAIssues(int... filas) {
         if (!integracionIssuesDisponible) {
             mostrarInfoEnviarA(I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ISSUES_SOLO_PRO());
             return;
@@ -920,7 +924,7 @@ public class PanelHallazgos extends JPanel {
         String ejecutar(HttpRequest solicitud, Hallazgo hallazgo) throws Exception;
     }
 
-    private void ignorarHallazgos(int[] filas) {
+    private void ignorarHallazgos(int... filas) {
         int[] filasModelo = convertirFilasVistaAModelo(filas);
         for (int filaModelo : filasModelo) {
             modelo.marcarComoIgnorado(filaModelo);
@@ -930,7 +934,7 @@ public class PanelHallazgos extends JPanel {
         UIUtils.mostrarInfo(PanelHallazgos.this, I18nUI.Hallazgos.TITULO_HALLAZGOS_IGNORADOS(), I18nUI.Hallazgos.MSG_HALLAZGOS_IGNORADOS(ignorados));
     }
 
-    private void borrarHallazgosDeTabla(int[] filas) {
+    private void borrarHallazgosDeTabla(int... filas) {
         int[] filasModeloOrdenadasDesc = convertirFilasVistaAModeloOrdenDesc(filas);
         int contadorBorrados = 0;
 
@@ -945,7 +949,7 @@ public class PanelHallazgos extends JPanel {
             I18nUI.Hallazgos.MSG_HALLAZGOS_BORRADOS(contadorBorrados));
     }
 
-    private int[] convertirFilasVistaAModelo(int[] filasVista) {
+    private int[] convertirFilasVistaAModelo(int... filasVista) {
         if (filasVista == null || filasVista.length == 0) {
             return new int[0];
         }
@@ -958,7 +962,7 @@ public class PanelHallazgos extends JPanel {
             .toArray();
     }
 
-    private int[] convertirFilasVistaAModeloOrdenDesc(int[] filasVista) {
+    private int[] convertirFilasVistaAModeloOrdenDesc(int... filasVista) {
         int[] filas = convertirFilasVistaAModelo(filasVista);
         java.util.Arrays.sort(filas);
 
@@ -967,7 +971,7 @@ public class PanelHallazgos extends JPanel {
             .toArray();
     }
 
-    private ResultadoCapturaAccion capturarEntradasAccion(int[] filasVista) {
+    private ResultadoCapturaAccion capturarEntradasAccion(int... filasVista) {
         int[] filasModelo = convertirFilasVistaAModelo(filasVista);
         List<EntradaAccion> entradas = new ArrayList<>(filasModelo.length);
         int ignorados = 0;
@@ -1168,7 +1172,23 @@ public class PanelHallazgos extends JPanel {
         });
     }
 
-    private void guardarEstadoFiltros() {
+    private Timer crearTemporizadorPersistenciaFiltros() {
+        Timer temporizador = new Timer(
+            DELAY_PERSISTENCIA_FILTROS_MS,
+            e -> guardarEstadoFiltrosAhora()
+        );
+        temporizador.setRepeats(false);
+        return temporizador;
+    }
+
+    private void programarPersistenciaFiltros() {
+        if (config == null) {
+            return;
+        }
+        temporizadorPersistenciaFiltros.restart();
+    }
+
+    private void guardarEstadoFiltrosAhora() {
         if (config == null) {
             return;
         }

@@ -77,9 +77,9 @@ class ConstructorSolicitudesProveedorTest {
             List<String> modelos = ConstructorSolicitudesProveedor.listarModelosGemini(
                 servidor.url("/v1beta").toString(), "test-key", clienteHttp);
 
-            assertEquals(2, modelos.size());
-            assertTrue(modelos.contains("gemini-1.5-pro-002"));
-            assertTrue(modelos.contains("gemini-1.5-flash-002"));
+            assertEquals(2, modelos.size(), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:80");
+            assertTrue(modelos.contains("gemini-1.5-pro-002"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:81");
+            assertTrue(modelos.contains("gemini-1.5-flash-002"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:82");
         }
 
         @Test
@@ -97,8 +97,8 @@ class ConstructorSolicitudesProveedorTest {
             List<String> modelos = ConstructorSolicitudesProveedor.listarModelosGemini(
                 servidor.url("/v1beta").toString(), "test-key", clienteHttp);
 
-            assertEquals(1, modelos.size());
-            assertEquals("gemini-1.5-pro-002", modelos.get(0));
+            assertEquals(1, modelos.size(), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:100");
+            assertEquals("gemini-1.5-pro-002", modelos.get(0), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:101");
         }
 
         @Test
@@ -120,8 +120,8 @@ class ConstructorSolicitudesProveedorTest {
             List<String> modelosA = ConstructorSolicitudesProveedor.listarModelosGemini(urlBase, "Aa", clienteHttp);
             List<String> modelosB = ConstructorSolicitudesProveedor.listarModelosGemini(urlBase, "BB", clienteHttp);
 
-            assertEquals(List.of("gemini-1.5-pro-002"), modelosA);
-            assertEquals(List.of("gemini-1.5-flash-002"), modelosB);
+            assertEquals(List.of("gemini-1.5-pro-002"), modelosA, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:123");
+            assertEquals(List.of("gemini-1.5-flash-002"), modelosB, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:124");
             assertEquals(2, servidor.getRequestCount(), "Debe hacer dos peticiones distintas");
         }
 
@@ -139,7 +139,7 @@ class ConstructorSolicitudesProveedorTest {
             List<String> modelos1 = ConstructorSolicitudesProveedor.listarModelosGemini(urlBase, "key1", clienteHttp);
             List<String> modelos2 = ConstructorSolicitudesProveedor.listarModelosGemini(urlBase, "key1", clienteHttp);
 
-            assertEquals(modelos1, modelos2);
+            assertEquals(modelos1, modelos2, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:142");
             assertEquals(1, servidor.getRequestCount(), "Solo debe hacer una petición HTTP gracias al cache");
         }
 
@@ -193,7 +193,7 @@ class ConstructorSolicitudesProveedorTest {
                 servidor.url("/v1beta").toString(), "my-api-key", clienteHttp);
 
             RecordedRequest request = servidor.takeRequest();
-            assertTrue(request.getPath().contains("key=my-api-key"));
+            assertTrue(request.getPath().contains("key=my-api-key"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:196");
         }
     }
 
@@ -212,9 +212,9 @@ class ConstructorSolicitudesProveedorTest {
             List<String> modelos = ConstructorSolicitudesProveedor.listarModelosOllama(
                 servidor.url("/api").toString(), clienteHttp);
 
-            assertEquals(2, modelos.size());
-            assertTrue(modelos.contains("llama3:latest"));
-            assertTrue(modelos.contains("mistral:latest"));
+            assertEquals(2, modelos.size(), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:215");
+            assertTrue(modelos.contains("llama3:latest"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:216");
+            assertTrue(modelos.contains("mistral:latest"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:217");
         }
 
         @Test
@@ -262,9 +262,9 @@ class ConstructorSolicitudesProveedorTest {
             List<String> modelos = ConstructorSolicitudesProveedor.listarModelosOpenAI(
                 servidor.url("/v1").toString(), "test-key", clienteHttp);
 
-            assertEquals(2, modelos.size());
-            assertTrue(modelos.contains("gpt-4o"));
-            assertTrue(modelos.contains("gpt-4o-mini"));
+            assertEquals(2, modelos.size(), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:265");
+            assertTrue(modelos.contains("gpt-4o"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:266");
+            assertTrue(modelos.contains("gpt-4o-mini"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:267");
         }
 
         @Test
@@ -278,7 +278,7 @@ class ConstructorSolicitudesProveedorTest {
             List<String> modelos = ConstructorSolicitudesProveedor.listarModelosOpenAI(
                 servidor.url("/v1").toString(), "test-key", clienteHttp);
 
-            assertEquals(List.of("gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"), modelos);
+            assertEquals(List.of("gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"), modelos, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:281");
         }
 
         @Test
@@ -292,8 +292,8 @@ class ConstructorSolicitudesProveedorTest {
             List<String> modelos = ConstructorSolicitudesProveedor.listarModelosOpenAI(
                 servidor.url("/v1").toString(), "test-key", clienteHttp);
 
-            assertEquals(2, modelos.size());
-            assertEquals(List.of("gpt-4o", "gpt-4o-mini"), modelos);
+            assertEquals(2, modelos.size(), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:295");
+            assertEquals(List.of("gpt-4o", "gpt-4o-mini"), modelos, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:296");
         }
 
         @Test
@@ -337,7 +337,7 @@ class ConstructorSolicitudesProveedorTest {
                 servidor.url("/v1").toString(), "my-api-key", clienteHttp);
 
             RecordedRequest request = servidor.takeRequest();
-            assertEquals("Bearer my-api-key", request.getHeader("Authorization"));
+            assertEquals("Bearer my-api-key", request.getHeader("Authorization"), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:340");
         }
 
         @Test
@@ -352,7 +352,7 @@ class ConstructorSolicitudesProveedorTest {
                 servidor.url("/v1").toString(), null, clienteHttp);
 
             RecordedRequest request = servidor.takeRequest();
-            assertNull(request.getHeader("Authorization"));
+            assertNull(request.getHeader("Authorization"), "assertNull failed at ConstructorSolicitudesProveedorTest.java:355");
         }
     }
 
@@ -368,10 +368,10 @@ class ConstructorSolicitudesProveedorTest {
             ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
                 ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
 
-            assertNotNull(solicitud.request);
-            assertTrue(solicitud.endpoint.contains("/responses"));
-            assertEquals("gpt-4o", solicitud.modeloUsado);
-            assertNull(solicitud.advertencia);
+            assertNotNull(solicitud.request, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:371");
+            assertTrue(solicitud.endpoint.contains("/responses"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:372");
+            assertEquals("gpt-4o", solicitud.modeloUsado, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:373");
+            assertNull(solicitud.advertencia, "assertNull failed at ConstructorSolicitudesProveedorTest.java:374");
         }
 
         @Test
@@ -382,11 +382,11 @@ class ConstructorSolicitudesProveedorTest {
             ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
                 ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
 
-            assertNotNull(solicitud.request);
-            assertTrue(solicitud.endpoint.contains("/messages"));
-            assertEquals("claude-3-sonnet", solicitud.modeloUsado);
-            assertNotNull(solicitud.request.header("x-api-key"));
-            assertNotNull(solicitud.request.header("anthropic-version"));
+            assertNotNull(solicitud.request, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:385");
+            assertTrue(solicitud.endpoint.contains("/messages"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:386");
+            assertEquals("claude-3-sonnet", solicitud.modeloUsado, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:387");
+            assertNotNull(solicitud.request.header("x-api-key"), "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:388");
+            assertNotNull(solicitud.request.header("anthropic-version"), "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:389");
         }
 
         @Test
@@ -397,9 +397,9 @@ class ConstructorSolicitudesProveedorTest {
             ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
                 ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
 
-            assertNotNull(solicitud.request);
-            assertTrue(solicitud.endpoint.contains("/api/chat"));
-            assertEquals("llama3", solicitud.modeloUsado);
+            assertNotNull(solicitud.request, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:400");
+            assertTrue(solicitud.endpoint.contains("/api/chat"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:401");
+            assertEquals("llama3", solicitud.modeloUsado, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:402");
         }
 
         @Test
@@ -410,7 +410,7 @@ class ConstructorSolicitudesProveedorTest {
             ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
                 ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
 
-            assertNotNull(solicitud.request);
+            assertNotNull(solicitud.request, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:413");
         }
 
         @Test
@@ -426,10 +426,10 @@ class ConstructorSolicitudesProveedorTest {
             ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
                 ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
 
-            assertNotNull(solicitud.request);
-            assertEquals("custom-model", solicitud.modeloUsado);
-            assertTrue(solicitud.endpoint.endsWith("/chat/completions"));
-            assertNotNull(solicitud.request.header("Authorization"));
+            assertNotNull(solicitud.request, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:429");
+            assertEquals("custom-model", solicitud.modeloUsado, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:430");
+            assertTrue(solicitud.endpoint.endsWith("/chat/completions"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:431");
+            assertNotNull(solicitud.request.header("Authorization"), "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:432");
         }
     }
 
@@ -445,9 +445,9 @@ class ConstructorSolicitudesProveedorTest {
             ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
                 ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
 
-            assertNotNull(solicitud.request);
-            assertNotNull(solicitud.endpoint);
-            assertNotNull(solicitud.modeloUsado);
+            assertNotNull(solicitud.request, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:448");
+            assertNotNull(solicitud.endpoint, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:449");
+            assertNotNull(solicitud.modeloUsado, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:450");
         }
     }
 

@@ -47,7 +47,7 @@ class PanelAgenteTransporteTest {
 
             boolean resultado = invocarEscrituraTty(panel, "hola");
 
-            assertTrue(resultado);
+            assertTrue(resultado, "assertTrue failed at PanelAgenteTransporteTest.java:50");
             verify(connector, times(1)).write("hola");
         } finally {
             panel.destruir();
@@ -66,11 +66,11 @@ class PanelAgenteTransporteTest {
             String payload = "A".repeat(260);
             boolean resultado = invocarEscrituraTty(panel, payload);
 
-            assertTrue(resultado);
+            assertTrue(resultado, "assertTrue failed at PanelAgenteTransporteTest.java:69");
             ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
             verify(connector, times(3)).write(captor.capture());
             String reconstruido = String.join("", captor.getAllValues());
-            assertEquals(payload, reconstruido);
+            assertEquals(payload, reconstruido, "assertEquals failed at PanelAgenteTransporteTest.java:73");
         } finally {
             panel.destruir();
         }
@@ -87,7 +87,7 @@ class PanelAgenteTransporteTest {
 
             boolean resultado = invocarEscrituraTty(panel, "payload");
 
-            assertFalse(resultado);
+            assertFalse(resultado, "assertFalse failed at PanelAgenteTransporteTest.java:90");
             verify(connector, never()).write(anyString());
         } finally {
             panel.destruir();
@@ -108,7 +108,7 @@ class PanelAgenteTransporteTest {
             method.setAccessible(true);
             boolean resultado = (boolean) method.invoke(panel, "payload", 199L);
 
-            assertFalse(resultado);
+            assertFalse(resultado, "assertFalse failed at PanelAgenteTransporteTest.java:111");
             verify(connector, never()).write(anyString());
         } finally {
             panel.destruir();
@@ -133,9 +133,9 @@ class PanelAgenteTransporteTest {
             int delayPendiente = obtenerCampoInt(panel, "delayPendienteMs");
             String esperado = "PROMPT_PREFLIGHT_CUSTOM";
 
-            assertEquals(esperado, promptPendiente);
+            assertEquals(esperado, promptPendiente, "assertEquals failed at PanelAgenteTransporteTest.java:136");
             assertNotEquals("PROMPT_VALIDACION_CUSTOM", promptPendiente);
-            assertEquals(4000, delayPendiente);
+            assertEquals(4000, delayPendiente, "assertEquals failed at PanelAgenteTransporteTest.java:138");
         } finally {
             panel.destruir();
         }
@@ -157,8 +157,8 @@ class PanelAgenteTransporteTest {
             String promptPendiente = obtenerCampoString(panel, "promptPendiente");
             int delayPendiente = obtenerCampoInt(panel, "delayPendienteMs");
 
-            assertEquals("PROMPT_PREFLIGHT_CUSTOM", promptPendiente);
-            assertEquals(0, delayPendiente);
+            assertEquals("PROMPT_PREFLIGHT_CUSTOM", promptPendiente, "assertEquals failed at PanelAgenteTransporteTest.java:160");
+            assertEquals(0, delayPendiente, "assertEquals failed at PanelAgenteTransporteTest.java:161");
         } finally {
             panel.destruir();
         }
@@ -262,8 +262,8 @@ class PanelAgenteTransporteTest {
 
             invocarCambiarAgenteRapido(panel);
 
-            assertTrue(focoSolicitado.get());
-            assertEquals(AgenteTipo.CLAUDE_CODE.name(), config.obtenerTipoAgente());
+            assertTrue(focoSolicitado.get(), "assertTrue failed at PanelAgenteTransporteTest.java:265");
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:266");
         } finally {
             panel.destruir();
         }
@@ -279,7 +279,7 @@ class PanelAgenteTransporteTest {
 
             invocarReiniciarYSolicitarFoco(panel);
 
-            assertTrue(focoSolicitado.get());
+            assertTrue(focoSolicitado.get(), "assertTrue failed at PanelAgenteTransporteTest.java:282");
         } finally {
             panel.destruir();
         }
@@ -291,8 +291,8 @@ class PanelAgenteTransporteTest {
         PanelAgente panel = crearPanelSinConsola();
         try {
             JButton botonAyuda = obtenerBotonAyuda(panel);
-            assertNotNull(botonAyuda);
-            assertEquals("❓", botonAyuda.getText());
+            assertNotNull(botonAyuda, "assertNotNull failed at PanelAgenteTransporteTest.java:294");
+            assertEquals("❓", botonAyuda.getText(), "assertEquals failed at PanelAgenteTransporteTest.java:295");
         } finally {
             panel.destruir();
         }
@@ -304,18 +304,18 @@ class PanelAgenteTransporteTest {
         PanelAgente panel = crearPanelSinConsola();
         try {
             ExecutorService inyectorInicial = obtenerInyectorPty(panel);
-            assertNotNull(inyectorInicial);
+            assertNotNull(inyectorInicial, "assertNotNull failed at PanelAgenteTransporteTest.java:307");
 
             panel.destruir();
 
             ExecutorService inyectorPostDestruir = obtenerInyectorPty(panel);
-            assertNotNull(inyectorPostDestruir);
-            assertNotSame(inyectorInicial, inyectorPostDestruir);
-            assertFalse(inyectorPostDestruir.isShutdown());
+            assertNotNull(inyectorPostDestruir, "assertNotNull failed at PanelAgenteTransporteTest.java:312");
+            assertNotSame(inyectorInicial, inyectorPostDestruir, "assertNotSame failed at PanelAgenteTransporteTest.java:313");
+            assertFalse(inyectorPostDestruir.isShutdown(), "assertFalse failed at PanelAgenteTransporteTest.java:314");
 
             panel.escribirComandoCrudo("echo test");
             ExecutorService inyectorPostEscritura = obtenerInyectorPty(panel);
-            assertFalse(inyectorPostEscritura.isShutdown());
+            assertFalse(inyectorPostEscritura.isShutdown(), "assertFalse failed at PanelAgenteTransporteTest.java:318");
         } finally {
             panel.destruir();
         }
@@ -332,46 +332,46 @@ class PanelAgenteTransporteTest {
             assertEquals(
                 "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-DROID-ES.md",
                 invocarResolverUrlGuia(panel)
-            );
+            , "assertEquals failed at PanelAgenteTransporteTest.java:332");
 
             config.establecerIdiomaUi("en");
             assertEquals(
                 "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-DROID-EN.md",
                 invocarResolverUrlGuia(panel)
-            );
+            , "assertEquals failed at PanelAgenteTransporteTest.java:338");
 
             config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
             config.establecerIdiomaUi("es");
             assertEquals(
                 "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-CLAUDE-ES.md",
                 invocarResolverUrlGuia(panel)
-            );
+            , "assertEquals failed at PanelAgenteTransporteTest.java:345");
 
             config.establecerIdiomaUi("en");
             assertEquals(
                 "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-CLAUDE-EN.md",
                 invocarResolverUrlGuia(panel)
-            );
+            , "assertEquals failed at PanelAgenteTransporteTest.java:351");
 
             config.establecerTipoAgente(AgenteTipo.GEMINI_CLI.name());
             config.establecerIdiomaUi("es");
             assertEquals(
                 "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-ES.md",
                 invocarResolverUrlGuia(panel)
-            );
+            , "assertEquals failed at PanelAgenteTransporteTest.java:358");
 
             config.establecerIdiomaUi("en");
             assertEquals(
                 "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-GEMINI-EN.md",
                 invocarResolverUrlGuia(panel)
-            );
+            , "assertEquals failed at PanelAgenteTransporteTest.java:364");
 
             config.establecerTipoAgente("INVALIDO");
             config.establecerIdiomaUi("en");
             assertEquals(
                 "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-DROID-EN.md",
                 invocarResolverUrlGuia(panel)
-            );
+            , "assertEquals failed at PanelAgenteTransporteTest.java:371");
         } finally {
             panel.destruir();
         }
@@ -390,14 +390,14 @@ class PanelAgenteTransporteTest {
 
             I18nUI.establecerIdioma("en");
             SwingUtilities.invokeAndWait(panel::aplicarIdioma);
-            assertTrue(botonAyuda.getToolTipText().contains("Claude Code"));
-            assertTrue(botonAyuda.getToolTipText().contains("installation/setup guide"));
+            assertTrue(botonAyuda.getToolTipText().contains("Claude Code"), "assertTrue failed at PanelAgenteTransporteTest.java:393");
+            assertTrue(botonAyuda.getToolTipText().contains("installation/setup guide"), "assertTrue failed at PanelAgenteTransporteTest.java:394");
 
             I18nUI.establecerIdioma("es");
             config.establecerIdiomaUi("es");
             SwingUtilities.invokeAndWait(panel::aplicarIdioma);
-            assertTrue(botonAyuda.getToolTipText().contains("Claude Code"));
-            assertTrue(botonAyuda.getToolTipText().contains("guía de instalación/configuración"));
+            assertTrue(botonAyuda.getToolTipText().contains("Claude Code"), "assertTrue failed at PanelAgenteTransporteTest.java:399");
+            assertTrue(botonAyuda.getToolTipText().contains("guía de instalación/configuración"), "assertTrue failed at PanelAgenteTransporteTest.java:400");
         } finally {
             panel.destruir();
             I18nUI.establecerIdioma("es");
@@ -416,14 +416,14 @@ class PanelAgenteTransporteTest {
 
             I18nUI.establecerIdioma("en");
             SwingUtilities.invokeAndWait(panel::aplicarIdioma);
-            assertTrue(botonReiniciar.getText().contains("Restart"));
-            assertTrue(botonCtrlC.getText().contains("Ctrl+C"));
-            assertTrue(botonPayload.getText().contains("Inject Payload"));
+            assertTrue(botonReiniciar.getText().contains("Restart"), "assertTrue failed at PanelAgenteTransporteTest.java:419");
+            assertTrue(botonCtrlC.getText().contains("Ctrl+C"), "assertTrue failed at PanelAgenteTransporteTest.java:420");
+            assertTrue(botonPayload.getText().contains("Inject Payload"), "assertTrue failed at PanelAgenteTransporteTest.java:421");
 
             I18nUI.establecerIdioma("es");
             SwingUtilities.invokeAndWait(panel::aplicarIdioma);
-            assertTrue(botonReiniciar.getText().contains("Reiniciar"));
-            assertTrue(botonPayload.getText().contains("Inyectar Payload"));
+            assertTrue(botonReiniciar.getText().contains("Reiniciar"), "assertTrue failed at PanelAgenteTransporteTest.java:425");
+            assertTrue(botonPayload.getText().contains("Inyectar Payload"), "assertTrue failed at PanelAgenteTransporteTest.java:426");
         } finally {
             panel.destruir();
             I18nUI.establecerIdioma("es");
@@ -556,9 +556,5 @@ class PanelAgenteTransporteTest {
             }
         }
         return -1;
-    }
-
-    private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {});
     }
 }

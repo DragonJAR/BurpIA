@@ -2,7 +2,6 @@ package com.burpia.ui;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
-import com.burpia.util.GestorLoggingUnificado;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
@@ -11,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
@@ -18,7 +18,6 @@ import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 public class ModeloTablaHallazgos extends DefaultTableModel {
     private static final Logger LOGGER = Logger.getLogger(ModeloTablaHallazgos.class.getName());
     private static final int TOTAL_COLUMNAS = 5;
-    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearConLogger(LOGGER);
     private final List<Hallazgo> datos;
     private int limiteFilas;
     private final Set<Integer> filasIgnoradas;
@@ -269,6 +268,8 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                         case Hallazgo.SEVERIDAD_INFO:
                             stats[5]++;
                             break;
+                        default:
+                            break;
                     }
                 }
             }
@@ -483,10 +484,16 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                 try {
                     escucha.enHallazgosCambiados();
                 } catch (Exception e) {
-                    gestorLogging.error("ModeloTablaHallazgos", "Error en escucha de cambios: " + e.getMessage());
+                    registrarErrorEscucha(e);
                 }
             }
         });
+    }
+
+    private static void registrarErrorEscucha(Exception e) {
+        if (LOGGER.isLoggable(Level.SEVERE)) {
+            LOGGER.log(Level.SEVERE, "Error en escucha de cambios: {0}", e.getMessage());
+        }
     }
 
     @Override

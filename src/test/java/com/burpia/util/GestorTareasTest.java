@@ -44,14 +44,14 @@ class GestorTareasTest {
         Tarea tarea = gestor.crearTarea("Analisis HTTP", "https://example.com", Tarea.ESTADO_EN_COLA, "en cola");
         flushEdt();
 
-        assertEquals(1, modelo.obtenerNumeroTareas());
-        assertEquals(tarea.obtenerId(), modelo.obtenerIdTarea(0));
-        assertEquals(Tarea.ESTADO_EN_COLA, modelo.getValueAt(0, 2));
+        assertEquals(1, modelo.obtenerNumeroTareas(), "assertEquals failed at GestorTareasTest.java:47");
+        assertEquals(tarea.obtenerId(), modelo.obtenerIdTarea(0), "assertEquals failed at GestorTareasTest.java:48");
+        assertEquals(Tarea.ESTADO_EN_COLA, modelo.getValueAt(0, 2), "assertEquals failed at GestorTareasTest.java:49");
 
         gestor.actualizarTarea(tarea.obtenerId(), Tarea.ESTADO_COMPLETADO, "ok");
         flushEdt();
 
-        assertEquals(Tarea.ESTADO_COMPLETADO, modelo.getValueAt(0, 2));
+        assertEquals(Tarea.ESTADO_COMPLETADO, modelo.getValueAt(0, 2), "assertEquals failed at GestorTareasTest.java:54");
     }
 
     @Test
@@ -60,17 +60,17 @@ class GestorTareasTest {
         Tarea tarea = gestor.crearTarea("Analisis HTTP", "https://example.com/a", Tarea.ESTADO_ANALIZANDO, "run");
         flushEdt();
 
-        assertTrue(gestor.pausarTarea(tarea.obtenerId()));
+        assertTrue(gestor.pausarTarea(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:63");
         flushEdt();
-        assertTrue(gestor.estaTareaPausada(tarea.obtenerId()));
+        assertTrue(gestor.estaTareaPausada(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:65");
 
-        assertTrue(gestor.reanudarTarea(tarea.obtenerId()));
+        assertTrue(gestor.reanudarTarea(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:67");
         flushEdt();
-        assertFalse(gestor.estaTareaPausada(tarea.obtenerId()));
+        assertFalse(gestor.estaTareaPausada(tarea.obtenerId()), "assertFalse failed at GestorTareasTest.java:69");
 
-        assertTrue(gestor.cancelarTarea(tarea.obtenerId()));
+        assertTrue(gestor.cancelarTarea(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:71");
         flushEdt();
-        assertTrue(gestor.estaTareaCancelada(tarea.obtenerId()));
+        assertTrue(gestor.estaTareaCancelada(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:73");
     }
 
     @Test
@@ -79,13 +79,13 @@ class GestorTareasTest {
         Tarea t1 = gestor.crearTarea("A", "https://example.com/1", Tarea.ESTADO_EN_COLA, "");
         Tarea t2 = gestor.crearTarea("B", "https://example.com/2", Tarea.ESTADO_EN_COLA, "");
         flushEdt();
-        assertEquals(2, modelo.obtenerNumeroTareas());
+        assertEquals(2, modelo.obtenerNumeroTareas(), "assertEquals failed at GestorTareasTest.java:82");
 
-        assertTrue(gestor.limpiarTarea(t1.obtenerId()));
+        assertTrue(gestor.limpiarTarea(t1.obtenerId()), "assertTrue failed at GestorTareasTest.java:84");
         flushEdt();
 
-        assertEquals(1, modelo.obtenerNumeroTareas());
-        assertEquals(t2.obtenerId(), modelo.obtenerIdTarea(0));
+        assertEquals(1, modelo.obtenerNumeroTareas(), "assertEquals failed at GestorTareasTest.java:87");
+        assertEquals(t2.obtenerId(), modelo.obtenerIdTarea(0), "assertEquals failed at GestorTareasTest.java:88");
     }
 
     @Test
@@ -94,17 +94,17 @@ class GestorTareasTest {
         Tarea tarea = gestor.crearTarea("A", "https://example.com/return", Tarea.ESTADO_EN_COLA, "");
         flushEdt();
 
-        assertTrue(gestor.pausarTarea(tarea.obtenerId()));
-        assertFalse(gestor.pausarTarea(tarea.obtenerId()));
+        assertTrue(gestor.pausarTarea(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:97");
+        assertFalse(gestor.pausarTarea(tarea.obtenerId()), "assertFalse failed at GestorTareasTest.java:98");
 
-        assertTrue(gestor.reanudarTarea(tarea.obtenerId()));
-        assertFalse(gestor.reanudarTarea(tarea.obtenerId()));
+        assertTrue(gestor.reanudarTarea(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:100");
+        assertFalse(gestor.reanudarTarea(tarea.obtenerId()), "assertFalse failed at GestorTareasTest.java:101");
 
-        assertTrue(gestor.cancelarTarea(tarea.obtenerId()));
-        assertFalse(gestor.cancelarTarea(tarea.obtenerId()));
+        assertTrue(gestor.cancelarTarea(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:103");
+        assertFalse(gestor.cancelarTarea(tarea.obtenerId()), "assertFalse failed at GestorTareasTest.java:104");
 
-        assertTrue(gestor.limpiarTarea(tarea.obtenerId()));
-        assertFalse(gestor.limpiarTarea(tarea.obtenerId()));
+        assertTrue(gestor.limpiarTarea(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:106");
+        assertFalse(gestor.limpiarTarea(tarea.obtenerId()), "assertFalse failed at GestorTareasTest.java:107");
     }
 
     @Test
@@ -119,8 +119,8 @@ class GestorTareasTest {
 
         Tarea pausadaActualizada = gestor.obtenerTarea(pausada.obtenerId());
         Tarea analizandoActualizada = gestor.obtenerTarea(analizando.obtenerId());
-        assertEquals(Tarea.ESTADO_EN_COLA, pausadaActualizada.obtenerEstado());
-        assertEquals(Tarea.ESTADO_ANALIZANDO, analizandoActualizada.obtenerEstado());
+        assertEquals(Tarea.ESTADO_EN_COLA, pausadaActualizada.obtenerEstado(), "assertEquals failed at GestorTareasTest.java:122");
+        assertEquals(Tarea.ESTADO_ANALIZANDO, analizandoActualizada.obtenerEstado(), "assertEquals failed at GestorTareasTest.java:123");
     }
 
     @Test
@@ -134,9 +134,9 @@ class GestorTareasTest {
         gestor.pausarTodasActivas();
         flushEdt();
 
-        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(enCola.obtenerId()).obtenerEstado());
-        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(analizando.obtenerId()).obtenerEstado());
-        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(pausada.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(enCola.obtenerId()).obtenerEstado(), "assertEquals failed at GestorTareasTest.java:137");
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(analizando.obtenerId()).obtenerEstado(), "assertEquals failed at GestorTareasTest.java:138");
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(pausada.obtenerId()).obtenerEstado(), "assertEquals failed at GestorTareasTest.java:139");
     }
 
     @Test
@@ -150,9 +150,9 @@ class GestorTareasTest {
         gestor.reanudarTodasPausadas();
         flushEdt();
 
-        assertEquals(Tarea.ESTADO_EN_COLA, gestor.obtenerTarea(pausada1.obtenerId()).obtenerEstado());
-        assertEquals(Tarea.ESTADO_EN_COLA, gestor.obtenerTarea(pausada2.obtenerId()).obtenerEstado());
-        assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_EN_COLA, gestor.obtenerTarea(pausada1.obtenerId()).obtenerEstado(), "assertEquals failed at GestorTareasTest.java:153");
+        assertEquals(Tarea.ESTADO_EN_COLA, gestor.obtenerTarea(pausada2.obtenerId()).obtenerEstado(), "assertEquals failed at GestorTareasTest.java:154");
+        assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado(), "assertEquals failed at GestorTareasTest.java:155");
     }
 
     @Test
@@ -175,12 +175,12 @@ class GestorTareasTest {
         Tarea pausada = gestor.crearTarea("B", "https://example.com/pause", Tarea.ESTADO_PAUSADO, "");
         flushEdt();
 
-        assertTrue(gestor.marcarTareaAnalizando(enCola.obtenerId(), "inicio"));
-        assertFalse(gestor.marcarTareaAnalizando(pausada.obtenerId(), "inicio"));
+        assertTrue(gestor.marcarTareaAnalizando(enCola.obtenerId(), "inicio"), "assertTrue failed at GestorTareasTest.java:178");
+        assertFalse(gestor.marcarTareaAnalizando(pausada.obtenerId(), "inicio"), "assertFalse failed at GestorTareasTest.java:179");
         flushEdt();
 
-        assertEquals(Tarea.ESTADO_ANALIZANDO, gestor.obtenerTarea(enCola.obtenerId()).obtenerEstado());
-        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(pausada.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_ANALIZANDO, gestor.obtenerTarea(enCola.obtenerId()).obtenerEstado(), "assertEquals failed at GestorTareasTest.java:182");
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(pausada.obtenerId()).obtenerEstado(), "assertEquals failed at GestorTareasTest.java:183");
     }
 
     @Test
@@ -206,9 +206,9 @@ class GestorTareasTest {
             verificar.invoke(gestorRetencion);
             flushEdt();
 
-            assertNull(gestorRetencion.obtenerTarea(t1.obtenerId()));
-            assertNotNull(gestorRetencion.obtenerTarea(t2.obtenerId()));
-            assertNotNull(gestorRetencion.obtenerTarea(t3.obtenerId()));
+            assertNull(gestorRetencion.obtenerTarea(t1.obtenerId()), "assertNull failed at GestorTareasTest.java:209");
+            assertNotNull(gestorRetencion.obtenerTarea(t2.obtenerId()), "assertNotNull failed at GestorTareasTest.java:210");
+            assertNotNull(gestorRetencion.obtenerTarea(t3.obtenerId()), "assertNotNull failed at GestorTareasTest.java:211");
         } finally {
             gestorRetencion.detener();
         }
@@ -224,10 +224,10 @@ class GestorTareasTest {
             Tarea reciente = gestorLimitado.crearTarea("B", "https://example.com/new", Tarea.ESTADO_ERROR, "");
             flushEdt();
 
-            assertNull(gestorLimitado.obtenerTarea(antigua.obtenerId()));
-            assertNotNull(gestorLimitado.obtenerTarea(reciente.obtenerId()));
-            assertEquals(1, modeloLimitado.obtenerNumeroTareas());
-            assertEquals(reciente.obtenerId(), modeloLimitado.obtenerIdTarea(0));
+            assertNull(gestorLimitado.obtenerTarea(antigua.obtenerId()), "assertNull failed at GestorTareasTest.java:227");
+            assertNotNull(gestorLimitado.obtenerTarea(reciente.obtenerId()), "assertNotNull failed at GestorTareasTest.java:228");
+            assertEquals(1, modeloLimitado.obtenerNumeroTareas(), "assertEquals failed at GestorTareasTest.java:229");
+            assertEquals(reciente.obtenerId(), modeloLimitado.obtenerIdTarea(0), "assertEquals failed at GestorTareasTest.java:230");
         } finally {
             gestorLimitado.detener();
         }
@@ -242,7 +242,7 @@ class GestorTareasTest {
             Tarea tarea = gestor.crearTarea("A", "https://example.com/" + i, Tarea.ESTADO_EN_COLA, "");
             ids.add(tarea.obtenerId());
         }
-        assertEquals(total, ids.size());
+        assertEquals(total, ids.size(), "assertEquals failed at GestorTareasTest.java:245");
     }
 
     @Test
@@ -266,9 +266,9 @@ class GestorTareasTest {
         flushEdt();
 
         Tarea actualizada = gestor.obtenerTarea(tarea.obtenerId());
-        assertNotNull(actualizada);
-        assertEquals(Tarea.ESTADO_ERROR, actualizada.obtenerEstado());
-        assertTrue(cancelaciones.contains(tarea.obtenerId()));
+        assertNotNull(actualizada, "assertNotNull failed at GestorTareasTest.java:269");
+        assertEquals(Tarea.ESTADO_ERROR, actualizada.obtenerEstado(), "assertEquals failed at GestorTareasTest.java:270");
+        assertTrue(cancelaciones.contains(tarea.obtenerId()), "assertTrue failed at GestorTareasTest.java:271");
     }
 
     private void flushEdt() throws Exception {

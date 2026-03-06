@@ -4,7 +4,6 @@ import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.LimitadorTasa;
-import okhttp3.OkHttpClient;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -91,8 +90,8 @@ class AnalizadorAITest {
         ResultadoAnalisisMultiple resultado = invocarParsearRespuesta(analizador, respuesta);
 
         assertTrue(resultado.obtenerNumeroHallazgos() >= 1, "Debe haber al menos 1 hallazgo válido");
-        assertEquals("Sin título", resultado.obtenerHallazgos().get(0).obtenerTitulo());
-        assertEquals("SQLi detectada", resultado.obtenerHallazgos().get(0).obtenerHallazgo());
+        assertEquals("Sin título", resultado.obtenerHallazgos().get(0).obtenerTitulo(), "assertEquals failed at AnalizadorAITest.java:93");
+        assertEquals("SQLi detectada", resultado.obtenerHallazgos().get(0).obtenerHallazgo(), "assertEquals failed at AnalizadorAITest.java:94");
     }
 
     @Test
@@ -128,7 +127,7 @@ class AnalizadorAITest {
         ResultadoAnalisisMultiple resultado = invocarParsearRespuesta(analizador, respuesta);
 
         assertEquals(1, resultado.obtenerNumeroHallazgos(), "Debe haber exactamente 1 hallazgo");
-        assertEquals("Inyeccion SQL Detectada", resultado.obtenerHallazgos().get(0).obtenerTitulo());
+        assertEquals("Inyeccion SQL Detectada", resultado.obtenerHallazgos().get(0).obtenerTitulo(), "assertEquals failed at AnalizadorAITest.java:130");
     }
 
     @Test
@@ -145,9 +144,9 @@ class AnalizadorAITest {
         ResultadoAnalisisMultiple resultado = invocarParsearRespuesta(analizador, respuesta);
 
         assertEquals(1, resultado.obtenerNumeroHallazgos(), "Debe haber exactamente 1 hallazgo");
-        assertEquals("Missing HSTS", resultado.obtenerHallazgos().get(0).obtenerTitulo());
-        assertEquals("Medium", resultado.obtenerHallazgos().get(0).obtenerSeveridad());
-        assertEquals("High", resultado.obtenerHallazgos().get(0).obtenerConfianza());
+        assertEquals("Missing HSTS", resultado.obtenerHallazgos().get(0).obtenerTitulo(), "assertEquals failed at AnalizadorAITest.java:147");
+        assertEquals("Medium", resultado.obtenerHallazgos().get(0).obtenerSeveridad(), "assertEquals failed at AnalizadorAITest.java:148");
+        assertEquals("High", resultado.obtenerHallazgos().get(0).obtenerConfianza(), "assertEquals failed at AnalizadorAITest.java:149");
     }
 
     @Test
@@ -166,8 +165,8 @@ class AnalizadorAITest {
     }
 
     @Test
-    @DisplayName("Constructor usa timeout efectivo por proveedor y modelo")
-    void testConstructorUsaTimeoutPorModelo() throws Exception {
+    @DisplayName("Resuelve cliente HTTP según la configuración actual")
+    void testResuelveClienteHttpSegunConfiguracionActual() throws Exception {
         ConfiguracionAPI config = crearConfiguracionBasica(PROVEEDOR_ZAI);
         config.establecerModeloParaProveedor(PROVEEDOR_ZAI, MODELO_GLM5);
         config.establecerTiempoEsperaAI(60);
@@ -176,11 +175,23 @@ class AnalizadorAITest {
         SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com", "GET", "hash-timeout");
         AnalizadorAI analizador = crearAnalizadorParaTest(config, solicitud);
 
-        Field campoCliente = AnalizadorAI.class.getDeclaredField("clienteHttp");
-        campoCliente.setAccessible(true);
-        OkHttpClient cliente = (OkHttpClient) campoCliente.get(analizador);
+        Method metodoResolver = AnalizadorAI.class.getDeclaredMethod("resolverClienteHttpActual");
+        metodoResolver.setAccessible(true);
+        okhttp3.OkHttpClient clienteInicial = (okhttp3.OkHttpClient) metodoResolver.invoke(analizador);
+        assertEquals(180_000, clienteInicial.readTimeoutMillis(),
+            "El timeout inicial debe respetar la configuración del modelo");
 
-        assertEquals(180_000, cliente.readTimeoutMillis(),
-            "El timeout debe ser 180 segundos (180000ms) según configuración por modelo");
+        ConfiguracionAPI configActualizada = crearConfiguracionBasica(PROVEEDOR_OPENAI);
+        configActualizada.establecerModeloParaProveedor(PROVEEDOR_OPENAI, "gpt-5-mini");
+        configActualizada.establecerTiempoEsperaAI(45);
+        configActualizada.establecerTiempoEsperaParaModelo(PROVEEDOR_OPENAI, "gpt-5-mini", 45);
+
+        Field campoConfig = AnalizadorAI.class.getDeclaredField("config");
+        campoConfig.setAccessible(true);
+        campoConfig.set(analizador, configActualizada);
+
+        okhttp3.OkHttpClient clienteActualizado = (okhttp3.OkHttpClient) metodoResolver.invoke(analizador);
+        assertEquals(45_000, clienteActualizado.readTimeoutMillis(),
+            "El timeout debe recalcularse si cambia la configuración efectiva");
     }
 }

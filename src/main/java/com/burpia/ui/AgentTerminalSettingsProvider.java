@@ -148,7 +148,7 @@ final class AgentTerminalSettingsProvider extends DefaultSettingsProvider {
     private static final class AgentColorPalette extends ColorPalette {
         private final Color[] colores;
 
-        private AgentColorPalette(Color[] colores) {
+        private AgentColorPalette(Color... colores) {
             if (colores == null || colores.length < 16) {
                 throw new IllegalArgumentException("La paleta ANSI debe tener al menos 16 colores");
             }

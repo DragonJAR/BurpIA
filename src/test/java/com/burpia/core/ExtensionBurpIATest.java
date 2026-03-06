@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -79,10 +80,10 @@ class ExtensionBurpIATest {
             verify(gestorTareas).shutdown();
             verify(gestorConsola).shutdown();
 
-            assertNull(obtenerCampo(extension, "manejadorHttp"));
-            assertNull(obtenerCampo(extension, "pestaniaPrincipal"));
-            assertNull(obtenerCampo(extension, "gestorTareas"));
-            assertNull(obtenerCampo(extension, "gestorConsola"));
+            assertNull(obtenerCampo(extension, "manejadorHttp"), "assertNull failed at ExtensionBurpIATest.java:83");
+            assertNull(obtenerCampo(extension, "pestaniaPrincipal"), "assertNull failed at ExtensionBurpIATest.java:84");
+            assertNull(obtenerCampo(extension, "gestorTareas"), "assertNull failed at ExtensionBurpIATest.java:85");
+            assertNull(obtenerCampo(extension, "gestorConsola"), "assertNull failed at ExtensionBurpIATest.java:86");
         }
 
         @Test
@@ -109,7 +110,7 @@ class ExtensionBurpIATest {
         @Test
         @DisplayName("esBurpProfessional retorna false cuando API es null")
         void testEsBurpProfessionalConApiNull() {
-            assertFalse(ExtensionBurpIA.esBurpProfessional(null));
+            assertFalse(ExtensionBurpIA.esBurpProfessional(null), "assertFalse failed at ExtensionBurpIATest.java:113");
         }
 
         @Test
@@ -117,7 +118,7 @@ class ExtensionBurpIATest {
         void testEsBurpProfessionalConBurpSuiteNull() {
             MontoyaApi api = mock(MontoyaApi.class);
             when(api.burpSuite()).thenReturn(null);
-            assertFalse(ExtensionBurpIA.esBurpProfessional(api));
+            assertFalse(ExtensionBurpIA.esBurpProfessional(api), "assertFalse failed at ExtensionBurpIATest.java:121");
         }
 
         @Test
@@ -125,7 +126,7 @@ class ExtensionBurpIATest {
         void testEsBurpProfessionalProfessionalEdition() {
             MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
             when(api.burpSuite().version().edition()).thenReturn(BurpSuiteEdition.PROFESSIONAL);
-            assertTrue(ExtensionBurpIA.esBurpProfessional(api));
+            assertTrue(ExtensionBurpIA.esBurpProfessional(api), "assertTrue failed at ExtensionBurpIATest.java:129");
         }
 
         @Test
@@ -133,7 +134,7 @@ class ExtensionBurpIATest {
         void testEsBurpProfessionalConExcepcion() {
             MontoyaApi api = mock(MontoyaApi.class);
             when(api.burpSuite()).thenThrow(new RuntimeException("Test exception"));
-            assertFalse(ExtensionBurpIA.esBurpProfessional(api));
+            assertFalse(ExtensionBurpIA.esBurpProfessional(api), "assertFalse failed at ExtensionBurpIATest.java:137");
         }
 
         @Test
@@ -141,7 +142,7 @@ class ExtensionBurpIATest {
         void testEsBurpProfessionalConVersionNull() {
             MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
             when(api.burpSuite().version()).thenReturn(null);
-            assertFalse(ExtensionBurpIA.esBurpProfessional(api));
+            assertFalse(ExtensionBurpIA.esBurpProfessional(api), "assertFalse failed at ExtensionBurpIATest.java:145");
         }
 
         @Test
@@ -149,10 +150,33 @@ class ExtensionBurpIATest {
         void testEsBurpProfessionalInstancia() throws Exception {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             establecerCampo(extension, "esProfessional", true);
-            assertTrue(extension.esBurpProfessional());
+            assertTrue(extension.esBurpProfessional(), "assertTrue failed at ExtensionBurpIATest.java:153");
 
             establecerCampo(extension, "esProfessional", false);
-            assertFalse(extension.esBurpProfessional());
+            assertFalse(extension.esBurpProfessional(), "assertFalse failed at ExtensionBurpIATest.java:156");
+        }
+
+        @Test
+        @DisplayName("Community no sobrescribe preferencia guardada de auto issues")
+        void testCommunityNoSobrescribePreferenciaAutoIssues() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = mock(ConfiguracionAPI.class);
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+
+            when(config.autoGuardadoIssuesHabilitado()).thenReturn(true);
+            when(config.autoScrollConsolaHabilitado()).thenReturn(true);
+            when(pestania.obtenerPanelAgente()).thenReturn(null);
+
+            establecerCampo(extension, "config", config);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+            establecerCampo(extension, "esProfessional", false);
+
+            Method metodo = ExtensionBurpIA.class.getDeclaredMethod("inicializarPreferenciasUsuarioEnUI");
+            metodo.setAccessible(true);
+            metodo.invoke(extension);
+
+            verify(pestania).establecerGuardadoAutomaticoIssuesActivo(false);
+            verify(config, never()).establecerAutoGuardadoIssuesHabilitado(false);
         }
     }
 
@@ -163,7 +187,7 @@ class ExtensionBurpIATest {
         @Test
         @DisplayName("crearAuditIssueDesdeHallazgo retorna null cuando hallazgo es null")
         void testCrearAuditIssueConHallazgoNull() {
-            assertNull(ExtensionBurpIA.crearAuditIssueDesdeHallazgo(null, null));
+            assertNull(ExtensionBurpIA.crearAuditIssueDesdeHallazgo(null, null), "assertNull failed at ExtensionBurpIATest.java:190");
         }
 
         /**
@@ -177,8 +201,8 @@ class ExtensionBurpIATest {
         void testCrearAuditIssueConHallazgoCompleto() {
             Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "XSS Title", "XSS Description", "High", "High");
             var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue);
-            assertEquals("XSS Title", issue.name());
+            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:204");
+            assertEquals("XSS Title", issue.name(), "assertEquals failed at ExtensionBurpIATest.java:205");
         }
 
         @Test
@@ -187,8 +211,8 @@ class ExtensionBurpIATest {
         void testCrearAuditIssueSeveridadCritical() {
             Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "RCE", "Remote Code Execution", "Critical", "High");
             var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue);
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.HIGH, issue.severity());
+            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:214");
+            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.HIGH, issue.severity(), "assertEquals failed at ExtensionBurpIATest.java:215");
         }
 
         @Test
@@ -197,8 +221,8 @@ class ExtensionBurpIATest {
         void testCrearAuditIssueSeveridadLow() {
             Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "Info Leak", "Information Disclosure", "Low", "Medium");
             var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue);
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.LOW, issue.severity());
+            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:224");
+            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.LOW, issue.severity(), "assertEquals failed at ExtensionBurpIATest.java:225");
         }
 
         @Test
@@ -207,8 +231,8 @@ class ExtensionBurpIATest {
         void testCrearAuditIssueSeveridadInfo() {
             Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "Info", "Informational", "Info", "Low");
             var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue);
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.INFORMATION, issue.severity());
+            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:234");
+            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.INFORMATION, issue.severity(), "assertEquals failed at ExtensionBurpIATest.java:235");
         }
 
         @Test
@@ -217,8 +241,8 @@ class ExtensionBurpIATest {
         void testCrearAuditIssueConfianzaAlta() {
             Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "SQLi", "SQL Injection", "High", "High");
             var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue);
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.CERTAIN, issue.confidence());
+            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:244");
+            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.CERTAIN, issue.confidence(), "assertEquals failed at ExtensionBurpIATest.java:245");
         }
 
         @Test
@@ -227,8 +251,8 @@ class ExtensionBurpIATest {
         void testCrearAuditIssueConfianzaMedia() {
             Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "SQLi", "SQL Injection", "High", "Medium");
             var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue);
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.FIRM, issue.confidence());
+            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:254");
+            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.FIRM, issue.confidence(), "assertEquals failed at ExtensionBurpIATest.java:255");
         }
 
         @Test
@@ -237,8 +261,8 @@ class ExtensionBurpIATest {
         void testCrearAuditIssueConfianzaBaja() {
             Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "SQLi", "SQL Injection", "High", "Low");
             var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue);
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.TENTATIVE, issue.confidence());
+            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:264");
+            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.TENTATIVE, issue.confidence(), "assertEquals failed at ExtensionBurpIATest.java:265");
         }
     }
 
@@ -251,7 +275,7 @@ class ExtensionBurpIATest {
         void testGuardarAuditIssueConApiNull() {
             Hallazgo hallazgo = new Hallazgo("https://example.com", "SQLi Title", "Possible SQLi", "High", "High");
             boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(null, hallazgo, null);
-            assertFalse(guardado);
+            assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:278");
         }
 
         @Test
@@ -264,7 +288,7 @@ class ExtensionBurpIATest {
 
             boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
 
-            assertFalse(guardado);
+            assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:291");
         }
 
         @Test
@@ -275,7 +299,7 @@ class ExtensionBurpIATest {
 
             boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, null, null);
 
-            assertFalse(guardado);
+            assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:302");
         }
 
         @Test
@@ -288,7 +312,7 @@ class ExtensionBurpIATest {
 
             boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
 
-            assertFalse(guardado);
+            assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:315");
         }
     }
 
@@ -302,8 +326,8 @@ class ExtensionBurpIATest {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
             enviarAAgente.setAccessible(true);
-            Object resultado = enviarAAgente.invoke(extension, new Object[]{null});
-            assertFalse((Boolean) resultado);
+            Object resultado = enviarAAgente.invoke(extension, (Object) null);
+            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:330");
         }
 
         @Test
@@ -318,7 +342,7 @@ class ExtensionBurpIATest {
             enviarAAgente.setAccessible(true);
 
             Object resultado = enviarAAgente.invoke(extension, mock(HttpRequestResponse.class));
-            assertFalse((Boolean) resultado);
+            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:345");
         }
 
         @Test
@@ -332,7 +356,7 @@ class ExtensionBurpIATest {
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
             enviarAAgente.setAccessible(true);
 
-            assertDoesNotThrow(() -> enviarAAgente.invoke(extension, new Object[]{null}));
+            assertDoesNotThrow(() -> enviarAAgente.invoke(extension, (Object) null));
         }
 
         @Test
@@ -351,7 +375,7 @@ class ExtensionBurpIATest {
             when(solicitudRespuesta.request()).thenReturn(mock(HttpRequest.class));
 
             Object resultado = enviarAAgente.invoke(extension, solicitudRespuesta);
-            assertFalse((Boolean) resultado);
+            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:378");
         }
 
         @Test
@@ -360,7 +384,7 @@ class ExtensionBurpIATest {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
             enviarAAgente.setAccessible(true);
-            assertDoesNotThrow(() -> enviarAAgente.invoke(extension, new Object[]{null}));
+            assertDoesNotThrow(() -> enviarAAgente.invoke(extension, (Object) null));
         }
 
         @Test
@@ -370,7 +394,7 @@ class ExtensionBurpIATest {
             Method enviarHallazgo = ExtensionBurpIA.class.getDeclaredMethod("enviarHallazgoAAgente", Hallazgo.class);
             enviarHallazgo.setAccessible(true);
             Object resultado = enviarHallazgo.invoke(extension, new Hallazgo("url", "t", "d", "High", "High"));
-            assertFalse((Boolean) resultado);
+            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:397");
         }
 
         @Test
@@ -384,7 +408,7 @@ class ExtensionBurpIATest {
             Method enviarHallazgo = ExtensionBurpIA.class.getDeclaredMethod("enviarHallazgoAAgente", Hallazgo.class);
             enviarHallazgo.setAccessible(true);
 
-            assertDoesNotThrow(() -> enviarHallazgo.invoke(extension, new Object[]{null}));
+            assertDoesNotThrow(() -> enviarHallazgo.invoke(extension, (Object) null));
         }
 
         @Test
@@ -414,8 +438,8 @@ class ExtensionBurpIATest {
 
             assertDoesNotThrow(() -> enviarAAgente.invoke(extension, solicitudRespuesta));
 
-            assertEquals(0, contadorRequest.get());
-            assertEquals(0, contadorResponse.get());
+            assertEquals(0, contadorRequest.get(), "assertEquals failed at ExtensionBurpIATest.java:441");
+            assertEquals(0, contadorResponse.get(), "assertEquals failed at ExtensionBurpIATest.java:442");
             verify(panelAgente).inyectarComando(anyString(), eq(0));
         }
 
@@ -446,8 +470,8 @@ class ExtensionBurpIATest {
 
             assertDoesNotThrow(() -> enviarAAgente.invoke(extension, solicitudRespuesta));
 
-            assertTrue(contadorRequest.get() > 0);
-            assertTrue(contadorResponse.get() > 0);
+            assertTrue(contadorRequest.get() > 0, "assertTrue failed at ExtensionBurpIATest.java:473");
+            assertTrue(contadorResponse.get() > 0, "assertTrue failed at ExtensionBurpIATest.java:474");
             verify(panelAgente).inyectarComando(anyString(), eq(0));
         }
 
@@ -481,8 +505,8 @@ class ExtensionBurpIATest {
             verify(panelAgente).inyectarComando(payloadCaptor.capture(), eq(0));
             String payload = payloadCaptor.getValue();
 
-            assertNotNull(payload);
-            assertTrue(payload.contains("REQ="));
+            assertNotNull(payload, "assertNotNull failed at ExtensionBurpIATest.java:508");
+            assertTrue(payload.contains("REQ="), "assertTrue failed at ExtensionBurpIATest.java:509");
             int inicioReq = payload.indexOf("REQ=") + 4;
             int finReq = payload.indexOf("\nRES=", inicioReq);
             if (finReq < 0) {
@@ -491,9 +515,9 @@ class ExtensionBurpIATest {
             String requestSerializado = finReq > inicioReq ? payload.substring(inicioReq, finReq) : payload.substring(inicioReq);
             assertTrue(!requestSerializado.trim().isEmpty(), payload);
             assertTrue(requestSerializado.toUpperCase().contains("GET"), payload);
-            assertTrue(payload.contains("TITLE=Titulo Manual"));
-            assertTrue(payload.contains("DESC=Descripcion Manual"));
-            assertTrue(payload.contains("RES="));
+            assertTrue(payload.contains("TITLE=Titulo Manual"), "assertTrue failed at ExtensionBurpIATest.java:518");
+            assertTrue(payload.contains("DESC=Descripcion Manual"), "assertTrue failed at ExtensionBurpIATest.java:519");
+            assertTrue(payload.contains("RES="), "assertTrue failed at ExtensionBurpIATest.java:520");
         }
 
         @Test
@@ -526,10 +550,10 @@ class ExtensionBurpIATest {
             verify(panelAgente).inyectarComando(payloadCaptor.capture(), eq(0));
             String payload = payloadCaptor.getValue();
 
-            assertNotNull(payload);
-            assertTrue(payload.contains("Title: Titulo Manual"));
-            assertTrue(payload.contains("Summary: Descripcion Manual"));
-            assertTrue(payload.contains("REQ="));
+            assertNotNull(payload, "assertNotNull failed at ExtensionBurpIATest.java:553");
+            assertTrue(payload.contains("Title: Titulo Manual"), "assertTrue failed at ExtensionBurpIATest.java:554");
+            assertTrue(payload.contains("Summary: Descripcion Manual"), "assertTrue failed at ExtensionBurpIATest.java:555");
+            assertTrue(payload.contains("REQ="), "assertTrue failed at ExtensionBurpIATest.java:556");
         }
 
         @Test
@@ -562,7 +586,7 @@ class ExtensionBurpIATest {
             verify(panelAgente).inyectarComando(payloadCaptor.capture(), eq(0));
             String payload = payloadCaptor.getValue();
 
-            assertTrue(payload.contains("URL=https://example.com/test"));
+            assertTrue(payload.contains("URL=https://example.com/test"), "assertTrue failed at ExtensionBurpIATest.java:589");
         }
     }
 

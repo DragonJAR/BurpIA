@@ -32,7 +32,7 @@ class GestorConsolaGUITest {
         gestor.registrarVerbose("verbose");
         gestor.registrarError("error");
 
-        assertEquals("Total: 3 | Info: 1 | Verbose: 1 | Errores: 1", gestor.generarResumen());
+        assertEquals("Total: 3 | Info: 1 | Verbose: 1 | Errores: 1", gestor.generarResumen(), "assertEquals failed at GestorConsolaGUITest.java:35");
     }
 
     @Test
@@ -44,7 +44,7 @@ class GestorConsolaGUITest {
         gestor.registrarVerbose("verbose");
         gestor.registrarError("error");
 
-        assertEquals("Total: 3 | Info: 1 | Verbose: 1 | Errors: 1", gestor.generarResumen());
+        assertEquals("Total: 3 | Info: 1 | Verbose: 1 | Errors: 1", gestor.generarResumen(), "assertEquals failed at GestorConsolaGUITest.java:47");
     }
 
     @Test
@@ -61,9 +61,9 @@ class GestorConsolaGUITest {
 
         String salidaOut = out.toString();
         String salidaErr = err.toString();
-        assertTrue(salidaOut.contains("[ManejadorBurpIA]"));
-        assertTrue(salidaOut.contains("[RASTREO]"));
-        assertTrue(salidaErr.contains("[ManejadorBurpIA] [ERROR]"));
+        assertTrue(salidaOut.contains("[ManejadorBurpIA]"), "assertTrue failed at GestorConsolaGUITest.java:64");
+        assertTrue(salidaOut.contains("[RASTREO]"), "assertTrue failed at GestorConsolaGUITest.java:65");
+        assertTrue(salidaErr.contains("[ManejadorBurpIA] [ERROR]"), "assertTrue failed at GestorConsolaGUITest.java:66");
     }
 
     @Test
@@ -76,7 +76,7 @@ class GestorConsolaGUITest {
 
         gestor.registrar("ManejadorBurpIA", "Evento detallado", GestorConsolaGUI.TipoLog.VERBOSE);
 
-        assertTrue(out.toString().contains("[TRACE]"));
+        assertTrue(out.toString().contains("[TRACE]"), "assertTrue failed at GestorConsolaGUITest.java:79");
     }
 
     @Test
@@ -92,8 +92,8 @@ class GestorConsolaGUITest {
         });
 
         String texto = consola.getText();
-        assertTrue(texto.contains("Log previo 1"));
-        assertTrue(texto.contains("Log previo 2"));
+        assertTrue(texto.contains("Log previo 1"), "assertTrue failed at GestorConsolaGUITest.java:95");
+        assertTrue(texto.contains("Log previo 2"), "assertTrue failed at GestorConsolaGUITest.java:96");
     }
 
     @Test
@@ -110,10 +110,10 @@ class GestorConsolaGUITest {
         });
 
         String texto = consola.getDocument().getText(0, consola.getDocument().getLength());
-        assertTrue(estaEnNegrilla(consola, texto, "NOTA:"));
-        assertTrue(estaEnNegrilla(consola, texto, "ACCION:"));
-        assertTrue(estaEnNegrilla(consola, texto, "NOTE:"));
-        assertTrue(estaEnNegrilla(consola, texto, "ACTION:"));
+        assertTrue(estaEnNegrilla(consola, texto, "NOTA:"), "assertTrue failed at GestorConsolaGUITest.java:113");
+        assertTrue(estaEnNegrilla(consola, texto, "ACCION:"), "assertTrue failed at GestorConsolaGUITest.java:114");
+        assertTrue(estaEnNegrilla(consola, texto, "NOTE:"), "assertTrue failed at GestorConsolaGUITest.java:115");
+        assertTrue(estaEnNegrilla(consola, texto, "ACTION:"), "assertTrue failed at GestorConsolaGUITest.java:116");
     }
 
     @Test
@@ -149,13 +149,13 @@ class GestorConsolaGUITest {
             consola.getStyledDocument().getStyle("Info")
         );
         assertNotEquals(colorInfoAntes, colorInfoDespues);
-        assertEquals(totalAntes, gestor.obtenerTotalLogs());
-        assertTrue(EstilosUI.ratioContraste(colorInfoDespues, consola.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
+        assertEquals(totalAntes, gestor.obtenerTotalLogs(), "assertEquals failed at GestorConsolaGUITest.java:152");
+        assertTrue(EstilosUI.ratioContraste(colorInfoDespues, consola.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL, "assertTrue failed at GestorConsolaGUITest.java:153");
 
         SwingUtilities.invokeAndWait(() -> gestor.registrarVerbose("trace posterior"));
         SwingUtilities.invokeAndWait(() -> {
         });
-        assertTrue(consola.getText().contains("trace posterior"));
+        assertTrue(consola.getText().contains("trace posterior"), "assertTrue failed at GestorConsolaGUITest.java:158");
     }
 
     @Test
@@ -169,17 +169,17 @@ class GestorConsolaGUITest {
         });
 
         int versionAntes = gestor.obtenerVersion();
-        assertTrue(gestor.obtenerTotalLogs() > 0);
+        assertTrue(gestor.obtenerTotalLogs() > 0, "assertTrue failed at GestorConsolaGUITest.java:172");
 
         SwingUtilities.invokeAndWait(gestor::limpiarConsola);
         SwingUtilities.invokeAndWait(() -> {
         });
 
-        assertEquals(0, gestor.obtenerTotalLogs());
-        assertEquals(0, gestor.obtenerContadorInfo());
-        assertEquals(0, gestor.obtenerContadorVerbose());
-        assertEquals(0, gestor.obtenerContadorError());
-        assertTrue(gestor.obtenerVersion() > versionAntes);
+        assertEquals(0, gestor.obtenerTotalLogs(), "assertEquals failed at GestorConsolaGUITest.java:178");
+        assertEquals(0, gestor.obtenerContadorInfo(), "assertEquals failed at GestorConsolaGUITest.java:179");
+        assertEquals(0, gestor.obtenerContadorVerbose(), "assertEquals failed at GestorConsolaGUITest.java:180");
+        assertEquals(0, gestor.obtenerContadorError(), "assertEquals failed at GestorConsolaGUITest.java:181");
+        assertTrue(gestor.obtenerVersion() > versionAntes, "assertTrue failed at GestorConsolaGUITest.java:182");
     }
 
     private boolean estaEnNegrilla(JTextPane consola, String texto, String etiqueta) {

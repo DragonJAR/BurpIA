@@ -20,12 +20,12 @@ class TareaTest {
         void testCrearTareaBasica() {
             Tarea tarea = new Tarea("abc123", "Analisis HTTP", "https://example.com", Tarea.ESTADO_EN_COLA);
 
-            assertNotNull(tarea);
-            assertEquals("abc123", tarea.obtenerId());
-            assertEquals("Analisis HTTP", tarea.obtenerTipo());
-            assertEquals("https://example.com", tarea.obtenerUrl());
-            assertEquals(Tarea.ESTADO_EN_COLA, tarea.obtenerEstado());
-            assertTrue(tarea.obtenerTiempoInicio() > 0);
+            assertNotNull(tarea, "assertNotNull failed at TareaTest.java:23");
+            assertEquals("abc123", tarea.obtenerId(), "assertEquals failed at TareaTest.java:24");
+            assertEquals("Analisis HTTP", tarea.obtenerTipo(), "assertEquals failed at TareaTest.java:25");
+            assertEquals("https://example.com", tarea.obtenerUrl(), "assertEquals failed at TareaTest.java:26");
+            assertEquals(Tarea.ESTADO_EN_COLA, tarea.obtenerEstado(), "assertEquals failed at TareaTest.java:27");
+            assertTrue(tarea.obtenerTiempoInicio() > 0, "assertTrue failed at TareaTest.java:28");
         }
 
         @Test
@@ -76,14 +76,14 @@ class TareaTest {
         @DisplayName("Constructor con estado invalido establece ERROR")
         void testConstructorEstadoInvalido() {
             Tarea tarea = new Tarea("id", "Test", "url", "EstadoInvalido");
-            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado(), "assertEquals failed at TareaTest.java:79");
         }
 
         @Test
         @DisplayName("Constructor con estado nulo establece ERROR")
         void testConstructorEstadoNulo() {
             Tarea tarea = new Tarea("id", "Test", "url", null);
-            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado(), "assertEquals failed at TareaTest.java:86");
         }
     }
 
@@ -94,22 +94,22 @@ class TareaTest {
         @Test
         @DisplayName("Estados validos")
         void testEstadosValidos() {
-            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_EN_COLA));
-            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_ANALIZANDO));
-            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_PAUSADO));
-            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_COMPLETADO));
-            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_ERROR));
-            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_CANCELADO));
+            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_EN_COLA), "assertTrue failed at TareaTest.java:97");
+            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_ANALIZANDO), "assertTrue failed at TareaTest.java:98");
+            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_PAUSADO), "assertTrue failed at TareaTest.java:99");
+            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_COMPLETADO), "assertTrue failed at TareaTest.java:100");
+            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_ERROR), "assertTrue failed at TareaTest.java:101");
+            assertTrue(Tarea.esEstadoValido(Tarea.ESTADO_CANCELADO), "assertTrue failed at TareaTest.java:102");
         }
 
         @Test
         @DisplayName("Estados invalidos")
         void testEstadosInvalidos() {
-            assertFalse(Tarea.esEstadoValido("Running"));
-            assertFalse(Tarea.esEstadoValido("Paused"));
-            assertFalse(Tarea.esEstadoValido(null));
-            assertFalse(Tarea.esEstadoValido(""));
-            assertFalse(Tarea.esEstadoValido("   "));
+            assertFalse(Tarea.esEstadoValido("Running"), "assertFalse failed at TareaTest.java:108");
+            assertFalse(Tarea.esEstadoValido("Paused"), "assertFalse failed at TareaTest.java:109");
+            assertFalse(Tarea.esEstadoValido(null), "assertFalse failed at TareaTest.java:110");
+            assertFalse(Tarea.esEstadoValido(""), "assertFalse failed at TareaTest.java:111");
+            assertFalse(Tarea.esEstadoValido("   "), "assertFalse failed at TareaTest.java:112");
         }
     }
 
@@ -120,67 +120,67 @@ class TareaTest {
         @Test
         @DisplayName("esEstadoPausable funciona correctamente")
         void testEsEstadoPausable() {
-            assertTrue(Tarea.esEstadoPausable(Tarea.ESTADO_EN_COLA));
-            assertTrue(Tarea.esEstadoPausable(Tarea.ESTADO_ANALIZANDO));
-            assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_PAUSADO));
-            assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_COMPLETADO));
-            assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_ERROR));
-            assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_CANCELADO));
+            assertTrue(Tarea.esEstadoPausable(Tarea.ESTADO_EN_COLA), "assertTrue failed at TareaTest.java:123");
+            assertTrue(Tarea.esEstadoPausable(Tarea.ESTADO_ANALIZANDO), "assertTrue failed at TareaTest.java:124");
+            assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_PAUSADO), "assertFalse failed at TareaTest.java:125");
+            assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_COMPLETADO), "assertFalse failed at TareaTest.java:126");
+            assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_ERROR), "assertFalse failed at TareaTest.java:127");
+            assertFalse(Tarea.esEstadoPausable(Tarea.ESTADO_CANCELADO), "assertFalse failed at TareaTest.java:128");
         }
 
         @Test
         @DisplayName("esEstadoReanudable funciona correctamente")
         void testEsEstadoReanudable() {
-            assertTrue(Tarea.esEstadoReanudable(Tarea.ESTADO_PAUSADO));
-            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_EN_COLA));
-            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_ANALIZANDO));
-            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_ERROR));
-            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_COMPLETADO));
-            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_CANCELADO));
+            assertTrue(Tarea.esEstadoReanudable(Tarea.ESTADO_PAUSADO), "assertTrue failed at TareaTest.java:134");
+            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_EN_COLA), "assertFalse failed at TareaTest.java:135");
+            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_ANALIZANDO), "assertFalse failed at TareaTest.java:136");
+            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_ERROR), "assertFalse failed at TareaTest.java:137");
+            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_COMPLETADO), "assertFalse failed at TareaTest.java:138");
+            assertFalse(Tarea.esEstadoReanudable(Tarea.ESTADO_CANCELADO), "assertFalse failed at TareaTest.java:139");
         }
 
         @Test
         @DisplayName("esEstadoReintentable funciona correctamente")
         void testEsEstadoReintentable() {
-            assertTrue(Tarea.esEstadoReintentable(Tarea.ESTADO_ERROR));
-            assertTrue(Tarea.esEstadoReintentable(Tarea.ESTADO_CANCELADO));
-            assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_COMPLETADO));
-            assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_EN_COLA));
-            assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_ANALIZANDO));
-            assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_PAUSADO));
+            assertTrue(Tarea.esEstadoReintentable(Tarea.ESTADO_ERROR), "assertTrue failed at TareaTest.java:145");
+            assertTrue(Tarea.esEstadoReintentable(Tarea.ESTADO_CANCELADO), "assertTrue failed at TareaTest.java:146");
+            assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_COMPLETADO), "assertFalse failed at TareaTest.java:147");
+            assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_EN_COLA), "assertFalse failed at TareaTest.java:148");
+            assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_ANALIZANDO), "assertFalse failed at TareaTest.java:149");
+            assertFalse(Tarea.esEstadoReintentable(Tarea.ESTADO_PAUSADO), "assertFalse failed at TareaTest.java:150");
         }
 
         @Test
         @DisplayName("esEstadoCancelable funciona correctamente")
         void testEsEstadoCancelable() {
-            assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_EN_COLA));
-            assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_ANALIZANDO));
-            assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_PAUSADO));
-            assertFalse(Tarea.esEstadoCancelable(Tarea.ESTADO_COMPLETADO));
-            assertFalse(Tarea.esEstadoCancelable(Tarea.ESTADO_ERROR));
-            assertFalse(Tarea.esEstadoCancelable(Tarea.ESTADO_CANCELADO));
+            assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_EN_COLA), "assertTrue failed at TareaTest.java:156");
+            assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_ANALIZANDO), "assertTrue failed at TareaTest.java:157");
+            assertTrue(Tarea.esEstadoCancelable(Tarea.ESTADO_PAUSADO), "assertTrue failed at TareaTest.java:158");
+            assertFalse(Tarea.esEstadoCancelable(Tarea.ESTADO_COMPLETADO), "assertFalse failed at TareaTest.java:159");
+            assertFalse(Tarea.esEstadoCancelable(Tarea.ESTADO_ERROR), "assertFalse failed at TareaTest.java:160");
+            assertFalse(Tarea.esEstadoCancelable(Tarea.ESTADO_CANCELADO), "assertFalse failed at TareaTest.java:161");
         }
 
         @Test
         @DisplayName("esEstadoEliminable funciona correctamente")
         void testEsEstadoEliminable() {
-            assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_COMPLETADO));
-            assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_ERROR));
-            assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_CANCELADO));
-            assertFalse(Tarea.esEstadoEliminable(Tarea.ESTADO_EN_COLA));
-            assertFalse(Tarea.esEstadoEliminable(Tarea.ESTADO_ANALIZANDO));
-            assertFalse(Tarea.esEstadoEliminable(Tarea.ESTADO_PAUSADO));
+            assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_COMPLETADO), "assertTrue failed at TareaTest.java:167");
+            assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_ERROR), "assertTrue failed at TareaTest.java:168");
+            assertTrue(Tarea.esEstadoEliminable(Tarea.ESTADO_CANCELADO), "assertTrue failed at TareaTest.java:169");
+            assertFalse(Tarea.esEstadoEliminable(Tarea.ESTADO_EN_COLA), "assertFalse failed at TareaTest.java:170");
+            assertFalse(Tarea.esEstadoEliminable(Tarea.ESTADO_ANALIZANDO), "assertFalse failed at TareaTest.java:171");
+            assertFalse(Tarea.esEstadoEliminable(Tarea.ESTADO_PAUSADO), "assertFalse failed at TareaTest.java:172");
         }
 
         @Test
         @DisplayName("esEstadoFinal funciona correctamente")
         void testEsEstadoFinal() {
-            assertTrue(Tarea.esEstadoFinal(Tarea.ESTADO_COMPLETADO));
-            assertTrue(Tarea.esEstadoFinal(Tarea.ESTADO_ERROR));
-            assertTrue(Tarea.esEstadoFinal(Tarea.ESTADO_CANCELADO));
-            assertFalse(Tarea.esEstadoFinal(Tarea.ESTADO_EN_COLA));
-            assertFalse(Tarea.esEstadoFinal(Tarea.ESTADO_ANALIZANDO));
-            assertFalse(Tarea.esEstadoFinal(Tarea.ESTADO_PAUSADO));
+            assertTrue(Tarea.esEstadoFinal(Tarea.ESTADO_COMPLETADO), "assertTrue failed at TareaTest.java:178");
+            assertTrue(Tarea.esEstadoFinal(Tarea.ESTADO_ERROR), "assertTrue failed at TareaTest.java:179");
+            assertTrue(Tarea.esEstadoFinal(Tarea.ESTADO_CANCELADO), "assertTrue failed at TareaTest.java:180");
+            assertFalse(Tarea.esEstadoFinal(Tarea.ESTADO_EN_COLA), "assertFalse failed at TareaTest.java:181");
+            assertFalse(Tarea.esEstadoFinal(Tarea.ESTADO_ANALIZANDO), "assertFalse failed at TareaTest.java:182");
+            assertFalse(Tarea.esEstadoFinal(Tarea.ESTADO_PAUSADO), "assertFalse failed at TareaTest.java:183");
         }
     }
 
@@ -198,12 +198,12 @@ class TareaTest {
             Tarea tareaError = new Tarea("5", "Test", "url", Tarea.ESTADO_ERROR);
             Tarea tareaCancelada = new Tarea("6", "Test", "url", Tarea.ESTADO_CANCELADO);
 
-            assertTrue(tareaEnCola.esActiva());
-            assertTrue(tareaAnalizando.esActiva());
-            assertTrue(tareaPausada.esActiva());
-            assertFalse(tareaCompletada.esActiva());
-            assertFalse(tareaError.esActiva());
-            assertFalse(tareaCancelada.esActiva());
+            assertTrue(tareaEnCola.esActiva(), "assertTrue failed at TareaTest.java:201");
+            assertTrue(tareaAnalizando.esActiva(), "assertTrue failed at TareaTest.java:202");
+            assertTrue(tareaPausada.esActiva(), "assertTrue failed at TareaTest.java:203");
+            assertFalse(tareaCompletada.esActiva(), "assertFalse failed at TareaTest.java:204");
+            assertFalse(tareaError.esActiva(), "assertFalse failed at TareaTest.java:205");
+            assertFalse(tareaCancelada.esActiva(), "assertFalse failed at TareaTest.java:206");
         }
 
         @Test
@@ -216,12 +216,12 @@ class TareaTest {
             Tarea tareaAnalizando = new Tarea("5", "Test", "url", Tarea.ESTADO_ANALIZANDO);
             Tarea tareaPausada = new Tarea("6", "Test", "url", Tarea.ESTADO_PAUSADO);
 
-            assertTrue(tareaCompletada.esFinalizada());
-            assertTrue(tareaError.esFinalizada());
-            assertTrue(tareaCancelada.esFinalizada());
-            assertFalse(tareaEnCola.esFinalizada());
-            assertFalse(tareaAnalizando.esFinalizada());
-            assertFalse(tareaPausada.esFinalizada());
+            assertTrue(tareaCompletada.esFinalizada(), "assertTrue failed at TareaTest.java:219");
+            assertTrue(tareaError.esFinalizada(), "assertTrue failed at TareaTest.java:220");
+            assertTrue(tareaCancelada.esFinalizada(), "assertTrue failed at TareaTest.java:221");
+            assertFalse(tareaEnCola.esFinalizada(), "assertFalse failed at TareaTest.java:222");
+            assertFalse(tareaAnalizando.esFinalizada(), "assertFalse failed at TareaTest.java:223");
+            assertFalse(tareaPausada.esFinalizada(), "assertFalse failed at TareaTest.java:224");
         }
 
         @Test
@@ -230,7 +230,7 @@ class TareaTest {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
             tarea.establecerEstado(Tarea.ESTADO_ANALIZANDO);
 
-            assertEquals(Tarea.ESTADO_ANALIZANDO, tarea.obtenerEstado());
+            assertEquals(Tarea.ESTADO_ANALIZANDO, tarea.obtenerEstado(), "assertEquals failed at TareaTest.java:233");
         }
 
         @Test
@@ -239,7 +239,7 @@ class TareaTest {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
             tarea.establecerEstado("EstadoInvalido");
 
-            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado(), "assertEquals failed at TareaTest.java:242");
         }
 
         @Test
@@ -248,7 +248,7 @@ class TareaTest {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
             tarea.establecerEstado(null);
 
-            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado(), "assertEquals failed at TareaTest.java:251");
         }
 
         @Test
@@ -257,7 +257,7 @@ class TareaTest {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
             tarea.establecerEstado("");
 
-            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado());
+            assertEquals(Tarea.ESTADO_ERROR, tarea.obtenerEstado(), "assertEquals failed at TareaTest.java:260");
         }
 
         @Test
@@ -266,7 +266,7 @@ class TareaTest {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
             tarea.establecerMensajeInfo("Procesando solicitud");
 
-            assertEquals("Procesando solicitud", tarea.obtenerMensajeInfo());
+            assertEquals("Procesando solicitud", tarea.obtenerMensajeInfo(), "assertEquals failed at TareaTest.java:269");
         }
 
         @Test
@@ -275,7 +275,7 @@ class TareaTest {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
             tarea.establecerMensajeInfo(null);
 
-            assertNull(tarea.obtenerMensajeInfo());
+            assertNull(tarea.obtenerMensajeInfo(), "assertNull failed at TareaTest.java:278");
         }
 
         @Test
@@ -285,7 +285,7 @@ class TareaTest {
             tarea.establecerMensajeInfo("mensaje inicial");
             tarea.establecerMensajeInfo("");
 
-            assertEquals("", tarea.obtenerMensajeInfo());
+            assertEquals("", tarea.obtenerMensajeInfo(), "assertEquals failed at TareaTest.java:288");
         }
     }
 
@@ -300,15 +300,15 @@ class TareaTest {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
             long despues = System.currentTimeMillis();
 
-            assertTrue(tarea.obtenerTiempoInicio() >= antes);
-            assertTrue(tarea.obtenerTiempoInicio() <= despues);
+            assertTrue(tarea.obtenerTiempoInicio() >= antes, "assertTrue failed at TareaTest.java:303");
+            assertTrue(tarea.obtenerTiempoInicio() <= despues, "assertTrue failed at TareaTest.java:304");
         }
 
         @Test
         @DisplayName("obtenerTiempoFin es 0 antes de finalizar")
         void testObtenerTiempoFinInicial() {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
-            assertEquals(0, tarea.obtenerTiempoFin());
+            assertEquals(0, tarea.obtenerTiempoFin(), "assertEquals failed at TareaTest.java:311");
         }
 
         @Test
@@ -318,8 +318,8 @@ class TareaTest {
             Thread.sleep(10); // Pequeña pausa para asegurar diferencia de tiempo
             tarea.establecerEstado(Tarea.ESTADO_COMPLETADO);
 
-            assertTrue(tarea.obtenerTiempoFin() > 0);
-            assertTrue(tarea.obtenerTiempoFin() >= tarea.obtenerTiempoInicio());
+            assertTrue(tarea.obtenerTiempoFin() > 0, "assertTrue failed at TareaTest.java:321");
+            assertTrue(tarea.obtenerTiempoFin() >= tarea.obtenerTiempoInicio(), "assertTrue failed at TareaTest.java:322");
         }
 
         @Test
@@ -329,7 +329,7 @@ class TareaTest {
             Thread.sleep(10);
             tarea.establecerEstado(Tarea.ESTADO_ERROR);
 
-            assertTrue(tarea.obtenerTiempoFin() > 0);
+            assertTrue(tarea.obtenerTiempoFin() > 0, "assertTrue failed at TareaTest.java:332");
         }
 
         @Test
@@ -339,14 +339,14 @@ class TareaTest {
             Thread.sleep(10);
             tarea.establecerEstado(Tarea.ESTADO_CANCELADO);
 
-            assertTrue(tarea.obtenerTiempoFin() > 0);
+            assertTrue(tarea.obtenerTiempoFin() > 0, "assertTrue failed at TareaTest.java:342");
         }
 
         @Test
         @DisplayName("obtenerDuracionMilisegundos es 0 al inicio")
         void testObtenerDuracionMilisegundosInicial() {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
-            assertEquals(0, tarea.obtenerDuracionMilisegundos());
+            assertEquals(0, tarea.obtenerDuracionMilisegundos(), "assertEquals failed at TareaTest.java:349");
         }
 
         @Test
@@ -369,13 +369,13 @@ class TareaTest {
             
             Thread.sleep(20);
             // La duracion no debe cambiar mientras esta pausada
-            assertEquals(duracionPausada, tarea.obtenerDuracionMilisegundos());
+            assertEquals(duracionPausada, tarea.obtenerDuracionMilisegundos(), "assertEquals failed at TareaTest.java:372");
             
             tarea.establecerEstado(Tarea.ESTADO_ANALIZANDO);
             Thread.sleep(20);
             
             long duracionFinal = tarea.obtenerDuracionMilisegundos();
-            assertTrue(duracionFinal >= duracionPausada + 20);
+            assertTrue(duracionFinal >= duracionPausada + 20, "assertTrue failed at TareaTest.java:378");
         }
     }
 
@@ -386,19 +386,19 @@ class TareaTest {
         @Test
         @DisplayName("formatearDuracion estatico con segundos")
         void testFormatearDuracionEstaticoSegundos() {
-            assertEquals("0s", Tarea.formatearDuracion(0));
-            assertEquals("0s", Tarea.formatearDuracion(999));
-            assertEquals("1s", Tarea.formatearDuracion(1000));
-            assertEquals("5s", Tarea.formatearDuracion(5500));
+            assertEquals("0s", Tarea.formatearDuracion(0), "assertEquals failed at TareaTest.java:389");
+            assertEquals("0s", Tarea.formatearDuracion(999), "assertEquals failed at TareaTest.java:390");
+            assertEquals("1s", Tarea.formatearDuracion(1000), "assertEquals failed at TareaTest.java:391");
+            assertEquals("5s", Tarea.formatearDuracion(5500), "assertEquals failed at TareaTest.java:392");
         }
 
         @Test
         @DisplayName("formatearDuracion estatico con minutos")
         void testFormatearDuracionEstaticoMinutos() {
-            assertEquals("1m 0s", Tarea.formatearDuracion(60000));
-            assertEquals("1m 30s", Tarea.formatearDuracion(90000));
-            assertEquals("2m 15s", Tarea.formatearDuracion(135000));
-            assertEquals("10m 0s", Tarea.formatearDuracion(600000));
+            assertEquals("1m 0s", Tarea.formatearDuracion(60000), "assertEquals failed at TareaTest.java:398");
+            assertEquals("1m 30s", Tarea.formatearDuracion(90000), "assertEquals failed at TareaTest.java:399");
+            assertEquals("2m 15s", Tarea.formatearDuracion(135000), "assertEquals failed at TareaTest.java:400");
+            assertEquals("10m 0s", Tarea.formatearDuracion(600000), "assertEquals failed at TareaTest.java:401");
         }
 
         @Test
@@ -406,8 +406,8 @@ class TareaTest {
         void testFormatearDuracionInstancia() throws InterruptedException {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);
             String duracion = tarea.formatearDuracion();
-            assertNotNull(duracion);
-            assertEquals("0s", duracion);
+            assertNotNull(duracion, "assertNotNull failed at TareaTest.java:409");
+            assertEquals("0s", duracion, "assertEquals failed at TareaTest.java:410");
         }
     }
 
@@ -421,11 +421,11 @@ class TareaTest {
             Tarea tarea = new Tarea("1", "Analisis", "https://example.com", Tarea.ESTADO_EN_COLA);
             Object[] fila = tarea.aFilaTabla();
 
-            assertEquals(4, fila.length);
-            assertEquals("Analisis", fila[0]);
-            assertEquals("https://example.com", fila[1]);
-            assertEquals(Tarea.ESTADO_EN_COLA, fila[2]);
-            assertEquals("0s", fila[3]);
+            assertEquals(4, fila.length, "assertEquals failed at TareaTest.java:424");
+            assertEquals("Analisis", fila[0], "assertEquals failed at TareaTest.java:425");
+            assertEquals("https://example.com", fila[1], "assertEquals failed at TareaTest.java:426");
+            assertEquals(Tarea.ESTADO_EN_COLA, fila[2], "assertEquals failed at TareaTest.java:427");
+            assertEquals("0s", fila[3], "assertEquals failed at TareaTest.java:428");
         }
 
         @Test
@@ -436,10 +436,10 @@ class TareaTest {
             tarea.establecerEstado(Tarea.ESTADO_COMPLETADO);
             
             Object[] fila = tarea.aFilaTabla();
-            assertEquals(Tarea.ESTADO_COMPLETADO, fila[2]);
+            assertEquals(Tarea.ESTADO_COMPLETADO, fila[2], "assertEquals failed at TareaTest.java:439");
             // La duracion debe ser >= 50ms
             String duracion = (String) fila[3];
-            assertTrue(duracion.contains("s") || duracion.contains("m"));
+            assertTrue(duracion.contains("s") || duracion.contains("m"), "assertTrue failed at TareaTest.java:442");
         }
     }
 
@@ -450,32 +450,32 @@ class TareaTest {
         @Test
         @DisplayName("Obtener color estado para estados validos")
         void testObtenerColorEstadoValidos() {
-            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_EN_COLA));
-            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_ANALIZANDO));
-            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_COMPLETADO));
-            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_ERROR));
-            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_CANCELADO));
-            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_PAUSADO));
+            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_EN_COLA), "assertNotNull failed at TareaTest.java:453");
+            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_ANALIZANDO), "assertNotNull failed at TareaTest.java:454");
+            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_COMPLETADO), "assertNotNull failed at TareaTest.java:455");
+            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_ERROR), "assertNotNull failed at TareaTest.java:456");
+            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_CANCELADO), "assertNotNull failed at TareaTest.java:457");
+            assertNotNull(Tarea.obtenerColorEstado(Tarea.ESTADO_PAUSADO), "assertNotNull failed at TareaTest.java:458");
         }
 
         @Test
         @DisplayName("Obtener color estado con estado nulo devuelve negro")
         void testObtenerColorEstadoNulo() {
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado(null));
+            assertEquals(Color.BLACK, Tarea.obtenerColorEstado(null), "assertEquals failed at TareaTest.java:464");
         }
 
         @Test
         @DisplayName("Obtener color estado con estado vacio devuelve negro")
         void testObtenerColorEstadoVacio() {
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado(""));
+            assertEquals(Color.BLACK, Tarea.obtenerColorEstado(""), "assertEquals failed at TareaTest.java:470");
         }
 
         @Test
         @DisplayName("Obtener color estado con estado invalido devuelve negro")
         void testObtenerColorEstadoInvalido() {
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Invalido"));
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Running"));
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Paused"));
+            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Invalido"), "assertEquals failed at TareaTest.java:476");
+            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Running"), "assertEquals failed at TareaTest.java:477");
+            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Paused"), "assertEquals failed at TareaTest.java:478");
         }
     }
 }

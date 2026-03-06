@@ -93,7 +93,6 @@ public class DialogoConfiguracion extends JDialog {
     private JButton btnSitioWeb;
     private final Map<String, String> rutasBinarioAgenteTemporal = new HashMap<>();
     private final Map<String, EstadoProveedorUI> estadoProveedorTemporal = new HashMap<>();
-    private final Map<String, List<String>> modelosProveedorTemporal = new HashMap<>();
     private EstadoEdicionDialogo estadoInicialDialogo;
     private String proveedorActualUi;
     private boolean actualizandoProveedorUi = false;
@@ -746,8 +745,6 @@ public class DialogoConfiguracion extends JDialog {
         lblEstadoMultiProveedor.setForeground(EstilosUI.COLOR_INFO);
         panel.add(lblEstadoMultiProveedor, gbc);
 
-        fila++;
-
         listaProveedoresSeleccionados.addListSelectionListener(e -> {
             actualizarBotonesReordenamiento();
         });
@@ -893,12 +890,7 @@ public class DialogoConfiguracion extends JDialog {
         actualizarBotonesReordenamiento();
 
         if (indice - 1 == 0 && !actualizandoProveedorUi) {
-            actualizandoListaMultiProveedor = true;
-            try {
-                comboProveedor.setSelectedItem(proveedor);
-            } finally {
-                actualizandoListaMultiProveedor = false;
-            }
+            seleccionarProveedorPrincipalDesdeLista(proveedor);
         }
     }
 
@@ -915,12 +907,7 @@ public class DialogoConfiguracion extends JDialog {
 
         if (indice == 0 && !actualizandoProveedorUi) {
             String nuevoProveedorPrincipal = modeloListaSeleccionados.getElementAt(0);
-            actualizandoListaMultiProveedor = true;
-            try {
-                comboProveedor.setSelectedItem(nuevoProveedorPrincipal);
-            } finally {
-                actualizandoListaMultiProveedor = false;
-            }
+            seleccionarProveedorPrincipalDesdeLista(nuevoProveedorPrincipal);
         }
     }
 
@@ -1476,11 +1463,12 @@ public class DialogoConfiguracion extends JDialog {
         guardandoConfiguracion = true;
 
         SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
-            private final StringBuilder errorMsg = new StringBuilder();
+            private String errorMsg = "";
             private ConfiguracionAPI snapshot;
 
             @Override
             protected Boolean doInBackground() {
+                StringBuilder errorBuilder = new StringBuilder();
                 try {
                     snapshot = config.crearSnapshot();
 
@@ -1536,13 +1524,17 @@ public class DialogoConfiguracion extends JDialog {
 
                     java.util.Map<String, String> errores = snapshot.validar();
                     if (!errores.isEmpty()) {
-                        errorMsg.append(construirMensajeErroresValidacion(errores));
+                        errorBuilder.append(construirMensajeErroresValidacion(errores));
+                        errorMsg = errorBuilder.toString();
                         return false;
                     }
 
-                    return gestorConfig.guardarConfiguracion(snapshot, errorMsg);
+                    boolean guardado = gestorConfig.guardarConfiguracion(snapshot, errorBuilder);
+                    errorMsg = errorBuilder.toString();
+                    return guardado;
                 } catch (Exception e) {
-                    errorMsg.append(e.getMessage());
+                    errorBuilder.append(e.getMessage());
+                    errorMsg = errorBuilder.toString();
                     return false;
                 }
             }
@@ -1559,7 +1551,7 @@ public class DialogoConfiguracion extends JDialog {
                         dispose();
                     } else {
                         UIUtils.mostrarError(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ERROR_GUARDAR(),
-                                errorMsg.toString());
+                                errorMsg);
                     }
                 } catch (Exception e) {
                     UIUtils.mostrarError(DialogoConfiguracion.this, I18nUI.Configuracion.TITULO_ERROR_GUARDAR(),
@@ -1693,6 +1685,23 @@ public class DialogoConfiguracion extends JDialog {
         } finally {
             actualizandoProveedorUi = false;
         }
+    }
+
+    private void seleccionarProveedorPrincipalDesdeLista(String proveedor) {
+        iniciarActualizacionListaMultiProveedor();
+        try {
+            comboProveedor.setSelectedItem(proveedor);
+        } finally {
+            finalizarActualizacionListaMultiProveedor();
+        }
+    }
+
+    private void iniciarActualizacionListaMultiProveedor() {
+        actualizandoListaMultiProveedor = true;
+    }
+
+    private void finalizarActualizacionListaMultiProveedor() {
+        actualizandoListaMultiProveedor = false;
     }
 
     private void cargarEstadoProveedor(String proveedor) {

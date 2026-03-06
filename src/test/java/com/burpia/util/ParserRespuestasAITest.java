@@ -19,129 +19,129 @@ class ParserRespuestasAITest {
     @DisplayName("Extrae contenido formato OpenAI/Z.ai")
     void testExtraerOpenAi() {
         String json = "{\"choices\":[{\"message\":{\"content\":\"OK desde OpenAI\"}}]}";
-        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
-        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "Z.ai"));
-        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_01));
-        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_02));
-        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_03));
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "OpenAI"), "assertEquals failed at ParserRespuestasAITest.java:22");
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, "Z.ai"), "assertEquals failed at ParserRespuestasAITest.java:23");
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_01), "assertEquals failed at ParserRespuestasAITest.java:24");
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_02), "assertEquals failed at ParserRespuestasAITest.java:25");
+        assertEquals("OK desde OpenAI", ParserRespuestasAI.extraerContenido(json, ProveedorAI.PROVEEDOR_CUSTOM_03), "assertEquals failed at ParserRespuestasAITest.java:26");
     }
 
     @Test
     @DisplayName("Extrae contenido formato OpenAI Responses API")
     void testExtraerOpenAiResponsesApi() {
         String json = "{\"output_text\":\"OK desde Responses\"}";
-        assertEquals("OK desde Responses", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+        assertEquals("OK desde Responses", ParserRespuestasAI.extraerContenido(json, "OpenAI"), "assertEquals failed at ParserRespuestasAITest.java:33");
     }
 
     @Test
     @DisplayName("Extrae reasoning_content cuando content viene vacío")
     void testExtraerReasoningContent() {
         String json = "{\"choices\":[{\"message\":{\"content\":\"\",\"reasoning_content\":\"Analisis interno\"}}]}";
-        assertEquals("Analisis interno", ParserRespuestasAI.extraerContenido(json, "Z.ai"));
+        assertEquals("Analisis interno", ParserRespuestasAI.extraerContenido(json, "Z.ai"), "assertEquals failed at ParserRespuestasAITest.java:40");
     }
 
     @Test
     @DisplayName("Extrae contenido formato Claude")
     void testExtraerClaude() {
         String json = "{\"content\":[{\"type\":\"text\",\"text\":\"Hola Claude\"}]}";
-        assertEquals("Hola Claude", ParserRespuestasAI.extraerContenido(json, "Claude"));
+        assertEquals("Hola Claude", ParserRespuestasAI.extraerContenido(json, "Claude"), "assertEquals failed at ParserRespuestasAITest.java:47");
     }
 
     @Test
     @DisplayName("Claude extrae texto aunque falte campo type")
     void testExtraerClaudeSinType() {
         String json = "{\"content\":[{\"text\":\"Hola Claude sin type\"}]}";
-        assertEquals("Hola Claude sin type", ParserRespuestasAI.extraerContenido(json, "Claude"));
+        assertEquals("Hola Claude sin type", ParserRespuestasAI.extraerContenido(json, "Claude"), "assertEquals failed at ParserRespuestasAITest.java:54");
     }
 
     @Test
     @DisplayName("Extrae contenido formato Gemini")
     void testExtraerGemini() {
         String json = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"OK Gemini\"}]}}]}";
-        assertEquals("OK Gemini", ParserRespuestasAI.extraerContenido(json, "Gemini"));
+        assertEquals("OK Gemini", ParserRespuestasAI.extraerContenido(json, "Gemini"), "assertEquals failed at ParserRespuestasAITest.java:61");
     }
 
     @Test
     @DisplayName("OpenAI ignora estructuras inválidas y usa fallback válido")
     void testOpenAiEstructuraMixta() {
         String json = "{\"choices\":[{\"message\":{\"content\":{}}},{\"text\":\"fallback texto\"}]}";
-        assertEquals("fallback texto", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+        assertEquals("fallback texto", ParserRespuestasAI.extraerContenido(json, "OpenAI"), "assertEquals failed at ParserRespuestasAITest.java:68");
     }
 
     @Test
     @DisplayName("OpenAI extrae texto cuando message.content llega como array estructurado")
     void testOpenAiContentArray() {
         String json = "{\"choices\":[{\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"OK desde array\"}]}}]}";
-        assertEquals("OK desde array", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+        assertEquals("OK desde array", ParserRespuestasAI.extraerContenido(json, "OpenAI"), "assertEquals failed at ParserRespuestasAITest.java:75");
     }
 
     @Test
     @DisplayName("OpenAI concatena todas las partes de message.content array")
     void testOpenAiContentArrayMultiparte() {
         String json = "{\"choices\":[{\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"hallazgos\\\":\"},{\"type\":\"text\",\"text\":\"[]}\"}]}}]}";
-        assertEquals("{\"hallazgos\":[]}", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+        assertEquals("{\"hallazgos\":[]}", ParserRespuestasAI.extraerContenido(json, "OpenAI"), "assertEquals failed at ParserRespuestasAITest.java:82");
     }
 
     @Test
     @DisplayName("Responses API concatena contenido multiparte de output.content")
     void testResponsesApiConcatenaOutputMultiparte() {
         String json = "{\"output\":[{\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"ok\\\":\"},{\"type\":\"output_text\",\"text\":\"true}\"}]}]}";
-        assertEquals("{\"ok\":true}", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+        assertEquals("{\"ok\":true}", ParserRespuestasAI.extraerContenido(json, "OpenAI"), "assertEquals failed at ParserRespuestasAITest.java:89");
     }
 
     @Test
     @DisplayName("Gemini ignora candidatos inválidos y toma primer texto util")
     void testGeminiCandidatosInvalidos() {
         String json = "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":{}}]}},{\"content\":{\"parts\":[{\"text\":\"OK Gemini 2\"}]}}]}";
-        assertEquals("OK Gemini 2", ParserRespuestasAI.extraerContenido(json, "Gemini"));
+        assertEquals("OK Gemini 2", ParserRespuestasAI.extraerContenido(json, "Gemini"), "assertEquals failed at ParserRespuestasAITest.java:96");
     }
 
     @Test
     @DisplayName("Extrae contenido formato Ollama")
     void testExtraerOllama() {
         String json = "{\"message\":{\"content\":\"OK Ollama\"}}";
-        assertEquals("OK Ollama", ParserRespuestasAI.extraerContenido(json, "Ollama"));
+        assertEquals("OK Ollama", ParserRespuestasAI.extraerContenido(json, "Ollama"), "assertEquals failed at ParserRespuestasAITest.java:103");
     }
 
     @Test
     @DisplayName("Valida respuestas esperadas de prueba")
     void testValidarRespuestaPrueba() {
-        assertTrue(ParserRespuestasAI.validarRespuestaPrueba("OK"));
-        assertTrue(ParserRespuestasAI.validarRespuestaPrueba("Hola"));
-        assertTrue(ParserRespuestasAI.validarRespuestaPrueba("hola mundo"));
-        assertFalse(ParserRespuestasAI.validarRespuestaPrueba("respuesta sin palabra esperada"));
+        assertTrue(ParserRespuestasAI.validarRespuestaPrueba("OK"), "assertTrue failed at ParserRespuestasAITest.java:109");
+        assertTrue(ParserRespuestasAI.validarRespuestaPrueba("Hola"), "assertTrue failed at ParserRespuestasAITest.java:110");
+        assertTrue(ParserRespuestasAI.validarRespuestaPrueba("hola mundo"), "assertTrue failed at ParserRespuestasAITest.java:111");
+        assertFalse(ParserRespuestasAI.validarRespuestaPrueba("respuesta sin palabra esperada"), "assertFalse failed at ParserRespuestasAITest.java:112");
     }
 
     @Test
     @DisplayName("Valida conexión con contenido no vacío")
     void testValidarRespuestaConexion() {
-        assertTrue(ParserRespuestasAI.validarRespuestaConexion("contenido cualquiera"));
-        assertFalse(ParserRespuestasAI.validarRespuestaConexion(""));
+        assertTrue(ParserRespuestasAI.validarRespuestaConexion("contenido cualquiera"), "assertTrue failed at ParserRespuestasAITest.java:118");
+        assertFalse(ParserRespuestasAI.validarRespuestaConexion(""), "assertFalse failed at ParserRespuestasAITest.java:119");
     }
 
     @Test
     @DisplayName("Elimina bloques <think> antes de retornar contenido")
     void testEliminaBloquesThink() {
         String json = "{\"choices\":[{\"message\":{\"content\":\"<think>paso interno</think>{\\\"hallazgos\\\":[]}\"}}]}";
-        assertEquals("{\"hallazgos\":[]}", ParserRespuestasAI.extraerContenido(json, "OpenAI"));
+        assertEquals("{\"hallazgos\":[]}", ParserRespuestasAI.extraerContenido(json, "OpenAI"), "assertEquals failed at ParserRespuestasAITest.java:126");
     }
 
     @Test
     @DisplayName("Elimina múltiples bloques de pensamiento y mantiene JSON final")
     void testEliminaMultiplesBloquesThink() {
         String json = "{\"choices\":[{\"message\":{\"content\":\"<think>uno</think> <thinking>dos</thinking> {\\\"ok\\\":true}\"}}]}";
-        assertEquals("{\"ok\":true}", ParserRespuestasAI.extraerContenido(json, "Z.ai"));
+        assertEquals("{\"ok\":true}", ParserRespuestasAI.extraerContenido(json, "Z.ai"), "assertEquals failed at ParserRespuestasAITest.java:133");
     }
 
     @Test
     @DisplayName("Extractor no estricto acepta alias en inglés")
     void testExtraerCampoNoEstrictoAliasIngles() {
         String contenido = "{\"title\":\"SQLi\",\"description\":\"detalle\",\"severity\":\"High\",\"confidence\":\"Low\",\"evidence\":\"id=1\"}";
-        assertEquals("SQLi", ParserRespuestasAI.extraerCampoNoEstricto("title", contenido));
-        assertEquals("detalle", ParserRespuestasAI.extraerCampoNoEstricto("description", contenido));
-        assertEquals("High", ParserRespuestasAI.extraerCampoNoEstricto("severity", contenido));
-        assertEquals("Low", ParserRespuestasAI.extraerCampoNoEstricto("confidence", contenido));
-        assertEquals("id=1", ParserRespuestasAI.extraerCampoNoEstricto("evidence", contenido));
+        assertEquals("SQLi", ParserRespuestasAI.extraerCampoNoEstricto("title", contenido), "assertEquals failed at ParserRespuestasAITest.java:140");
+        assertEquals("detalle", ParserRespuestasAI.extraerCampoNoEstricto("description", contenido), "assertEquals failed at ParserRespuestasAITest.java:141");
+        assertEquals("High", ParserRespuestasAI.extraerCampoNoEstricto("severity", contenido), "assertEquals failed at ParserRespuestasAITest.java:142");
+        assertEquals("Low", ParserRespuestasAI.extraerCampoNoEstricto("confidence", contenido), "assertEquals failed at ParserRespuestasAITest.java:143");
+        assertEquals("id=1", ParserRespuestasAI.extraerCampoNoEstricto("evidence", contenido), "assertEquals failed at ParserRespuestasAITest.java:144");
     }
 
     @Test
@@ -155,9 +155,9 @@ class ParserRespuestasAITest {
             "  \"evidence\": \"payload: \\\"test\\\"\"\n" +
             "}";
         
-        assertEquals("SQL Injection 'or 1=1--", ParserRespuestasAI.extraerCampoNoEstricto("title", contenidoEstructurado));
-        assertEquals("Encontramos un error: \"syntax error\" o \"Error 500\". Esto es grave.", ParserRespuestasAI.extraerCampoNoEstricto("description", contenidoEstructurado));
-        assertEquals("High", ParserRespuestasAI.extraerCampoNoEstricto("severity", contenidoEstructurado));
+        assertEquals("SQL Injection 'or 1=1--", ParserRespuestasAI.extraerCampoNoEstricto("title", contenidoEstructurado), "assertEquals failed at ParserRespuestasAITest.java:158");
+        assertEquals("Encontramos un error: \"syntax error\" o \"Error 500\". Esto es grave.", ParserRespuestasAI.extraerCampoNoEstricto("description", contenidoEstructurado), "assertEquals failed at ParserRespuestasAITest.java:159");
+        assertEquals("High", ParserRespuestasAI.extraerCampoNoEstricto("severity", contenidoEstructurado), "assertEquals failed at ParserRespuestasAITest.java:160");
     }
 
     @Test
@@ -172,9 +172,9 @@ class ParserRespuestasAITest {
 
         assertEquals(2, hallazgos.size(), "Debe recuperar 2 hallazgos");
         assertEquals("SQL Injection",
-            hallazgos.get(0).getAsJsonObject().get("titulo").getAsString());
+            hallazgos.get(0).getAsJsonObject().get("titulo").getAsString(), "assertEquals failed at ParserRespuestasAITest.java:174");
         assertEquals("XSS",
-            hallazgos.get(1).getAsJsonObject().get("titulo").getAsString());
+            hallazgos.get(1).getAsJsonObject().get("titulo").getAsString(), "assertEquals failed at ParserRespuestasAITest.java:176");
     }
 
     @Test
@@ -214,8 +214,8 @@ class ParserRespuestasAITest {
     void testExtraerArrayJsonInteligente_ContenidoVacio() {
         Gson gson = new Gson();
 
-        assertNull(ParserRespuestasAI.extraerArrayJsonInteligente("", gson));
-        assertNull(ParserRespuestasAI.extraerArrayJsonInteligente(null, gson));
+        assertNull(ParserRespuestasAI.extraerArrayJsonInteligente("", gson), "assertNull failed at ParserRespuestasAITest.java:217");
+        assertNull(ParserRespuestasAI.extraerArrayJsonInteligente(null, gson), "assertNull failed at ParserRespuestasAITest.java:218");
     }
 
     @Test

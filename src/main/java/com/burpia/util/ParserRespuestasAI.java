@@ -108,9 +108,8 @@ public class ParserRespuestasAI {
             }
 
             JsonObject raiz = elemento.getAsJsonObject();
-            String contenido = "";
-
             String proveedorNormalizado = proveedor != null ? proveedor : "";
+            String contenido;
 
             if ("Ollama".equals(proveedorNormalizado)) {
                 contenido = extraerContenidoOllama(raiz);

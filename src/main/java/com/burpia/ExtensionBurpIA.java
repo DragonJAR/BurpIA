@@ -25,6 +25,7 @@ import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
 import com.burpia.util.VersionBurpIA;
 import javax.swing.*;
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
@@ -32,6 +33,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
@@ -73,76 +75,8 @@ public class ExtensionBurpIA implements BurpExtension {
             unload();
         });
 
-        this.stdout = new PrintWriter(new OutputStream() {
-            private final StringBuilder buffer = new StringBuilder();
-
-            @Override
-            public void write(int b) {
-                if (b == '\n') {
-                    flushBuffer();
-                } else {
-                    buffer.append((char) b);
-                }
-            }
-
-            @Override
-            public void write(byte[] b, int off, int len) {
-                String s = new String(b, off, len, StandardCharsets.UTF_8);
-                if (s.contains("\n")) {
-                    buffer.append(s);
-                    flushBuffer();
-                } else {
-                    buffer.append(s);
-                }
-            }
-
-            private void flushBuffer() {
-                if (buffer.length() > 0) {
-                    api.logging().logToOutput(buffer.toString());
-                    buffer.setLength(0);
-                }
-            }
-
-            @Override
-            public void flush() {
-                flushBuffer();
-            }
-        }, true);
-        this.stderr = new PrintWriter(new OutputStream() {
-            private final StringBuilder buffer = new StringBuilder();
-
-            @Override
-            public void write(int b) {
-                if (b == '\n') {
-                    flushBuffer();
-                } else {
-                    buffer.append((char) b);
-                }
-            }
-
-            @Override
-            public void write(byte[] b, int off, int len) {
-                String s = new String(b, off, len, StandardCharsets.UTF_8);
-                if (s.contains("\n")) {
-                    buffer.append(s);
-                    flushBuffer();
-                } else {
-                    buffer.append(s);
-                }
-            }
-
-            private void flushBuffer() {
-                if (buffer.length() > 0) {
-                    api.logging().logToError(buffer.toString());
-                    buffer.setLength(0);
-                }
-            }
-
-            @Override
-            public void flush() {
-                flushBuffer();
-            }
-        }, true);
+        this.stdout = crearPrintWriterMontoya(api.logging()::logToOutput);
+        this.stderr = crearPrintWriterMontoya(api.logging()::logToError);
 
         gestorConfig = new GestorConfiguracion(stdout, stderr);
         config = gestorConfig.cargarConfiguracion();
@@ -207,6 +141,43 @@ public class ExtensionBurpIA implements BurpExtension {
         }
 
         registrar(I18nLogs.Inicializacion.INICIALIZACION_COMPLETA());
+    }
+
+    private PrintWriter crearPrintWriterMontoya(Consumer<String> sink) {
+        return new PrintWriter(new OutputStream() {
+            private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+            @Override
+            public void write(int b) {
+                if (b == '\n') {
+                    flushBuffer();
+                    return;
+                }
+                buffer.write(b);
+            }
+
+            @Override
+            public void write(byte[] b, int off, int len) {
+                String texto = new String(b, off, len, StandardCharsets.UTF_8);
+                buffer.write(b, off, len);
+                if (texto.contains("\n")) {
+                    flushBuffer();
+                }
+            }
+
+            private void flushBuffer() {
+                if (buffer.size() == 0) {
+                    return;
+                }
+                sink.accept(buffer.toString(StandardCharsets.UTF_8));
+                buffer.reset();
+            }
+
+            @Override
+            public void flush() {
+                flushBuffer();
+            }
+        }, true);
     }
 
     private void analizarSolicitudManual(HttpRequest solicitud, boolean forzarAnalisis,
@@ -582,31 +553,31 @@ public class ExtensionBurpIA implements BurpExtension {
 
         // Header siempre presente
         gestorLogging.separador();
-        gestorLogging.info(" BurpIA v" + VersionBurpIA.obtenerVersionActual());
+        registrar(" BurpIA v" + VersionBurpIA.obtenerVersionActual());
         gestorLogging.separador();
 
         // Sección [Configuration] - MODO NORMAL
-        gestorLogging.info(I18nLogs.Inicializacion.SECCION_CONFIGURACION());
-        gestorLogging.info("  " + I18nLogs.Inicializacion.PROVEEDOR_PRINCIPAL()
+        registrar(I18nLogs.Inicializacion.SECCION_CONFIGURACION());
+        registrar("  " + I18nLogs.Inicializacion.PROVEEDOR_PRINCIPAL()
                 + proveedor + " (" + modelo + "), " + I18nLogs.Inicializacion.TIMEOUT_SEGUNDOS(String.valueOf(timeoutEfectivo)));
 
         // Multi-proveedor (condicional)
         if (config.esMultiProveedorHabilitado()) {
             List<String> proveedoresMulti = config.obtenerProveedoresMultiConsulta();
             if (proveedoresMulti != null && !proveedoresMulti.isEmpty()) {
-                gestorLogging.info("  " + I18nLogs.Inicializacion.MULTI_PROVEEDOR()
+                registrar("  " + I18nLogs.Inicializacion.MULTI_PROVEEDOR()
                         + String.join(", ", proveedoresMulti));
             }
         }
 
         // Concurrencia y rendimiento
-        gestorLogging.info("  " + I18nLogs.Inicializacion.CONCURRENCIA()
+        registrar("  " + I18nLogs.Inicializacion.CONCURRENCIA()
                 + I18nLogs.Inicializacion.TAREAS(String.valueOf(config.obtenerMaximoConcurrente()))
                 + ", " + I18nLogs.Inicializacion.RETRASO_SEGUNDOS(String.valueOf(config.obtenerRetrasoSegundos()))
                 + ", " + I18nLogs.Inicializacion.MAX_HALLAZGOS(String.valueOf(config.obtenerMaximoHallazgosTabla())));
 
         // Flags binarios
-        gestorLogging.info("  " + I18nLogs.Inicializacion.MODO_DETALLADO()
+        registrar("  " + I18nLogs.Inicializacion.MODO_DETALLADO()
                 + (detallado ? I18nLogs.Inicializacion.SI() : I18nLogs.Inicializacion.NO())
                 + " | " + I18nLogs.Inicializacion.AGENTE()
                 + (config.agenteHabilitado() ? I18nLogs.Inicializacion.SI() : I18nLogs.Inicializacion.NO()));
@@ -614,34 +585,29 @@ public class ExtensionBurpIA implements BurpExtension {
 
         // Sección [Environment] - SOLO MODO DETALLADO
         if (detallado) {
-            gestorLogging.info(I18nLogs.Inicializacion.SECCION_ENTORNO());
-            gestorLogging.info("  " + I18nLogs.Inicializacion.ENTORNO_BURP_SUITE(
+            registrar(I18nLogs.Inicializacion.SECCION_ENTORNO());
+            registrar("  " + I18nLogs.Inicializacion.ENTORNO_BURP_SUITE(
                     esProfessional ? "Professional" : "Community Edition",
                     obtenerVersionBurp(api)));
 
-            // Java y OS (opcional, disponible si se quiere agregar)
-            gestorLogging.info("");
-
             // Detalles técnicos de IA
-            gestorLogging.info("  " + I18nLogs.Inicializacion.URL_API(config.obtenerUrlApi()));
-            gestorLogging.info("  " + I18nLogs.Inicializacion.API_KEY(
+            registrar("  " + I18nLogs.Inicializacion.URL_API(config.obtenerUrlApi()));
+            registrar("  " + I18nLogs.Inicializacion.API_KEY(
                     com.burpia.util.Normalizador.sanitizarApiKey(config.obtenerClaveApi())));
-            gestorLogging.info("  " + I18nLogs.Inicializacion.TIMEOUT_GLOBAL(
+            registrar("  " + I18nLogs.Inicializacion.TIMEOUT_GLOBAL(
                     String.valueOf(config.obtenerTiempoEsperaAI()),
                     String.valueOf(timeoutEfectivo),
                     String.valueOf(timeoutEfectivo)));
-            gestorLogging.info("  " + I18nLogs.Inicializacion.SSL_VERIFICACION(!config.ignorarErroresSSL()));
-            gestorLogging.info("  " + I18nLogs.Inicializacion.MODO_SOLO_PROXY(config.soloProxy()));
-            gestorLogging.info("  " + I18nLogs.Inicializacion.IDIOMA(
-                    config.obtenerIdiomaUi().equals("es") ? "Español" : "English",
+            registrar("  " + I18nLogs.Inicializacion.SSL_VERIFICACION(!config.ignorarErroresSSL()));
+            registrar("  " + I18nLogs.Inicializacion.MODO_SOLO_PROXY(config.soloProxy()));
+            registrar("  " + I18nLogs.Inicializacion.IDIOMA(
+                    "es".equals(config.obtenerIdiomaUi()) ? "Español" : "English",
                     config.obtenerIdiomaUi()));
-            gestorLogging.info("  " + I18nLogs.Inicializacion.TEMA(config.obtenerTema()));
 
             // Multi-provider details
             if (config.esMultiProveedorHabilitado()) {
-                gestorLogging.info("");
-                gestorLogging.info(I18nLogs.Inicializacion.SECCION_MULTI_PROVEEDOR());
-                gestorLogging.info("  " + I18nLogs.Inicializacion.MULTI_HABILITADO(true));
+                registrar(I18nLogs.Inicializacion.SECCION_MULTI_PROVEEDOR());
+                registrar("  " + I18nLogs.Inicializacion.MULTI_HABILITADO(true));
                 List<String> proveedoresMulti = config.obtenerProveedoresMultiConsulta();
                 if (proveedoresMulti != null && !proveedoresMulti.isEmpty()) {
                     StringBuilder sb = new StringBuilder(I18nLogs.Inicializacion.PROVEEDORES());
@@ -654,28 +620,26 @@ public class ExtensionBurpIA implements BurpExtension {
                         sb.append(prov).append(" (").append(provModelo).append(", timeout ")
                           .append(provTimeout).append("s)");
                     }
-                    gestorLogging.info("  " + sb.toString());
-                    gestorLogging.info("  " + I18nLogs.Inicializacion.ORDEN_EJECUCION()
+                    registrar("  " + sb);
+                    registrar("  " + I18nLogs.Inicializacion.ORDEN_EJECUCION()
                             + proveedor + " → " + String.join(" → ", proveedoresMulti));
                 }
             }
 
             // Performance details
-            gestorLogging.info("");
-            gestorLogging.info(I18nLogs.Inicializacion.SECCION_RENDIMIENTO());
-            gestorLogging.info("  " + I18nLogs.Inicializacion.CONCURRENCIA_MAX(String.valueOf(config.obtenerMaximoConcurrente())));
-            gestorLogging.info("  " + I18nLogs.Inicializacion.MAX_TAREAS(String.valueOf(config.obtenerMaximoTareasTabla())));
-            gestorLogging.info("  " + I18nLogs.Inicializacion.RETENCION(String.valueOf(2000)));
+            registrar(I18nLogs.Inicializacion.SECCION_RENDIMIENTO());
+            registrar("  " + I18nLogs.Inicializacion.CONCURRENCIA_MAX(String.valueOf(config.obtenerMaximoConcurrente())));
+            registrar("  " + I18nLogs.Inicializacion.MAX_TAREAS(String.valueOf(config.obtenerMaximoTareasTabla())));
+            registrar("  " + I18nLogs.Inicializacion.RETENCION(String.valueOf(2000)));
 
             // Agent details
-            gestorLogging.info("");
-            gestorLogging.info(I18nLogs.Inicializacion.SECCION_AGENTE());
-            gestorLogging.info("  " + I18nLogs.Inicializacion.AGENTE_HABILITADO(config.agenteHabilitado()));
+            registrar(I18nLogs.Inicializacion.SECCION_AGENTE());
+            registrar("  " + I18nLogs.Inicializacion.AGENTE_HABILITADO(config.agenteHabilitado()));
             if (config.agenteHabilitado()) {
-                gestorLogging.info("  " + I18nLogs.Inicializacion.AGENTE_TIPO(config.obtenerTipoAgente()));
+                registrar("  " + I18nLogs.Inicializacion.AGENTE_TIPO(config.obtenerTipoAgente()));
                 String rutaBinario = config.obtenerRutaBinarioAgente(config.obtenerTipoAgente());
                 if (rutaBinario != null && !rutaBinario.isEmpty()) {
-                    gestorLogging.info("  " + I18nLogs.Inicializacion.AGENTE_BINARIO(rutaBinario));
+                    registrar("  " + I18nLogs.Inicializacion.AGENTE_BINARIO(rutaBinario));
                 }
             }
             gestorLogging.separador();
@@ -711,15 +675,14 @@ public class ExtensionBurpIA implements BurpExtension {
         }
 
         boolean autoGuardadoIssuesPermitido = esProfessional && config.autoGuardadoIssuesHabilitado();
-        if (config.autoGuardadoIssuesHabilitado() != autoGuardadoIssuesPermitido) {
-            config.establecerAutoGuardadoIssuesHabilitado(autoGuardadoIssuesPermitido);
-            guardarConfiguracionSilenciosa("auto-issues-edicion");
-        }
 
         pestaniaPrincipal.establecerGuardadoAutomaticoIssuesActivo(autoGuardadoIssuesPermitido);
         pestaniaPrincipal.establecerAutoScrollConsolaActivo(config.autoScrollConsolaHabilitado());
 
         pestaniaPrincipal.establecerManejadorAutoGuardadoIssues(activo -> {
+            if (!esProfessional) {
+                return;
+            }
             boolean autoGuardadoNormalizado = esProfessional && activo;
             if (config.autoGuardadoIssuesHabilitado() == autoGuardadoNormalizado) {
                 return;

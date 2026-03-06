@@ -32,9 +32,9 @@ class ControlBackpressureGlobalTest {
             ControlBackpressureGlobal control = new ControlBackpressureGlobal();
             control.activarCooldown(200L);
             
-            assertTrue(control.estaEnCooldown());
-            assertTrue(control.milisegundosRestantes() > 0L);
-            assertTrue(control.milisegundosRestantes() <= 200L);
+            assertTrue(control.estaEnCooldown(), "assertTrue failed at ControlBackpressureGlobalTest.java:35");
+            assertTrue(control.milisegundosRestantes() > 0L, "assertTrue failed at ControlBackpressureGlobalTest.java:36");
+            assertTrue(control.milisegundosRestantes() <= 200L, "assertTrue failed at ControlBackpressureGlobalTest.java:37");
         }
 
         @Test
@@ -43,8 +43,8 @@ class ControlBackpressureGlobalTest {
             ControlBackpressureGlobal control = new ControlBackpressureGlobal();
             control.activarCooldown(-100L);
             
-            assertFalse(control.estaEnCooldown());
-            assertEquals(0L, control.milisegundosRestantes());
+            assertFalse(control.estaEnCooldown(), "assertFalse failed at ControlBackpressureGlobalTest.java:46");
+            assertEquals(0L, control.milisegundosRestantes(), "assertEquals failed at ControlBackpressureGlobalTest.java:47");
         }
 
         @Test
@@ -53,8 +53,8 @@ class ControlBackpressureGlobalTest {
             ControlBackpressureGlobal control = new ControlBackpressureGlobal();
             control.activarCooldown(0L);
             
-            assertFalse(control.estaEnCooldown());
-            assertEquals(0L, control.milisegundosRestantes());
+            assertFalse(control.estaEnCooldown(), "assertFalse failed at ControlBackpressureGlobalTest.java:56");
+            assertEquals(0L, control.milisegundosRestantes(), "assertEquals failed at ControlBackpressureGlobalTest.java:57");
         }
 
         @Test
@@ -63,8 +63,8 @@ class ControlBackpressureGlobalTest {
             ControlBackpressureGlobal control = new ControlBackpressureGlobal();
             control.activarCooldown(Long.MAX_VALUE - System.currentTimeMillis() - 1);
             
-            assertTrue(control.estaEnCooldown());
-            assertTrue(control.milisegundosRestantes() > 0L);
+            assertTrue(control.estaEnCooldown(), "assertTrue failed at ControlBackpressureGlobalTest.java:66");
+            assertTrue(control.milisegundosRestantes() > 0L, "assertTrue failed at ControlBackpressureGlobalTest.java:67");
         }
     }
 
@@ -82,8 +82,8 @@ class ControlBackpressureGlobalTest {
             control.activarCooldown(500L);
             long restantesFinal = control.milisegundosRestantes();
             
-            assertTrue(restantesFinal > restantesInicial);
-            assertTrue(control.milisegundosRestantes() > 100L);
+            assertTrue(restantesFinal > restantesInicial, "assertTrue failed at ControlBackpressureGlobalTest.java:85");
+            assertTrue(control.milisegundosRestantes() > 100L, "assertTrue failed at ControlBackpressureGlobalTest.java:86");
         }
 
         @Test
@@ -97,7 +97,7 @@ class ControlBackpressureGlobalTest {
             long restantesFinal = control.milisegundosRestantes();
             
             // Debe mantener el cooldown más largo (dentro del margen de tiempo transcurrido)
-            assertTrue(restantesFinal >= restantesInicial - 10L);
+            assertTrue(restantesFinal >= restantesInicial - 10L, "assertTrue failed at ControlBackpressureGlobalTest.java:100");
         }
     }
 
@@ -110,12 +110,12 @@ class ControlBackpressureGlobalTest {
         void limpiarCooldownReseteaEstado() {
             ControlBackpressureGlobal control = new ControlBackpressureGlobal();
             control.activarCooldown(5000L);
-            assertTrue(control.estaEnCooldown());
+            assertTrue(control.estaEnCooldown(), "assertTrue failed at ControlBackpressureGlobalTest.java:113");
             
             control.limpiar();
             
-            assertFalse(control.estaEnCooldown());
-            assertEquals(0L, control.milisegundosRestantes());
+            assertFalse(control.estaEnCooldown(), "assertFalse failed at ControlBackpressureGlobalTest.java:117");
+            assertEquals(0L, control.milisegundosRestantes(), "assertEquals failed at ControlBackpressureGlobalTest.java:118");
         }
 
         @Test
@@ -125,8 +125,8 @@ class ControlBackpressureGlobalTest {
             
             control.limpiar();
             
-            assertFalse(control.estaEnCooldown());
-            assertEquals(0L, control.milisegundosRestantes());
+            assertFalse(control.estaEnCooldown(), "assertFalse failed at ControlBackpressureGlobalTest.java:128");
+            assertEquals(0L, control.milisegundosRestantes(), "assertEquals failed at ControlBackpressureGlobalTest.java:129");
         }
     }
 
@@ -159,8 +159,8 @@ class ControlBackpressureGlobalTest {
             latch.await(5, TimeUnit.SECONDS);
             executor.shutdown();
 
-            assertEquals(0, errores.get());
-            assertTrue(control.estaEnCooldown());
+            assertEquals(0, errores.get(), "assertEquals failed at ControlBackpressureGlobalTest.java:162");
+            assertTrue(control.estaEnCooldown(), "assertTrue failed at ControlBackpressureGlobalTest.java:163");
         }
 
         @Test
@@ -194,7 +194,7 @@ class ControlBackpressureGlobalTest {
             latch.await(5, TimeUnit.SECONDS);
             executor.shutdown();
 
-            assertEquals(0, errores.get());
+            assertEquals(0, errores.get(), "assertEquals failed at ControlBackpressureGlobalTest.java:197");
         }
     }
 
@@ -212,8 +212,8 @@ class ControlBackpressureGlobalTest {
             
             long expiracion = control.obtenerExpiracionCooldown();
             
-            assertTrue(expiracion >= antes + 1000L);
-            assertTrue(expiracion <= despues + 1000L);
+            assertTrue(expiracion >= antes + 1000L, "assertTrue failed at ControlBackpressureGlobalTest.java:215");
+            assertTrue(expiracion <= despues + 1000L, "assertTrue failed at ControlBackpressureGlobalTest.java:216");
         }
 
         @Test
@@ -221,7 +221,7 @@ class ControlBackpressureGlobalTest {
         void obtenerExpiracionSinCooldownDevuelveCero() {
             ControlBackpressureGlobal control = new ControlBackpressureGlobal();
             
-            assertEquals(0L, control.obtenerExpiracionCooldown());
+            assertEquals(0L, control.obtenerExpiracionCooldown(), "assertEquals failed at ControlBackpressureGlobalTest.java:224");
         }
 
         @Test
@@ -231,7 +231,7 @@ class ControlBackpressureGlobalTest {
             
             String resultado = control.toString();
             
-            assertTrue(resultado.contains("sin cooldown activo"));
+            assertTrue(resultado.contains("sin cooldown activo"), "assertTrue failed at ControlBackpressureGlobalTest.java:234");
         }
 
         @Test
@@ -242,8 +242,8 @@ class ControlBackpressureGlobalTest {
             
             String resultado = control.toString();
             
-            assertTrue(resultado.contains("cooldown:"));
-            assertTrue(resultado.contains("ms restantes"));
+            assertTrue(resultado.contains("cooldown:"), "assertTrue failed at ControlBackpressureGlobalTest.java:245");
+            assertTrue(resultado.contains("ms restantes"), "assertTrue failed at ControlBackpressureGlobalTest.java:246");
         }
     }
 }

@@ -39,7 +39,7 @@ class DeduplicadorSolicitudesTest {
         @DisplayName("Primer hash no es duplicado")
         void primerHashNoEsDuplicado() {
             boolean esDuplicado = deduplicador.esDuplicadoYAgregar("hash1");
-            assertFalse(esDuplicado);
+            assertFalse(esDuplicado, "assertFalse failed at DeduplicadorSolicitudesTest.java:42");
         }
 
         @Test
@@ -47,7 +47,7 @@ class DeduplicadorSolicitudesTest {
         void segundoHashIgualEsDuplicado() {
             deduplicador.esDuplicadoYAgregar("hash1");
             boolean esDuplicado = deduplicador.esDuplicadoYAgregar("hash1");
-            assertTrue(esDuplicado);
+            assertTrue(esDuplicado, "assertTrue failed at DeduplicadorSolicitudesTest.java:50");
         }
 
         @Test
@@ -55,7 +55,7 @@ class DeduplicadorSolicitudesTest {
         void hashesDiferentesNoSonDuplicados() {
             deduplicador.esDuplicadoYAgregar("hash1");
             boolean esDuplicado = deduplicador.esDuplicadoYAgregar("hash2");
-            assertFalse(esDuplicado);
+            assertFalse(esDuplicado, "assertFalse failed at DeduplicadorSolicitudesTest.java:58");
         }
 
         @Test
@@ -67,9 +67,9 @@ class DeduplicadorSolicitudesTest {
             deduplicador.esDuplicadoYAgregar("hash3");
             deduplicador.esDuplicadoYAgregar("hash2");
 
-            assertTrue(deduplicador.esDuplicadoYAgregar("hash1"));
-            assertTrue(deduplicador.esDuplicadoYAgregar("hash2"));
-            assertTrue(deduplicador.esDuplicadoYAgregar("hash3"));
+            assertTrue(deduplicador.esDuplicadoYAgregar("hash1"), "assertTrue failed at DeduplicadorSolicitudesTest.java:70");
+            assertTrue(deduplicador.esDuplicadoYAgregar("hash2"), "assertTrue failed at DeduplicadorSolicitudesTest.java:71");
+            assertTrue(deduplicador.esDuplicadoYAgregar("hash3"), "assertTrue failed at DeduplicadorSolicitudesTest.java:72");
         }
     }
 
@@ -81,14 +81,14 @@ class DeduplicadorSolicitudesTest {
         @NullAndEmptySource
         @DisplayName("Hash nulo o vacío no es duplicado y no se agrega")
         void hashNuloOVacioNoEsDuplicado(String hash) {
-            assertFalse(deduplicador.esDuplicadoYAgregar(hash));
+            assertFalse(deduplicador.esDuplicadoYAgregar(hash), "assertFalse failed at DeduplicadorSolicitudesTest.java:84");
         }
 
         @ParameterizedTest
         @ValueSource(strings = {"   ", "\t", "\n", "  \t  "})
         @DisplayName("Hash con solo espacios en blanco no es duplicado")
         void hashSoloEspaciosNoEsDuplicado(String hash) {
-            assertFalse(deduplicador.esDuplicadoYAgregar(hash));
+            assertFalse(deduplicador.esDuplicadoYAgregar(hash), "assertFalse failed at DeduplicadorSolicitudesTest.java:91");
         }
     }
 
@@ -101,34 +101,34 @@ class DeduplicadorSolicitudesTest {
         void normalizaMaxHashesCero() {
             DeduplicadorSolicitudes deduplicadorLocal = new DeduplicadorSolicitudes(0, 60000);
             // Solo puede haber un elemento
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"));
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h2")); // h1 es evicto
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h3")); // h2 es evicto
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertFalse failed at DeduplicadorSolicitudesTest.java:104");
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h2"), "assertFalse failed at DeduplicadorSolicitudesTest.java:105"); // h1 es evicto
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h3"), "assertFalse failed at DeduplicadorSolicitudesTest.java:106"); // h2 es evicto
         }
 
         @Test
         @DisplayName("Normaliza maxHashes negativo a uno")
         void normalizaMaxHashesNegativo() {
             DeduplicadorSolicitudes deduplicadorLocal = new DeduplicadorSolicitudes(-5, 60000);
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"));
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h2")); // h1 es evicto
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertFalse failed at DeduplicadorSolicitudesTest.java:113");
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h2"), "assertFalse failed at DeduplicadorSolicitudesTest.java:114"); // h1 es evicto
         }
 
         @Test
         @DisplayName("Normaliza ttlMillis menor a 10ms a 10ms")
         void normalizaTtlMillisMinimo() {
             DeduplicadorSolicitudes deduplicadorLocal = new DeduplicadorSolicitudes(10, 1);
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"));
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertFalse failed at DeduplicadorSolicitudesTest.java:121");
             // Con TTL de 10ms mínimo, el hash debería seguir existiendo brevemente
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h1"));
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertTrue failed at DeduplicadorSolicitudesTest.java:123");
         }
 
         @Test
         @DisplayName("Acepta configuración válida")
         void aceptaConfiguracionValida() {
             DeduplicadorSolicitudes deduplicadorLocal = new DeduplicadorSolicitudes(100, 30000);
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"));
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h1"));
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertFalse failed at DeduplicadorSolicitudesTest.java:130");
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertTrue failed at DeduplicadorSolicitudesTest.java:131");
         }
     }
 
@@ -146,11 +146,11 @@ class DeduplicadorSolicitudesTest {
             deduplicadorLocal.esDuplicadoYAgregar("h4"); // h1 debe ser evicto
 
             // h2, h3, h4 deberían seguir existiendo
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h2"));
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h3"));
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h4"));
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h2"), "assertTrue failed at DeduplicadorSolicitudesTest.java:149");
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h3"), "assertTrue failed at DeduplicadorSolicitudesTest.java:150");
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h4"), "assertTrue failed at DeduplicadorSolicitudesTest.java:151");
             // h1 fue evicto, ya no es duplicado
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"));
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertFalse failed at DeduplicadorSolicitudesTest.java:153");
         }
 
         @Test
@@ -162,17 +162,17 @@ class DeduplicadorSolicitudesTest {
             deduplicadorLocal.esDuplicadoYAgregar("h3");
 
             // Acceder a h1 lo marca como recientemente usado
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h1"));
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertTrue failed at DeduplicadorSolicitudesTest.java:165");
 
             // Agregar h4 debería evictar h2 (el menos recientemente accedido)
             deduplicadorLocal.esDuplicadoYAgregar("h4");
 
             // h1, h3, h4 deberían seguir existiendo
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h1"));
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h3"));
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h4"));
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h1"), "assertTrue failed at DeduplicadorSolicitudesTest.java:171");
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h3"), "assertTrue failed at DeduplicadorSolicitudesTest.java:172");
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("h4"), "assertTrue failed at DeduplicadorSolicitudesTest.java:173");
             // h2 fue evicto por ser LRU
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h2"));
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("h2"), "assertFalse failed at DeduplicadorSolicitudesTest.java:175");
         }
 
         @Test
@@ -188,13 +188,13 @@ class DeduplicadorSolicitudesTest {
 
             // Verificar primero los que deberían existir (d y e)
             // Importante: verificar en orden inverso para no alterar LRU
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("e"));
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("d"));
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("e"), "assertTrue failed at DeduplicadorSolicitudesTest.java:191");
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("d"), "assertTrue failed at DeduplicadorSolicitudesTest.java:192");
 
             // Los elementos evictos (a, b, c) ya no son duplicados
             // Nota: verificar un elemento evicto lo re-agrega, por eso
             // verificamos primero los que deberían existir
-            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("a"));
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("a"), "assertFalse failed at DeduplicadorSolicitudesTest.java:197");
         }
     }
 
@@ -211,7 +211,7 @@ class DeduplicadorSolicitudesTest {
             deduplicadorLocal.esDuplicadoYAgregar("expirable");
 
             // Inmediatamente debería ser duplicado
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("expirable"));
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("expirable"), "assertTrue failed at DeduplicadorSolicitudesTest.java:214");
 
             // Esperar a que expire + intervalo de limpieza (30 segundos mínimo)
             // Usamos un TTL muy corto y forzamos una nueva operación para disparar limpieza
@@ -239,7 +239,7 @@ class DeduplicadorSolicitudesTest {
             Thread.sleep(50);
 
             // Debería seguir siendo duplicado
-            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("persistente"));
+            assertTrue(deduplicadorLocal.esDuplicadoYAgregar("persistente"), "assertTrue failed at DeduplicadorSolicitudesTest.java:242");
         }
     }
 
@@ -312,7 +312,7 @@ class DeduplicadorSolicitudesTest {
             listo.await(5, TimeUnit.SECONDS);
 
             // Todos los hilos deberían detectar que es duplicado
-            assertEquals(numHilos, duplicadosDetectados.get());
+            assertEquals(numHilos, duplicadosDetectados.get(), "assertEquals failed at DeduplicadorSolicitudesTest.java:315");
         }
 
         @Test

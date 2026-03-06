@@ -24,8 +24,8 @@ class SubmitSequenceFactoryTest {
                 AgenteTipo.CLAUDE_CODE,
                 SubmitSequenceFactory.Plataforma.LINUX
             );
-            assertEquals("\r", secuencia.payload());
-            assertEquals(1, secuencia.repeticiones());
+            assertEquals("\r", secuencia.payload(), "assertEquals failed at SubmitSequenceFactoryTest.java:27");
+            assertEquals(1, secuencia.repeticiones(), "assertEquals failed at SubmitSequenceFactoryTest.java:28");
         }
 
         @Test
@@ -35,8 +35,8 @@ class SubmitSequenceFactoryTest {
                 AgenteTipo.CLAUDE_CODE,
                 SubmitSequenceFactory.Plataforma.WINDOWS
             );
-            assertEquals("\r\n", secuencia.payload());
-            assertEquals(1, secuencia.repeticiones());
+            assertEquals("\r\n", secuencia.payload(), "assertEquals failed at SubmitSequenceFactoryTest.java:38");
+            assertEquals(1, secuencia.repeticiones(), "assertEquals failed at SubmitSequenceFactoryTest.java:39");
         }
 
         @Test
@@ -46,8 +46,8 @@ class SubmitSequenceFactoryTest {
                 AgenteTipo.CLAUDE_CODE,
                 SubmitSequenceFactory.Plataforma.MAC
             );
-            assertEquals("\r", secuencia.payload());
-            assertEquals(1, secuencia.repeticiones());
+            assertEquals("\r", secuencia.payload(), "assertEquals failed at SubmitSequenceFactoryTest.java:49");
+            assertEquals(1, secuencia.repeticiones(), "assertEquals failed at SubmitSequenceFactoryTest.java:50");
         }
     }
 
@@ -106,7 +106,7 @@ class SubmitSequenceFactoryTest {
                 null
             );
 
-            assertEquals("\r", secuencia.payload());
+            assertEquals("\r", secuencia.payload(), "assertEquals failed at SubmitSequenceFactoryTest.java:109");
         }
 
         @Test
@@ -116,8 +116,8 @@ class SubmitSequenceFactoryTest {
                 AgenteTipo.FACTORY_DROID
             );
 
-            assertNotNull(secuencia);
-            assertNotNull(secuencia.payload());
+            assertNotNull(secuencia, "assertNotNull failed at SubmitSequenceFactoryTest.java:119");
+            assertNotNull(secuencia.payload(), "assertNotNull failed at SubmitSequenceFactoryTest.java:120");
         }
     }
 
@@ -133,7 +133,7 @@ class SubmitSequenceFactoryTest {
                 SubmitSequenceFactory.Plataforma.LINUX
             );
 
-            assertEquals("AUTO_CLAUDE x1", secuencia.descripcion());
+            assertEquals("AUTO_CLAUDE x1", secuencia.descripcion(), "assertEquals failed at SubmitSequenceFactoryTest.java:136");
         }
 
         @Test
@@ -144,7 +144,7 @@ class SubmitSequenceFactoryTest {
                 SubmitSequenceFactory.Plataforma.LINUX
             );
 
-            assertEquals(0, secuencia.delayEntreEnviosMs());
+            assertEquals(0, secuencia.delayEntreEnviosMs(), "assertEquals failed at SubmitSequenceFactoryTest.java:147");
         }
 
         @Test
@@ -157,8 +157,8 @@ class SubmitSequenceFactoryTest {
 
             SubmitSequenceFactory.SubmitSequence resultado = secuencia.conFallback(null, 1, 100);
 
-            assertSame(secuencia, resultado);
-            assertNull(secuencia.getFallback());
+            assertSame(secuencia, resultado, "assertSame failed at SubmitSequenceFactoryTest.java:160");
+            assertNull(secuencia.getFallback(), "assertNull failed at SubmitSequenceFactoryTest.java:161");
         }
 
         @Test
@@ -168,7 +168,7 @@ class SubmitSequenceFactoryTest {
                 "\r", 0, 0, "TEST"
             );
 
-            assertEquals(1, secuencia.repeticiones());
+            assertEquals(1, secuencia.repeticiones(), "assertEquals failed at SubmitSequenceFactoryTest.java:171");
         }
 
         @Test
@@ -178,7 +178,7 @@ class SubmitSequenceFactoryTest {
                 "\r", 1, -50, "TEST"
             );
 
-            assertEquals(0, secuencia.delayEntreEnviosMs());
+            assertEquals(0, secuencia.delayEntreEnviosMs(), "assertEquals failed at SubmitSequenceFactoryTest.java:181");
         }
     }
 
@@ -191,7 +191,7 @@ class SubmitSequenceFactoryTest {
         void desdeSistemaActualRetornaValorValido() {
             SubmitSequenceFactory.Plataforma plataforma = SubmitSequenceFactory.Plataforma.desdeSistemaActual();
 
-            assertNotNull(plataforma);
+            assertNotNull(plataforma, "assertNotNull failed at SubmitSequenceFactoryTest.java:194");
         }
     }
 
@@ -200,13 +200,13 @@ class SubmitSequenceFactoryTest {
      * CR -> LF -> CRLF
      */
     private static void assertCadenaSmartFallback(SubmitSequenceFactory.SubmitSequence secuencia) {
-        assertEquals("\r", secuencia.payload());
-        assertEquals(1, secuencia.repeticiones());
+        assertEquals("\r", secuencia.payload(), "assertEquals failed at SubmitSequenceFactoryTest.java:203");
+        assertEquals(1, secuencia.repeticiones(), "assertEquals failed at SubmitSequenceFactoryTest.java:204");
 
         assertNotNull(secuencia.getFallback(), "Primer fallback no debe ser null");
-        assertEquals("\n", secuencia.getFallback().payload());
+        assertEquals("\n", secuencia.getFallback().payload(), "assertEquals failed at SubmitSequenceFactoryTest.java:207");
 
         assertNotNull(secuencia.getFallback().getFallback(), "Segundo fallback no debe ser null");
-        assertEquals("\r\n", secuencia.getFallback().getFallback().payload());
+        assertEquals("\r\n", secuencia.getFallback().getFallback().payload(), "assertEquals failed at SubmitSequenceFactoryTest.java:210");
     }
 }

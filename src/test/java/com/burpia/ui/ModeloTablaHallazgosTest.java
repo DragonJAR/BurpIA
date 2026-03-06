@@ -43,9 +43,9 @@ class ModeloTablaHallazgosTest {
             modelo.agregarHallazgo(hallazgo);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(1, modelo.getRowCount());
-            assertEquals(1, modelo.obtenerNumeroHallazgos());
-            assertNotNull(modelo.obtenerHallazgo(0));
+            assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:46");
+            assertEquals(1, modelo.obtenerNumeroHallazgos(), "assertEquals failed at ModeloTablaHallazgosTest.java:47");
+            assertNotNull(modelo.obtenerHallazgo(0), "assertNotNull failed at ModeloTablaHallazgosTest.java:48");
         }
 
         @Test
@@ -56,8 +56,8 @@ class ModeloTablaHallazgosTest {
             assertDoesNotThrow(() -> modelo.agregarHallazgo(null));
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(0, modelo.getRowCount());
-            assertEquals(0, modelo.obtenerNumeroHallazgos());
+            assertEquals(0, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:59");
+            assertEquals(0, modelo.obtenerNumeroHallazgos(), "assertEquals failed at ModeloTablaHallazgosTest.java:60");
         }
 
         @Test
@@ -72,8 +72,8 @@ class ModeloTablaHallazgosTest {
             modelo.agregarHallazgos(hallazgos);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(5, modelo.getRowCount());
-            assertEquals(5, modelo.obtenerNumeroHallazgos());
+            assertEquals(5, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:75");
+            assertEquals(5, modelo.obtenerNumeroHallazgos(), "assertEquals failed at ModeloTablaHallazgosTest.java:76");
         }
 
         @Test
@@ -84,7 +84,7 @@ class ModeloTablaHallazgosTest {
             assertDoesNotThrow(() -> modelo.agregarHallazgos(Collections.emptyList()));
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(0, modelo.getRowCount());
+            assertEquals(0, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:87");
         }
 
         @Test
@@ -95,7 +95,7 @@ class ModeloTablaHallazgosTest {
             assertDoesNotThrow(() -> modelo.agregarHallazgos(null));
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(0, modelo.getRowCount());
+            assertEquals(0, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:98");
         }
 
         @Test
@@ -110,7 +110,7 @@ class ModeloTablaHallazgosTest {
             modelo.agregarHallazgos(hallazgos);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(3, modelo.getRowCount());
+            assertEquals(3, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:113");
         }
     }
 
@@ -127,12 +127,12 @@ class ModeloTablaHallazgosTest {
                 modelo.agregarHallazgo(crearHallazgo("https://example.com/" + i, "Test " + i));
             }
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals(5, modelo.getRowCount());
+            assertEquals(5, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:130");
 
             modelo.establecerLimiteFilas(3);
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals(3, modelo.getRowCount());
-            assertEquals(3, modelo.obtenerLimiteFilas());
+            assertEquals(3, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:134");
+            assertEquals(3, modelo.obtenerLimiteFilas(), "assertEquals failed at ModeloTablaHallazgosTest.java:135");
         }
 
         @Test
@@ -154,8 +154,8 @@ class ModeloTablaHallazgosTest {
             modelo.establecerLimiteFilas(3);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(3, modelo.getRowCount());
-            assertTrue(eventos.get() > 0);
+            assertEquals(3, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:157");
+            assertTrue(eventos.get() > 0, "assertTrue failed at ModeloTablaHallazgosTest.java:158");
         }
 
         @Test
@@ -163,12 +163,12 @@ class ModeloTablaHallazgosTest {
         void testLimiteMinimo() throws Exception {
             ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(0);
 
-            assertEquals(1, modelo.obtenerLimiteFilas());
+            assertEquals(1, modelo.obtenerLimiteFilas(), "assertEquals failed at ModeloTablaHallazgosTest.java:166");
 
             modelo.establecerLimiteFilas(-5);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(1, modelo.obtenerLimiteFilas());
+            assertEquals(1, modelo.obtenerLimiteFilas(), "assertEquals failed at ModeloTablaHallazgosTest.java:171");
         }
     }
 
@@ -185,7 +185,7 @@ class ModeloTablaHallazgosTest {
 
             assertDoesNotThrow(() -> modelo.actualizarHallazgo(0, null));
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals(1, modelo.getRowCount());
+            assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:188");
         }
 
         @Test
@@ -206,16 +206,16 @@ class ModeloTablaHallazgosTest {
                 "High"
             );
 
-            assertTrue(modelo.actualizarHallazgo(segundo, editado));
+            assertTrue(modelo.actualizarHallazgo(segundo, editado), "assertTrue failed at ModeloTablaHallazgosTest.java:209");
             SwingUtilities.invokeAndWait(() -> {});
 
             Hallazgo filaActualizada = modelo.obtenerHallazgo(1);
-            assertEquals("https://example.com/b-editado", filaActualizada.obtenerUrl());
-            assertEquals("TB Editado", filaActualizada.obtenerTitulo());
-            assertEquals("Hallazgo B Editado", filaActualizada.obtenerHallazgo());
+            assertEquals("https://example.com/b-editado", filaActualizada.obtenerUrl(), "assertEquals failed at ModeloTablaHallazgosTest.java:213");
+            assertEquals("TB Editado", filaActualizada.obtenerTitulo(), "assertEquals failed at ModeloTablaHallazgosTest.java:214");
+            assertEquals("Hallazgo B Editado", filaActualizada.obtenerHallazgo(), "assertEquals failed at ModeloTablaHallazgosTest.java:215");
 
             Hallazgo noExistente = crearHallazgo("https://example.com/c", "TC");
-            assertFalse(modelo.actualizarHallazgo(noExistente, editado));
+            assertFalse(modelo.actualizarHallazgo(noExistente, editado), "assertFalse failed at ModeloTablaHallazgosTest.java:218");
         }
 
         @Test
@@ -226,7 +226,7 @@ class ModeloTablaHallazgosTest {
             SwingUtilities.invokeAndWait(() -> {});
 
             Hallazgo editado = crearHallazgo("https://example.com/b", "Editado");
-            assertFalse(modelo.actualizarHallazgo(null, editado));
+            assertFalse(modelo.actualizarHallazgo(null, editado), "assertFalse failed at ModeloTablaHallazgosTest.java:229");
         }
     }
 
@@ -240,14 +240,14 @@ class ModeloTablaHallazgosTest {
             ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
             modelo.agregarHallazgo(crearHallazgo("https://example.com/x", "Test"));
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals(1, modelo.getRowCount());
+            assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:243");
 
             assertDoesNotThrow(() -> modelo.marcarComoIgnorado(-1));
             assertDoesNotThrow(() -> modelo.eliminarHallazgo(-1));
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(1, modelo.getRowCount());
-            assertEquals(0, modelo.obtenerNumeroIgnorados());
+            assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:249");
+            assertEquals(0, modelo.obtenerNumeroIgnorados(), "assertEquals failed at ModeloTablaHallazgosTest.java:250");
         }
 
         @Test
@@ -260,8 +260,8 @@ class ModeloTablaHallazgosTest {
             modelo.marcarComoIgnorado(0);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertTrue(modelo.estaIgnorado(0));
-            assertEquals(1, modelo.obtenerNumeroIgnorados());
+            assertTrue(modelo.estaIgnorado(0), "assertTrue failed at ModeloTablaHallazgosTest.java:263");
+            assertEquals(1, modelo.obtenerNumeroIgnorados(), "assertEquals failed at ModeloTablaHallazgosTest.java:264");
         }
 
         @Test
@@ -271,13 +271,13 @@ class ModeloTablaHallazgosTest {
             modelo.agregarHallazgo(crearHallazgo("https://example.com/1", "Test 1"));
             modelo.agregarHallazgo(crearHallazgo("https://example.com/2", "Test 2"));
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals(2, modelo.getRowCount());
+            assertEquals(2, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:274");
 
             modelo.eliminarHallazgo(0);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(1, modelo.getRowCount());
-            assertEquals(1, modelo.obtenerNumeroHallazgos());
+            assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:279");
+            assertEquals(1, modelo.obtenerNumeroHallazgos(), "assertEquals failed at ModeloTablaHallazgosTest.java:280");
         }
 
         @Test
@@ -295,8 +295,8 @@ class ModeloTablaHallazgosTest {
             modelo.eliminarHallazgo(0);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(1, modelo.obtenerNumeroIgnorados());
-            assertTrue(modelo.estaIgnorado(1));
+            assertEquals(1, modelo.obtenerNumeroIgnorados(), "assertEquals failed at ModeloTablaHallazgosTest.java:298");
+            assertTrue(modelo.estaIgnorado(1), "assertTrue failed at ModeloTablaHallazgosTest.java:299");
         }
     }
 
@@ -313,9 +313,9 @@ class ModeloTablaHallazgosTest {
             SwingUtilities.invokeAndWait(() -> {});
 
             Hallazgo obtenido = modelo.obtenerHallazgo(0);
-            assertNotNull(obtenido);
-            assertEquals("https://example.com/test", obtenido.obtenerUrl());
-            assertEquals("Test Title", obtenido.obtenerTitulo());
+            assertNotNull(obtenido, "assertNotNull failed at ModeloTablaHallazgosTest.java:316");
+            assertEquals("https://example.com/test", obtenido.obtenerUrl(), "assertEquals failed at ModeloTablaHallazgosTest.java:317");
+            assertEquals("Test Title", obtenido.obtenerTitulo(), "assertEquals failed at ModeloTablaHallazgosTest.java:318");
         }
 
         @Test
@@ -323,9 +323,9 @@ class ModeloTablaHallazgosTest {
         void testObtenerHallazgoInvalido() throws Exception {
             ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
 
-            assertNull(modelo.obtenerHallazgo(-1));
-            assertNull(modelo.obtenerHallazgo(0));
-            assertNull(modelo.obtenerHallazgo(100));
+            assertNull(modelo.obtenerHallazgo(-1), "assertNull failed at ModeloTablaHallazgosTest.java:326");
+            assertNull(modelo.obtenerHallazgo(0), "assertNull failed at ModeloTablaHallazgosTest.java:327");
+            assertNull(modelo.obtenerHallazgo(100), "assertNull failed at ModeloTablaHallazgosTest.java:328");
         }
 
         @Test
@@ -337,12 +337,12 @@ class ModeloTablaHallazgosTest {
             modelo.agregarHallazgo(crearHallazgo("https://example.com/3", "Test 3"));
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(3, modelo.obtenerFilasVisibles());
+            assertEquals(3, modelo.obtenerFilasVisibles(), "assertEquals failed at ModeloTablaHallazgosTest.java:340");
 
             modelo.marcarComoIgnorado(1);
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(2, modelo.obtenerFilasVisibles());
+            assertEquals(2, modelo.obtenerFilasVisibles(), "assertEquals failed at ModeloTablaHallazgosTest.java:345");
         }
 
         @Test
@@ -359,12 +359,12 @@ class ModeloTablaHallazgosTest {
 
             int[] stats = modelo.obtenerEstadisticasVisibles();
 
-            assertEquals(6, stats[0]); // total
-            assertEquals(1, stats[1]); // critical
-            assertEquals(2, stats[2]); // high
-            assertEquals(1, stats[3]); // medium
-            assertEquals(1, stats[4]); // low
-            assertEquals(1, stats[5]); // info
+            assertEquals(6, stats[0], "assertEquals failed at ModeloTablaHallazgosTest.java:362"); // total
+            assertEquals(1, stats[1], "assertEquals failed at ModeloTablaHallazgosTest.java:363"); // critical
+            assertEquals(2, stats[2], "assertEquals failed at ModeloTablaHallazgosTest.java:364"); // high
+            assertEquals(1, stats[3], "assertEquals failed at ModeloTablaHallazgosTest.java:365"); // medium
+            assertEquals(1, stats[4], "assertEquals failed at ModeloTablaHallazgosTest.java:366"); // low
+            assertEquals(1, stats[5], "assertEquals failed at ModeloTablaHallazgosTest.java:367"); // info
         }
 
         @Test
@@ -380,7 +380,7 @@ class ModeloTablaHallazgosTest {
             SwingUtilities.invokeAndWait(() -> {});
 
             List<Hallazgo> noIgnorados = modelo.obtenerHallazgosNoIgnorados();
-            assertEquals(2, noIgnorados.size());
+            assertEquals(2, noIgnorados.size(), "assertEquals failed at ModeloTablaHallazgosTest.java:383");
         }
     }
 
@@ -395,14 +395,14 @@ class ModeloTablaHallazgosTest {
             modelo.agregarHallazgo(crearHallazgo("https://example.com/1", "Test 1"));
             modelo.agregarHallazgo(crearHallazgo("https://example.com/2", "Test 2"));
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals(2, modelo.getRowCount());
+            assertEquals(2, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:398");
 
             modelo.limpiar();
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals(0, modelo.getRowCount());
-            assertEquals(0, modelo.obtenerNumeroHallazgos());
-            assertEquals(0, modelo.obtenerNumeroIgnorados());
+            assertEquals(0, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:403");
+            assertEquals(0, modelo.obtenerNumeroHallazgos(), "assertEquals failed at ModeloTablaHallazgosTest.java:404");
+            assertEquals(0, modelo.obtenerNumeroIgnorados(), "assertEquals failed at ModeloTablaHallazgosTest.java:405");
         }
     }
 
@@ -417,15 +417,15 @@ class ModeloTablaHallazgosTest {
             I18nUI.establecerIdioma("es");
             modelo.agregarHallazgo(new Hallazgo("https://example.com/x", "T", "Hallazgo X", "High", "Low"));
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals("Alta", modelo.getValueAt(0, 3));
-            assertEquals("Baja", modelo.getValueAt(0, 4));
+            assertEquals("Alta", modelo.getValueAt(0, 3), "assertEquals failed at ModeloTablaHallazgosTest.java:420");
+            assertEquals("Baja", modelo.getValueAt(0, 4), "assertEquals failed at ModeloTablaHallazgosTest.java:421");
 
             I18nUI.establecerIdioma("en");
             modelo.refrescarColumnasIdioma();
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertEquals("High", modelo.getValueAt(0, 3));
-            assertEquals("Low", modelo.getValueAt(0, 4));
+            assertEquals("High", modelo.getValueAt(0, 3), "assertEquals failed at ModeloTablaHallazgosTest.java:427");
+            assertEquals("Low", modelo.getValueAt(0, 4), "assertEquals failed at ModeloTablaHallazgosTest.java:428");
         }
     }
 
@@ -443,7 +443,7 @@ class ModeloTablaHallazgosTest {
             modelo.agregarHallazgo(crearHallazgo("https://example.com/test", "Test"));
             SwingUtilities.invokeAndWait(() -> {});
 
-            assertTrue(notificado.get());
+            assertTrue(notificado.get(), "assertTrue failed at ModeloTablaHallazgosTest.java:446");
         }
 
         @Test
@@ -457,13 +457,13 @@ class ModeloTablaHallazgosTest {
 
             modelo.agregarHallazgo(crearHallazgo("https://example.com/1", "Test 1"));
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals(1, contador.get());
+            assertEquals(1, contador.get(), "assertEquals failed at ModeloTablaHallazgosTest.java:460");
 
             modelo.eliminarEscucha(escucha);
 
             modelo.agregarHallazgo(crearHallazgo("https://example.com/2", "Test 2"));
             SwingUtilities.invokeAndWait(() -> {});
-            assertEquals(1, contador.get());
+            assertEquals(1, contador.get(), "assertEquals failed at ModeloTablaHallazgosTest.java:466");
         }
 
         @Test
@@ -483,16 +483,16 @@ class ModeloTablaHallazgosTest {
         void testCeldasNoEditables() {
             ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
 
-            assertFalse(modelo.isCellEditable(0, 0));
-            assertFalse(modelo.isCellEditable(100, 4));
-            assertFalse(modelo.isCellEditable(-1, 0));
+            assertFalse(modelo.isCellEditable(0, 0), "assertFalse failed at ModeloTablaHallazgosTest.java:486");
+            assertFalse(modelo.isCellEditable(100, 4), "assertFalse failed at ModeloTablaHallazgosTest.java:487");
+            assertFalse(modelo.isCellEditable(-1, 0), "assertFalse failed at ModeloTablaHallazgosTest.java:488");
         }
 
         @Test
         @DisplayName("Número de columnas es 5")
         void testNumeroColumnas() {
             ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(5);
-            assertEquals(5, modelo.getColumnCount());
+            assertEquals(5, modelo.getColumnCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:495");
         }
     }
 

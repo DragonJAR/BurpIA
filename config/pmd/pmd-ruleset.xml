@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<ruleset name="BurpIA PMD Ruleset"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Reglas PMD personalizadas para BurpIA.
+        Basado en bestpractices.xml con exclusiones específicas para el contexto del proyecto.
+    </description>
+
+    <!-- Incluir todas las reglas de bestpractices -->
+    <rule ref="category/java/bestpractices.xml">
+        <!-- Excluir reglas que no aplican al contexto de BurpIA -->
+        <exclude name="UnitTestContainsTooManyAsserts"/>
+        <exclude name="UnitTestShouldIncludeAssert"/>
+        <!-- SystemPrintln es aceptable en tests de benchmark y diagnóstico -->
+        <exclude name="SystemPrintln"/>
+    </rule>
+
+</ruleset>

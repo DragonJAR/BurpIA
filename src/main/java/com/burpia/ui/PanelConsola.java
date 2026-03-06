@@ -268,7 +268,6 @@ public class PanelConsola extends JPanel {
             return;
         }
 
-        StyledDocument documento = consola.getStyledDocument();
         String texto = obtenerTextoDocumento();
 
         if (Normalizador.esVacio(texto)) {
@@ -301,7 +300,6 @@ public class PanelConsola extends JPanel {
             return;
         }
 
-        StyledDocument documento = consola.getStyledDocument();
         String texto = obtenerTextoDocumento();
 
         if (Normalizador.esVacio(texto)) {
@@ -484,11 +482,11 @@ public class PanelConsola extends JPanel {
         boolean cambioEstado = estadoActual != activo;
 
         if (cambioEstado) {
-            actualizandoAutoScroll = true;
+            iniciarActualizacionAutoScroll();
             try {
                 checkboxAutoScroll.setSelected(activo);
             } finally {
-                actualizandoAutoScroll = false;
+                finalizarActualizacionAutoScroll();
             }
         }
 
@@ -497,6 +495,14 @@ public class PanelConsola extends JPanel {
         if (notificarCambio && cambioEstado && manejadorCambioAutoScroll != null) {
             manejadorCambioAutoScroll.accept(activo);
         }
+    }
+
+    private void iniciarActualizacionAutoScroll() {
+        actualizandoAutoScroll = true;
+    }
+
+    private void finalizarActualizacionAutoScroll() {
+        actualizandoAutoScroll = false;
     }
 
 }

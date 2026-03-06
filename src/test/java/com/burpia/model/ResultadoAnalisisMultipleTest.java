@@ -35,13 +35,13 @@ class ResultadoAnalisisMultipleTest {
             null
         );
 
-        assertEquals("", resultado.obtenerUrl());
-        assertNotNull(resultado.obtenerHallazgos());
-        assertEquals(0, resultado.obtenerNumeroHallazgos());
-        assertNull(resultado.obtenerSolicitudHttp());
-        assertNotNull(resultado.obtenerProveedoresFallidos());
-        assertEquals(0, resultado.obtenerProveedoresFallidos().size());
-        assertFalse(resultado.huboErroresParciales());
+        assertEquals("", resultado.obtenerUrl(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:38");
+        assertNotNull(resultado.obtenerHallazgos(), "assertNotNull failed at ResultadoAnalisisMultipleTest.java:39");
+        assertEquals(0, resultado.obtenerNumeroHallazgos(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:40");
+        assertNull(resultado.obtenerSolicitudHttp(), "assertNull failed at ResultadoAnalisisMultipleTest.java:41");
+        assertNotNull(resultado.obtenerProveedoresFallidos(), "assertNotNull failed at ResultadoAnalisisMultipleTest.java:42");
+        assertEquals(0, resultado.obtenerProveedoresFallidos().size(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:43");
+        assertFalse(resultado.huboErroresParciales(), "assertFalse failed at ResultadoAnalisisMultipleTest.java:44");
     }
 
     @Test
@@ -54,10 +54,10 @@ class ResultadoAnalisisMultipleTest {
             Collections.emptyList()
         );
 
-        assertEquals(URL_TEST, resultado.obtenerUrl());
-        assertNotNull(resultado.obtenerProveedoresFallidos());
-        assertEquals(0, resultado.obtenerProveedoresFallidos().size());
-        assertFalse(resultado.huboErroresParciales());
+        assertEquals(URL_TEST, resultado.obtenerUrl(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:57");
+        assertNotNull(resultado.obtenerProveedoresFallidos(), "assertNotNull failed at ResultadoAnalisisMultipleTest.java:58");
+        assertEquals(0, resultado.obtenerProveedoresFallidos().size(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:59");
+        assertFalse(resultado.huboErroresParciales(), "assertFalse failed at ResultadoAnalisisMultipleTest.java:60");
     }
 
     @Test
@@ -80,8 +80,8 @@ class ResultadoAnalisisMultipleTest {
         hallazgosOriginales.add(crearHallazgo(Hallazgo.SEVERIDAD_LOW));
         proveedoresOriginales.add("claude");
 
-        assertEquals(1, resultado.obtenerNumeroHallazgos());
-        assertEquals(1, resultado.obtenerProveedoresFallidos().size());
+        assertEquals(1, resultado.obtenerNumeroHallazgos(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:83");
+        assertEquals(1, resultado.obtenerProveedoresFallidos().size(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:84");
     }
 
     // ==================== INMUTABILIDAD ====================
@@ -135,7 +135,7 @@ class ResultadoAnalisisMultipleTest {
             Collections.emptyList()
         );
 
-        assertEquals(Hallazgo.SEVERIDAD_INFO, resultado.obtenerSeveridadMaxima());
+        assertEquals(Hallazgo.SEVERIDAD_INFO, resultado.obtenerSeveridadMaxima(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:138");
     }
 
     @Test
@@ -152,7 +152,7 @@ class ResultadoAnalisisMultipleTest {
             Collections.emptyList()
         );
 
-        assertEquals(Hallazgo.SEVERIDAD_MEDIUM, resultado.obtenerSeveridadMaxima());
+        assertEquals(Hallazgo.SEVERIDAD_MEDIUM, resultado.obtenerSeveridadMaxima(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:155");
     }
 
     @Test
@@ -170,7 +170,7 @@ class ResultadoAnalisisMultipleTest {
             Collections.emptyList()
         );
 
-        assertEquals(Hallazgo.SEVERIDAD_CRITICAL, resultado.obtenerSeveridadMaxima());
+        assertEquals(Hallazgo.SEVERIDAD_CRITICAL, resultado.obtenerSeveridadMaxima(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:173");
     }
 
     @Test
@@ -186,7 +186,7 @@ class ResultadoAnalisisMultipleTest {
             null,
             Collections.emptyList()
         );
-        assertEquals(Hallazgo.SEVERIDAD_CRITICAL, conCritical.obtenerSeveridadMaxima());
+        assertEquals(Hallazgo.SEVERIDAD_CRITICAL, conCritical.obtenerSeveridadMaxima(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:189");
 
         // High > Medium
         ResultadoAnalisisMultiple conHigh = new ResultadoAnalisisMultiple(
@@ -199,7 +199,7 @@ class ResultadoAnalisisMultipleTest {
             null,
             Collections.emptyList()
         );
-        assertEquals(Hallazgo.SEVERIDAD_HIGH, conHigh.obtenerSeveridadMaxima());
+        assertEquals(Hallazgo.SEVERIDAD_HIGH, conHigh.obtenerSeveridadMaxima(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:202");
     }
 
     // ==================== PROVEEDORES FALLIDOS ====================
@@ -214,7 +214,7 @@ class ResultadoAnalisisMultipleTest {
             Collections.emptyList()
         );
 
-        assertFalse(resultado.huboErroresParciales());
+        assertFalse(resultado.huboErroresParciales(), "assertFalse failed at ResultadoAnalisisMultipleTest.java:217");
     }
 
     @Test
@@ -227,10 +227,10 @@ class ResultadoAnalisisMultipleTest {
             Arrays.asList("openai", "claude")
         );
 
-        assertTrue(resultado.huboErroresParciales());
-        assertEquals(2, resultado.obtenerProveedoresFallidos().size());
-        assertTrue(resultado.obtenerProveedoresFallidos().contains("openai"));
-        assertTrue(resultado.obtenerProveedoresFallidos().contains("claude"));
+        assertTrue(resultado.huboErroresParciales(), "assertTrue failed at ResultadoAnalisisMultipleTest.java:230");
+        assertEquals(2, resultado.obtenerProveedoresFallidos().size(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:231");
+        assertTrue(resultado.obtenerProveedoresFallidos().contains("openai"), "assertTrue failed at ResultadoAnalisisMultipleTest.java:232");
+        assertTrue(resultado.obtenerProveedoresFallidos().contains("claude"), "assertTrue failed at ResultadoAnalisisMultipleTest.java:233");
     }
 
     // ==================== EQUALS Y HASHCODE ====================
@@ -257,8 +257,8 @@ class ResultadoAnalisisMultipleTest {
             proveedores
         );
 
-        assertEquals(resultado1, resultado2);
-        assertEquals(resultado1.hashCode(), resultado2.hashCode());
+        assertEquals(resultado1, resultado2, "assertEquals failed at ResultadoAnalisisMultipleTest.java:260");
+        assertEquals(resultado1.hashCode(), resultado2.hashCode(), "assertEquals failed at ResultadoAnalisisMultipleTest.java:261");
     }
 
     @Test
@@ -305,7 +305,7 @@ class ResultadoAnalisisMultipleTest {
             null
         );
 
-        assertEquals(resultado, resultado);
+        assertEquals(resultado, resultado, "assertEquals failed at ResultadoAnalisisMultipleTest.java:308");
     }
 
     // ==================== TOSTRING ====================
@@ -322,9 +322,9 @@ class ResultadoAnalisisMultipleTest {
 
         String str = resultado.toString();
         
-        assertTrue(str.contains(URL_TEST));
-        assertTrue(str.contains("hallazgos=1"));
-        assertTrue(str.contains("proveedoresFallidos"));
+        assertTrue(str.contains(URL_TEST), "assertTrue failed at ResultadoAnalisisMultipleTest.java:325");
+        assertTrue(str.contains("hallazgos=1"), "assertTrue failed at ResultadoAnalisisMultipleTest.java:326");
+        assertTrue(str.contains("proveedoresFallidos"), "assertTrue failed at ResultadoAnalisisMultipleTest.java:327");
     }
 
     // ==================== MÉTODOS AUXILIARES ====================

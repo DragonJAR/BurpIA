@@ -40,7 +40,6 @@ public class AnalizadorAI implements Runnable {
     private final LimitadorTasa limitador;
     private final Callback callback;
     private final Runnable alInicioAnalisis;
-    private final OkHttpClient clienteHttp;
     private final Gson gson;
     private final ConstructorPrompts constructorPrompt;
     private final GestorConsolaGUI gestorConsola;
@@ -183,7 +182,6 @@ public class AnalizadorAI implements Runnable {
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.gson = new Gson();
         this.constructorPrompt = new ConstructorPrompts(this.config);
-        this.clienteHttp = obtenerClienteHttp(timeoutEfectivo, this.config.ignorarErroresSSL());
         this.controlBackpressure = controlBackpressure;
         this.logLock = new Object();
 
@@ -405,6 +403,7 @@ public class AnalizadorAI implements Runnable {
     }
 
     private String llamarAPIAI(String prompt, boolean registrarDetalleSolicitud) throws IOException {
+        OkHttpClient clienteHttp = resolverClienteHttpActual();
         try {
             verificarCancelacion();
             esperarSiPausada();
@@ -429,12 +428,11 @@ public class AnalizadorAI implements Runnable {
         llamadaHttpActiva = call;
 
         try {
-            Response respuesta = call.execute();
-            int codigoRespuesta = respuesta.code();
-            registrar("Codigo de respuesta de API: " + codigoRespuesta);
-            rastrearTecnico("Encabezados de respuesta de API: " + respuesta.headers());
+            try (Response respuesta = call.execute()) {
+                int codigoRespuesta = respuesta.code();
+                registrar("Codigo de respuesta de API: " + codigoRespuesta);
+                rastrearTecnico("Encabezados de respuesta de API: " + respuesta.headers());
 
-            try {
                 if (!respuesta.isSuccessful()) {
                     String cuerpoError = "";
                     ResponseBody bodyError = respuesta.body();
@@ -462,9 +460,6 @@ public class AnalizadorAI implements Runnable {
                 registrar("Longitud de respuesta de API: " + cuerpoRespuesta.length() + " caracteres");
                 rastrearTecnico("Respuesta de API (preview):\n" + resumirParaLog(cuerpoRespuesta));
                 return cuerpoRespuesta;
-            } finally {
-                // Cerrar response para liberar recursos
-                respuesta.close();
             }
         } catch (ApiHttpException e) {
             throw e;
@@ -476,6 +471,14 @@ public class AnalizadorAI implements Runnable {
             // Limpiar referencia para permitir GC
             llamadaHttpActiva = null;
         }
+    }
+
+    private OkHttpClient resolverClienteHttpActual() {
+        int timeoutEfectivo = config.obtenerTiempoEsperaParaModelo(
+            config.obtenerProveedorAI(),
+            config.obtenerModelo()
+        );
+        return obtenerClienteHttp(timeoutEfectivo, config.ignorarErroresSSL());
     }
 
     private String llamarAPIAIConRetries() throws IOException {
@@ -1092,7 +1095,7 @@ public class AnalizadorAI implements Runnable {
         }
     }
 
-    private JsonElement extraerPrimerCampoExistente(JsonObject objeto, String[] campos) {
+    private JsonElement extraerPrimerCampoExistente(JsonObject objeto, String... campos) {
         if (objeto == null || campos == null) {
             return null;
         }
@@ -1116,7 +1119,7 @@ public class AnalizadorAI implements Runnable {
             || Normalizador.noEsVacio(extraerCampoFlexible(objeto, CAMPOS_EVIDENCIA));
     }
 
-    private String extraerCampoFlexible(JsonObject objeto, String[] campos) {
+    private String extraerCampoFlexible(JsonObject objeto, String... campos) {
         if (objeto == null || campos == null) {
             return "";
         }

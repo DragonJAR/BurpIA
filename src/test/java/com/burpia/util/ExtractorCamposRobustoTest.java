@@ -477,8 +477,11 @@ class ExtractorCamposRobustoTest {
             assertTrue(todos.length >= 5, "TODOS debe contener al menos 5 campos");
 
             // Verificar que los campos específicos están presentes
-            boolean tieneTitulo = false, tieneDescripcion = false, tieneSeveridad = false,
-                    tieneConfianza = false, tieneEvidencia = false;
+            boolean tieneTitulo = false;
+            boolean tieneDescripcion = false;
+            boolean tieneSeveridad = false;
+            boolean tieneConfianza = false;
+            boolean tieneEvidencia = false;
 
             for (ExtractorCamposRobusto.Campo campo : todos) {
                 String nombre = campo.obtenerNombre();
@@ -563,15 +566,15 @@ class ExtractorCamposRobustoTest {
         @Test
         @DisplayName("obtenerNombre retorna el nombre correcto")
         void obtenerNombreRetornaNombreCorrecto() {
-            assertEquals("titulo", ExtractorCamposRobusto.CamposHallazgo.TITULO.obtenerNombre());
-            assertEquals("severidad", ExtractorCamposRobusto.CamposHallazgo.SEVERIDAD.obtenerNombre());
+            assertEquals("titulo", ExtractorCamposRobusto.CamposHallazgo.TITULO.obtenerNombre(), "assertEquals failed at ExtractorCamposRobustoTest.java:566");
+            assertEquals("severidad", ExtractorCamposRobusto.CamposHallazgo.SEVERIDAD.obtenerNombre(), "assertEquals failed at ExtractorCamposRobustoTest.java:567");
         }
 
         @Test
         @DisplayName("obtenerPatron retorna patrón no null")
         void obtenerPatronRetornaPatronNoNull() {
-            assertNotNull(ExtractorCamposRobusto.CamposHallazgo.TITULO.obtenerPatron());
-            assertNotNull(ExtractorCamposRobusto.CamposHallazgo.SEVERIDAD.obtenerPatron());
+            assertNotNull(ExtractorCamposRobusto.CamposHallazgo.TITULO.obtenerPatron(), "assertNotNull failed at ExtractorCamposRobustoTest.java:573");
+            assertNotNull(ExtractorCamposRobusto.CamposHallazgo.SEVERIDAD.obtenerPatron(), "assertNotNull failed at ExtractorCamposRobustoTest.java:574");
         }
 
         @Test

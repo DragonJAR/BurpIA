@@ -249,9 +249,8 @@ public class PestaniaPrincipal extends JPanel {
                 return panelAgente;
             case CONSOLA:
                 return panelConsola;
-            default:
-                return null;
         }
+        return null;
     }
 
     private String resolverTituloPestania(DestinoPestania destino) {
@@ -267,9 +266,8 @@ public class PestaniaPrincipal extends JPanel {
                 return I18nUI.Pestanias.AGENTE();
             case CONSOLA:
                 return I18nUI.Pestanias.CONSOLA();
-            default:
-                return null;
         }
+        return null;
     }
 
     private String resolverTooltipPestania(DestinoPestania destino) {
@@ -285,9 +283,8 @@ public class PestaniaPrincipal extends JPanel {
                 return I18nUI.Tooltips.Pestanias.AGENTE();
             case CONSOLA:
                 return I18nUI.Tooltips.Pestanias.CONSOLA();
-            default:
-                return null;
         }
+        return null;
     }
 
     private void enfocarComponenteSeleccionado(Component componente, boolean traerVentanaAlFrente) {

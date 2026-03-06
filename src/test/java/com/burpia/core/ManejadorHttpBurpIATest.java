@@ -14,12 +14,17 @@ import org.junit.jupiter.api.Test;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
@@ -65,9 +70,9 @@ class ManejadorHttpBurpIATest {
     void testDetectaRecursosEstaticosRobusto() throws Exception {
         ManejadorHttpBurpIA manejador = crearManejador(null);
 
-        assertTrue(invocarEsRecursoEstatico(manejador, "https://example.com/assets/app.JS?v=123"));
-        assertTrue(invocarEsRecursoEstatico(manejador, "https://example.com/img/logo.PNG#v2"));
-        assertFalse(invocarEsRecursoEstatico(manejador, "https://example.com/api/users"));
+        assertTrue(invocarEsRecursoEstatico(manejador, "https://example.com/assets/app.JS?v=123"), "assertTrue failed at ManejadorHttpBurpIATest.java:73");
+        assertTrue(invocarEsRecursoEstatico(manejador, "https://example.com/img/logo.PNG#v2"), "assertTrue failed at ManejadorHttpBurpIATest.java:74");
+        assertFalse(invocarEsRecursoEstatico(manejador, "https://example.com/api/users"), "assertFalse failed at ManejadorHttpBurpIATest.java:75");
     }
 
     @Test
@@ -77,7 +82,7 @@ class ManejadorHttpBurpIATest {
         HttpRequest solicitud = mock(HttpRequest.class);
         when(solicitud.url()).thenReturn("https://example.com");
 
-        assertFalse(invocarEstaEnScope(manejador, solicitud));
+        assertFalse(invocarEstaEnScope(manejador, solicitud), "assertFalse failed at ManejadorHttpBurpIATest.java:85");
     }
 
     @Test
@@ -90,7 +95,7 @@ class ManejadorHttpBurpIATest {
         HttpRequest solicitud = mock(HttpRequest.class);
         when(solicitud.url()).thenReturn("https://example.com");
 
-        assertFalse(invocarEstaEnScope(manejador, solicitud));
+        assertFalse(invocarEstaEnScope(manejador, solicitud), "assertFalse failed at ManejadorHttpBurpIATest.java:98");
     }
 
     @Test
@@ -119,7 +124,54 @@ class ManejadorHttpBurpIATest {
         config.establecerEscaneoPasivoHabilitado(false);
 
         ManejadorHttpBurpIA manejador = crearManejador(null, config);
-        assertFalse(manejador.estaCapturaActiva());
+        assertFalse(manejador.estaCapturaActiva(), "assertFalse failed at ManejadorHttpBurpIATest.java:127");
+    }
+
+    @Test
+    @DisplayName("Actualizar configuración reutiliza el mismo limitador y ajusta permisos")
+    void testActualizarConfiguracionReutilizaLimitador() throws Exception {
+        ConfiguracionAPI inicial = new ConfiguracionAPI();
+        inicial.establecerMaximoConcurrente(2);
+        ManejadorHttpBurpIA manejador = crearManejador(null, inicial);
+
+        Field campoLimitador = ManejadorHttpBurpIA.class.getDeclaredField("limitador");
+        campoLimitador.setAccessible(true);
+        LimitadorTasa limitadorAntes = (LimitadorTasa) campoLimitador.get(manejador);
+        limitadorAntes.adquirir();
+        assertEquals(0, limitadorAntes.permisosDisponibles(), "assertEquals failed at ManejadorHttpBurpIATest.java:141");
+
+        ConfiguracionAPI actualizada = inicial.crearSnapshot();
+        actualizada.establecerMaximoConcurrente(4);
+        manejador.actualizarConfiguracion(actualizada);
+
+        LimitadorTasa limitadorDespues = (LimitadorTasa) campoLimitador.get(manejador);
+        assertSame(limitadorAntes, limitadorDespues, "Debe mantenerse el mismo limitador compartido");
+        assertEquals(3, limitadorDespues.permisosDisponibles(),
+            "Con un permiso en uso y maximo 4 deben quedar 3 disponibles");
+    }
+
+    @Test
+    @DisplayName("Cancelar ejecución activa limpia future y analizador asociado")
+    @SuppressWarnings("unchecked")
+    void testCancelarEjecucionActivaLimpiaMapas() throws Exception {
+        ManejadorHttpBurpIA manejador = crearManejador(null);
+
+        Field campoAnalizadores = ManejadorHttpBurpIA.class.getDeclaredField("analizadoresActivos");
+        campoAnalizadores.setAccessible(true);
+        Map<String, Object> analizadores = (Map<String, Object>) campoAnalizadores.get(manejador);
+
+        Field campoFutures = ManejadorHttpBurpIA.class.getDeclaredField("ejecucionesActivas");
+        campoFutures.setAccessible(true);
+        Map<String, CompletableFuture<?>> futures = (Map<String, CompletableFuture<?>>) campoFutures.get(manejador);
+
+        String tareaId = "tarea-prueba";
+        analizadores.put(tareaId, mock(com.burpia.analyzer.AnalizadorAI.class));
+        futures.put(tareaId, new CompletableFuture<>());
+
+        manejador.cancelarEjecucionActiva(tareaId);
+
+        assertFalse(analizadores.containsKey(tareaId), "assertFalse failed at ManejadorHttpBurpIATest.java:173");
+        assertFalse(futures.containsKey(tareaId), "assertFalse failed at ManejadorHttpBurpIATest.java:174");
     }
 
     @Test
@@ -143,10 +195,10 @@ class ManejadorHttpBurpIATest {
         salida.manejador.analizarSolicitudForzada(solicitud);
         String error = salida.stderr.toString();
 
-        assertTrue(error.contains("ANÁLISIS BLOQUEADO") || error.contains("ANALISIS BLOQUEADO"));
-        assertTrue(error.contains("Config") || error.contains("config"));
+        assertTrue(error.contains("ANÁLISIS BLOQUEADO") || error.contains("ANALISIS BLOQUEADO"), "assertTrue failed at ManejadorHttpBurpIATest.java:198");
+        assertTrue(error.contains("Config") || error.contains("config"), "assertTrue failed at ManejadorHttpBurpIATest.java:199");
         assertTrue(error.contains("Probar Conexión") || error.contains("Probar Conexion")
-            || error.contains("Test Connection"));
+            || error.contains("Test Connection"), "assertTrue failed at ManejadorHttpBurpIATest.java:200");
     }
 
     @Test
@@ -173,7 +225,7 @@ class ManejadorHttpBurpIATest {
         String error = salida.stderr.toString();
         int ocurrencias = contarCoincidencias(error, "ANÁLISIS BLOQUEADO")
             + contarCoincidencias(error, "ANALISIS BLOQUEADO");
-        assertTrue(ocurrencias <= 1);
+        assertTrue(ocurrencias <= 1, "assertTrue failed at ManejadorHttpBurpIATest.java:228");
     }
 
     @Test
@@ -183,7 +235,7 @@ class ManejadorHttpBurpIATest {
         config.establecerDetallado(true); // Habilitar modo detallado para ver notas de scope
         SalidaManejador salida = crearManejadorConSalida(null, config);
         String info = salida.stdout.toString();
-        assertTrue(info.contains("Target > Scope"));
+        assertTrue(info.contains("Target > Scope"), "assertTrue failed at ManejadorHttpBurpIATest.java:238");
     }
 
     @Test
@@ -193,9 +245,9 @@ class ManejadorHttpBurpIATest {
         String error = salida.stderr.toString();
         String info = salida.stdout.toString();
 
-        assertTrue(error.contains("Estado LLM al inicio") || error.contains("LLM startup status"));
+        assertTrue(error.contains("Estado LLM al inicio") || error.contains("LLM startup status"), "assertTrue failed at ManejadorHttpBurpIATest.java:248");
         assertTrue(info.contains("Probar Conexión") || info.contains("Probar Conexion")
-            || info.contains("Test Connection"));
+            || info.contains("Test Connection"), "assertTrue failed at ManejadorHttpBurpIATest.java:249");
     }
 
     private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {

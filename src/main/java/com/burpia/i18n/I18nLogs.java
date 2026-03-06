@@ -529,7 +529,7 @@ public final class I18nLogs {
      * @param reemplazos array de entradas de reemplazo a aplicar
      * @return el texto con todos los reemplazos aplicados
      */
-    private static String aplicarReemplazos(String texto, EntradaReemplazo[] reemplazos) {
+    private static String aplicarReemplazos(String texto, EntradaReemplazo... reemplazos) {
         String resultado = texto;
         for (EntradaReemplazo r : reemplazos) {
             if (r.patronCompilado != null) {

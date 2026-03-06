@@ -32,18 +32,18 @@ class PanelEstadisticasCapturaTest {
             AtomicInteger clicks = new AtomicInteger();
             panel.establecerManejadorToggleCaptura(clicks::incrementAndGet);
 
-            assertEquals("⏸️", boton.getText());
+            assertEquals("⏸️", boton.getText(), "assertEquals failed at PanelEstadisticasCapturaTest.java:35");
 
             SwingUtilities.invokeAndWait(boton::doClick);
-            assertEquals(1, clicks.get());
+            assertEquals(1, clicks.get(), "assertEquals failed at PanelEstadisticasCapturaTest.java:38");
 
             panel.establecerEstadoCaptura(false);
             flushEdt();
-            assertEquals("▶️", boton.getText());
+            assertEquals("▶️", boton.getText(), "assertEquals failed at PanelEstadisticasCapturaTest.java:42");
 
             panel.establecerEstadoCaptura(true);
             flushEdt();
-            assertEquals("⏸️", boton.getText());
+            assertEquals("⏸️", boton.getText(), "assertEquals failed at PanelEstadisticasCapturaTest.java:46");
         } finally {
             panel.destruir();
         }
@@ -57,7 +57,7 @@ class PanelEstadisticasCapturaTest {
         try {
             JLabel limite = obtenerEtiquetaLimite(panel);
             flushEdt();
-            assertTrue(limite.getText().contains("Límite Hallazgos"));
+            assertTrue(limite.getText().contains("Límite Hallazgos"), "assertTrue failed at PanelEstadisticasCapturaTest.java:60");
 
             SwingUtilities.invokeAndWait(() -> {
                 I18nUI.establecerIdioma("en");
@@ -65,7 +65,7 @@ class PanelEstadisticasCapturaTest {
             });
             flushEdt();
 
-            assertTrue(limite.getText().contains("Findings Limit"));
+            assertTrue(limite.getText().contains("Findings Limit"), "assertTrue failed at PanelEstadisticasCapturaTest.java:68");
         } finally {
             panel.destruir();
         }
@@ -82,8 +82,8 @@ class PanelEstadisticasCapturaTest {
             SwingUtilities.invokeAndWait(panel::aplicarTema);
             flushEdt();
 
-            assertTrue(EstilosUI.ratioContraste(total.getForeground(), panel.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
-            assertTrue(EstilosUI.ratioContraste(limite.getForeground(), panel.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
+            assertTrue(EstilosUI.ratioContraste(total.getForeground(), panel.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL, "assertTrue failed at PanelEstadisticasCapturaTest.java:85");
+            assertTrue(EstilosUI.ratioContraste(limite.getForeground(), panel.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL, "assertTrue failed at PanelEstadisticasCapturaTest.java:86");
         } finally {
             panel.destruir();
         }

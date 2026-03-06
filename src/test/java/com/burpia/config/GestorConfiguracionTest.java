@@ -103,17 +103,17 @@ class GestorConfiguracionTest {
         config.establecerIdiomaUi("en");
         config.establecerMaximoHallazgosTabla(2500);
 
-        assertTrue(gestor.guardarConfiguracion(config));
+        assertTrue(gestor.guardarConfiguracion(config), "assertTrue failed at GestorConfiguracionTest.java:106");
 
         String json = leerConfigJson();
 
-        assertFalse(json.contains("\"urlApi\""));
-        assertFalse(json.contains("\"claveApi\""));
-        assertFalse(json.contains("\"modelo\""));
-        assertTrue(json.contains("\"apiKeysPorProveedor\""));
-        assertTrue(json.contains("\"modelosPorProveedor\""));
-        assertTrue(json.contains("\"idiomaUi\": \"en\""));
-        assertTrue(json.contains("\"maximoHallazgosTabla\": 2500"));
+        assertFalse(json.contains("\"urlApi\""), "assertFalse failed at GestorConfiguracionTest.java:110");
+        assertFalse(json.contains("\"claveApi\""), "assertFalse failed at GestorConfiguracionTest.java:111");
+        assertFalse(json.contains("\"modelo\""), "assertFalse failed at GestorConfiguracionTest.java:112");
+        assertTrue(json.contains("\"apiKeysPorProveedor\""), "assertTrue failed at GestorConfiguracionTest.java:113");
+        assertTrue(json.contains("\"modelosPorProveedor\""), "assertTrue failed at GestorConfiguracionTest.java:114");
+        assertTrue(json.contains("\"idiomaUi\": \"en\""), "assertTrue failed at GestorConfiguracionTest.java:115");
+        assertTrue(json.contains("\"maximoHallazgosTabla\": 2500"), "assertTrue failed at GestorConfiguracionTest.java:116");
     }
 
     @Test
@@ -135,9 +135,9 @@ class GestorConfiguracionTest {
 
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = gestor.cargarConfiguracion();
-        assertFalse(config.esDetallado());
-        assertEquals("en", config.obtenerIdiomaUi());
-        assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla());
+        assertFalse(config.esDetallado(), "assertFalse failed at GestorConfiguracionTest.java:138");
+        assertEquals("en", config.obtenerIdiomaUi(), "assertEquals failed at GestorConfiguracionTest.java:139");
+        assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla(), "assertEquals failed at GestorConfiguracionTest.java:140");
     }
 
     @Test
@@ -152,19 +152,19 @@ class GestorConfiguracionTest {
         config.establecerAutoScrollConsolaHabilitado(false);
         config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
 
-        assertTrue(gestor.guardarConfiguracion(config));
+        assertTrue(gestor.guardarConfiguracion(config), "assertTrue failed at GestorConfiguracionTest.java:155");
 
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
-        assertFalse(cargada.escaneoPasivoHabilitado());
-        assertFalse(cargada.autoGuardadoIssuesHabilitado());
-        assertFalse(cargada.autoScrollConsolaHabilitado());
-        assertFalse(cargada.alertasClickDerechoEnviarAHabilitadas());
+        assertFalse(cargada.escaneoPasivoHabilitado(), "assertFalse failed at GestorConfiguracionTest.java:158");
+        assertFalse(cargada.autoGuardadoIssuesHabilitado(), "assertFalse failed at GestorConfiguracionTest.java:159");
+        assertFalse(cargada.autoScrollConsolaHabilitado(), "assertFalse failed at GestorConfiguracionTest.java:160");
+        assertFalse(cargada.alertasClickDerechoEnviarAHabilitadas(), "assertFalse failed at GestorConfiguracionTest.java:161");
 
         String json = leerConfigJson();
-        assertTrue(json.contains("\"escaneoPasivoHabilitado\": false"));
-        assertTrue(json.contains("\"autoGuardadoIssuesHabilitado\": false"));
-        assertTrue(json.contains("\"autoScrollConsolaHabilitado\": false"));
-        assertTrue(json.contains("\"alertasClickDerechoEnviarAHabilitadas\": false"));
+        assertTrue(json.contains("\"escaneoPasivoHabilitado\": false"), "assertTrue failed at GestorConfiguracionTest.java:164");
+        assertTrue(json.contains("\"autoGuardadoIssuesHabilitado\": false"), "assertTrue failed at GestorConfiguracionTest.java:165");
+        assertTrue(json.contains("\"autoScrollConsolaHabilitado\": false"), "assertTrue failed at GestorConfiguracionTest.java:166");
+        assertTrue(json.contains("\"alertasClickDerechoEnviarAHabilitadas\": false"), "assertTrue failed at GestorConfiguracionTest.java:167");
     }
 
     @Test
@@ -177,15 +177,15 @@ class GestorConfiguracionTest {
         config.establecerAgentePreflightPrompt("PRE_FLIGHT_CUSTOM");
         config.establecerAgentePrompt("VALIDACION_CUSTOM");
 
-        assertTrue(gestor.guardarConfiguracion(config));
+        assertTrue(gestor.guardarConfiguracion(config), "assertTrue failed at GestorConfiguracionTest.java:180");
 
         String json = leerConfigJson();
-        assertTrue(json.contains("\"agentePreflightPrompt\": \"PRE_FLIGHT_CUSTOM\""));
-        assertTrue(json.contains("\"agentePrompt\": \"VALIDACION_CUSTOM\""));
+        assertTrue(json.contains("\"agentePreflightPrompt\": \"PRE_FLIGHT_CUSTOM\""), "assertTrue failed at GestorConfiguracionTest.java:183");
+        assertTrue(json.contains("\"agentePrompt\": \"VALIDACION_CUSTOM\""), "assertTrue failed at GestorConfiguracionTest.java:184");
 
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
-        assertEquals("PRE_FLIGHT_CUSTOM", cargada.obtenerAgentePreflightPrompt());
-        assertEquals("VALIDACION_CUSTOM", cargada.obtenerAgentePrompt());
+        assertEquals("PRE_FLIGHT_CUSTOM", cargada.obtenerAgentePreflightPrompt(), "assertEquals failed at GestorConfiguracionTest.java:187");
+        assertEquals("VALIDACION_CUSTOM", cargada.obtenerAgentePrompt(), "assertEquals failed at GestorConfiguracionTest.java:188");
     }
 
     @Test
@@ -205,7 +205,7 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
 
-        assertEquals(ConfiguracionAPI.AGENTE_DELAY_DEFECTO_MS, cargada.obtenerAgenteDelay());
+        assertEquals(ConfiguracionAPI.AGENTE_DELAY_DEFECTO_MS, cargada.obtenerAgenteDelay(), "assertEquals failed at GestorConfiguracionTest.java:208");
     }
 
     @Test
@@ -226,7 +226,7 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
 
-        assertEquals(75000, cargada.obtenerAgenteDelay());
+        assertEquals(75000, cargada.obtenerAgenteDelay(), "assertEquals failed at GestorConfiguracionTest.java:229");
     }
 
     @Test
@@ -240,17 +240,17 @@ class GestorConfiguracionTest {
         config.establecerTiempoEsperaParaModelo("Z.ai", "glm-5", 180);
         config.establecerTiempoEsperaParaModelo("OpenAI", "gpt-5-mini", 240);
 
-        assertTrue(gestor.guardarConfiguracion(config));
+        assertTrue(gestor.guardarConfiguracion(config), "assertTrue failed at GestorConfiguracionTest.java:243");
 
         String json = leerConfigJson();
-        assertTrue(json.contains("\"tiempoEsperaPorModelo\""));
-        assertTrue(json.contains("\"Z.ai::glm-5\": 180"));
-        assertTrue(json.contains("\"OpenAI::gpt-5-mini\": 240"));
+        assertTrue(json.contains("\"tiempoEsperaPorModelo\""), "assertTrue failed at GestorConfiguracionTest.java:246");
+        assertTrue(json.contains("\"Z.ai::glm-5\": 180"), "assertTrue failed at GestorConfiguracionTest.java:247");
+        assertTrue(json.contains("\"OpenAI::gpt-5-mini\": 240"), "assertTrue failed at GestorConfiguracionTest.java:248");
 
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
-        assertEquals(180, cargada.obtenerTiempoEsperaParaModelo("Z.ai", "glm-5"));
-        assertEquals(240, cargada.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-5-mini"));
-        assertEquals(90, cargada.obtenerTiempoEsperaParaModelo("Z.ai", "glm-4-air"));
+        assertEquals(180, cargada.obtenerTiempoEsperaParaModelo("Z.ai", "glm-5"), "assertEquals failed at GestorConfiguracionTest.java:251");
+        assertEquals(240, cargada.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-5-mini"), "assertEquals failed at GestorConfiguracionTest.java:252");
+        assertEquals(90, cargada.obtenerTiempoEsperaParaModelo("Z.ai", "glm-4-air"), "assertEquals failed at GestorConfiguracionTest.java:253");
     }
 
     @Test
@@ -271,8 +271,8 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
 
-        assertTrue(cargada.obtenerTiempoEsperaPorModelo().isEmpty());
-        assertEquals(120, cargada.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-5-mini"));
+        assertTrue(cargada.obtenerTiempoEsperaPorModelo().isEmpty(), "assertTrue failed at GestorConfiguracionTest.java:274");
+        assertEquals(120, cargada.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-5-mini"), "assertEquals failed at GestorConfiguracionTest.java:275");
     }
 
     @Test
@@ -286,8 +286,8 @@ class GestorConfiguracionTest {
         new GestorConfiguracion(new PrintWriter(salida, true), new PrintWriter(errores, true));
 
         String log = salida.toString();
-        assertTrue(log.contains("[Configuration]"));
-        assertTrue(log.contains("Configuration path"));
+        assertTrue(log.contains("[Configuration]"), "assertTrue failed at GestorConfiguracionTest.java:289");
+        assertTrue(log.contains("Configuration path"), "assertTrue failed at GestorConfiguracionTest.java:290");
     }
 
     @Test
@@ -298,12 +298,12 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         StringBuilder mensajeError = new StringBuilder();
 
-        assertFalse(gestor.guardarConfiguracion(null, mensajeError));
-        assertNotNull(mensajeError.toString());
+        assertFalse(gestor.guardarConfiguracion(null, mensajeError), "assertFalse failed at GestorConfiguracionTest.java:301");
+        assertNotNull(mensajeError.toString(), "assertNotNull failed at GestorConfiguracionTest.java:302");
         assertTrue(mensajeError.toString().toLowerCase().contains("null")
-            || mensajeError.toString().toLowerCase().contains("nula"));
-        assertFalse(Files.exists(configDir.resolve("config.json")));
-        assertFalse(Files.exists(configDir.resolve("config.json.tmp")));
+            || mensajeError.toString().toLowerCase().contains("nula"), "assertTrue failed at GestorConfiguracionTest.java:303");
+        assertFalse(Files.exists(configDir.resolve("config.json")), "assertFalse failed at GestorConfiguracionTest.java:305");
+        assertFalse(Files.exists(configDir.resolve("config.json.tmp")), "assertFalse failed at GestorConfiguracionTest.java:306");
     }
 
     @Test
@@ -325,8 +325,8 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI config = gestor.cargarConfiguracion();
 
-        assertFalse(config.esPromptModificado());
-        assertEquals(ConfiguracionAPI.obtenerPromptPorDefecto(), config.obtenerPromptConfigurable());
+        assertFalse(config.esPromptModificado(), "assertFalse failed at GestorConfiguracionTest.java:328");
+        assertEquals(ConfiguracionAPI.obtenerPromptPorDefecto(), config.obtenerPromptConfigurable(), "assertEquals failed at GestorConfiguracionTest.java:329");
     }
 
     @Test
@@ -349,17 +349,17 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
 
-        assertEquals("Z.ai", cargada.obtenerProveedorAI());
-        assertEquals("", cargada.obtenerApiKeyParaProveedor("-- Custom --"));
-        assertNull(cargada.obtenerUrlBaseGuardadaParaProveedor("-- Custom --"));
-        assertEquals("", cargada.obtenerModeloParaProveedor("-- Custom --"));
-        assertEquals(4096, cargada.obtenerMaxTokensParaProveedor("-- Custom --"));
-        assertNull(cargada.obtenerTiempoEsperaConfiguradoParaModelo("-- Custom --", "legacy-model"));
-        assertEquals(1, cargada.obtenerProveedoresMultiConsulta().size());
-        assertEquals("OpenAI", cargada.obtenerProveedoresMultiConsulta().get(0));
+        assertEquals("Z.ai", cargada.obtenerProveedorAI(), "assertEquals failed at GestorConfiguracionTest.java:352");
+        assertEquals("", cargada.obtenerApiKeyParaProveedor("-- Custom --"), "assertEquals failed at GestorConfiguracionTest.java:353");
+        assertNull(cargada.obtenerUrlBaseGuardadaParaProveedor("-- Custom --"), "assertNull failed at GestorConfiguracionTest.java:354");
+        assertEquals("", cargada.obtenerModeloParaProveedor("-- Custom --"), "assertEquals failed at GestorConfiguracionTest.java:355");
+        assertEquals(4096, cargada.obtenerMaxTokensParaProveedor("-- Custom --"), "assertEquals failed at GestorConfiguracionTest.java:356");
+        assertNull(cargada.obtenerTiempoEsperaConfiguradoParaModelo("-- Custom --", "legacy-model"), "assertNull failed at GestorConfiguracionTest.java:357");
+        assertEquals(1, cargada.obtenerProveedoresMultiConsulta().size(), "assertEquals failed at GestorConfiguracionTest.java:358");
+        assertEquals("OpenAI", cargada.obtenerProveedoresMultiConsulta().get(0), "assertEquals failed at GestorConfiguracionTest.java:359");
 
-        assertTrue(gestor.guardarConfiguracion(cargada));
+        assertTrue(gestor.guardarConfiguracion(cargada), "assertTrue failed at GestorConfiguracionTest.java:361");
         String jsonMigrado = leerConfigJson();
-        assertFalse(jsonMigrado.contains("\"-- Custom --\""));
+        assertFalse(jsonMigrado.contains("\"-- Custom --\""), "assertFalse failed at GestorConfiguracionTest.java:363");
     }
 }

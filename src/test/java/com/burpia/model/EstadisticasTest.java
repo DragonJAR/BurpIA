@@ -29,17 +29,17 @@ class EstadisticasTest {
         @Test
         @DisplayName("Todos los contadores inician en cero")
         void todosLosContadoresInicianEnCero() {
-            assertEquals(0, stats.obtenerTotalSolicitudes());
-            assertEquals(0, stats.obtenerAnalizados());
-            assertEquals(0, stats.obtenerHallazgosCreados());
-            assertEquals(0, stats.obtenerErrores());
-            assertEquals(0, stats.obtenerTotalOmitidos());
-            assertEquals(0, stats.obtenerHallazgosCritical());
-            assertEquals(0, stats.obtenerHallazgosHigh());
-            assertEquals(0, stats.obtenerHallazgosMedium());
-            assertEquals(0, stats.obtenerHallazgosLow());
-            assertEquals(0, stats.obtenerHallazgosInfo());
-            assertEquals(0, stats.obtenerHallazgosDesconocidos());
+            assertEquals(0, stats.obtenerTotalSolicitudes(), "assertEquals failed at EstadisticasTest.java:32");
+            assertEquals(0, stats.obtenerAnalizados(), "assertEquals failed at EstadisticasTest.java:33");
+            assertEquals(0, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:34");
+            assertEquals(0, stats.obtenerErrores(), "assertEquals failed at EstadisticasTest.java:35");
+            assertEquals(0, stats.obtenerTotalOmitidos(), "assertEquals failed at EstadisticasTest.java:36");
+            assertEquals(0, stats.obtenerHallazgosCritical(), "assertEquals failed at EstadisticasTest.java:37");
+            assertEquals(0, stats.obtenerHallazgosHigh(), "assertEquals failed at EstadisticasTest.java:38");
+            assertEquals(0, stats.obtenerHallazgosMedium(), "assertEquals failed at EstadisticasTest.java:39");
+            assertEquals(0, stats.obtenerHallazgosLow(), "assertEquals failed at EstadisticasTest.java:40");
+            assertEquals(0, stats.obtenerHallazgosInfo(), "assertEquals failed at EstadisticasTest.java:41");
+            assertEquals(0, stats.obtenerHallazgosDesconocidos(), "assertEquals failed at EstadisticasTest.java:42");
         }
     }
 
@@ -51,14 +51,14 @@ class EstadisticasTest {
         void incrementaSolicitudes() {
             stats.incrementarTotalSolicitudes();
             stats.incrementarTotalSolicitudes();
-            assertEquals(2, stats.obtenerTotalSolicitudes());
+            assertEquals(2, stats.obtenerTotalSolicitudes(), "assertEquals failed at EstadisticasTest.java:54");
         }
 
         @Test
         @DisplayName("Incrementa analizados")
         void incrementaAnalizados() {
             stats.incrementarAnalizados();
-            assertEquals(1, stats.obtenerAnalizados());
+            assertEquals(1, stats.obtenerAnalizados(), "assertEquals failed at EstadisticasTest.java:61");
         }
 
         @Test
@@ -67,7 +67,7 @@ class EstadisticasTest {
             stats.incrementarErrores();
             stats.incrementarErrores();
             stats.incrementarErrores();
-            assertEquals(3, stats.obtenerErrores());
+            assertEquals(3, stats.obtenerErrores(), "assertEquals failed at EstadisticasTest.java:70");
         }
     }
 
@@ -80,7 +80,7 @@ class EstadisticasTest {
             stats.incrementarOmitidosDuplicado();
             stats.incrementarOmitidosDuplicado();
             stats.incrementarOmitidosBajaConfianza();
-            assertEquals(3, stats.obtenerTotalOmitidos());
+            assertEquals(3, stats.obtenerTotalOmitidos(), "assertEquals failed at EstadisticasTest.java:83");
         }
     }
 
@@ -91,73 +91,73 @@ class EstadisticasTest {
         @DisplayName("Incrementa Critical correctamente")
         void incrementaCritical() {
             stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_CRITICAL);
-            assertEquals(1, stats.obtenerHallazgosCritical());
-            assertEquals(1, stats.obtenerHallazgosCreados());
+            assertEquals(1, stats.obtenerHallazgosCritical(), "assertEquals failed at EstadisticasTest.java:94");
+            assertEquals(1, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:95");
         }
 
         @Test
         @DisplayName("Incrementa High correctamente")
         void incrementaHigh() {
             stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_HIGH);
-            assertEquals(1, stats.obtenerHallazgosHigh());
+            assertEquals(1, stats.obtenerHallazgosHigh(), "assertEquals failed at EstadisticasTest.java:102");
         }
 
         @Test
         @DisplayName("Incrementa Medium correctamente")
         void incrementaMedium() {
             stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_MEDIUM);
-            assertEquals(1, stats.obtenerHallazgosMedium());
+            assertEquals(1, stats.obtenerHallazgosMedium(), "assertEquals failed at EstadisticasTest.java:109");
         }
 
         @Test
         @DisplayName("Incrementa Low correctamente")
         void incrementaLow() {
             stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_LOW);
-            assertEquals(1, stats.obtenerHallazgosLow());
+            assertEquals(1, stats.obtenerHallazgosLow(), "assertEquals failed at EstadisticasTest.java:116");
         }
 
         @Test
         @DisplayName("Incrementa Info correctamente")
         void incrementaInfo() {
             stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_INFO);
-            assertEquals(1, stats.obtenerHallazgosInfo());
+            assertEquals(1, stats.obtenerHallazgosInfo(), "assertEquals failed at EstadisticasTest.java:123");
         }
 
         @Test
         @DisplayName("Severidad desconocida incrementa creados y desconocidos")
         void severidadDesconocida() {
             stats.incrementarHallazgoSeveridad("Unknown");
-            assertEquals(0, stats.obtenerHallazgosCritical());
-            assertEquals(0, stats.obtenerHallazgosHigh());
-            assertEquals(0, stats.obtenerHallazgosMedium());
-            assertEquals(0, stats.obtenerHallazgosLow());
-            assertEquals(0, stats.obtenerHallazgosInfo());
-            assertEquals(1, stats.obtenerHallazgosCreados());
-            assertEquals(1, stats.obtenerHallazgosDesconocidos());
+            assertEquals(0, stats.obtenerHallazgosCritical(), "assertEquals failed at EstadisticasTest.java:130");
+            assertEquals(0, stats.obtenerHallazgosHigh(), "assertEquals failed at EstadisticasTest.java:131");
+            assertEquals(0, stats.obtenerHallazgosMedium(), "assertEquals failed at EstadisticasTest.java:132");
+            assertEquals(0, stats.obtenerHallazgosLow(), "assertEquals failed at EstadisticasTest.java:133");
+            assertEquals(0, stats.obtenerHallazgosInfo(), "assertEquals failed at EstadisticasTest.java:134");
+            assertEquals(1, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:135");
+            assertEquals(1, stats.obtenerHallazgosDesconocidos(), "assertEquals failed at EstadisticasTest.java:136");
         }
 
         @Test
         @DisplayName("Severidad null incrementa creados y desconocidos")
         void severidadNull() {
             stats.incrementarHallazgoSeveridad(null);
-            assertEquals(1, stats.obtenerHallazgosCreados());
-            assertEquals(1, stats.obtenerHallazgosDesconocidos());
+            assertEquals(1, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:143");
+            assertEquals(1, stats.obtenerHallazgosDesconocidos(), "assertEquals failed at EstadisticasTest.java:144");
         }
 
         @Test
         @DisplayName("Severidad vacia incrementa creados y desconocidos")
         void severidadVacia() {
             stats.incrementarHallazgoSeveridad("");
-            assertEquals(1, stats.obtenerHallazgosCreados());
-            assertEquals(1, stats.obtenerHallazgosDesconocidos());
+            assertEquals(1, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:151");
+            assertEquals(1, stats.obtenerHallazgosDesconocidos(), "assertEquals failed at EstadisticasTest.java:152");
         }
 
         @Test
         @DisplayName("Severidad con solo espacios incrementa creados y desconocidos")
         void severidadSoloEspacios() {
             stats.incrementarHallazgoSeveridad("   ");
-            assertEquals(1, stats.obtenerHallazgosCreados());
-            assertEquals(1, stats.obtenerHallazgosDesconocidos());
+            assertEquals(1, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:159");
+            assertEquals(1, stats.obtenerHallazgosDesconocidos(), "assertEquals failed at EstadisticasTest.java:160");
         }
 
         @Test
@@ -171,12 +171,12 @@ class EstadisticasTest {
             stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_INFO);
             stats.incrementarHallazgoSeveridad(Hallazgo.SEVERIDAD_INFO);
 
-            assertEquals(1, stats.obtenerHallazgosCritical());
-            assertEquals(2, stats.obtenerHallazgosHigh());
-            assertEquals(1, stats.obtenerHallazgosMedium());
-            assertEquals(1, stats.obtenerHallazgosLow());
-            assertEquals(2, stats.obtenerHallazgosInfo());
-            assertEquals(7, stats.obtenerHallazgosCreados());
+            assertEquals(1, stats.obtenerHallazgosCritical(), "assertEquals failed at EstadisticasTest.java:174");
+            assertEquals(2, stats.obtenerHallazgosHigh(), "assertEquals failed at EstadisticasTest.java:175");
+            assertEquals(1, stats.obtenerHallazgosMedium(), "assertEquals failed at EstadisticasTest.java:176");
+            assertEquals(1, stats.obtenerHallazgosLow(), "assertEquals failed at EstadisticasTest.java:177");
+            assertEquals(2, stats.obtenerHallazgosInfo(), "assertEquals failed at EstadisticasTest.java:178");
+            assertEquals(7, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:179");
         }
     }
 
@@ -193,22 +193,22 @@ class EstadisticasTest {
             stats.incrementarOmitidosDuplicado();
 
             String resumen = stats.generarResumen();
-            assertTrue(resumen.contains("Solicitudes: 1"));
-            assertTrue(resumen.contains("Analizados: 1"));
-            assertTrue(resumen.contains("Omitidos: 1"));
-            assertTrue(resumen.contains("Hallazgos: 1"));
-            assertTrue(resumen.contains("Errores: 1"));
+            assertTrue(resumen.contains("Solicitudes: 1"), "assertTrue failed at EstadisticasTest.java:196");
+            assertTrue(resumen.contains("Analizados: 1"), "assertTrue failed at EstadisticasTest.java:197");
+            assertTrue(resumen.contains("Omitidos: 1"), "assertTrue failed at EstadisticasTest.java:198");
+            assertTrue(resumen.contains("Hallazgos: 1"), "assertTrue failed at EstadisticasTest.java:199");
+            assertTrue(resumen.contains("Errores: 1"), "assertTrue failed at EstadisticasTest.java:200");
         }
 
         @Test
         @DisplayName("Genera resumen con todos los valores en cero")
         void generaResumenConCeros() {
             String resumen = stats.generarResumen();
-            assertTrue(resumen.contains("Solicitudes: 0"));
-            assertTrue(resumen.contains("Analizados: 0"));
-            assertTrue(resumen.contains("Omitidos: 0"));
-            assertTrue(resumen.contains("Hallazgos: 0"));
-            assertTrue(resumen.contains("Errores: 0"));
+            assertTrue(resumen.contains("Solicitudes: 0"), "assertTrue failed at EstadisticasTest.java:207");
+            assertTrue(resumen.contains("Analizados: 0"), "assertTrue failed at EstadisticasTest.java:208");
+            assertTrue(resumen.contains("Omitidos: 0"), "assertTrue failed at EstadisticasTest.java:209");
+            assertTrue(resumen.contains("Hallazgos: 0"), "assertTrue failed at EstadisticasTest.java:210");
+            assertTrue(resumen.contains("Errores: 0"), "assertTrue failed at EstadisticasTest.java:211");
         }
     }
 
@@ -229,17 +229,17 @@ class EstadisticasTest {
 
             stats.reiniciar();
 
-            assertEquals(0, stats.obtenerTotalSolicitudes());
-            assertEquals(0, stats.obtenerAnalizados());
-            assertEquals(0, stats.obtenerHallazgosCreados());
-            assertEquals(0, stats.obtenerErrores());
-            assertEquals(0, stats.obtenerTotalOmitidos());
-            assertEquals(0, stats.obtenerHallazgosCritical());
-            assertEquals(0, stats.obtenerHallazgosHigh());
-            assertEquals(0, stats.obtenerHallazgosMedium());
-            assertEquals(0, stats.obtenerHallazgosLow());
-            assertEquals(0, stats.obtenerHallazgosInfo());
-            assertEquals(0, stats.obtenerHallazgosDesconocidos());
+            assertEquals(0, stats.obtenerTotalSolicitudes(), "assertEquals failed at EstadisticasTest.java:232");
+            assertEquals(0, stats.obtenerAnalizados(), "assertEquals failed at EstadisticasTest.java:233");
+            assertEquals(0, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:234");
+            assertEquals(0, stats.obtenerErrores(), "assertEquals failed at EstadisticasTest.java:235");
+            assertEquals(0, stats.obtenerTotalOmitidos(), "assertEquals failed at EstadisticasTest.java:236");
+            assertEquals(0, stats.obtenerHallazgosCritical(), "assertEquals failed at EstadisticasTest.java:237");
+            assertEquals(0, stats.obtenerHallazgosHigh(), "assertEquals failed at EstadisticasTest.java:238");
+            assertEquals(0, stats.obtenerHallazgosMedium(), "assertEquals failed at EstadisticasTest.java:239");
+            assertEquals(0, stats.obtenerHallazgosLow(), "assertEquals failed at EstadisticasTest.java:240");
+            assertEquals(0, stats.obtenerHallazgosInfo(), "assertEquals failed at EstadisticasTest.java:241");
+            assertEquals(0, stats.obtenerHallazgosDesconocidos(), "assertEquals failed at EstadisticasTest.java:242");
         }
 
         @Test
@@ -247,7 +247,7 @@ class EstadisticasTest {
         void reiniciarIncrementaVersion() {
             int versionInicial = stats.obtenerVersion();
             stats.reiniciar();
-            assertTrue(stats.obtenerVersion() > versionInicial);
+            assertTrue(stats.obtenerVersion() > versionInicial, "assertTrue failed at EstadisticasTest.java:250");
         }
     }
 
@@ -311,9 +311,9 @@ class EstadisticasTest {
             executor.shutdown();
             assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Executor debe terminar en tiempo");
 
-            assertEquals(hilos * incrementosPorHilo, stats.obtenerTotalSolicitudes());
-            assertEquals(hilos * incrementosPorHilo, stats.obtenerAnalizados());
-            assertEquals(hilos * incrementosPorHilo, stats.obtenerErrores());
+            assertEquals(hilos * incrementosPorHilo, stats.obtenerTotalSolicitudes(), "assertEquals failed at EstadisticasTest.java:314");
+            assertEquals(hilos * incrementosPorHilo, stats.obtenerAnalizados(), "assertEquals failed at EstadisticasTest.java:315");
+            assertEquals(hilos * incrementosPorHilo, stats.obtenerErrores(), "assertEquals failed at EstadisticasTest.java:316");
         }
 
         @Test
@@ -338,8 +338,8 @@ class EstadisticasTest {
             executor.shutdown();
             assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS), "Executor debe terminar en tiempo");
 
-            assertEquals(hilos * incrementosPorHilo, stats.obtenerHallazgosHigh());
-            assertEquals(hilos * incrementosPorHilo, stats.obtenerHallazgosCreados());
+            assertEquals(hilos * incrementosPorHilo, stats.obtenerHallazgosHigh(), "assertEquals failed at EstadisticasTest.java:341");
+            assertEquals(hilos * incrementosPorHilo, stats.obtenerHallazgosCreados(), "assertEquals failed at EstadisticasTest.java:342");
         }
 
         @Test

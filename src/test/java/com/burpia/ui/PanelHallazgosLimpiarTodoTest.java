@@ -25,10 +25,10 @@ class PanelHallazgosLimpiarTodoTest {
         PanelHallazgos panel = crearPanel();
         JButton botonLimpiarTodo = obtenerCampo(panel, CAMPO_BOTON_LIMPIAR_TODO, JButton.class);
 
-        assertNotNull(botonLimpiarTodo);
-        assertTrue(botonLimpiarTodo.isEnabled());
-        assertNotNull(botonLimpiarTodo.getText());
-        assertFalse(botonLimpiarTodo.getText().isEmpty());
+        assertNotNull(botonLimpiarTodo, "assertNotNull failed at PanelHallazgosLimpiarTodoTest.java:28");
+        assertTrue(botonLimpiarTodo.isEnabled(), "assertTrue failed at PanelHallazgosLimpiarTodoTest.java:29");
+        assertNotNull(botonLimpiarTodo.getText(), "assertNotNull failed at PanelHallazgosLimpiarTodoTest.java:30");
+        assertFalse(botonLimpiarTodo.getText().isEmpty(), "assertFalse failed at PanelHallazgosLimpiarTodoTest.java:31");
     }
 
     @Test
@@ -117,7 +117,7 @@ class PanelHallazgosLimpiarTodoTest {
         return panel;
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
     private <T> T obtenerCampo(Object target, String nombreCampo, Class<T> tipo) throws Exception {
         Field field = target.getClass().getDeclaredField(nombreCampo);
         field.setAccessible(true);

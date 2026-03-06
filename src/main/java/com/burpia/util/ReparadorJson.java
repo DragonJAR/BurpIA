@@ -39,16 +39,13 @@ public final class ReparadorJson {
         }
 
         String resultado = jsonPotencial.trim();
-        int longitudAnterior = resultado.length();
-
         if (esJsonValido(resultado)) {
             return resultado;
         }
 
         resultado = eliminarMarkdownCodeBlocks(resultado);
-        if (resultado.length() != longitudAnterior) {
-            if (esJsonValido(resultado)) return resultado;
-            longitudAnterior = resultado.length();
+        if (esJsonValido(resultado)) {
+            return resultado;
         }
 
         resultado = extraerPrimerObjetoJson(resultado);
@@ -227,8 +224,9 @@ public final class ReparadorJson {
         StringBuilder resultado = new StringBuilder(html.length() + 32);
         boolean dentroDeTag = false;
 
-        for (int i = 0; i < html.length(); i++) {
-            char c = html.charAt(i);
+        int indice = 0;
+        while (indice < html.length()) {
+            char c = html.charAt(indice);
 
             if (c == '<') {
                 dentroDeTag = true;
@@ -238,12 +236,14 @@ public final class ReparadorJson {
                 resultado.append(c);
             } else if (c == '"' && dentroDeTag) {
                 resultado.append("\\\"");
-            } else if (c == '\\' && i + 1 < html.length() && html.charAt(i + 1) == '"') {
+            } else if (c == '\\' && indice + 1 < html.length() && html.charAt(indice + 1) == '"') {
                 resultado.append("\\\\\"");
-                i++;
+                indice += 2;
+                continue;
             } else {
                 resultado.append(c);
             }
+            indice++;
         }
 
         return resultado.toString();

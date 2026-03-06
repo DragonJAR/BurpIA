@@ -47,11 +47,11 @@ public class ConstructorPrompts {
      * El prompt incluye:
      * </p>
      * <ul>
-     *   <li>Template configurable del usuario</li>
-     *   <li>Solicitud HTTP (request)</li>
-     *   <li>Respuesta HTTP (response)</li>
-     *   <li>Instrucciones de idioma de salida</li>
-     *   <li>Instrucciones de formato JSON</li>
+     * <li>Template configurable del usuario</li>
+     * <li>Solicitud HTTP (request)</li>
+     * <li>Respuesta HTTP (response)</li>
+     * <li>Instrucciones de idioma de salida</li>
+     * <li>Instrucciones de formato JSON</li>
      * </ul>
      *
      * @param solicitud la solicitud HTTP a analizar, puede ser {@code null}
@@ -72,9 +72,9 @@ public class ConstructorPrompts {
         boolean teniaTokenIdioma = promptTemplate.contains(TOKEN_OUTPUT_LANGUAGE);
 
         String promptFinal = promptTemplate
-            .replace(TOKEN_REQUEST, requestContenido)
-            .replace(TOKEN_RESPONSE, responseContenido)
-            .replace(TOKEN_OUTPUT_LANGUAGE, idiomaSalida);
+                .replace(TOKEN_REQUEST, requestContenido)
+                .replace(TOKEN_RESPONSE, responseContenido)
+                .replace(TOKEN_OUTPUT_LANGUAGE, idiomaSalida);
 
         if (!teniaTokenRequest) {
             promptFinal += "\n\nREQUEST:\n" + requestContenido;
@@ -84,14 +84,9 @@ public class ConstructorPrompts {
         }
         if (!teniaTokenIdioma) {
             promptFinal += "\n\n" + trPrompt("IDIOMA DE SALIDA", "OUTPUT LANGUAGE") + ": " + idiomaSalida +
-                "\n" + trPrompt(
-                "Escribe \"descripcion\" estrictamente en IDIOMA DE SALIDA. Mantén \"severidad\" y \"confianza\" exactamente con valores canónicos.",
-                "Write \"descripcion\" strictly in OUTPUT LANGUAGE. Keep \"severidad\" and \"confianza\" exactly as canonical values."
-            );
-        }
-
-        if (!promptFinal.contains("json_formatting")) {
-            promptFinal += "\n\n" + construirInstruccionesFormatoJson();
+                    "\n" + trPrompt(
+                            "Escribe \"descripcion\" estrictamente en IDIOMA DE SALIDA. Mantén \"severidad\" y \"confianza\" exactamente con valores canónicos.",
+                            "Write \"descripcion\" strictly in OUTPUT LANGUAGE. Keep \"severidad\" and \"confianza\" exactly as canonical values.");
         }
 
         return promptFinal;
@@ -113,7 +108,8 @@ public class ConstructorPrompts {
     /**
      * Construye el bloque de texto para la solicitud HTTP.
      * <p>
-     * Incluye línea inicial (método + URL), encabezados y cuerpo si están disponibles.
+     * Incluye línea inicial (método + URL), encabezados y cuerpo si están
+     * disponibles.
      * El cuerpo se trunca si excede el límite configurado.
      * </p>
      *
@@ -126,7 +122,7 @@ public class ConstructorPrompts {
         }
 
         String lineaInicial = valorNoVacio(solicitud.obtenerMetodo(), "[METHOD NULL]") +
-            " " + valorNoVacio(solicitud.obtenerUrl(), "[URL NULL]");
+                " " + valorNoVacio(solicitud.obtenerUrl(), "[URL NULL]");
         String encabezados = valorNoVacio(solicitud.obtenerEncabezados(), "");
 
         StringBuilder requestBuilder = new StringBuilder();
@@ -141,11 +137,10 @@ public class ConstructorPrompts {
         String cuerpo = valorNoVacio(solicitud.obtenerCuerpo(), "");
         if (!cuerpo.isEmpty()) {
             requestBuilder.append("\nBODY:\n")
-                .append(truncarTexto(
-                    cuerpo,
-                    PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
-                    trPrompt("cuerpo de solicitud", "request body")
-                ));
+                    .append(truncarTexto(
+                            cuerpo,
+                            PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
+                            trPrompt("cuerpo de solicitud", "request body")));
         }
 
         return requestBuilder.toString();
@@ -158,7 +153,8 @@ public class ConstructorPrompts {
      * El cuerpo se trunca si excede el límite configurado.
      * </p>
      *
-     * @param solicitud la solicitud HTTP con datos de respuesta, puede ser {@code null}
+     * @param solicitud la solicitud HTTP con datos de respuesta, puede ser
+     *                  {@code null}
      * @return el bloque de response formateado
      */
     private String construirBloqueResponse(SolicitudAnalisis solicitud) {
@@ -185,11 +181,10 @@ public class ConstructorPrompts {
 
         if (!cuerpo.isEmpty()) {
             responseBuilder.append("\nBODY:\n")
-                .append(truncarTexto(
-                    cuerpo,
-                    PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
-                    trPrompt("cuerpo de respuesta", "response body")
-                ));
+                    .append(truncarTexto(
+                            cuerpo,
+                            PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
+                            trPrompt("cuerpo de respuesta", "response body")));
         } else {
             responseBuilder.append("\nBODY:\n[EMPTY]");
         }
@@ -204,10 +199,12 @@ public class ConstructorPrompts {
      * fueron omitidos.
      * </p>
      *
-     * @param texto el texto a truncar, puede ser {@code null}
+     * @param texto         el texto a truncar, puede ser {@code null}
      * @param maxCaracteres el número máximo de caracteres permitidos
-     * @param etiqueta la etiqueta para el mensaje de truncado (ej: "request body")
-     * @return el texto truncado con mensaje si aplica, o cadena vacía si el input es {@code null}
+     * @param etiqueta      la etiqueta para el mensaje de truncado (ej: "request
+     *                      body")
+     * @return el texto truncado con mensaje si aplica, o cadena vacía si el input
+     *         es {@code null}
      */
     private String truncarTexto(String texto, int maxCaracteres, String etiqueta) {
         if (texto == null) {
@@ -218,10 +215,9 @@ public class ConstructorPrompts {
         }
         int truncados = texto.length() - maxCaracteres;
         return texto.substring(0, maxCaracteres) +
-            "\n" + trPrompt(
-            "[TRUNCADO " + etiqueta + ": +" + truncados + " caracteres]",
-            "[TRUNCATED " + etiqueta + ": +" + truncados + " characters]"
-        );
+                "\n" + trPrompt(
+                        "[TRUNCADO " + etiqueta + ": +" + truncados + " caracteres]",
+                        "[TRUNCATED " + etiqueta + ": +" + truncados + " characters]");
     }
 
     /**
@@ -246,7 +242,7 @@ public class ConstructorPrompts {
      * el principio DRY.
      * </p>
      *
-     * @param valor el valor a verificar, puede ser {@code null}
+     * @param valor        el valor a verificar, puede ser {@code null}
      * @param valorDefecto el valor por defecto si el valor está vacío
      * @return el valor trimado si tiene contenido, o el valor por defecto
      */
@@ -257,38 +253,4 @@ public class ConstructorPrompts {
         return valor.trim();
     }
 
-    /**
-     * Construye las instrucciones de formato JSON para el prompt.
-     * <p>
-     * Las instrucciones incluyen reglas críticas para el escape correcto de
-     * caracteres especiales en contenido HTML dentro de JSON.
-     * </p>
-     *
-     * @return las instrucciones de formato JSON en el idioma configurado
-     */
-    private String construirInstruccionesFormatoJson() {
-        return trPrompt(
-            "<json_formatting>" +
-            "CRITICAL: When generating JSON responses with HTML content in 'evidencia' field:" +
-            "1. Escape ALL double quotes inside HTML tags as backslash-double-quote (\\\") " +
-            "2. Examples of CORRECT escaping:" +
-            "   - \"evidencia\": \"<img src=\\\"logo.gif\\\">\" " +
-            "   - \"evidencia\": \"<form action=\\\"submit.php\\\">\" " +
-            "   - \"evidencia\": \"<embed src=\\\"file.swf\\\">\" " +
-            "3. NEVER include unescaped quotes inside JSON string values" +
-            "4. This prevents JSON parsing errors" +
-            "</json_formatting>",
-
-            "<json_formatting>" +
-            "CRITICAL: When generating JSON responses with HTML content in 'evidence' field:" +
-            "1. Escape ALL double quotes inside HTML tags as backslash-double-quote (\\\") " +
-            "2. Examples of CORRECT escaping:" +
-            "   - \"evidence\": \"<img src=\\\"logo.gif\\\">\" " +
-            "   - \"evidence\": \"<form action=\\\"submit.php\\\">\" " +
-            "   - \"evidence\": \"<embed src=\\\"file.swf\\\">\" " +
-            "3. NEVER include unescaped quotes inside JSON string values" +
-            "4. This prevents JSON parsing errors" +
-            "</json_formatting>"
-        );
-    }
 }

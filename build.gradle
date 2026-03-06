@@ -17,8 +17,8 @@ def versionCentral = matcherVersion.group(1)
 pmd {
     consoleOutput = true
     toolVersion = "7.11.0"
-    ruleSets = ["category/java/bestpractices.xml"]
-    ignoreFailures = true
+    ruleSets = [file("config/pmd/pmd-ruleset.xml").absolutePath]
+    ignoreFailures = false
 }
 
 jacoco {

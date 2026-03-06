@@ -74,7 +74,7 @@ class PanelHallazgosSendTest {
         HttpRequest request = mock(HttpRequest.class);
         when(request.url()).thenReturn("https://example.com/repeater");
         agregarHallazgoConRequest(panel, request, "https://example.com/repeater");
-        assertTrue(panel.obtenerModelo().getRowCount() >= 1);
+        assertTrue(panel.obtenerModelo().getRowCount() >= 1, "assertTrue failed at PanelHallazgosSendTest.java:77");
 
         invocarMetodoPrivado(panel, "enviarARepeater", new int[]{0});
 
@@ -90,7 +90,7 @@ class PanelHallazgosSendTest {
         HttpRequest request = mock(HttpRequest.class);
         when(request.url()).thenReturn("https://example.com/intruder");
         agregarHallazgoConRequest(panel, request, "https://example.com/intruder");
-        assertTrue(panel.obtenerModelo().getRowCount() >= 1);
+        assertTrue(panel.obtenerModelo().getRowCount() >= 1, "assertTrue failed at PanelHallazgosSendTest.java:93");
 
         invocarMetodoPrivado(panel, "enviarAIntruder", new int[]{0});
 
@@ -105,11 +105,11 @@ class PanelHallazgosSendTest {
         Audit audit = mock(Audit.class);
         when(scanner.startAudit(any())).thenReturn(audit);
 
-        assertTrue(obtenerCampoBooleano(panel, "esBurpProfessional"));
+        assertTrue(obtenerCampoBooleano(panel, "esBurpProfessional"), "assertTrue failed at PanelHallazgosSendTest.java:108");
         HttpRequest request = mock(HttpRequest.class);
         when(request.url()).thenReturn("https://example.com/scanner");
         agregarHallazgoConRequest(panel, request, "https://example.com/scanner");
-        assertTrue(panel.obtenerModelo().getRowCount() >= 1);
+        assertTrue(panel.obtenerModelo().getRowCount() >= 1, "assertTrue failed at PanelHallazgosSendTest.java:112");
 
         assertDoesNotThrow(() -> invocarMetodoPrivado(panel, "enviarAScanner", new int[]{0}));
     }
@@ -122,13 +122,13 @@ class PanelHallazgosSendTest {
         when(api.ai().isEnabled()).thenReturn(true);
         when(api.siteMap()).thenReturn(siteMap);
 
-        assertTrue(obtenerCampoBooleano(panel, "integracionIssuesDisponible"));
+        assertTrue(obtenerCampoBooleano(panel, "integracionIssuesDisponible"), "assertTrue failed at PanelHallazgosSendTest.java:125");
         SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
 
         HttpRequest request = mock(HttpRequest.class);
         when(request.url()).thenReturn("https://example.com/issues");
         agregarHallazgoConRequest(panel, request, "https://example.com/issues");
-        assertTrue(panel.obtenerModelo().getRowCount() >= 1);
+        assertTrue(panel.obtenerModelo().getRowCount() >= 1, "assertTrue failed at PanelHallazgosSendTest.java:131");
 
         assertDoesNotThrow(() -> invocarMetodoPrivado(panel, "enviarAIssues", new int[]{0}));
     }
@@ -160,8 +160,8 @@ class PanelHallazgosSendTest {
 
         invocarMetodoPrivado(panel, "enviarAAgente", new int[]{0, 1});
 
-        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS));
-        assertEquals(1, enviados.get());
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS), "assertTrue failed at PanelHallazgosSendTest.java:163");
+        assertEquals(1, enviados.get(), "assertEquals failed at PanelHallazgosSendTest.java:164");
     }
 
     @Test
@@ -181,15 +181,15 @@ class PanelHallazgosSendTest {
         panel.establecerManejadorEnviarAAgente(h -> {
             enviados.incrementAndGet();
             assertNotNull(h, "El hallazgo no debe ser null");
-            assertEquals("https://example.com/test", h.obtenerUrl());
+            assertEquals("https://example.com/test", h.obtenerUrl(), "assertEquals failed at PanelHallazgosSendTest.java:184");
             latch.countDown();
             return true;
         });
 
         invocarMetodoPrivado(panel, "enviarAAgente", new int[]{0});
 
-        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS));
-        assertEquals(1, enviados.get());
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS), "assertTrue failed at PanelHallazgosSendTest.java:191");
+        assertEquals(1, enviados.get(), "assertEquals failed at PanelHallazgosSendTest.java:192");
     }
 
     @Test
@@ -204,7 +204,7 @@ class PanelHallazgosSendTest {
         assertNotNull(captura, "La captura no debe ser null");
 
         List<?> entradas = obtenerCampoLista(captura, "entradas");
-        assertEquals(1, entradas.size());
+        assertEquals(1, entradas.size(), "assertEquals failed at PanelHallazgosSendTest.java:207");
 
         Object entrada = entradas.get(0);
         HttpRequest solicitud = obtenerCampo(entrada, "solicitud", HttpRequest.class);
@@ -252,6 +252,7 @@ class PanelHallazgosSendTest {
      * @param filas        Parámetro int[] a pasar al método
      * @throws Exception si el método no existe o falla la invocación
      */
+    @SuppressWarnings("PMD.UseVarargs")
     private void invocarMetodoPrivado(PanelHallazgos panel, String nombreMetodo, int[] filas) throws Exception {
         assertNotNull(panel, "El panel no puede ser null");
         Method metodo = PanelHallazgos.class.getDeclaredMethod(nombreMetodo, int[].class);
@@ -268,6 +269,7 @@ class PanelHallazgosSendTest {
      * @return Resultado del método invocado
      * @throws Exception si el método no existe o falla la invocación
      */
+    @SuppressWarnings("PMD.UseVarargs")
     private Object invocarMetodoPrivadoRetorno(PanelHallazgos panel, String nombreMetodo, int[] filas) throws Exception {
         assertNotNull(panel, "El panel no puede ser null");
         Method metodo = PanelHallazgos.class.getDeclaredMethod(nombreMetodo, int[].class);
@@ -353,7 +355,7 @@ class PanelHallazgosSendTest {
      * @return Valor del campo
      * @throws Exception si ocurre error al acceder al campo
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
     private <T> T obtenerCampo(Object objeto, String nombreCampo, Class<T> tipoEsperado) throws Exception {
         assertNotNull(objeto, "El objeto no puede ser null");
         Field field = objeto.getClass().getDeclaredField(nombreCampo);

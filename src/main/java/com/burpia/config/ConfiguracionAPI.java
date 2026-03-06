@@ -47,7 +47,6 @@ public class ConfiguracionAPI {
     private boolean detallado;
     private String proveedorAI;
     private int tiempoEsperaAI;
-    private String tema;
     private String idiomaUi;
     private boolean escaneoPasivoHabilitado;
     private boolean autoGuardadoIssuesHabilitado;
@@ -96,7 +95,6 @@ public class ConfiguracionAPI {
         this.maximoTareasTabla = MAXIMO_TAREAS_TABLA_DEFECTO;
         this.tiempoEsperaAI = 120;
         this.detallado = false;
-        this.tema = "Light";
         this.idiomaUi = IdiomaUI.porDefecto().codigo();
         this.escaneoPasivoHabilitado = true;
         this.autoGuardadoIssuesHabilitado = true;
@@ -233,14 +231,6 @@ public class ConfiguracionAPI {
 
     public void establecerTiempoEsperaAI(int tiempoEsperaAI) {
         this.tiempoEsperaAI = normalizarTiempoEspera(tiempoEsperaAI);
-    }
-
-    public String obtenerTema() {
-        return tema;
-    }
-
-    public void establecerTema(String tema) {
-        this.tema = normalizarTema(tema);
     }
 
     public String obtenerIdiomaUi() {
@@ -848,10 +838,6 @@ public class ConfiguracionAPI {
                     I18nUI.Configuracion.ERROR_TIMEOUT_RANGO());
         }
 
-        if (!"Light".equals(tema) && !"Dark".equals(tema)) {
-            errores.put("tema", I18nUI.Configuracion.ERROR_TEMA_INVALIDO());
-        }
-
         if (Normalizador.esVacio(promptConfigurable)) {
             errores.put(
                     "promptConfigurable",
@@ -966,6 +952,7 @@ public class ConfiguracionAPI {
                 "1. Before generating JSON, internally reason through the request and response systematically (do not output this reasoning)\n"
                 +
                 "2. Output ONLY raw JSON. No markdown, no code blocks, no backticks, no explanation, no preamble\n" +
+                "2b. Respond ONLY with valid JSON, no additional text, no explanations, no markdown code blocks or backticks; properly escape quotes, line breaks, and any special characters within values.\n" +
                 "3. Start your response with { and end with }\n" +
                 "4. Every finding must have EXACTLY these five fields in this exact order: \"titulo\", \"severidad\", \"confianza\", \"descripcion\", \"evidencia\"\n"
                 +
@@ -1020,6 +1007,9 @@ public class ConfiguracionAPI {
         asegurarMapas();
 
         CodigoValidacionConsulta codigo = validarCodigoParaConsultaModelo();
+        if (codigo == null) {
+            return I18nUI.Configuracion.ALERTA_PROVEEDOR_INVALIDO();
+        }
         String proveedor = obtenerProveedorAI();
         switch (codigo) {
             case OK:
@@ -1034,9 +1024,8 @@ public class ConfiguracionAPI {
                 return I18nUI.Configuracion.ALERTA_MODELO_NO_CONFIGURADO(proveedor);
             case API_KEY_REQUERIDA:
                 return I18nUI.Configuracion.ALERTA_CLAVE_REQUERIDA(proveedor);
-            default:
-                return I18nUI.Configuracion.ALERTA_PROVEEDOR_INVALIDO();
         }
+        return I18nUI.Configuracion.ALERTA_PROVEEDOR_INVALIDO();
     }
 
     public CodigoValidacionConsulta validarCodigoParaConsultaModelo() {
@@ -1189,7 +1178,6 @@ public class ConfiguracionAPI {
         proveedoresMultiConsulta = normalizarListaProveedores(proveedoresMultiConsulta);
         idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo();
         tiempoEsperaAI = normalizarTiempoEspera(tiempoEsperaAI);
-        tema = normalizarTema(tema);
         retrasoSegundos = normalizarRetrasoSegundos(retrasoSegundos);
         maximoConcurrente = normalizarMaximoConcurrente(maximoConcurrente);
         maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
@@ -1260,13 +1248,6 @@ public class ConfiguracionAPI {
 
     private static int normalizarMaximoConcurrente(int valor) {
         return normalizarRango(valor, MINIMO_MAXIMO_CONCURRENTE, MAXIMO_MAXIMO_CONCURRENTE);
-    }
-
-    private static String normalizarTema(String tema) {
-        if ("Dark".equals(tema)) {
-            return "Dark";
-        }
-        return "Light";
     }
 
     private static String normalizarPromptAgente(String prompt) {
@@ -1367,7 +1348,6 @@ public class ConfiguracionAPI {
         snapshot.detallado = this.detallado;
         snapshot.proveedorAI = this.proveedorAI;
         snapshot.tiempoEsperaAI = this.tiempoEsperaAI;
-        snapshot.tema = this.tema;
         snapshot.idiomaUi = this.idiomaUi;
         snapshot.escaneoPasivoHabilitado = this.escaneoPasivoHabilitado;
         snapshot.autoGuardadoIssuesHabilitado = this.autoGuardadoIssuesHabilitado;
@@ -1426,7 +1406,6 @@ public class ConfiguracionAPI {
         this.detallado = origen.detallado;
         this.proveedorAI = origen.proveedorAI;
         this.tiempoEsperaAI = origen.tiempoEsperaAI;
-        this.tema = origen.tema;
         this.idiomaUi = origen.idiomaUi;
         this.escaneoPasivoHabilitado = origen.escaneoPasivoHabilitado;
         this.autoGuardadoIssuesHabilitado = origen.autoGuardadoIssuesHabilitado;

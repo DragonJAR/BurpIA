@@ -73,19 +73,13 @@ public class ModeloTablaTareas extends DefaultTableModel {
         }
 
         ejecutarEnEdt(() -> {
-            List<String> idsPurgadas;
             lock.lock();
             try {
-                boolean huboCambios = false;
                 for (Tarea tarea : tareasFiltradas) {
-                    int tamañoAnterior = datos.size();
                     datos.add(tarea);
-                    if (datos.size() > tamañoAnterior) {
-                        huboCambios = true;
-                    }
                 }
                 marcarCambio();
-                idsPurgadas = aplicarLimiteFilasEnDatos();
+                aplicarLimiteFilasEnDatos();
             } finally {
                 lock.unlock();
             }
@@ -125,7 +119,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (Normalizador.esVacio(idTarea)) {
             return;
         }
-        int indiceEnDatos = -1;
+        int indiceEnDatos;
         lock.lock();
         try {
             indiceEnDatos = buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));

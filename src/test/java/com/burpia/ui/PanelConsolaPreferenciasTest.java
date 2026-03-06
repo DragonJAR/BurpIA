@@ -30,15 +30,15 @@ class PanelConsolaPreferenciasTest {
     void testSetterProgramaticoAutoScroll() throws Exception {
         PanelConsola panel = crearPanel();
         try {
-            assertTrue(panel.isAutoScrollActivo());
+            assertTrue(panel.isAutoScrollActivo(), "assertTrue failed at PanelConsolaPreferenciasTest.java:33");
 
             SwingUtilities.invokeAndWait(() -> panel.establecerAutoScrollActivo(false));
             flushEdt();
-            assertFalse(panel.isAutoScrollActivo());
+            assertFalse(panel.isAutoScrollActivo(), "assertFalse failed at PanelConsolaPreferenciasTest.java:37");
 
             SwingUtilities.invokeAndWait(() -> panel.establecerAutoScrollActivo(true));
             flushEdt();
-            assertTrue(panel.isAutoScrollActivo());
+            assertTrue(panel.isAutoScrollActivo(), "assertTrue failed at PanelConsolaPreferenciasTest.java:41");
         } finally {
             panel.destruir();
         }
@@ -52,7 +52,7 @@ class PanelConsolaPreferenciasTest {
         try {
             JLabel etiquetaResumen = obtenerEtiquetaResumen(panel);
             flushEdt();
-            assertTrue(etiquetaResumen.getText().contains("Total:"));
+            assertTrue(etiquetaResumen.getText().contains("Total:"), "assertTrue failed at PanelConsolaPreferenciasTest.java:55");
 
             SwingUtilities.invokeAndWait(() -> {
                 I18nUI.establecerIdioma("en");
@@ -60,7 +60,7 @@ class PanelConsolaPreferenciasTest {
             });
             flushEdt();
 
-            assertTrue(etiquetaResumen.getText().contains("Total:"));
+            assertTrue(etiquetaResumen.getText().contains("Total:"), "assertTrue failed at PanelConsolaPreferenciasTest.java:63");
         } finally {
             panel.destruir();
         }
@@ -78,8 +78,8 @@ class PanelConsolaPreferenciasTest {
             flushEdt();
 
             Color fondoPanel = panel.getBackground();
-            assertTrue(EstilosUI.ratioContraste(etiquetaResumen.getForeground(), fondoPanel) >= EstilosUI.CONTRASTE_AA_NORMAL);
-            assertTrue(EstilosUI.ratioContraste(consola.getForeground(), consola.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL);
+            assertTrue(EstilosUI.ratioContraste(etiquetaResumen.getForeground(), fondoPanel) >= EstilosUI.CONTRASTE_AA_NORMAL, "assertTrue failed at PanelConsolaPreferenciasTest.java:81");
+            assertTrue(EstilosUI.ratioContraste(consola.getForeground(), consola.getBackground()) >= EstilosUI.CONTRASTE_AA_NORMAL, "assertTrue failed at PanelConsolaPreferenciasTest.java:82");
         } finally {
             panel.destruir();
         }
@@ -99,7 +99,7 @@ class PanelConsolaPreferenciasTest {
             SwingUtilities.invokeAndWait(panel::aplicarIdioma);
             flushEdt();
 
-            assertTrue(etiquetaResumen.getText().contains("Total: 0"));
+            assertTrue(etiquetaResumen.getText().contains("Total: 0"), "assertTrue failed at PanelConsolaPreferenciasTest.java:102");
         } finally {
             panel.destruir();
         }
@@ -122,8 +122,8 @@ class PanelConsolaPreferenciasTest {
             hilo.join(2000);
             flushEdt();
 
-            assertNull(error.get());
-            assertFalse(panel.isAutoScrollActivo());
+            assertNull(error.get(), "assertNull failed at PanelConsolaPreferenciasTest.java:125");
+            assertFalse(panel.isAutoScrollActivo(), "assertFalse failed at PanelConsolaPreferenciasTest.java:126");
         } finally {
             panel.destruir();
         }

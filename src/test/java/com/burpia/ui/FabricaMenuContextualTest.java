@@ -52,7 +52,7 @@ class FabricaMenuContextualTest {
         void eventoNull() {
             FabricaMenuContextual fabrica = crearFabricaBasica();
             List<Component> items = fabrica.provideMenuItems((ContextMenuEvent) null);
-            assertTrue(items.isEmpty());
+            assertTrue(items.isEmpty(), "assertTrue failed at FabricaMenuContextualTest.java:55");
         }
 
         @Test
@@ -64,7 +64,7 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = crearFabricaBasica();
             List<Component> items = fabrica.provideMenuItems(evento);
 
-            assertTrue(items.isEmpty());
+            assertTrue(items.isEmpty(), "assertTrue failed at FabricaMenuContextualTest.java:67");
         }
 
         @Test
@@ -76,7 +76,7 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = crearFabricaBasica();
             List<Component> items = fabrica.provideMenuItems(evento);
 
-            assertTrue(items.isEmpty());
+            assertTrue(items.isEmpty(), "assertTrue failed at FabricaMenuContextualTest.java:79");
         }
 
         @Test
@@ -87,10 +87,10 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = crearFabricaBasica();
             List<Component> items = fabrica.provideMenuItems(evento);
 
-            assertEquals(1, items.size());
+            assertEquals(1, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:90");
             JMenuItem item = (JMenuItem) items.get(0);
-            assertNotNull(item.getText());
-            assertFalse(item.getText().isEmpty());
+            assertNotNull(item.getText(), "assertNotNull failed at FabricaMenuContextualTest.java:92");
+            assertFalse(item.getText().isEmpty(), "assertFalse failed at FabricaMenuContextualTest.java:93");
         }
 
         @Test
@@ -115,7 +115,7 @@ class FabricaMenuContextualTest {
 
             List<Component> items = fabrica.provideMenuItems(evento);
 
-            assertEquals(2, items.size());
+            assertEquals(2, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:118");
         }
     }
 
@@ -146,8 +146,8 @@ class FabricaMenuContextualTest {
             JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
             item.doClick();
 
-            assertEquals(1, llamadas.get());
-            assertNotNull(evidencia.get());
+            assertEquals(1, llamadas.get(), "assertEquals failed at FabricaMenuContextualTest.java:149");
+            assertNotNull(evidencia.get(), "assertNotNull failed at FabricaMenuContextualTest.java:150");
         }
 
         @Test
@@ -171,7 +171,7 @@ class FabricaMenuContextualTest {
             JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
             item.doClick();
 
-            assertEquals(1, analisis.get());
+            assertEquals(1, analisis.get(), "assertEquals failed at FabricaMenuContextualTest.java:174");
             verify(config, never()).establecerAlertasClickDerechoEnviarAHabilitadas(false);
         }
     }
@@ -202,7 +202,7 @@ class FabricaMenuContextualTest {
             item.doClick();
             item.doClick();
 
-            assertEquals(1, llamadas.get());
+            assertEquals(1, llamadas.get(), "assertEquals failed at FabricaMenuContextualTest.java:205");
         }
 
         @Test
@@ -231,7 +231,7 @@ class FabricaMenuContextualTest {
             JMenuItem item2 = (JMenuItem) fabrica.provideMenuItems(evento2).get(0);
             item2.doClick();
 
-            assertEquals(2, llamadas.get());
+            assertEquals(2, llamadas.get(), "assertEquals failed at FabricaMenuContextualTest.java:234");
         }
     }
 
@@ -262,7 +262,7 @@ class FabricaMenuContextualTest {
             JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
             itemAgente.doClick();
 
-            assertEquals(1, enviados.get());
+            assertEquals(1, enviados.get(), "assertEquals failed at FabricaMenuContextualTest.java:265");
         }
 
         @Test
@@ -298,7 +298,7 @@ class FabricaMenuContextualTest {
             JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
             itemAgente.doClick();
 
-            assertEquals(2, enviados.get());
+            assertEquals(2, enviados.get(), "assertEquals failed at FabricaMenuContextualTest.java:301");
         }
 
         @Test
@@ -356,7 +356,7 @@ class FabricaMenuContextualTest {
             itemAgente.doClick();
 
             // Solo el elemento valido debe ser procesado
-            assertEquals(1, enviados.get());
+            assertEquals(1, enviados.get(), "assertEquals failed at FabricaMenuContextualTest.java:359");
         }
     }
 
@@ -379,9 +379,9 @@ class FabricaMenuContextualTest {
             );
 
             List<Component> items = fabrica.provideMenuItems(evento);
-            assertEquals(1, items.size());
+            assertEquals(1, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:382");
             ((JMenuItem) items.get(0)).doClick();
-            assertEquals(1, analisis.get());
+            assertEquals(1, analisis.get(), "assertEquals failed at FabricaMenuContextualTest.java:384");
         }
     }
 
@@ -389,6 +389,7 @@ class FabricaMenuContextualTest {
     @DisplayName("Callback cambio alertas")
     class CallbackCambioAlertasTests {
 
+        @SuppressWarnings("PMD.UnusedLocalVariable")
         @Test
         @DisplayName("llama callback de cambio cuando se deshabilitan alertas")
         void llamaCallbackCambio() {
@@ -406,8 +407,8 @@ class FabricaMenuContextualTest {
             );
 
             // Verificar que el callback esta configurado
-            assertNotNull(fabrica);
-            assertEquals(0, cambios.get());
+            assertNotNull(fabrica, "assertNotNull failed at FabricaMenuContextualTest.java:409");
+            assertEquals(0, cambios.get(), "assertEquals failed at FabricaMenuContextualTest.java:410");
         }
 
         @Test
@@ -421,7 +422,7 @@ class FabricaMenuContextualTest {
             metodo.setAccessible(true);
 
             boolean habilitadas = (boolean) metodo.invoke(fabrica);
-            assertFalse(habilitadas);
+            assertFalse(habilitadas, "assertFalse failed at FabricaMenuContextualTest.java:424");
         }
     }
 

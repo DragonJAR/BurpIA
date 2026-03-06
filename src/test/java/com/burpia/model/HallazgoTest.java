@@ -30,15 +30,15 @@ class HallazgoTest {
                 "Medium"
             );
 
-            assertNotNull(hallazgo);
-            assertEquals("https://example.com/test", hallazgo.obtenerUrl());
-            assertEquals("XSS", hallazgo.obtenerTitulo());
-            assertEquals("XSS detectado", hallazgo.obtenerHallazgo());
-            assertEquals("High", hallazgo.obtenerSeveridad());
-            assertEquals("Medium", hallazgo.obtenerConfianza());
-            assertNull(hallazgo.obtenerSolicitudHttp());
-            assertNull(hallazgo.obtenerEvidenciaHttp());
-            assertNull(hallazgo.obtenerEvidenciaId());
+            assertNotNull(hallazgo, "assertNotNull failed at HallazgoTest.java:33");
+            assertEquals("https://example.com/test", hallazgo.obtenerUrl(), "assertEquals failed at HallazgoTest.java:34");
+            assertEquals("XSS", hallazgo.obtenerTitulo(), "assertEquals failed at HallazgoTest.java:35");
+            assertEquals("XSS detectado", hallazgo.obtenerHallazgo(), "assertEquals failed at HallazgoTest.java:36");
+            assertEquals("High", hallazgo.obtenerSeveridad(), "assertEquals failed at HallazgoTest.java:37");
+            assertEquals("Medium", hallazgo.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:38");
+            assertNull(hallazgo.obtenerSolicitudHttp(), "assertNull failed at HallazgoTest.java:39");
+            assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:40");
+            assertNull(hallazgo.obtenerEvidenciaId(), "assertNull failed at HallazgoTest.java:41");
         }
 
         @Test
@@ -54,9 +54,9 @@ class HallazgoTest {
                 solicitud
             );
 
-            assertNotNull(hallazgo);
-            assertSame(solicitud, hallazgo.obtenerSolicitudHttp());
-            assertNull(hallazgo.obtenerEvidenciaHttp());
+            assertNotNull(hallazgo, "assertNotNull failed at HallazgoTest.java:57");
+            assertSame(solicitud, hallazgo.obtenerSolicitudHttp(), "assertSame failed at HallazgoTest.java:58");
+            assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:59");
         }
 
         @Test
@@ -72,7 +72,7 @@ class HallazgoTest {
                 (HttpRequest) null
             );
 
-            assertEquals("10:20:30", hallazgo.obtenerHoraDescubrimiento());
+            assertEquals("10:20:30", hallazgo.obtenerHoraDescubrimiento(), "assertEquals failed at HallazgoTest.java:75");
         }
 
         @Test
@@ -92,14 +92,14 @@ class HallazgoTest {
                 evidencia
             );
 
-            assertEquals("10:20:30", hallazgo.obtenerHoraDescubrimiento());
-            assertEquals("https://example.com/test", hallazgo.obtenerUrl());
-            assertEquals("SSRF", hallazgo.obtenerTitulo());
-            assertEquals("Server-Side Request Forgery", hallazgo.obtenerHallazgo());
-            assertEquals(Hallazgo.SEVERIDAD_HIGH, hallazgo.obtenerSeveridad());
-            assertEquals(Hallazgo.CONFIANZA_ALTA, hallazgo.obtenerConfianza());
-            assertSame(solicitud, hallazgo.obtenerSolicitudHttp());
-            assertSame(evidencia, hallazgo.obtenerEvidenciaHttp());
+            assertEquals("10:20:30", hallazgo.obtenerHoraDescubrimiento(), "assertEquals failed at HallazgoTest.java:95");
+            assertEquals("https://example.com/test", hallazgo.obtenerUrl(), "assertEquals failed at HallazgoTest.java:96");
+            assertEquals("SSRF", hallazgo.obtenerTitulo(), "assertEquals failed at HallazgoTest.java:97");
+            assertEquals("Server-Side Request Forgery", hallazgo.obtenerHallazgo(), "assertEquals failed at HallazgoTest.java:98");
+            assertEquals(Hallazgo.SEVERIDAD_HIGH, hallazgo.obtenerSeveridad(), "assertEquals failed at HallazgoTest.java:99");
+            assertEquals(Hallazgo.CONFIANZA_ALTA, hallazgo.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:100");
+            assertSame(solicitud, hallazgo.obtenerSolicitudHttp(), "assertSame failed at HallazgoTest.java:101");
+            assertSame(evidencia, hallazgo.obtenerEvidenciaHttp(), "assertSame failed at HallazgoTest.java:102");
         }
 
         @Test
@@ -119,8 +119,8 @@ class HallazgoTest {
                 "evidencia-123"
             );
 
-            assertEquals("evidencia-123", hallazgo.obtenerEvidenciaId());
-            assertNull(hallazgo.obtenerEvidenciaHttp());
+            assertEquals("evidencia-123", hallazgo.obtenerEvidenciaId(), "assertEquals failed at HallazgoTest.java:122");
+            assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:123");
         }
 
         @Test
@@ -134,11 +134,11 @@ class HallazgoTest {
                 null
             );
 
-            assertNull(hallazgo.obtenerUrl());
-            assertNull(hallazgo.obtenerTitulo());
-            assertNull(hallazgo.obtenerHallazgo());
-            assertEquals(Hallazgo.SEVERIDAD_INFO, hallazgo.obtenerSeveridad()); // Valor por defecto
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, hallazgo.obtenerConfianza()); // Valor por defecto
+            assertNull(hallazgo.obtenerUrl(), "assertNull failed at HallazgoTest.java:137");
+            assertNull(hallazgo.obtenerTitulo(), "assertNull failed at HallazgoTest.java:138");
+            assertNull(hallazgo.obtenerHallazgo(), "assertNull failed at HallazgoTest.java:139");
+            assertEquals(Hallazgo.SEVERIDAD_INFO, hallazgo.obtenerSeveridad(), "assertEquals failed at HallazgoTest.java:140"); // Valor por defecto
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, hallazgo.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:141"); // Valor por defecto
         }
 
         @Test
@@ -152,11 +152,11 @@ class HallazgoTest {
                 ""
             );
 
-            assertEquals("", hallazgo.obtenerUrl());
-            assertEquals("", hallazgo.obtenerTitulo());
-            assertEquals("", hallazgo.obtenerHallazgo());
-            assertEquals(Hallazgo.SEVERIDAD_INFO, hallazgo.obtenerSeveridad()); // Valor por defecto
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, hallazgo.obtenerConfianza()); // Valor por defecto
+            assertEquals("", hallazgo.obtenerUrl(), "assertEquals failed at HallazgoTest.java:155");
+            assertEquals("", hallazgo.obtenerTitulo(), "assertEquals failed at HallazgoTest.java:156");
+            assertEquals("", hallazgo.obtenerHallazgo(), "assertEquals failed at HallazgoTest.java:157");
+            assertEquals(Hallazgo.SEVERIDAD_INFO, hallazgo.obtenerSeveridad(), "assertEquals failed at HallazgoTest.java:158"); // Valor por defecto
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, hallazgo.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:159"); // Valor por defecto
         }
     }
 
@@ -167,65 +167,65 @@ class HallazgoTest {
         @Test
         @DisplayName("Validar severidades validas")
         void testSeveridadesValidas() {
-            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_CRITICAL));
-            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_HIGH));
-            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_MEDIUM));
-            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_LOW));
-            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_INFO));
+            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_CRITICAL), "assertTrue failed at HallazgoTest.java:170");
+            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_HIGH), "assertTrue failed at HallazgoTest.java:171");
+            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_MEDIUM), "assertTrue failed at HallazgoTest.java:172");
+            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_LOW), "assertTrue failed at HallazgoTest.java:173");
+            assertTrue(Hallazgo.esSeveridadValida(Hallazgo.SEVERIDAD_INFO), "assertTrue failed at HallazgoTest.java:174");
         }
 
         @Test
         @DisplayName("Rechazar severidades invalidas")
         void testSeveridadesInvalidas() {
-            assertFalse(Hallazgo.esSeveridadValida("Alta"));
-            assertFalse(Hallazgo.esSeveridadValida("alta"));
-            assertFalse(Hallazgo.esSeveridadValida("CRITICAL"));
-            assertFalse(Hallazgo.esSeveridadValida(null));
-            assertFalse(Hallazgo.esSeveridadValida(""));
+            assertFalse(Hallazgo.esSeveridadValida("Alta"), "assertFalse failed at HallazgoTest.java:180");
+            assertFalse(Hallazgo.esSeveridadValida("alta"), "assertFalse failed at HallazgoTest.java:181");
+            assertFalse(Hallazgo.esSeveridadValida("CRITICAL"), "assertFalse failed at HallazgoTest.java:182");
+            assertFalse(Hallazgo.esSeveridadValida(null), "assertFalse failed at HallazgoTest.java:183");
+            assertFalse(Hallazgo.esSeveridadValida(""), "assertFalse failed at HallazgoTest.java:184");
         }
 
         @Test
         @DisplayName("Obtener peso de severidad correctamente")
         void testPesoSeveridad() {
-            assertEquals(5, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_CRITICAL));
-            assertEquals(4, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_HIGH));
-            assertEquals(3, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_MEDIUM));
-            assertEquals(2, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_LOW));
-            assertEquals(1, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_INFO));
-            assertEquals(0, Hallazgo.obtenerPesoSeveridad("Unknown"));
-            assertEquals(0, Hallazgo.obtenerPesoSeveridad(null));
+            assertEquals(5, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_CRITICAL), "assertEquals failed at HallazgoTest.java:190");
+            assertEquals(4, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_HIGH), "assertEquals failed at HallazgoTest.java:191");
+            assertEquals(3, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_MEDIUM), "assertEquals failed at HallazgoTest.java:192");
+            assertEquals(2, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_LOW), "assertEquals failed at HallazgoTest.java:193");
+            assertEquals(1, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_INFO), "assertEquals failed at HallazgoTest.java:194");
+            assertEquals(0, Hallazgo.obtenerPesoSeveridad("Unknown"), "assertEquals failed at HallazgoTest.java:195");
+            assertEquals(0, Hallazgo.obtenerPesoSeveridad(null), "assertEquals failed at HallazgoTest.java:196");
         }
 
         @Test
         @DisplayName("Prioridad de severidad soporta etiquetas traducidas")
         void testPrioridadSeveridadTraducida() {
-            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad("Crítica"));
-            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("Alta"));
-            assertEquals(3, Hallazgo.obtenerPrioridadSeveridad("Media"));
-            assertEquals(2, Hallazgo.obtenerPrioridadSeveridad("Baja"));
-            assertEquals(1, Hallazgo.obtenerPrioridadSeveridad("Información"));
+            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad("Crítica"), "assertEquals failed at HallazgoTest.java:202");
+            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("Alta"), "assertEquals failed at HallazgoTest.java:203");
+            assertEquals(3, Hallazgo.obtenerPrioridadSeveridad("Media"), "assertEquals failed at HallazgoTest.java:204");
+            assertEquals(2, Hallazgo.obtenerPrioridadSeveridad("Baja"), "assertEquals failed at HallazgoTest.java:205");
+            assertEquals(1, Hallazgo.obtenerPrioridadSeveridad("Información"), "assertEquals failed at HallazgoTest.java:206");
         }
 
         @Test
         @DisplayName("Prioridad de severidad es case-insensitive")
         void testPrioridadSeveridadCaseInsensitive() {
-            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad("CRITICAL"));
-            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad("critical"));
-            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("HIGH"));
-            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("high"));
-            assertEquals(3, Hallazgo.obtenerPrioridadSeveridad("MEDIUM"));
-            assertEquals(2, Hallazgo.obtenerPrioridadSeveridad("LOW"));
-            assertEquals(1, Hallazgo.obtenerPrioridadSeveridad("INFO"));
+            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad("CRITICAL"), "assertEquals failed at HallazgoTest.java:212");
+            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad("critical"), "assertEquals failed at HallazgoTest.java:213");
+            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("HIGH"), "assertEquals failed at HallazgoTest.java:214");
+            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("high"), "assertEquals failed at HallazgoTest.java:215");
+            assertEquals(3, Hallazgo.obtenerPrioridadSeveridad("MEDIUM"), "assertEquals failed at HallazgoTest.java:216");
+            assertEquals(2, Hallazgo.obtenerPrioridadSeveridad("LOW"), "assertEquals failed at HallazgoTest.java:217");
+            assertEquals(1, Hallazgo.obtenerPrioridadSeveridad("INFO"), "assertEquals failed at HallazgoTest.java:218");
         }
 
         @Test
         @DisplayName("Prioridad de severidad con partial match")
         void testPrioridadSeveridadPartialMatch() {
-            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad("critica vulnerabilidad"));
-            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("alta severidad"));
-            assertEquals(3, Hallazgo.obtenerPrioridadSeveridad("media prioridad"));
-            assertEquals(2, Hallazgo.obtenerPrioridadSeveridad("baja urgencia"));
-            assertEquals(1, Hallazgo.obtenerPrioridadSeveridad("informational"));
+            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad("critica vulnerabilidad"), "assertEquals failed at HallazgoTest.java:224");
+            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("alta severidad"), "assertEquals failed at HallazgoTest.java:225");
+            assertEquals(3, Hallazgo.obtenerPrioridadSeveridad("media prioridad"), "assertEquals failed at HallazgoTest.java:226");
+            assertEquals(2, Hallazgo.obtenerPrioridadSeveridad("baja urgencia"), "assertEquals failed at HallazgoTest.java:227");
+            assertEquals(1, Hallazgo.obtenerPrioridadSeveridad("informational"), "assertEquals failed at HallazgoTest.java:228");
         }
     }
 
@@ -236,49 +236,49 @@ class HallazgoTest {
         @Test
         @DisplayName("Validar confianzas validas")
         void testConfianzasValidas() {
-            assertTrue(Hallazgo.esConfianzaValida(Hallazgo.CONFIANZA_ALTA));
-            assertTrue(Hallazgo.esConfianzaValida(Hallazgo.CONFIANZA_MEDIA));
-            assertTrue(Hallazgo.esConfianzaValida(Hallazgo.CONFIANZA_BAJA));
+            assertTrue(Hallazgo.esConfianzaValida(Hallazgo.CONFIANZA_ALTA), "assertTrue failed at HallazgoTest.java:239");
+            assertTrue(Hallazgo.esConfianzaValida(Hallazgo.CONFIANZA_MEDIA), "assertTrue failed at HallazgoTest.java:240");
+            assertTrue(Hallazgo.esConfianzaValida(Hallazgo.CONFIANZA_BAJA), "assertTrue failed at HallazgoTest.java:241");
         }
 
         @Test
         @DisplayName("Rechazar confianzas invalidas")
         void testConfianzasInvalidas() {
-            assertFalse(Hallazgo.esConfianzaValida("Alta"));
-            assertFalse(Hallazgo.esConfianzaValida("alta"));
-            assertFalse(Hallazgo.esConfianzaValida(null));
-            assertFalse(Hallazgo.esConfianzaValida(""));
+            assertFalse(Hallazgo.esConfianzaValida("Alta"), "assertFalse failed at HallazgoTest.java:247");
+            assertFalse(Hallazgo.esConfianzaValida("alta"), "assertFalse failed at HallazgoTest.java:248");
+            assertFalse(Hallazgo.esConfianzaValida(null), "assertFalse failed at HallazgoTest.java:249");
+            assertFalse(Hallazgo.esConfianzaValida(""), "assertFalse failed at HallazgoTest.java:250");
         }
 
         @Test
         @DisplayName("Prioridad de confianza soporta etiquetas traducidas")
         void testPrioridadConfianzaTraducida() {
-            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("Alta"));
-            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("Media"));
-            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("Baja"));
-            assertEquals(0, Hallazgo.obtenerPrioridadConfianza("Desconocida"));
+            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("Alta"), "assertEquals failed at HallazgoTest.java:256");
+            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("Media"), "assertEquals failed at HallazgoTest.java:257");
+            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("Baja"), "assertEquals failed at HallazgoTest.java:258");
+            assertEquals(0, Hallazgo.obtenerPrioridadConfianza("Desconocida"), "assertEquals failed at HallazgoTest.java:259");
         }
 
         @Test
         @DisplayName("Prioridad de confianza es case-insensitive")
         void testPrioridadConfianzaCaseInsensitive() {
-            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("HIGH"));
-            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("high"));
-            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("MEDIUM"));
-            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("medium"));
-            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("LOW"));
-            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("low"));
+            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("HIGH"), "assertEquals failed at HallazgoTest.java:265");
+            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("high"), "assertEquals failed at HallazgoTest.java:266");
+            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("MEDIUM"), "assertEquals failed at HallazgoTest.java:267");
+            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("medium"), "assertEquals failed at HallazgoTest.java:268");
+            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("LOW"), "assertEquals failed at HallazgoTest.java:269");
+            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("low"), "assertEquals failed at HallazgoTest.java:270");
         }
 
         @Test
         @DisplayName("Prioridad de confianza con partial match")
         void testPrioridadConfianzaPartialMatch() {
-            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("alta confianza"));
-            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("media certeza"));
-            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("baja probabilidad"));
-            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("certain"));
-            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("firm"));
-            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("tentative"));
+            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("alta confianza"), "assertEquals failed at HallazgoTest.java:276");
+            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("media certeza"), "assertEquals failed at HallazgoTest.java:277");
+            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("baja probabilidad"), "assertEquals failed at HallazgoTest.java:278");
+            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("certain"), "assertEquals failed at HallazgoTest.java:279");
+            assertEquals(2, Hallazgo.obtenerPrioridadConfianza("firm"), "assertEquals failed at HallazgoTest.java:280");
+            assertEquals(1, Hallazgo.obtenerPrioridadConfianza("tentative"), "assertEquals failed at HallazgoTest.java:281");
         }
     }
 
@@ -289,61 +289,61 @@ class HallazgoTest {
         @Test
         @DisplayName("Normalizar severidad con valores validos")
         void testNormalizarSeveridadValidos() {
-            assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("Critical"));
-            assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("High"));
-            assertEquals(Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.normalizarSeveridad("Medium"));
-            assertEquals(Hallazgo.SEVERIDAD_LOW, Hallazgo.normalizarSeveridad("Low"));
-            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad("Info"));
+            assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("Critical"), "assertEquals failed at HallazgoTest.java:292");
+            assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("High"), "assertEquals failed at HallazgoTest.java:293");
+            assertEquals(Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.normalizarSeveridad("Medium"), "assertEquals failed at HallazgoTest.java:294");
+            assertEquals(Hallazgo.SEVERIDAD_LOW, Hallazgo.normalizarSeveridad("Low"), "assertEquals failed at HallazgoTest.java:295");
+            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad("Info"), "assertEquals failed at HallazgoTest.java:296");
         }
 
         @Test
         @DisplayName("Normalizar severidad con valores nulos o vacios devuelve Info")
         void testNormalizarSeveridadNulos() {
-            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad(null));
-            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad(""));
-            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad("   "));
-            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad("Unknown"));
+            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad(null), "assertEquals failed at HallazgoTest.java:302");
+            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad(""), "assertEquals failed at HallazgoTest.java:303");
+            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad("   "), "assertEquals failed at HallazgoTest.java:304");
+            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad("Unknown"), "assertEquals failed at HallazgoTest.java:305");
         }
 
         @Test
         @DisplayName("Normalizar severidad con valores traducidos")
         void testNormalizarSeveridadTraducidos() {
-            assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("Crítica"));
-            assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("critica"));
-            assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("Alta"));
-            assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("severa"));
-            assertEquals(Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.normalizarSeveridad("Media"));
-            assertEquals(Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.normalizarSeveridad("moderada"));
-            assertEquals(Hallazgo.SEVERIDAD_LOW, Hallazgo.normalizarSeveridad("Baja"));
-            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad("Información"));
+            assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("Crítica"), "assertEquals failed at HallazgoTest.java:311");
+            assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("critica"), "assertEquals failed at HallazgoTest.java:312");
+            assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("Alta"), "assertEquals failed at HallazgoTest.java:313");
+            assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("severa"), "assertEquals failed at HallazgoTest.java:314");
+            assertEquals(Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.normalizarSeveridad("Media"), "assertEquals failed at HallazgoTest.java:315");
+            assertEquals(Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.normalizarSeveridad("moderada"), "assertEquals failed at HallazgoTest.java:316");
+            assertEquals(Hallazgo.SEVERIDAD_LOW, Hallazgo.normalizarSeveridad("Baja"), "assertEquals failed at HallazgoTest.java:317");
+            assertEquals(Hallazgo.SEVERIDAD_INFO, Hallazgo.normalizarSeveridad("Información"), "assertEquals failed at HallazgoTest.java:318");
         }
 
         @Test
         @DisplayName("Normalizar confianza con valores validos")
         void testNormalizarConfianzaValidos() {
-            assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("High"));
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("Medium"));
-            assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("Low"));
+            assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("High"), "assertEquals failed at HallazgoTest.java:324");
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("Medium"), "assertEquals failed at HallazgoTest.java:325");
+            assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("Low"), "assertEquals failed at HallazgoTest.java:326");
         }
 
         @Test
         @DisplayName("Normalizar confianza con valores nulos o vacios devuelve Medium")
         void testNormalizarConfianzaNulos() {
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza(null));
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza(""));
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("   "));
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("Unknown"));
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza(null), "assertEquals failed at HallazgoTest.java:332");
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza(""), "assertEquals failed at HallazgoTest.java:333");
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("   "), "assertEquals failed at HallazgoTest.java:334");
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("Unknown"), "assertEquals failed at HallazgoTest.java:335");
         }
 
         @Test
         @DisplayName("Normalizar confianza con valores traducidos")
         void testNormalizarConfianzaTraducidos() {
-            assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("Alta"));
-            assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("certain"));
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("Media"));
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("firm"));
-            assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("Baja"));
-            assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("tentative"));
+            assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("Alta"), "assertEquals failed at HallazgoTest.java:341");
+            assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("certain"), "assertEquals failed at HallazgoTest.java:342");
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("Media"), "assertEquals failed at HallazgoTest.java:343");
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("firm"), "assertEquals failed at HallazgoTest.java:344");
+            assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("Baja"), "assertEquals failed at HallazgoTest.java:345");
+            assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("tentative"), "assertEquals failed at HallazgoTest.java:346");
         }
     }
 
@@ -364,12 +364,12 @@ class HallazgoTest {
 
             Object[] fila = hallazgo.aFilaTabla();
 
-            assertEquals(5, fila.length);
-            assertNotNull(fila[0]); // hora
-            assertEquals("https://example.com/test", fila[1]);
-            assertEquals("SQLi", fila[2]);
-            assertEquals(I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(Hallazgo.SEVERIDAD_CRITICAL), fila[3]);
-            assertEquals(I18nUI.Hallazgos.TRADUCIR_CONFIANZA(Hallazgo.CONFIANZA_ALTA), fila[4]);
+            assertEquals(5, fila.length, "assertEquals failed at HallazgoTest.java:367");
+            assertNotNull(fila[0], "assertNotNull failed at HallazgoTest.java:368"); // hora
+            assertEquals("https://example.com/test", fila[1], "assertEquals failed at HallazgoTest.java:369");
+            assertEquals("SQLi", fila[2], "assertEquals failed at HallazgoTest.java:370");
+            assertEquals(I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(Hallazgo.SEVERIDAD_CRITICAL), fila[3], "assertEquals failed at HallazgoTest.java:371");
+            assertEquals(I18nUI.Hallazgos.TRADUCIR_CONFIANZA(Hallazgo.CONFIANZA_ALTA), fila[4], "assertEquals failed at HallazgoTest.java:372");
         }
 
         @Test
@@ -385,12 +385,12 @@ class HallazgoTest {
 
             Object[] fila = hallazgo.aFilaTabla();
 
-            assertEquals(5, fila.length);
-            assertNotNull(fila[0]); // hora siempre tiene valor
-            assertNull(fila[1]); // url
-            assertNull(fila[2]); // titulo
-            assertEquals(I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(Hallazgo.SEVERIDAD_INFO), fila[3]);
-            assertEquals(I18nUI.Hallazgos.TRADUCIR_CONFIANZA(Hallazgo.CONFIANZA_MEDIA), fila[4]);
+            assertEquals(5, fila.length, "assertEquals failed at HallazgoTest.java:388");
+            assertNotNull(fila[0], "assertNotNull failed at HallazgoTest.java:389"); // hora siempre tiene valor
+            assertNull(fila[1], "assertNull failed at HallazgoTest.java:390"); // url
+            assertNull(fila[2], "assertNull failed at HallazgoTest.java:391"); // titulo
+            assertEquals(I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(Hallazgo.SEVERIDAD_INFO), fila[3], "assertEquals failed at HallazgoTest.java:392");
+            assertEquals(I18nUI.Hallazgos.TRADUCIR_CONFIANZA(Hallazgo.CONFIANZA_MEDIA), fila[4], "assertEquals failed at HallazgoTest.java:393");
         }
     }
 
@@ -424,16 +424,16 @@ class HallazgoTest {
             );
 
             // Verificar que mantiene los datos inmutables
-            assertEquals("10:20:30", editado.obtenerHoraDescubrimiento());
-            assertSame(solicitud, editado.obtenerSolicitudHttp());
-            assertSame(evidencia, editado.obtenerEvidenciaHttp());
+            assertEquals("10:20:30", editado.obtenerHoraDescubrimiento(), "assertEquals failed at HallazgoTest.java:427");
+            assertSame(solicitud, editado.obtenerSolicitudHttp(), "assertSame failed at HallazgoTest.java:428");
+            assertSame(evidencia, editado.obtenerEvidenciaHttp(), "assertSame failed at HallazgoTest.java:429");
 
             // Verificar que actualiza los datos editables
-            assertEquals("https://example.com/editado", editado.obtenerUrl());
-            assertEquals("Titulo editado", editado.obtenerTitulo());
-            assertEquals("Descripcion editada", editado.obtenerHallazgo());
-            assertEquals(Hallazgo.SEVERIDAD_HIGH, editado.obtenerSeveridad());
-            assertEquals(Hallazgo.CONFIANZA_ALTA, editado.obtenerConfianza());
+            assertEquals("https://example.com/editado", editado.obtenerUrl(), "assertEquals failed at HallazgoTest.java:432");
+            assertEquals("Titulo editado", editado.obtenerTitulo(), "assertEquals failed at HallazgoTest.java:433");
+            assertEquals("Descripcion editada", editado.obtenerHallazgo(), "assertEquals failed at HallazgoTest.java:434");
+            assertEquals(Hallazgo.SEVERIDAD_HIGH, editado.obtenerSeveridad(), "assertEquals failed at HallazgoTest.java:435");
+            assertEquals(Hallazgo.CONFIANZA_ALTA, editado.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:436");
         }
 
         @Test
@@ -455,7 +455,7 @@ class HallazgoTest {
                 Hallazgo.CONFIANZA_BAJA
             );
 
-            assertNotSame(original, editado);
+            assertNotSame(original, editado, "assertNotSame failed at HallazgoTest.java:458");
         }
 
         @Test
@@ -482,14 +482,14 @@ class HallazgoTest {
                 null
             );
 
-            assertNull(editado.obtenerUrl());
-            assertNull(editado.obtenerTitulo());
-            assertNull(editado.obtenerHallazgo());
+            assertNull(editado.obtenerUrl(), "assertNull failed at HallazgoTest.java:485");
+            assertNull(editado.obtenerTitulo(), "assertNull failed at HallazgoTest.java:486");
+            assertNull(editado.obtenerHallazgo(), "assertNull failed at HallazgoTest.java:487");
             // Severidad y confianza se normalizan a valores por defecto
-            assertEquals(Hallazgo.SEVERIDAD_INFO, editado.obtenerSeveridad());
-            assertEquals(Hallazgo.CONFIANZA_MEDIA, editado.obtenerConfianza());
+            assertEquals(Hallazgo.SEVERIDAD_INFO, editado.obtenerSeveridad(), "assertEquals failed at HallazgoTest.java:489");
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, editado.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:490");
             // Mantiene solicitud original
-            assertSame(solicitud, editado.obtenerSolicitudHttp());
+            assertSame(solicitud, editado.obtenerSolicitudHttp(), "assertSame failed at HallazgoTest.java:492");
         }
     }
 
@@ -511,8 +511,8 @@ class HallazgoTest {
             HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
             Hallazgo conEvidencia = original.conEvidenciaHttp(evidencia);
 
-            assertNotSame(original, conEvidencia);
-            assertSame(evidencia, conEvidencia.obtenerEvidenciaHttp());
+            assertNotSame(original, conEvidencia, "assertNotSame failed at HallazgoTest.java:514");
+            assertSame(evidencia, conEvidencia.obtenerEvidenciaHttp(), "assertSame failed at HallazgoTest.java:515");
         }
 
         @Test
@@ -528,7 +528,7 @@ class HallazgoTest {
 
             Hallazgo resultado = original.conEvidenciaHttp(null);
 
-            assertSame(original, resultado);
+            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:531");
         }
 
         @Test
@@ -548,7 +548,7 @@ class HallazgoTest {
 
             Hallazgo resultado = original.conEvidenciaHttp(evidencia);
 
-            assertSame(original, resultado);
+            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:551");
         }
 
         @Test
@@ -564,8 +564,8 @@ class HallazgoTest {
 
             Hallazgo conEvidenciaId = original.conEvidenciaId("evidencia-456");
 
-            assertNotSame(original, conEvidenciaId);
-            assertEquals("evidencia-456", conEvidenciaId.obtenerEvidenciaId());
+            assertNotSame(original, conEvidenciaId, "assertNotSame failed at HallazgoTest.java:567");
+            assertEquals("evidencia-456", conEvidenciaId.obtenerEvidenciaId(), "assertEquals failed at HallazgoTest.java:568");
         }
 
         @Test
@@ -581,7 +581,7 @@ class HallazgoTest {
 
             Hallazgo resultado = original.conEvidenciaId(null);
 
-            assertSame(original, resultado);
+            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:584");
         }
 
         @Test
@@ -597,7 +597,7 @@ class HallazgoTest {
 
             Hallazgo resultado = original.conEvidenciaId("");
 
-            assertSame(original, resultado);
+            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:600");
         }
 
         @Test
@@ -617,7 +617,7 @@ class HallazgoTest {
 
             Hallazgo resultado = original.conEvidenciaId("evidencia-123");
 
-            assertSame(original, resultado);
+            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:620");
         }
 
         @Test
@@ -649,11 +649,11 @@ class HallazgoTest {
 
                 // Primera llamada resuelve lazy
                 HttpRequestResponse resultado = hallazgo.obtenerEvidenciaHttp();
-                assertSame(evidenciaResuelta, resultado);
+                assertSame(evidenciaResuelta, resultado, "assertSame failed at HallazgoTest.java:652");
 
                 // Segunda llamada usa cache
                 HttpRequestResponse resultadoCacheado = hallazgo.obtenerEvidenciaHttp();
-                assertSame(evidenciaResuelta, resultadoCacheado);
+                assertSame(evidenciaResuelta, resultadoCacheado, "assertSame failed at HallazgoTest.java:656");
             } finally {
                 // Limpiar resolutor
                 Hallazgo.establecerResolutorEvidencia(null);
@@ -678,7 +678,7 @@ class HallazgoTest {
                 "evidencia-123"
             );
 
-            assertNull(hallazgo.obtenerEvidenciaHttp());
+            assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:681");
         }
 
         @Test
@@ -704,7 +704,7 @@ class HallazgoTest {
                 );
 
                 // No debe lanzar excepcion, debe devolver null
-                assertNull(hallazgo.obtenerEvidenciaHttp());
+                assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:707");
             } finally {
                 // Limpiar resolutor
                 Hallazgo.establecerResolutorEvidencia(null);
@@ -726,7 +726,7 @@ class HallazgoTest {
                 evidencia
             );
 
-            assertSame(evidencia, hallazgo.obtenerEvidenciaHttp());
+            assertSame(evidencia, hallazgo.obtenerEvidenciaHttp(), "assertSame failed at HallazgoTest.java:729");
         }
     }
 
@@ -745,7 +745,7 @@ class HallazgoTest {
                 Hallazgo.CONFIANZA_ALTA
             );
 
-            assertEquals(hallazgo, hallazgo);
+            assertEquals(hallazgo, hallazgo, "assertEquals failed at HallazgoTest.java:748");
         }
 
         @Test
@@ -804,8 +804,8 @@ class HallazgoTest {
                 "evidencia-123"
             );
 
-            assertEquals(hallazgo1, hallazgo2);
-            assertEquals(hallazgo1.hashCode(), hallazgo2.hashCode());
+            assertEquals(hallazgo1, hallazgo2, "assertEquals failed at HallazgoTest.java:807");
+            assertEquals(hallazgo1.hashCode(), hallazgo2.hashCode(), "assertEquals failed at HallazgoTest.java:808");
         }
 
         @Test
@@ -881,7 +881,7 @@ class HallazgoTest {
             );
 
             // Deben ser iguales aunque las solicitudes sean diferentes
-            assertEquals(hallazgo1, hallazgo2);
+            assertEquals(hallazgo1, hallazgo2, "assertEquals failed at HallazgoTest.java:884");
         }
 
         @Test
@@ -911,7 +911,7 @@ class HallazgoTest {
                 "evidencia-123"
             );
 
-            assertEquals(hallazgo1.hashCode(), hallazgo2.hashCode());
+            assertEquals(hallazgo1.hashCode(), hallazgo2.hashCode(), "assertEquals failed at HallazgoTest.java:914");
         }
 
         @Test
@@ -929,8 +929,8 @@ class HallazgoTest {
             int hash2 = hallazgo.hashCode();
             int hash3 = hallazgo.hashCode();
 
-            assertEquals(hash1, hash2);
-            assertEquals(hash2, hash3);
+            assertEquals(hash1, hash2, "assertEquals failed at HallazgoTest.java:932");
+            assertEquals(hash2, hash3, "assertEquals failed at HallazgoTest.java:933");
         }
     }
 
@@ -953,11 +953,11 @@ class HallazgoTest {
 
             String resultado = hallazgo.toString();
 
-            assertTrue(resultado.contains("10:20:30"));
-            assertTrue(resultado.contains("https://example.com/test"));
-            assertTrue(resultado.contains("XSS"));
-            assertTrue(resultado.contains(Hallazgo.SEVERIDAD_HIGH));
-            assertTrue(resultado.contains(Hallazgo.CONFIANZA_ALTA));
+            assertTrue(resultado.contains("10:20:30"), "assertTrue failed at HallazgoTest.java:956");
+            assertTrue(resultado.contains("https://example.com/test"), "assertTrue failed at HallazgoTest.java:957");
+            assertTrue(resultado.contains("XSS"), "assertTrue failed at HallazgoTest.java:958");
+            assertTrue(resultado.contains(Hallazgo.SEVERIDAD_HIGH), "assertTrue failed at HallazgoTest.java:959");
+            assertTrue(resultado.contains(Hallazgo.CONFIANZA_ALTA), "assertTrue failed at HallazgoTest.java:960");
         }
 
         @Test
@@ -974,8 +974,8 @@ class HallazgoTest {
 
             String resultado = hallazgo.toString();
 
-            assertNotNull(resultado);
-            assertTrue(resultado.contains("Hallazgo"));
+            assertNotNull(resultado, "assertNotNull failed at HallazgoTest.java:977");
+            assertTrue(resultado.contains("Hallazgo"), "assertTrue failed at HallazgoTest.java:978");
         }
     }
 
@@ -986,19 +986,19 @@ class HallazgoTest {
         @Test
         @DisplayName("Constantes de severidad tienen valores correctos")
         void testConstantesSeveridad() {
-            assertEquals("Critical", Hallazgo.SEVERIDAD_CRITICAL);
-            assertEquals("High", Hallazgo.SEVERIDAD_HIGH);
-            assertEquals("Medium", Hallazgo.SEVERIDAD_MEDIUM);
-            assertEquals("Low", Hallazgo.SEVERIDAD_LOW);
-            assertEquals("Info", Hallazgo.SEVERIDAD_INFO);
+            assertEquals("Critical", Hallazgo.SEVERIDAD_CRITICAL, "assertEquals failed at HallazgoTest.java:989");
+            assertEquals("High", Hallazgo.SEVERIDAD_HIGH, "assertEquals failed at HallazgoTest.java:990");
+            assertEquals("Medium", Hallazgo.SEVERIDAD_MEDIUM, "assertEquals failed at HallazgoTest.java:991");
+            assertEquals("Low", Hallazgo.SEVERIDAD_LOW, "assertEquals failed at HallazgoTest.java:992");
+            assertEquals("Info", Hallazgo.SEVERIDAD_INFO, "assertEquals failed at HallazgoTest.java:993");
         }
 
         @Test
         @DisplayName("Constantes de confianza tienen valores correctos")
         void testConstantesConfianza() {
-            assertEquals("High", Hallazgo.CONFIANZA_ALTA);
-            assertEquals("Medium", Hallazgo.CONFIANZA_MEDIA);
-            assertEquals("Low", Hallazgo.CONFIANZA_BAJA);
+            assertEquals("High", Hallazgo.CONFIANZA_ALTA, "assertEquals failed at HallazgoTest.java:999");
+            assertEquals("Medium", Hallazgo.CONFIANZA_MEDIA, "assertEquals failed at HallazgoTest.java:1000");
+            assertEquals("Low", Hallazgo.CONFIANZA_BAJA, "assertEquals failed at HallazgoTest.java:1001");
         }
     }
 }

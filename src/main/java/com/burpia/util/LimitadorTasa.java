@@ -50,6 +50,15 @@ import java.util.concurrent.Semaphore;
  * @see <a href="https://github.com/DragonJAR/BurpIA/blob/main/AGENTS.md">Guía de codificación AGENTS.md</a>
  */
 public class LimitadorTasa {
+    private static final class SemaforoAjustable extends Semaphore {
+        private SemaforoAjustable(int permits) {
+            super(permits);
+        }
+
+        private void reducirPermisos(int reduction) {
+            super.reducePermits(reduction);
+        }
+    }
 
     /**
      * Valor mínimo de concurrencia permitido.
@@ -60,7 +69,8 @@ public class LimitadorTasa {
     /**
      * Semáforo subyacente que controla los permisos de concurrencia.
      */
-    private final Semaphore semaforo;
+    private final SemaforoAjustable semaforo;
+    private int maximoConcurrenteActual;
 
     /**
      * Crea un nuevo limitador de tasa con el máximo de operaciones concurrentes especificado.
@@ -74,7 +84,8 @@ public class LimitadorTasa {
      */
     public LimitadorTasa(int maximoConcurrente) {
         int maximoNormalizado = Math.max(MINIMO_CONCURRENTE, maximoConcurrente);
-        this.semaforo = new Semaphore(maximoNormalizado);
+        this.semaforo = new SemaforoAjustable(maximoNormalizado);
+        this.maximoConcurrenteActual = maximoNormalizado;
     }
 
     /**
@@ -102,6 +113,31 @@ public class LimitadorTasa {
      */
     public void liberar() {
         semaforo.release();
+    }
+
+    /**
+     * Ajusta el máximo de concurrencia preservando los permisos actualmente en uso.
+     * <p>
+     * Si se reduce por debajo del número de operaciones activas, los permisos
+     * disponibles pueden volverse negativos temporalmente. Esto es intencional:
+     * bloquea nuevas adquisiciones hasta que las operaciones en curso liberen
+     * suficientes permisos para volver al nuevo límite.
+     * </p>
+     *
+     * @param nuevoMaximoConcurrente nuevo máximo deseado; valores <= 0 se normalizan a 1
+     */
+    public synchronized void ajustarMaximoConcurrente(int nuevoMaximoConcurrente) {
+        int objetivo = Math.max(MINIMO_CONCURRENTE, nuevoMaximoConcurrente);
+        int disponibles = semaforo.availablePermits();
+        int enUso = Math.max(0, maximoConcurrenteActual - disponibles);
+        int nuevoDisponible = objetivo - enUso;
+        int delta = nuevoDisponible - disponibles;
+        if (delta > 0) {
+            semaforo.release(delta);
+        } else if (delta < 0) {
+            semaforo.reducirPermisos(-delta);
+        }
+        maximoConcurrenteActual = objetivo;
     }
 
     /**

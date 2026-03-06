@@ -1,6 +1,7 @@
 package com.burpia.util;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,10 +42,10 @@ public final class ExtractorCamposRobusto {
          * @param nombre Nombre principal del campo
          * @param variaciones Variaciones del nombre (i18n, aliases)
          */
-        Campo(String nombre, String[] variaciones) {
+        Campo(String nombre, String... variaciones) {
             this.nombre = nombre;
-            this.variaciones = variaciones;
-            this.patron = compilarPatronCampo(variaciones);
+            this.variaciones = variaciones != null ? Arrays.copyOf(variaciones, variaciones.length) : new String[0];
+            this.patron = compilarPatronCampo(this.variaciones);
         }
 
         /**
@@ -81,7 +82,7 @@ public final class ExtractorCamposRobusto {
          * @param variaciones Variaciones del campo
          * @return Patrón compilado
          */
-        private static Pattern compilarPatronCampo(String[] variaciones) {
+        private static Pattern compilarPatronCampo(String... variaciones) {
             StringBuilder sb = new StringBuilder("\"(?:");
             for (int i = 0; i < variaciones.length; i++) {
                 if (i > 0) {
@@ -101,23 +102,23 @@ public final class ExtractorCamposRobusto {
     public static final class CamposHallazgo {
         /** Campo de título/delimitador principal */
         public static final Campo TITULO = new Campo("titulo",
-            new String[]{"titulo", "title", "name", "nombre"});
+            "titulo", "title", "name", "nombre");
 
         /** Campo de descripción/detalles */
         public static final Campo DESCRIPCION = new Campo("descripcion",
-            new String[]{"descripcion", "description", "finding", "hallazgo", "details"});
+            "descripcion", "description", "finding", "hallazgo", "details");
 
         /** Campo de severidad/riesgo */
         public static final Campo SEVERIDAD = new Campo("severidad",
-            new String[]{"severidad", "severity", "risk", "impacto"});
+            "severidad", "severity", "risk", "impacto");
 
         /** Campo de confianza/certeza */
         public static final Campo CONFIANZA = new Campo("confianza",
-            new String[]{"confianza", "confidence", "certainty", "certeza"});
+            "confianza", "confidence", "certainty", "certeza");
 
         /** Campo de evidencia/prueba */
         public static final Campo EVIDENCIA = new Campo("evidencia",
-            new String[]{"evidencia", "evidence", "proof", "indicator"});
+            "evidencia", "evidence", "proof", "indicator");
 
         /**
          * Todos los campos en orden de prioridad.

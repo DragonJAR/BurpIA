@@ -44,12 +44,8 @@ public final class ConstructorSolicitudesProveedor {
             proveedor = "OpenAI";
         }
 
-        String endpoint = ConfiguracionAPI.construirUrlApiProveedor(
-            proveedor,
-            config.obtenerUrlApi(),
-            config.obtenerModelo()
-        );
         String modeloUsado = config.obtenerModelo();
+        String endpoint;
         JsonObject carga = new JsonObject();
         Request.Builder builder = new Request.Builder()
             .addHeader("Content-Type", "application/json")

@@ -305,23 +305,19 @@ public class GestorTareas {
     }
 
     public boolean limpiarTarea(String id) {
-        boolean eliminada = false;
         candado.lock();
         try {
             Tarea tarea = tareas.remove(id);
             if (tarea == null) {
                 return false;
             }
-            eliminada = true;
         } finally {
             candado.unlock();
         }
 
-        if (eliminada) {
-            modeloTabla.eliminarTareaPorId(id);
-            registrar("Tarea limpiada: " + id);
-        }
-        return eliminada;
+        modeloTabla.eliminarTareaPorId(id);
+        registrar("Tarea limpiada: " + id);
+        return true;
     }
 
     public void detener() {

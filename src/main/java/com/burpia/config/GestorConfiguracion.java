@@ -238,9 +238,6 @@ public class GestorConfiguracion {
         if (archivo.tiempoEsperaAI != null) {
             config.establecerTiempoEsperaAI(archivo.tiempoEsperaAI);
         }
-        if (archivo.tema != null) {
-            config.establecerTema(archivo.tema);
-        }
         if (archivo.idiomaUi != null) {
             config.establecerIdiomaUi(archivo.idiomaUi);
         }
@@ -352,7 +349,6 @@ public class GestorConfiguracion {
         archivo.maximoHallazgosTabla = config.obtenerMaximoHallazgosTabla();
         archivo.detallado = config.esDetallado();
         archivo.tiempoEsperaAI = config.obtenerTiempoEsperaAI();
-        archivo.tema = config.obtenerTema();
         archivo.idiomaUi = config.obtenerIdiomaUi();
         archivo.escaneoPasivoHabilitado = config.escaneoPasivoHabilitado();
         archivo.autoGuardadoIssuesHabilitado = config.autoGuardadoIssuesHabilitado();
@@ -470,7 +466,6 @@ public class GestorConfiguracion {
         private Integer maximoHallazgosTabla;
         private Boolean detallado;
         private Integer tiempoEsperaAI;
-        private String tema;
         private String idiomaUi;
         private Boolean escaneoPasivoHabilitado;
         private Boolean autoGuardadoIssuesHabilitado;

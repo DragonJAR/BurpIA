@@ -27,9 +27,9 @@ class PanelConsolaLimpiarTest {
         try {
             JButton botonLimpiar = obtenerBotonLimpiar(panel);
 
-            assertNotNull(botonLimpiar);
-            assertTrue(botonLimpiar.isEnabled());
-            assertEquals(I18nUI.Consola.BOTON_LIMPIAR(), botonLimpiar.getText());
+            assertNotNull(botonLimpiar, "assertNotNull failed at PanelConsolaLimpiarTest.java:30");
+            assertTrue(botonLimpiar.isEnabled(), "assertTrue failed at PanelConsolaLimpiarTest.java:31");
+            assertEquals(I18nUI.Consola.BOTON_LIMPIAR(), botonLimpiar.getText(), "assertEquals failed at PanelConsolaLimpiarTest.java:32");
         } finally {
             panel.destruir();
         }
@@ -131,7 +131,7 @@ class PanelConsolaLimpiarTest {
             gestor.limpiarConsola();
             flushEdt();
 
-            assertEquals(0, gestor.obtenerTotalLogs());
+            assertEquals(0, gestor.obtenerTotalLogs(), "assertEquals failed at PanelConsolaLimpiarTest.java:134");
 
             gestor.limpiarConsola();
             flushEdt();
@@ -164,10 +164,10 @@ class PanelConsolaLimpiarTest {
                 gestor.registrarVerbose("Verbose " + i);
             }
 
-            assertEquals(5, gestor.obtenerContadorInfo());
-            assertEquals(3, gestor.obtenerContadorError());
-            assertEquals(2, gestor.obtenerContadorVerbose());
-            assertEquals(10, gestor.obtenerTotalLogs());
+            assertEquals(5, gestor.obtenerContadorInfo(), "assertEquals failed at PanelConsolaLimpiarTest.java:167");
+            assertEquals(3, gestor.obtenerContadorError(), "assertEquals failed at PanelConsolaLimpiarTest.java:168");
+            assertEquals(2, gestor.obtenerContadorVerbose(), "assertEquals failed at PanelConsolaLimpiarTest.java:169");
+            assertEquals(10, gestor.obtenerTotalLogs(), "assertEquals failed at PanelConsolaLimpiarTest.java:170");
 
             gestor.limpiarConsola();
             flushEdt();

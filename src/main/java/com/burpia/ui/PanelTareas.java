@@ -568,7 +568,7 @@ public class PanelTareas extends JPanel {
         return contador;
     }
 
-    private List<TareaSeleccionada> capturarSeleccion(int[] filasVista) {
+    private List<TareaSeleccionada> capturarSeleccion(int... filasVista) {
         if (filasVista == null || filasVista.length == 0) {
             return new ArrayList<>();
         }
@@ -581,8 +581,7 @@ public class PanelTareas extends JPanel {
             .mapToObj(f -> new TareaSeleccionada(
                 modelo.obtenerIdTarea(f),
                 valorCeldaTexto(f, COLUMNA_ESTADO),
-                valorCeldaTexto(f, COLUMNA_URL),
-                valorCeldaTexto(f, COLUMNA_DURACION)
+                valorCeldaTexto(f, COLUMNA_URL)
             ))
             .collect(Collectors.toList());
     }
@@ -750,13 +749,11 @@ public class PanelTareas extends JPanel {
         private final String tareaId;
         private final String estado;
         private final String url;
-        private final String duracion;
 
-        private TareaSeleccionada(String tareaId, String estado, String url, String duracion) {
+        private TareaSeleccionada(String tareaId, String estado, String url) {
             this.tareaId = tareaId != null ? tareaId : "";
             this.estado = estado != null ? estado : "";
             this.url = url != null ? url : "";
-            this.duracion = duracion != null ? duracion : "";
         }
     }
 }

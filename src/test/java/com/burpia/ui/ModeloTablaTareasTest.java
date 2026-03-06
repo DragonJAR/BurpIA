@@ -27,8 +27,8 @@ class ModeloTablaTareasTest {
         modelo.agregarTarea(new Tarea("2", "B", "https://example.com/2", Tarea.ESTADO_COMPLETADO));
 
         SwingUtilities.invokeAndWait(() -> {});
-        assertEquals(1, modelo.getRowCount());
-        assertEquals("1", modelo.obtenerIdTarea(0));
+        assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaTareasTest.java:30");
+        assertEquals("1", modelo.obtenerIdTarea(0), "assertEquals failed at ModeloTablaTareasTest.java:31");
     }
 
     @Test
@@ -39,8 +39,8 @@ class ModeloTablaTareasTest {
         modelo.agregarTarea(new Tarea("2", "B", "https://example.com/2", Tarea.ESTADO_ANALIZANDO));
 
         SwingUtilities.invokeAndWait(() -> {});
-        assertEquals(2, modelo.getRowCount());
-        assertEquals(2, modelo.obtenerNumeroTareas());
+        assertEquals(2, modelo.getRowCount(), "assertEquals failed at ModeloTablaTareasTest.java:42");
+        assertEquals(2, modelo.obtenerNumeroTareas(), "assertEquals failed at ModeloTablaTareasTest.java:43");
     }
 
     @Test
@@ -49,18 +49,18 @@ class ModeloTablaTareasTest {
         ModeloTablaTareas modelo = new ModeloTablaTareas(10);
         modelo.agregarTarea(new Tarea("1", "A", "https://example.com/1", Tarea.ESTADO_EN_COLA));
         SwingUtilities.invokeAndWait(() -> {});
-        assertEquals(1, modelo.getRowCount());
+        assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaTareasTest.java:52");
 
         assertDoesNotThrow(() -> modelo.eliminarTarea(-1));
         SwingUtilities.invokeAndWait(() -> {});
-        assertEquals(1, modelo.getRowCount());
+        assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaTareasTest.java:56");
     }
 
     @Test
     @DisplayName("Buscar y eliminar por id null es seguro")
     void testOperacionesIdNull() {
         ModeloTablaTareas modelo = new ModeloTablaTareas(10);
-        assertEquals(-1, modelo.buscarIndicePorId(null));
+        assertEquals(-1, modelo.buscarIndicePorId(null), "assertEquals failed at ModeloTablaTareasTest.java:63");
         assertDoesNotThrow(() -> modelo.eliminarTareaPorId(null));
     }
 
@@ -71,12 +71,12 @@ class ModeloTablaTareasTest {
         modelo.agregarTarea(new Tarea("1", "A", "https://example.com/1", Tarea.ESTADO_EN_COLA));
         SwingUtilities.invokeAndWait(() -> {});
 
-        assertEquals(0, modelo.contarPorEstado(null));
+        assertEquals(0, modelo.contarPorEstado(null), "assertEquals failed at ModeloTablaTareasTest.java:74");
         assertDoesNotThrow(() -> modelo.eliminarPorEstado((String[]) null));
         assertDoesNotThrow(() -> modelo.eliminarPorEstado());
         assertDoesNotThrow(() -> modelo.eliminarPorEstado((String) null));
         SwingUtilities.invokeAndWait(() -> {});
-        assertEquals(1, modelo.getRowCount());
+        assertEquals(1, modelo.getRowCount(), "assertEquals failed at ModeloTablaTareasTest.java:79");
     }
 
     @Test
@@ -97,9 +97,9 @@ class ModeloTablaTareasTest {
             idsRestantes.add(tarea.obtenerId());
         }
 
-        assertEquals(2, modelo.obtenerNumeroTareas());
-        assertTrue(idsRestantes.contains("activa"));
-        assertTrue(idsRestantes.contains("new"));
+        assertEquals(2, modelo.obtenerNumeroTareas(), "assertEquals failed at ModeloTablaTareasTest.java:100");
+        assertTrue(idsRestantes.contains("activa"), "assertTrue failed at ModeloTablaTareasTest.java:101");
+        assertTrue(idsRestantes.contains("new"), "assertTrue failed at ModeloTablaTareasTest.java:102");
     }
 
     @Test
@@ -121,9 +121,9 @@ class ModeloTablaTareasTest {
         }
 
         executor.shutdown();
-        assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+        assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS), "assertTrue failed at ModeloTablaTareasTest.java:124");
         SwingUtilities.invokeAndWait(() -> {});
 
-        assertEquals(modelo.obtenerNumeroTareas(), modelo.getRowCount());
+        assertEquals(modelo.obtenerNumeroTareas(), modelo.getRowCount(), "assertEquals failed at ModeloTablaTareasTest.java:127");
     }
 }

@@ -41,10 +41,10 @@ class RenderizadorHallazgoBorradoTest {
         Component c = render.getTableCellRendererComponent(tabla, "Hallazgo <html>", false, false, 0, COLUMNA_TITULO);
         JLabel label = (JLabel) c;
 
-        assertEquals(Boolean.TRUE, label.getClientProperty("html.disable"));
-        assertEquals(TextAttribute.STRIKETHROUGH_ON, label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH));
-        assertEquals(EstilosUI.colorFondoIgnorado(tabla.getBackground()), label.getBackground());
-        assertEquals(EstilosUI.colorTextoIgnorado(label.getBackground()), label.getForeground());
+        assertEquals(Boolean.TRUE, label.getClientProperty("html.disable"), "assertEquals failed at RenderizadorHallazgoBorradoTest.java:44");
+        assertEquals(TextAttribute.STRIKETHROUGH_ON, label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH), "assertEquals failed at RenderizadorHallazgoBorradoTest.java:45");
+        assertEquals(EstilosUI.colorFondoIgnorado(tabla.getBackground()), label.getBackground(), "assertEquals failed at RenderizadorHallazgoBorradoTest.java:46");
+        assertEquals(EstilosUI.colorTextoIgnorado(label.getBackground()), label.getForeground(), "assertEquals failed at RenderizadorHallazgoBorradoTest.java:47");
     }
 
     @Test
@@ -64,9 +64,9 @@ class RenderizadorHallazgoBorradoTest {
         Component c = render.getTableCellRendererComponent(tabla, "Hallazgo normal", false, false, 0, COLUMNA_TITULO);
         JLabel label = (JLabel) c;
 
-        assertEquals(Boolean.TRUE, label.getClientProperty("html.disable"));
-        assertNull(label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH));
-        assertEquals(tabla.getFont(), label.getFont());
+        assertEquals(Boolean.TRUE, label.getClientProperty("html.disable"), "assertEquals failed at RenderizadorHallazgoBorradoTest.java:67");
+        assertNull(label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH), "assertNull failed at RenderizadorHallazgoBorradoTest.java:68");
+        assertEquals(tabla.getFont(), label.getFont(), "assertEquals failed at RenderizadorHallazgoBorradoTest.java:69");
     }
 
     @Test
@@ -86,7 +86,7 @@ class RenderizadorHallazgoBorradoTest {
         Component c = render.getTableCellRendererComponent(tabla, "Test", false, false, -1, COLUMNA_TITULO);
         JLabel label = (JLabel) c;
 
-        assertNull(label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH));
+        assertNull(label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH), "assertNull failed at RenderizadorHallazgoBorradoTest.java:89");
     }
 
     @Test
@@ -106,7 +106,7 @@ class RenderizadorHallazgoBorradoTest {
         Component c = render.getTableCellRendererComponent(tabla, "Test", false, false, 100, COLUMNA_TITULO);
         JLabel label = (JLabel) c;
 
-        assertNull(label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH));
+        assertNull(label.getFont().getAttributes().get(TextAttribute.STRIKETHROUGH), "assertNull failed at RenderizadorHallazgoBorradoTest.java:109");
     }
 
     @Test
@@ -126,7 +126,7 @@ class RenderizadorHallazgoBorradoTest {
         Component c = render.getTableCellRendererComponent(tabla, "<b>HTML</b>", false, false, 0, COLUMNA_TITULO);
         JLabel label = (JLabel) c;
 
-        assertEquals(Boolean.TRUE, label.getClientProperty("html.disable"));
+        assertEquals(Boolean.TRUE, label.getClientProperty("html.disable"), "assertEquals failed at RenderizadorHallazgoBorradoTest.java:129");
     }
 
     @Test
@@ -145,7 +145,7 @@ class RenderizadorHallazgoBorradoTest {
 
         Component c = render.getTableCellRendererComponent(tabla, "Test", false, false, 0, COLUMNA_TITULO);
 
-        assertNotNull(c);
+        assertNotNull(c, "assertNotNull failed at RenderizadorHallazgoBorradoTest.java:148");
         assertInstanceOf(JLabel.class, c);
     }
 

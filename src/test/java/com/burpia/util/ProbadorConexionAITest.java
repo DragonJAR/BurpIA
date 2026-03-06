@@ -55,7 +55,7 @@ class ProbadorConexionAITest {
             IllegalArgumentException.class,
             () -> new ProbadorConexionAI(null)
         );
-        assertEquals("La configuración no puede ser null", ex.getMessage());
+        assertEquals("La configuración no puede ser null", ex.getMessage(), "assertEquals failed at ProbadorConexionAITest.java:58");
     }
 
     @Test
@@ -66,8 +66,8 @@ class ProbadorConexionAITest {
         ProbadorConexionAI probador = new ProbadorConexionAI(config);
         ProbadorConexionAI.ResultadoPrueba resultado = probador.probarConexion();
 
-        assertFalse(resultado.exito);
-        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.ERRORES_CONFIGURACION().trim()));
+        assertFalse(resultado.exito, "assertFalse failed at ProbadorConexionAITest.java:69");
+        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.ERRORES_CONFIGURACION().trim()), "assertTrue failed at ProbadorConexionAITest.java:70");
     }
 
     @Test
@@ -81,9 +81,9 @@ class ProbadorConexionAITest {
         ProbadorConexionAI probador = new ProbadorConexionAI(config);
         ProbadorConexionAI.ResultadoPrueba resultado = probador.probarConexion();
 
-        assertTrue(resultado.exito);
-        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.EXITO_CONEXION()));
-        assertNotNull(resultado.respuestaRaw);
+        assertTrue(resultado.exito, "assertTrue failed at ProbadorConexionAITest.java:84");
+        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.EXITO_CONEXION()), "assertTrue failed at ProbadorConexionAITest.java:85");
+        assertNotNull(resultado.respuestaRaw, "assertNotNull failed at ProbadorConexionAITest.java:86");
     }
 
     @Test
@@ -97,8 +97,8 @@ class ProbadorConexionAITest {
         ProbadorConexionAI probador = new ProbadorConexionAI(config);
         ProbadorConexionAI.ResultadoPrueba resultado = probador.probarConexion();
 
-        assertTrue(resultado.exito);
-        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.EXITO_CONEXION()));
+        assertTrue(resultado.exito, "assertTrue failed at ProbadorConexionAITest.java:100");
+        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.EXITO_CONEXION()), "assertTrue failed at ProbadorConexionAITest.java:101");
     }
 
     @Test
@@ -112,8 +112,8 @@ class ProbadorConexionAITest {
         ProbadorConexionAI probador = new ProbadorConexionAI(config);
         ProbadorConexionAI.ResultadoPrueba resultado = probador.probarConexion();
 
-        assertTrue(resultado.exito);
-        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.EXITO_CONEXION()));
+        assertTrue(resultado.exito, "assertTrue failed at ProbadorConexionAITest.java:115");
+        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.EXITO_CONEXION()), "assertTrue failed at ProbadorConexionAITest.java:116");
     }
 
     @Test
@@ -126,9 +126,9 @@ class ProbadorConexionAITest {
         ProbadorConexionAI probador = new ProbadorConexionAI(config);
         ProbadorConexionAI.ResultadoPrueba resultado = probador.probarConexion();
 
-        assertFalse(resultado.exito);
-        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.ERROR_CONEXION()));
-        assertTrue(resultado.mensaje.contains("HTTP 500"));
+        assertFalse(resultado.exito, "assertFalse failed at ProbadorConexionAITest.java:129");
+        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.ERROR_CONEXION()), "assertTrue failed at ProbadorConexionAITest.java:130");
+        assertTrue(resultado.mensaje.contains("HTTP 500"), "assertTrue failed at ProbadorConexionAITest.java:131");
     }
 
     @Test
@@ -140,7 +140,7 @@ class ProbadorConexionAITest {
         ProbadorConexionAI probador = new ProbadorConexionAI(config);
         ProbadorConexionAI.ResultadoPrueba resultado = probador.probarConexion();
 
-        assertFalse(resultado.exito);
-        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.ERROR_CONEXION()));
+        assertFalse(resultado.exito, "assertFalse failed at ProbadorConexionAITest.java:143");
+        assertTrue(resultado.mensaje.contains(I18nUI.Conexion.ERROR_CONEXION()), "assertTrue failed at ProbadorConexionAITest.java:144");
     }
 }

@@ -38,7 +38,7 @@ class PanelHallazgosExportTest {
 
         String csv = invocarMetodoPrivado(panel, "construirLineaCsv", hallazgo);
 
-        assertEquals("\"10:00:00\nUTC\",\"https://example.com/a,b\"\"c\",Titulo X,\"Linea 1\n\"\"detalle\"\"\",High,Medium", csv);
+        assertEquals("\"10:00:00\nUTC\",\"https://example.com/a,b\"\"c\",Titulo X,\"Linea 1\n\"\"detalle\"\"\",High,Medium", csv, "assertEquals failed at PanelHallazgosExportTest.java:41");
     }
 
     @Test
@@ -57,12 +57,12 @@ class PanelHallazgosExportTest {
 
         String json = invocarMetodoPrivado(panel, "construirObjetoJson", hallazgo);
 
-        assertTrue(json.contains("\"hora\": \"10:00\\\"\\\\\\n\\t\""));
-        assertTrue(json.contains("\"url\": \"https://example.com/p?q=\\\"v\\\"\\n\""));
-        assertTrue(json.contains("\"titulo\": \"Titulo \\\"especial\\\"\\n\""));
-        assertTrue(json.contains("\"hallazgo\": \"Linea1\\r\\nLinea2\\t\\\\\\\"\""));
-        assertTrue(json.contains("\"severidad\": \"High\""));
-        assertTrue(json.contains("\"confianza\": \"Low\""));
+        assertTrue(json.contains("\"hora\": \"10:00\\\"\\\\\\n\\t\""), "assertTrue failed at PanelHallazgosExportTest.java:60");
+        assertTrue(json.contains("\"url\": \"https://example.com/p?q=\\\"v\\\"\\n\""), "assertTrue failed at PanelHallazgosExportTest.java:61");
+        assertTrue(json.contains("\"titulo\": \"Titulo \\\"especial\\\"\\n\""), "assertTrue failed at PanelHallazgosExportTest.java:62");
+        assertTrue(json.contains("\"hallazgo\": \"Linea1\\r\\nLinea2\\t\\\\\\\"\""), "assertTrue failed at PanelHallazgosExportTest.java:63");
+        assertTrue(json.contains("\"severidad\": \"High\""), "assertTrue failed at PanelHallazgosExportTest.java:64");
+        assertTrue(json.contains("\"confianza\": \"Low\""), "assertTrue failed at PanelHallazgosExportTest.java:65");
     }
 
     /**

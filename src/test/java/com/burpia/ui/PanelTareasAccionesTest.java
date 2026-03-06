@@ -66,8 +66,8 @@ class PanelTareasAccionesTest {
         SwingUtilities.invokeAndWait(boton::doClick);
         flushEdt();
 
-        assertEquals(Tarea.ESTADO_EN_COLA, gestor.obtenerTarea(pausada.obtenerId()).obtenerEstado());
-        assertEquals(Tarea.ESTADO_ANALIZANDO, gestor.obtenerTarea(analizando.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_EN_COLA, gestor.obtenerTarea(pausada.obtenerId()).obtenerEstado(), "assertEquals failed at PanelTareasAccionesTest.java:69");
+        assertEquals(Tarea.ESTADO_ANALIZANDO, gestor.obtenerTarea(analizando.obtenerId()).obtenerEstado(), "assertEquals failed at PanelTareasAccionesTest.java:70");
     }
 
     @Test
@@ -81,8 +81,8 @@ class PanelTareasAccionesTest {
         SwingUtilities.invokeAndWait(boton::doClick);
         flushEdt();
 
-        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(enCola.obtenerId()).obtenerEstado());
-        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(analizando.obtenerId()).obtenerEstado());
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(enCola.obtenerId()).obtenerEstado(), "assertEquals failed at PanelTareasAccionesTest.java:84");
+        assertEquals(Tarea.ESTADO_PAUSADO, gestor.obtenerTarea(analizando.obtenerId()).obtenerEstado(), "assertEquals failed at PanelTareasAccionesTest.java:85");
     }
 
     @Test
@@ -94,15 +94,15 @@ class PanelTareasAccionesTest {
         Object resultado = assertDoesNotThrow(() -> metodoCapturarSeleccion.invoke(panel, (Object) new int[]{0, -1, 999, 0}));
         @SuppressWarnings("unchecked")
         List<Object> seleccion = (List<Object>) resultado;
-        assertEquals(1, seleccion.size());
+        assertEquals(1, seleccion.size(), "assertEquals failed at PanelTareasAccionesTest.java:97");
 
         Object item = seleccion.get(0);
         Field tareaId = item.getClass().getDeclaredField("tareaId");
         Field estado = item.getClass().getDeclaredField("estado");
         tareaId.setAccessible(true);
         estado.setAccessible(true);
-        assertEquals(enCola.obtenerId(), tareaId.get(item));
-        assertEquals(Tarea.ESTADO_EN_COLA, estado.get(item));
+        assertEquals(enCola.obtenerId(), tareaId.get(item), "assertEquals failed at PanelTareasAccionesTest.java:104");
+        assertEquals(Tarea.ESTADO_EN_COLA, estado.get(item), "assertEquals failed at PanelTareasAccionesTest.java:105");
     }
 
     @Test
@@ -113,8 +113,8 @@ class PanelTareasAccionesTest {
         Object resultado = metodoCapturarSeleccion.invoke(panel, (Object) new int[]{});
         @SuppressWarnings("unchecked")
         List<Object> seleccion = (List<Object>) resultado;
-        assertNotNull(seleccion);
-        assertTrue(seleccion.isEmpty());
+        assertNotNull(seleccion, "assertNotNull failed at PanelTareasAccionesTest.java:116");
+        assertTrue(seleccion.isEmpty(), "assertTrue failed at PanelTareasAccionesTest.java:117");
     }
 
     @Test
@@ -126,8 +126,8 @@ class PanelTareasAccionesTest {
         Object resultado = metodoCapturarSeleccion.invoke(panel, (Object) new int[]{-1, -5, 999, -100});
         @SuppressWarnings("unchecked")
         List<Object> seleccion = (List<Object>) resultado;
-        assertNotNull(seleccion);
-        assertTrue(seleccion.isEmpty());
+        assertNotNull(seleccion, "assertNotNull failed at PanelTareasAccionesTest.java:129");
+        assertTrue(seleccion.isEmpty(), "assertTrue failed at PanelTareasAccionesTest.java:130");
     }
 
     @Test
@@ -144,9 +144,9 @@ class PanelTareasAccionesTest {
 
         boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, error.obtenerId());
 
-        assertTrue(resultado);
-        assertEquals(error.obtenerId(), tareaReintentada.get());
-        assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado());
+        assertTrue(resultado, "assertTrue failed at PanelTareasAccionesTest.java:147");
+        assertEquals(error.obtenerId(), tareaReintentada.get(), "assertEquals failed at PanelTareasAccionesTest.java:148");
+        assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado(), "assertEquals failed at PanelTareasAccionesTest.java:149");
     }
 
     @Test
@@ -157,22 +157,22 @@ class PanelTareasAccionesTest {
 
         boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, completada.obtenerId());
 
-        assertFalse(resultado);
-        assertEquals(Tarea.ESTADO_COMPLETADO, gestor.obtenerTarea(completada.obtenerId()).obtenerEstado());
+        assertFalse(resultado, "assertFalse failed at PanelTareasAccionesTest.java:160");
+        assertEquals(Tarea.ESTADO_COMPLETADO, gestor.obtenerTarea(completada.obtenerId()).obtenerEstado(), "assertEquals failed at PanelTareasAccionesTest.java:161");
     }
 
     @Test
     @DisplayName("Reencolar tarea con id null retorna false")
     void testReencolarTareaIdNull() throws Exception {
         boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, (String) null);
-        assertFalse(resultado);
+        assertFalse(resultado, "assertFalse failed at PanelTareasAccionesTest.java:168");
     }
 
     @Test
     @DisplayName("Reencolar tarea con id vacio retorna false")
     void testReencolarTareaIdVacio() throws Exception {
         boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, "");
-        assertFalse(resultado);
+        assertFalse(resultado, "assertFalse failed at PanelTareasAccionesTest.java:175");
     }
 
     @Test
@@ -186,7 +186,7 @@ class PanelTareasAccionesTest {
         actualizar.invoke(panel);
         flushEdt();
 
-        assertEquals("▶️ Reanudar Todo", boton.getText());
+        assertEquals("▶️ Reanudar Todo", boton.getText(), "assertEquals failed at PanelTareasAccionesTest.java:189");
 
         SwingUtilities.invokeAndWait(() -> {
             I18nUI.establecerIdioma("en");
@@ -194,7 +194,7 @@ class PanelTareasAccionesTest {
         });
         flushEdt();
 
-        assertEquals("▶️ Resume All", boton.getText());
+        assertEquals("▶️ Resume All", boton.getText(), "assertEquals failed at PanelTareasAccionesTest.java:197");
     }
 
     @Test
@@ -205,7 +205,7 @@ class PanelTareasAccionesTest {
 
         SwingUtilities.invokeAndWait(() -> panel.establecerConfiguracion(config));
 
-        assertEquals(321, modelo.obtenerLimiteFilas());
+        assertEquals(321, modelo.obtenerLimiteFilas(), "assertEquals failed at PanelTareasAccionesTest.java:208");
     }
 
     private JButton obtenerBotonPrincipal() throws Exception {

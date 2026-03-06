@@ -173,7 +173,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             ? nuevaConfig.obtenerMaximoConcurrente()
             : 1;
 
-        this.limitador = new LimitadorTasa(nuevoMaximoConcurrente);
+        this.limitador.ajustarMaximoConcurrente(nuevoMaximoConcurrente);
         actualizarPoolEjecucion(nuevoMaximoConcurrente);
 
         String proveedor = nuevaConfig.obtenerProveedorAI();
@@ -422,7 +422,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         // PRIMERO: Cancelar llamada HTTP activa (libera inmediatamente el socket)
-        com.burpia.analyzer.AnalizadorAI analizador = analizadoresActivos.get(tareaId);
+        com.burpia.analyzer.AnalizadorAI analizador = analizadoresActivos.remove(tareaId);
         if (analizador != null) {
             analizador.cancelarLlamadaHttpActiva();
             rastrear("Llamada HTTP cancelada para tarea: " + tareaId);
@@ -523,14 +523,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             controlBackpressure
         );
 
-        Future<?> future = null;
         String id = tareaIdFinal;
 
         try {
             // Almacenar analizador ANTES de ejecutar para permitir cancelación inmediata
             analizadoresActivos.put(id, analizador);
 
-            future = executorService.submit(analizador);
+            Future<?> future = executorService.submit(analizador);
             ejecucionesActivas.put(id, future);
             registrar("Hilo de analisis iniciado para: " + url + " (ID: " + id + ")");
             rastrearEstadoCola();

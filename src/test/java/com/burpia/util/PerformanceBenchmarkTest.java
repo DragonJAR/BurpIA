@@ -211,7 +211,7 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("ReparadorJson.jsonValido", () -> {
             String repaired = ReparadorJson.repararJson(jsonValido);
-            assertNotNull(repaired);
+            assertNotNull(repaired, "assertNotNull failed at PerformanceBenchmarkTest.java:214");
         });
 
         System.out.println(result);
@@ -227,7 +227,7 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("ReparadorJson.conMarkdown", () -> {
             String repaired = ReparadorJson.repararJson(jsonConMarkdown);
-            assertNotNull(repaired);
+            assertNotNull(repaired, "assertNotNull failed at PerformanceBenchmarkTest.java:230");
         });
 
         System.out.println(result);
@@ -243,7 +243,7 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("ReparadorJson.danado", () -> {
             String repaired = ReparadorJson.repararJson(jsonDanado);
-            assertNotNull(repaired);
+            assertNotNull(repaired, "assertNotNull failed at PerformanceBenchmarkTest.java:246");
         });
 
         System.out.println(result);
@@ -259,7 +259,7 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("ParserRespuestasAI.OpenAI", () -> {
             String contenido = ParserRespuestasAI.extraerContenido(respuestaOpenAI, "OpenAI");
-            assertNotNull(contenido);
+            assertNotNull(contenido, "assertNotNull failed at PerformanceBenchmarkTest.java:262");
         });
 
         System.out.println(result);
@@ -275,7 +275,7 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("ParserRespuestasAI.Claude", () -> {
             String contenido = ParserRespuestasAI.extraerContenido(respuestaClaude, "Claude");
-            assertNotNull(contenido);
+            assertNotNull(contenido, "assertNotNull failed at PerformanceBenchmarkTest.java:278");
         });
 
         System.out.println(result);
@@ -291,7 +291,7 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("Normalizador.normalizarTexto", () -> {
             String normalizado = Normalizador.normalizarTexto(texto);
-            assertNotNull(normalizado);
+            assertNotNull(normalizado, "assertNotNull failed at PerformanceBenchmarkTest.java:294");
         });
 
         System.out.println(result);
@@ -307,7 +307,7 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("Normalizador.esVacio", () -> {
             boolean vacio = Normalizador.esVacio(texto);
-            assertFalse(vacio);
+            assertFalse(vacio, "assertFalse failed at PerformanceBenchmarkTest.java:310");
         });
 
         System.out.println(result);
@@ -333,7 +333,7 @@ class PerformanceBenchmarkTest {
             System.out.println(result);
         });
 
-        assertNotNull(resultRef.get());
+        assertNotNull(resultRef.get(), "assertNotNull failed at PerformanceBenchmarkTest.java:336");
         assertTrue(resultRef.get().avgTimeNs < TimeUnit.MILLISECONDS.toNanos(10),
             "Agregar 100 hallazgos debe ser <10ms promedio. " + resultRef.get());
     }
@@ -350,7 +350,6 @@ class PerformanceBenchmarkTest {
         config.establecerTiempoEsperaAI(60);
         config.establecerRetrasoSegundos(5);
         config.establecerMaximoConcurrente(10);
-        config.establecerTema("oscuro");
         config.establecerIdiomaUi("es");
 
         BenchmarkResult result = runBenchmark("I/O.guardarConfiguracion", () -> {
@@ -376,7 +375,6 @@ class PerformanceBenchmarkTest {
         configOriginal.establecerTiempoEsperaAI(60);
         configOriginal.establecerRetrasoSegundos(5);
         configOriginal.establecerMaximoConcurrente(10);
-        configOriginal.establecerTema("oscuro");
         configOriginal.establecerIdiomaUi("es");
 
         GestorConfiguracion gestorSetup = new GestorConfiguracion();
@@ -385,7 +383,7 @@ class PerformanceBenchmarkTest {
         BenchmarkResult result = runBenchmark("I/O.cargarConfiguracion", () -> {
             GestorConfiguracion gestor = new GestorConfiguracion();
             ConfiguracionAPI loaded = gestor.cargarConfiguracion();
-            assertNotNull(loaded);
+            assertNotNull(loaded, "assertNotNull failed at PerformanceBenchmarkTest.java:386");
         });
 
         System.out.println(result);
@@ -413,7 +411,7 @@ class PerformanceBenchmarkTest {
             System.out.println(result);
         });
 
-        assertNotNull(resultRef.get());
+        assertNotNull(resultRef.get(), "assertNotNull failed at PerformanceBenchmarkTest.java:414");
     }
 
     @Test
@@ -433,7 +431,7 @@ class PerformanceBenchmarkTest {
             System.out.println(result);
         });
 
-        assertNotNull(resultRef.get());
+        assertNotNull(resultRef.get(), "assertNotNull failed at PerformanceBenchmarkTest.java:434");
         assertTrue(resultRef.get().avgTimeNs < TimeUnit.MILLISECONDS.toNanos(UMBRAL_MS_BATCH_TAREAS),
             "Agregar 100 tareas en batch debe ser <" + UMBRAL_MS_BATCH_TAREAS + "ms promedio. " + resultRef.get());
     }
@@ -464,6 +462,6 @@ class PerformanceBenchmarkTest {
             System.out.println(result);
         });
 
-        assertNotNull(resultRef.get());
+        assertNotNull(resultRef.get(), "assertNotNull failed at PerformanceBenchmarkTest.java:465");
     }
 }

@@ -42,39 +42,39 @@ class UIUtilsTest {
         @Test
         @DisplayName("mantiene texto plano sin cambios")
         void textoPlano() {
-            assertEquals("Como instalar Factory Droid?", UIUtils.extraerTextoVisibleEnlace("Como instalar Factory Droid?"));
+            assertEquals("Como instalar Factory Droid?", UIUtils.extraerTextoVisibleEnlace("Como instalar Factory Droid?"), "assertEquals failed at UIUtilsTest.java:45");
         }
 
         @Test
         @DisplayName("elimina anchor html")
         void conAnchor() {
             String input = "<html><a href='https://example.com'>Como instalar Factory Droid?</a></html>";
-            assertEquals("Como instalar Factory Droid?", UIUtils.extraerTextoVisibleEnlace(input));
+            assertEquals("Como instalar Factory Droid?", UIUtils.extraerTextoVisibleEnlace(input), "assertEquals failed at UIUtilsTest.java:52");
         }
 
         @Test
         @DisplayName("elimina etiquetas html residuales")
         void conEtiquetasHtml() {
             String input = "<b>Texto</b> <i>de enlace</i>";
-            assertEquals("Texto de enlace", UIUtils.extraerTextoVisibleEnlace(input));
+            assertEquals("Texto de enlace", UIUtils.extraerTextoVisibleEnlace(input), "assertEquals failed at UIUtilsTest.java:59");
         }
 
         @Test
         @DisplayName("maneja null retornando vacio")
         void nulo() {
-            assertEquals("", UIUtils.extraerTextoVisibleEnlace(null));
+            assertEquals("", UIUtils.extraerTextoVisibleEnlace(null), "assertEquals failed at UIUtilsTest.java:65");
         }
 
         @Test
         @DisplayName("maneja string vacio")
         void vacio() {
-            assertEquals("", UIUtils.extraerTextoVisibleEnlace(""));
+            assertEquals("", UIUtils.extraerTextoVisibleEnlace(""), "assertEquals failed at UIUtilsTest.java:71");
         }
 
         @Test
         @DisplayName("maneja solo espacios en blanco")
         void soloEspacios() {
-            assertEquals("", UIUtils.extraerTextoVisibleEnlace("   "));
+            assertEquals("", UIUtils.extraerTextoVisibleEnlace("   "), "assertEquals failed at UIUtilsTest.java:77");
         }
     }
 
@@ -85,19 +85,19 @@ class UIUtilsTest {
         @Test
         @DisplayName("retorna false con URL null")
         void urlNull() {
-            assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", null, "Mensaje"));
+            assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", null, "Mensaje"), "assertFalse failed at UIUtilsTest.java:88");
         }
 
         @Test
         @DisplayName("retorna false con URL vacia")
         void urlVacia() {
-            assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", "", "Mensaje"));
+            assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", "", "Mensaje"), "assertFalse failed at UIUtilsTest.java:94");
         }
 
         @Test
         @DisplayName("retorna false con URL solo espacios")
         void urlSoloEspacios() {
-            assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", "   ", "Mensaje"));
+            assertFalse(UIUtils.abrirUrlConFallbackInfo(null, "Titulo", "   ", "Mensaje"), "assertFalse failed at UIUtilsTest.java:100");
         }
     }
 
@@ -112,7 +112,7 @@ class UIUtilsTest {
             JPopupMenu popup = new JPopupMenu();
             popup.setInvoker(invocador);
 
-            assertEquals(invocador, UIUtils.normalizarPadreDialogo(popup));
+            assertEquals(invocador, UIUtils.normalizarPadreDialogo(popup), "assertEquals failed at UIUtilsTest.java:115");
         }
     }
 
@@ -127,9 +127,9 @@ class UIUtilsTest {
             JPanel envuelto = UIUtils.envolverContenidoConIcono(contenido, JOptionPane.INFORMATION_MESSAGE);
 
             BorderLayout layout = (BorderLayout) envuelto.getLayout();
-            assertEquals(12, layout.getHgap());
-            assertEquals(contenido, layout.getLayoutComponent(BorderLayout.CENTER));
-            assertNotNull(layout.getLayoutComponent(BorderLayout.WEST));
+            assertEquals(12, layout.getHgap(), "assertEquals failed at UIUtilsTest.java:130");
+            assertEquals(contenido, layout.getLayoutComponent(BorderLayout.CENTER), "assertEquals failed at UIUtilsTest.java:131");
+            assertNotNull(layout.getLayoutComponent(BorderLayout.WEST), "assertNotNull failed at UIUtilsTest.java:132");
         }
     }
 
@@ -141,8 +141,8 @@ class UIUtilsTest {
         @DisplayName("reserva margen horizontal")
         void margenHorizontal() {
             Insets margen = UIUtils.crearAreaMensajeDialogo("mensaje").getMargin();
-            assertTrue(margen.left >= 2);
-            assertTrue(margen.right >= 2);
+            assertTrue(margen.left >= 2, "assertTrue failed at UIUtilsTest.java:144");
+            assertTrue(margen.right >= 2, "assertTrue failed at UIUtilsTest.java:145");
         }
     }
 
@@ -154,10 +154,10 @@ class UIUtilsTest {
         @DisplayName("texto de checkbox no volver a mostrar se localiza en espanol e ingles")
         void textoCheckboxOptOut() {
             I18nUI.establecerIdioma("es");
-            assertEquals("No volver a mostrar este mensaje", I18nUI.General.CHECK_NO_VOLVER_MOSTRAR_ALERTA());
+            assertEquals("No volver a mostrar este mensaje", I18nUI.General.CHECK_NO_VOLVER_MOSTRAR_ALERTA(), "assertEquals failed at UIUtilsTest.java:157");
 
             I18nUI.establecerIdioma("en");
-            assertEquals("Do not show this message again", I18nUI.General.CHECK_NO_VOLVER_MOSTRAR_ALERTA());
+            assertEquals("Do not show this message again", I18nUI.General.CHECK_NO_VOLVER_MOSTRAR_ALERTA(), "assertEquals failed at UIUtilsTest.java:160");
         }
 
         @Test
@@ -172,7 +172,7 @@ class UIUtilsTest {
                 "El binario de Claude Code no existe en la ruta actual: /opt/claude/bin/claude\n"
                     + "Comando configurado: /opt/claude/bin/claude --dangerously-skip-permissions",
                 mensaje
-            );
+            , "assertEquals failed at UIUtilsTest.java:171");
         }
 
         @Test
@@ -188,7 +188,7 @@ class UIUtilsTest {
             assertEquals(
                 "The Factory Droid binary does not exist at the current path: /tmp/droid",
                 mensaje
-            );
+            , "assertEquals failed at UIUtilsTest.java:188");
         }
     }
 
@@ -199,25 +199,25 @@ class UIUtilsTest {
         @Test
         @DisplayName("evita valores negativos")
         void valorNegativo() {
-            assertEquals(0, UIUtils.normalizarDelayMs(-5));
+            assertEquals(0, UIUtils.normalizarDelayMs(-5), "assertEquals failed at UIUtilsTest.java:202");
         }
 
         @Test
         @DisplayName("retorna cero para cero")
         void cero() {
-            assertEquals(0, UIUtils.normalizarDelayMs(0));
+            assertEquals(0, UIUtils.normalizarDelayMs(0), "assertEquals failed at UIUtilsTest.java:208");
         }
 
         @Test
         @DisplayName("retorna valor positivo sin cambios")
         void valorPositivo() {
-            assertEquals(140, UIUtils.normalizarDelayMs(140));
+            assertEquals(140, UIUtils.normalizarDelayMs(140), "assertEquals failed at UIUtilsTest.java:214");
         }
 
         @Test
         @DisplayName("maneja Integer.MAX_VALUE")
         void maximoEntero() {
-            assertEquals(Integer.MAX_VALUE, UIUtils.normalizarDelayMs(Integer.MAX_VALUE));
+            assertEquals(Integer.MAX_VALUE, UIUtils.normalizarDelayMs(Integer.MAX_VALUE), "assertEquals failed at UIUtilsTest.java:220");
         }
     }
 
