@@ -252,7 +252,7 @@ public class TaskExecutionManager {
     }
 
     private void depurarContextosHuerfanos() {
-        if (gestorTareas == null || contextosReintento.isEmpty()) {
+        if (gestorTareas == null || Normalizador.esVacia(contextosReintento)) {
             return;
         }
         long ahora = System.currentTimeMillis();

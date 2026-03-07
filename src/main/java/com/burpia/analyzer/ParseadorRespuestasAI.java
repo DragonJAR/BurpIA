@@ -6,7 +6,10 @@ import com.burpia.i18n.I18nLogs;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
+import com.burpia.util.ConstantesJsonAI;
 import com.burpia.util.GestorLoggingUnificado;
+import com.burpia.util.GsonProvider;
+import com.burpia.util.JsonParserUtil;
 import com.burpia.util.Normalizador;
 import com.burpia.util.ParserRespuestasAI;
 import com.burpia.util.ReparadorJson;
@@ -22,21 +25,14 @@ import java.util.List;
 
 public class ParseadorRespuestasAI {
     private static final String ORIGEN_LOG = "ParseadorRespuestasAI";
-    private static final String[] CAMPOS_TITULO = { "titulo", "title", "name", "nombre" };
-    private static final String[] CAMPOS_DESCRIPCION = { "descripcion", "description", "hallazgo", "finding", "detalle", "details" };
-    private static final String[] CAMPOS_SEVERIDAD = { "severidad", "severity", "risk", "impacto" };
-    private static final String[] CAMPOS_CONFIANZA = { "confianza", "confidence", "certainty", "certeza" };
-    private static final String[] CAMPOS_EVIDENCIA = { "evidencia", "evidence", "proof", "indicator" };
-    private static final String[] CAMPOS_HALLAZGOS = { "hallazgos", "findings", "issues", "vulnerabilidades" };
-    private static final String[] CAMPOS_TEXTO = { "text", "texto", "content", "mensaje", "message", "value", "descripcion", "description" };
-    
+
     private final GestorLoggingUnificado gestorLogging;
     private final Gson gson;
     private final String idiomaUi;
 
     public ParseadorRespuestasAI(GestorLoggingUnificado gestorLogging, String idiomaUi) {
         this.gestorLogging = gestorLogging != null ? gestorLogging : GestorLoggingUnificado.crear(null, null, null, null, null);
-        this.gson = new Gson();
+        this.gson = GsonProvider.get();
         this.idiomaUi = idiomaUi != null ? idiomaUi : "es";
     }
 
@@ -68,18 +64,18 @@ public class ParseadorRespuestasAI {
             try {
                 String contenidoLimpio = limpiarBloquesMarkdownJson(contenido);
                 JsonElement raiz = gson.fromJson(contenidoLimpio, JsonElement.class);
-                List<JsonObject> objetosHallazgos = extraerObjetosHallazgos(raiz);
+                List<JsonObject> objetosHallazgos = JsonParserUtil.extraerObjetosHallazgos(raiz, ConstantesJsonAI.CAMPOS_HALLAZGOS);
 
                 if (!objetosHallazgos.isEmpty()) {
                     rastrear("Se encontraron " + objetosHallazgos.size() + " hallazgos en JSON");
                     for (JsonObject obj : objetosHallazgos) {
                         agregarHallazgoNormalizado(
                                 hallazgos,
-                                extraerCampoFlexible(obj, CAMPOS_TITULO),
-                                extraerCampoFlexible(obj, CAMPOS_DESCRIPCION),
-                                extraerCampoFlexible(obj, CAMPOS_SEVERIDAD),
-                                extraerCampoFlexible(obj, CAMPOS_CONFIANZA),
-                                extraerCampoFlexible(obj, CAMPOS_EVIDENCIA),
+                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO),
+                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION),
+                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD),
+                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA),
+                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA),
                                 solicitud);
                     }
                 } else {
@@ -159,11 +155,11 @@ public class ParseadorRespuestasAI {
                 JsonObject obj = item.getAsJsonObject();
                 agregarHallazgoNormalizado(
                         hallazgos,
-                        extraerCampoFlexible(obj, CAMPOS_TITULO),
-                        extraerCampoFlexible(obj, CAMPOS_DESCRIPCION),
-                        extraerCampoFlexible(obj, CAMPOS_SEVERIDAD),
-                        extraerCampoFlexible(obj, CAMPOS_CONFIANZA),
-                        extraerCampoFlexible(obj, CAMPOS_EVIDENCIA),
+                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO),
+                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION),
+                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD),
+                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA),
+                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA),
                         solicitud);
             }
         }
@@ -185,11 +181,11 @@ public class ParseadorRespuestasAI {
                 continue;
             }
 
-            String titulo = extraerCampoConFallback(CAMPOS_TITULO, bloqueHallazgo);
-            String descripcion = extraerCampoConFallback(CAMPOS_DESCRIPCION, bloqueHallazgo);
-            String severidad = extraerCampoConFallback(CAMPOS_SEVERIDAD, bloqueHallazgo);
-            String confianza = extraerCampoConFallback(CAMPOS_CONFIANZA, bloqueHallazgo);
-            String evidencia = extraerCampoConFallback(CAMPOS_EVIDENCIA, bloqueHallazgo);
+            String titulo = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_TITULO, bloqueHallazgo);
+            String descripcion = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_DESCRIPCION, bloqueHallazgo);
+            String severidad = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_SEVERIDAD, bloqueHallazgo);
+            String confianza = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_CONFIANZA, bloqueHallazgo);
+            String evidencia = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_EVIDENCIA, bloqueHallazgo);
 
             agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia, solicitud);
         }
@@ -337,134 +333,6 @@ public class ParseadorRespuestasAI {
             limpio = limpio.replaceFirst("\\s*```\\s*$", "");
         }
         return limpio.trim();
-    }
-
-    private List<JsonObject> extraerObjetosHallazgos(JsonElement raiz) {
-        List<JsonObject> objetos = new ArrayList<>();
-        if (raiz == null || raiz.isJsonNull()) {
-            return objetos;
-        }
-        if (raiz.isJsonArray()) {
-            anexarObjetosDesdeArreglo(raiz.getAsJsonArray(), objetos);
-            return objetos;
-        }
-        if (!raiz.isJsonObject()) {
-            return objetos;
-        }
-        JsonObject objetoRaiz = raiz.getAsJsonObject();
-        JsonElement campoHallazgos = extraerPrimerCampoExistente(objetoRaiz, CAMPOS_HALLAZGOS);
-        if (campoHallazgos != null) {
-            if (campoHallazgos.isJsonArray()) {
-                anexarObjetosDesdeArreglo(campoHallazgos.getAsJsonArray(), objetos);
-            } else if (campoHallazgos.isJsonObject()) {
-                objetos.add(campoHallazgos.getAsJsonObject());
-            }
-            return objetos;
-        }
-        if (pareceObjetoHallazgo(objetoRaiz)) {
-            objetos.add(objetoRaiz);
-        }
-        return objetos;
-    }
-
-    private void anexarObjetosDesdeArreglo(JsonArray arreglo, List<JsonObject> destino) {
-        if (arreglo == null || destino == null) {
-            return;
-        }
-        for (JsonElement elemento : arreglo) {
-            if (elemento != null && elemento.isJsonObject()) {
-                destino.add(elemento.getAsJsonObject());
-            }
-        }
-    }
-
-    private JsonElement extraerPrimerCampoExistente(JsonObject objeto, String... campos) {
-        if (objeto == null || campos == null) {
-            return null;
-        }
-        for (String campo : campos) {
-            if (Normalizador.esVacio(campo)) {
-                continue;
-            }
-            JsonElement valor = objeto.get(campo);
-            if (valor != null && !valor.isJsonNull()) {
-                return valor;
-            }
-        }
-        return null;
-    }
-
-    private boolean pareceObjetoHallazgo(JsonObject objeto) {
-        if (objeto == null) {
-            return false;
-        }
-        return Normalizador.noEsVacio(extraerCampoFlexible(objeto, CAMPOS_DESCRIPCION))
-                || Normalizador.noEsVacio(extraerCampoFlexible(objeto, CAMPOS_EVIDENCIA));
-    }
-
-    private String extraerCampoFlexible(JsonObject objeto, String... campos) {
-        if (objeto == null || campos == null) {
-            return "";
-        }
-        for (String campo : campos) {
-            if (Normalizador.esVacio(campo)) {
-                continue;
-            }
-            String valor = extraerCampoComoTexto(objeto.get(campo), 0);
-            if (Normalizador.noEsVacio(valor)) {
-                return valor;
-            }
-        }
-        return "";
-    }
-
-    private String extraerCampoComoTexto(JsonElement elemento, int profundidad) {
-        final int PROFUNDIDAD_MAXIMA_JSON = 5;
-        if (elemento == null || elemento.isJsonNull() || profundidad > PROFUNDIDAD_MAXIMA_JSON) {
-            return "";
-        }
-        if (elemento.isJsonPrimitive()) {
-            try {
-                String valor = elemento.getAsString();
-                return valor != null ? valor.trim() : "";
-            } catch (Exception e) {
-                return "";
-            }
-        }
-        if (elemento.isJsonArray()) {
-            StringBuilder acumulado = new StringBuilder();
-            for (JsonElement item : elemento.getAsJsonArray()) {
-                anexarTexto(acumulado, extraerCampoComoTexto(item, profundidad + 1));
-            }
-            return acumulado.toString().trim();
-        }
-        if (elemento.isJsonObject()) {
-            JsonObject objeto = elemento.getAsJsonObject();
-            for (String campoTexto : CAMPOS_TEXTO) {
-                String texto = extraerCampoComoTexto(objeto.get(campoTexto), profundidad + 1);
-                if (Normalizador.noEsVacio(texto)) {
-                    return texto;
-                }
-            }
-            for (var entry : objeto.entrySet()) {
-                String texto = extraerCampoComoTexto(entry.getValue(), profundidad + 1);
-                if (Normalizador.noEsVacio(texto)) {
-                    return texto;
-                }
-            }
-            return "";
-        }
-        return "";
-    }
-
-    private void anexarTexto(StringBuilder destino, String texto) {
-        if (destino == null || texto == null || Normalizador.esVacio(texto)) {
-            return;
-        }
-        if (destino.length() > 0) {
-            destino.append(' ');
-        }
-        destino.append(texto.trim());
     }
 
     private void agregarHallazgoNormalizado(List<Hallazgo> destino,

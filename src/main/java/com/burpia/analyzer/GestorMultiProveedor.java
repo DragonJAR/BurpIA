@@ -6,8 +6,11 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
+import com.burpia.util.ConstantesJsonAI;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
+import com.burpia.util.GsonProvider;
+import com.burpia.util.JsonParserUtil;
 import com.burpia.util.Normalizador;
 import com.burpia.util.ParserRespuestasAI;
 import com.burpia.util.ReparadorJson;
@@ -57,7 +60,7 @@ public class GestorMultiProveedor {
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
         this.gestorLogging = gestorLogging;
         this.logLock = new Object();
-        this.gson = new Gson();
+        this.gson = GsonProvider.get();
         this.constructorPrompt = new ConstructorPrompts(this.config);
     }
 
@@ -196,15 +199,15 @@ public class GestorMultiProveedor {
             }
 
             JsonElement raiz = gson.fromJson(contenido, JsonElement.class);
-            List<JsonObject> objetosHallazgos = extraerObjetosHallazgos(raiz);
+            List<JsonObject> objetosHallazgos = JsonParserUtil.extraerObjetosHallazgos(raiz, ConstantesJsonAI.CAMPOS_HALLAZGOS);
 
             if (!objetosHallazgos.isEmpty()) {
                 for (JsonObject obj : objetosHallazgos) {
-                    String titulo = extraerCampoFlexible(obj, "titulo", "title", "name", "nombre");
-                    String descripcion = extraerCampoFlexible(obj, "descripcion", "description", "hallazgo", "finding", "detalle", "details");
-                    String severidad = extraerCampoFlexible(obj, "severidad", "severity", "risk", "impacto");
-                    String confianza = extraerCampoFlexible(obj, "confianza", "confidence", "certainty", "certeza");
-                    String evidencia = extraerCampoFlexible(obj, "evidencia", "evidence", "proof", "indicator");
+                    String titulo = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO);
+                    String descripcion = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION);
+                    String severidad = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD);
+                    String confianza = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA);
+                    String evidencia = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA);
 
                     agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
                 }
@@ -218,74 +221,6 @@ public class GestorMultiProveedor {
                 hallazgos,
                 solicitud.obtenerSolicitudHttp(),
                 Collections.emptyList());
-    }
-
-    private List<JsonObject> extraerObjetosHallazgos(JsonElement raiz) {
-        List<JsonObject> objetos = new ArrayList<>();
-        if (raiz == null || raiz.isJsonNull()) {
-            return objetos;
-        }
-        if (raiz.isJsonArray()) {
-            for (JsonElement elemento : raiz.getAsJsonArray()) {
-                if (elemento != null && elemento.isJsonObject()) {
-                    objetos.add(elemento.getAsJsonObject());
-                }
-            }
-            return objetos;
-        }
-        if (raiz.isJsonObject()) {
-            JsonObject objetoRaiz = raiz.getAsJsonObject();
-            String[] camposHallazgos = { "hallazgos", "findings", "issues", "vulnerabilidades" };
-            
-            for (String campo : camposHallazgos) {
-                if (objetoRaiz.has(campo) && !objetoRaiz.get(campo).isJsonNull()) {
-                    JsonElement campoHallazgos = objetoRaiz.get(campo);
-                    if (campoHallazgos.isJsonArray()) {
-                        for (JsonElement elemento : campoHallazgos.getAsJsonArray()) {
-                            if (elemento != null && elemento.isJsonObject()) {
-                                objetos.add(elemento.getAsJsonObject());
-                            }
-                        }
-                    } else if (campoHallazgos.isJsonObject()) {
-                        objetos.add(campoHallazgos.getAsJsonObject());
-                    }
-                    return objetos;
-                }
-            }
-            
-            if (pareceObjetoHallazgo(objetoRaiz)) {
-                objetos.add(objetoRaiz);
-            }
-        }
-        return objetos;
-    }
-
-    private boolean pareceObjetoHallazgo(JsonObject objeto) {
-        if (objeto == null) {
-            return false;
-        }
-        String descripcion = extraerCampoFlexible(objeto, "descripcion", "description", "hallazgo", "finding", "detalle", "details");
-        String evidencia = extraerCampoFlexible(objeto, "evidencia", "evidence", "proof", "indicator");
-        return Normalizador.noEsVacio(descripcion) || Normalizador.noEsVacio(evidencia);
-    }
-
-    private String extraerCampoFlexible(JsonObject objeto, String... campos) {
-        if (objeto == null || campos == null) {
-            return "";
-        }
-        for (String campo : campos) {
-            if (Normalizador.esVacio(campo)) {
-                continue;
-            }
-            if (objeto.has(campo) && !objeto.get(campo).isJsonNull()) {
-                try {
-                    return objeto.get(campo).getAsString().trim();
-                } catch (Exception e) {
-                    continue;
-                }
-            }
-        }
-        return "";
     }
 
     private void agregarHallazgoNormalizado(List<Hallazgo> destino,

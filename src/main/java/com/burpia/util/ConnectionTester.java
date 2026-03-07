@@ -17,6 +17,7 @@ import javax.net.ssl.X509TrustManager;
 
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ProveedorAI;
+import com.burpia.util.GsonProvider;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -53,7 +54,7 @@ public class ConnectionTester {
         this.gestorLogging = GestorLoggingUnificado.crearMinimal(
             new PrintWriter(System.out), 
             new PrintWriter(System.err));
-        this.gson = new Gson();
+        this.gson = GsonProvider.get();
     }
     
     /**
