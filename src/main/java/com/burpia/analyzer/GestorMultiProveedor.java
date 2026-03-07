@@ -64,7 +64,7 @@ public class GestorMultiProveedor {
     public ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedor() throws IOException, InterruptedException {
         List<String> proveedores = config.obtenerProveedoresMultiConsulta();
         
-        if (proveedores == null || proveedores.isEmpty()) {
+        if (Normalizador.esVacia(proveedores)) {
             registrar("Multi-consulta: No hay proveedores seleccionados, usando proveedor único");
             return ejecutarAnalisisProveedorUnico();
         }

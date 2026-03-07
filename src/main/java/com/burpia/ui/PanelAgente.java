@@ -26,14 +26,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PanelAgente extends JPanel {
 
-    private static final Logger LOGGER = Logger.getLogger(PanelAgente.class.getName());
+    private static final String ORIGEN_LOG = "PanelAgente";
     private final GestorLoggingUnificado gestorLogging;
 
     private static final int DELAY_INICIO_BINARIO_MS = 800;
@@ -96,7 +94,7 @@ public class PanelAgente extends JPanel {
     @SuppressWarnings("this-escape")
     public PanelAgente(ConfiguracionAPI config, boolean iniciarConsola) {
         this.config = config;
-        this.gestorLogging = GestorLoggingUnificado.crearConLogger(LOGGER);
+        this.gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
         this.inyectorPty = crearInyectorPty();
         this.promptInicialEnviado = new AtomicBoolean(false);
         this.inicializacionPendiente = new AtomicBoolean(false);
@@ -166,7 +164,7 @@ public class PanelAgente extends JPanel {
             try {
                 obtenerInyectorPty().execute(tarea);
             } catch (RejectedExecutionException retryEx) {
-                registrarLog(Level.WARNING, I18nLogs.tr("No se pudo encolar tarea en inyector PTY"), retryEx);
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo encolar tarea en inyector PTY"), retryEx);
             }
         }
     }
@@ -210,7 +208,7 @@ public class PanelAgente extends JPanel {
             }
             return escribirTextoDirectoPTY(comando);
         } catch (Exception e) {
-            registrarLog(Level.FINE, I18nLogs.tr("Error escribiendo comando crudo PTY"), e);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error escribiendo comando crudo PTY"));
             return false;
         }
     }
@@ -245,7 +243,7 @@ public class PanelAgente extends JPanel {
             });
             return true;
         } catch (Exception e) {
-            registrarLog(Level.FINE, I18nLogs.tr("Error escribiendo por ttyConnector"), e);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error escribiendo por ttyConnector"));
             return false;
         }
     }
@@ -261,7 +259,7 @@ public class PanelAgente extends JPanel {
             os.flush();
             return true;
         } catch (Exception e) {
-            registrarLog(Level.FINE, I18nLogs.tr("Error escritura raw PTY"), e);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error escritura raw PTY"));
             return false;
         }
     }
@@ -280,7 +278,7 @@ public class PanelAgente extends JPanel {
 
         // Verificar proceso antes de crear el array de bytes (optimización)
         if (process == null || !process.isAlive()) {
-            registrarLog(Level.FINE, I18nLogs.tr("Escritura PTY omitida: proceso no disponible"));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Escritura PTY omitida: proceso no disponible"));
             return false;
         }
 
@@ -289,7 +287,7 @@ public class PanelAgente extends JPanel {
         try {
             java.io.OutputStream os = process.getOutputStream();
             if (os == null) {
-                registrarLog(Level.FINE, I18nLogs.tr("Escritura PTY omitida: stream de salida nulo"));
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Escritura PTY omitida: stream de salida nulo"));
                 return false;
             }
             escribirEnChunks(bytes, (offset, length) -> {
@@ -302,7 +300,7 @@ public class PanelAgente extends JPanel {
             os.flush();
             return true;
         } catch (Exception e) {
-            registrarLog(Level.FINE, I18nLogs.tr("Error escritura directa PTY"), e);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error escritura directa PTY"));
             return false;
         }
     }
@@ -603,7 +601,7 @@ public class PanelAgente extends JPanel {
             aplicarIdioma();
 
         } catch (Exception ex) {
-            registrarLog(Level.WARNING, I18nLogs.tr("Error al cambiar de agente"), ex);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al cambiar de agente"), ex);
         }
     }
 
@@ -723,12 +721,12 @@ public class PanelAgente extends JPanel {
         try {
             terminalWidget.stop();
         } catch (Exception e) {
-            registrarLog(Level.FINE, I18nLogs.tr("Error deteniendo terminalWidget"), e);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error deteniendo terminalWidget"));
         }
         try {
             terminalWidget.close();
         } catch (Exception e) {
-            registrarLog(Level.FINE, I18nLogs.tr("Error cerrando terminalWidget"), e);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error cerrando terminalWidget"));
         }
     }
 
@@ -740,7 +738,7 @@ public class PanelAgente extends JPanel {
             try {
                 connectorActual.close();
             } catch (Exception e) {
-                registrarLog(Level.FINE, I18nLogs.tr("Error cerrando ttyConnector"), e);
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error cerrando ttyConnector"));
             }
         }
 
@@ -768,7 +766,7 @@ public class PanelAgente extends JPanel {
                 esperarProceso(proceso, 1200L);
             }
         } catch (Exception e) {
-            registrarLog(Level.FINE, I18nLogs.tr("Error cerrando proceso PTY"), e);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error cerrando proceso PTY"));
         }
     }
 
@@ -919,7 +917,7 @@ public class PanelAgente extends JPanel {
 
         String rutaShell = OSUtils.expandirRuta(shell);
         if (!OSUtils.existeBinario(rutaShell)) {
-            registrarLog(Level.WARNING, I18nLogs.tr("Shell no encontrado: " + rutaShell + ", usando fallback a " + SHELL_POR_DEFECTO));
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Shell no encontrado: " + rutaShell + ", usando fallback a " + SHELL_POR_DEFECTO));
             shell = SHELL_POR_DEFECTO;
         }
 
@@ -933,7 +931,7 @@ public class PanelAgente extends JPanel {
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
         String comandoArranque = resolverComandoArranque(tipoActual);
 
-        registrarLog(Level.INFO, I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
 
         ejecutarEnInyectorPty(() -> {
             if (!esSesionVigente(sesionObjetivo)) {
@@ -950,7 +948,7 @@ public class PanelAgente extends JPanel {
                 INTENTOS_ENVIO_ARRANQUE,
                 DELAY_REINTENTO_ARRANQUE_MS
             )) {
-                registrarLog(Level.WARNING, I18nLogs.tr(
+                gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr(
                     "No se pudo enviar comando de arranque del agente tras reintentos"));
                 return;
             }
@@ -1056,7 +1054,7 @@ public class PanelAgente extends JPanel {
             }
             OSUtils.cerrarVentanaAjustes();
             if (delayMs > 0) {
-                registrarLog(Level.INFO, I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayMs + " ms) antes de la inyeccion..."));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayMs + " ms) antes de la inyeccion..."));
                 new Timer(delayMs, ev -> {
                     ((Timer) ev.getSource()).stop();
                     if (esSesionVigente(sesionObjetivo)) {
@@ -1086,7 +1084,7 @@ public class PanelAgente extends JPanel {
             if (!esSesionVigente(sesionObjetivo)) {
                 return;
             }
-            registrarLog(Level.INFO, I18nLogs.trTecnico(
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.trTecnico(
                 "[ENTER-FLOW] id=" + injectionId +
                     " origin=" + origen +
                     " agent=" + opciones.tipoAgente().name() +
@@ -1096,7 +1094,7 @@ public class PanelAgente extends JPanel {
             if (!escribirComandoCrudoSeguro(payloadConBrackets, sesionObjetivo)) {
                 return;
             }
-            registrarLog(Level.INFO, I18nLogs.tr("Payload en bufer usando escritura directa (tty stream con bracketed paste). Esperando confirmacion..."));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Payload en bufer usando escritura directa (tty stream con bracketed paste). Esperando confirmacion..."));
             dormirSilencioso(opciones.delaySubmitPostPasteMs());
             enviarSecuenciaSubmit(opciones, secuencia, injectionId, origen, sesionObjetivo);
         });
@@ -1139,7 +1137,7 @@ public class PanelAgente extends JPanel {
         }
 
         if (!envioExitoso && secuencia.getFallback() != null) {
-            registrarLog(Level.WARNING, I18nLogs.trTecnico(
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.trTecnico(
                 "[ENTER-FALLBACK] id=" + injectionId +
                     " origin=" + origen +
                     " motivo=fallo_escritura payload='" + escaparControl(secuencia.payload()) + "'"
@@ -1150,7 +1148,7 @@ public class PanelAgente extends JPanel {
         }
 
         if (!envioExitoso) {
-            registrarLog(Level.WARNING, I18nLogs.trTecnico(
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.trTecnico(
                 "[ENTER-RESULT] id=" + injectionId +
                     " origin=" + origen +
                     " outcome=failed reason=submit-write-failed-no-fallback"
@@ -1158,8 +1156,8 @@ public class PanelAgente extends JPanel {
             return;
         }
 
-        registrarLog(Level.INFO, I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
-        registrarLog(Level.INFO, I18nLogs.trTecnico(
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Se ha despachado la secuencia VK_ENTER") + " [id=" + injectionId + ", " + secuencia.descripcion() + "]");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trTecnico(
             "[ENTER-RESULT] id=" + injectionId +
                 " origin=" + origen +
                 " outcome=unknown reason=transport-level-dispatch-only"
@@ -1206,14 +1204,14 @@ public class PanelAgente extends JPanel {
 
     private void manejarErrorPty(Throwable t) {
         if (t instanceof java.io.IOException) {
-            registrarLog(Level.SEVERE, I18nLogs.tr("Error de E/S iniciando proceso PTY"), t);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error de E/S iniciando proceso PTY"), t);
         } else if (t instanceof SecurityException) {
-            registrarLog(Level.SEVERE, I18nLogs.tr("Error de seguridad iniciando proceso PTY"), t);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error de seguridad iniciando proceso PTY"), t);
         } else if (t instanceof InterruptedException) {
-            registrarLog(Level.WARNING, I18nLogs.tr("Operación interrumpida al iniciar PTY"), t);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Operación interrumpida al iniciar PTY"), t);
             Thread.currentThread().interrupt();
         } else {
-            registrarLog(Level.SEVERE, I18nLogs.tr("Error inesperado iniciando Consola PTY"), t);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error inesperado iniciando Consola PTY"), t);
         }
 
         String mensaje = t.getMessage() != null ? t.getMessage() : I18nLogs.tr("Error desconocido PTY");
@@ -1241,18 +1239,10 @@ public class PanelAgente extends JPanel {
 
         inyectarComando(prompt, 0);
 
-        registrarLog(Level.INFO, I18nLogs.tr("Payload inicial encolado para inyeccion manual por el usuario"));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Payload inicial encolado para inyeccion manual por el usuario"));
     }
 
     private String obtenerPromptPreflightFijo() {
         return config.obtenerAgentePreflightPrompt();
-    }
-
-    private void registrarLog(Level nivel, String mensaje) {
-        gestorLogging.log(nivel, mensaje);
-    }
-
-    private void registrarLog(Level nivel, String mensaje, Throwable error) {
-        gestorLogging.log(nivel, mensaje, error);
     }
 }

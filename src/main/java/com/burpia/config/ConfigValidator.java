@@ -7,7 +7,6 @@ import com.burpia.util.Normalizador;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 import static com.burpia.util.Normalizador.esVacio;
@@ -25,7 +24,7 @@ import static com.burpia.util.Normalizador.noEsVacio;
  */
 public final class ConfigValidator {
 
-    private static final Logger LOGGER = Logger.getLogger(ConfigValidator.class.getName());
+    private static final String ORIGEN_LOG = "ConfigValidator";
 
     // Patrones de validación para API keys por proveedor
     private static final Pattern OPENAI_API_KEY_PATTERN = Pattern.compile("^sk-[A-Za-z0-9]{48}$");
@@ -760,8 +759,6 @@ public final class ConfigValidator {
     public static void logError(GestorLoggingUnificado gestorLogging, String origen, String mensaje) {
         if (gestorLogging != null) {
             gestorLogging.error(origen, mensaje);
-        } else {
-            LOGGER.warning(String.format("[%s] %s", origen, mensaje));
         }
     }
 
@@ -776,8 +773,6 @@ public final class ConfigValidator {
     public static void logError(GestorLoggingUnificado gestorLogging, String origen, String mensaje, Throwable throwable) {
         if (gestorLogging != null) {
             gestorLogging.error(origen, mensaje, throwable);
-        } else {
-            LOGGER.throwing(origen, mensaje, throwable);
         }
     }
 }

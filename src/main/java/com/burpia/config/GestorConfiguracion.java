@@ -334,7 +334,7 @@ public class GestorConfiguracion {
         if (archivo.multiProveedorHabilitado != null) {
             config.establecerMultiProveedorHabilitado(archivo.multiProveedorHabilitado);
         }
-        if (archivo.proveedoresMultiConsulta != null && !archivo.proveedoresMultiConsulta.isEmpty()) {
+        if (Normalizador.noEsVacia(archivo.proveedoresMultiConsulta)) {
             config.establecerProveedoresMultiConsulta(archivo.proveedoresMultiConsulta);
         }
 
@@ -388,7 +388,7 @@ public class GestorConfiguracion {
         // Multi-Proveedor Configuration
         archivo.multiProveedorHabilitado = config.esMultiProveedorHabilitado();
         List<String> proveedores = config.obtenerProveedoresMultiConsulta();
-        archivo.proveedoresMultiConsulta = proveedores != null && !proveedores.isEmpty()
+        archivo.proveedoresMultiConsulta = Normalizador.noEsVacia(proveedores)
             ? new ArrayList<>(proveedores)
             : null;
 

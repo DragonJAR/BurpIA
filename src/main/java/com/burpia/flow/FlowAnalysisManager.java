@@ -51,6 +51,7 @@ public class FlowAnalysisManager {
     private final ModeloTablaHallazgos modeloTablaHallazgos;
     private final AtomicBoolean cancelado;
     private final ControlBackpressureGlobal controlBackpressure;
+    private volatile Thread threadAnalisisActivo;
     
     public FlowAnalysisManager(MontoyaApi api,
                                 ConfiguracionAPI config,
@@ -98,11 +99,16 @@ public class FlowAnalysisManager {
         gestorLogging.info(ORIGEN_LOG, 
             "Iniciando análisis de flujo con " + totalPeticiones + " peticiones");
         
-        Thread threadAnalisis = new Thread(() -> {
-            ejecutarAnalisisAsync(peticiones, callback);
+        Thread nuevoThread = new Thread(() -> {
+            try {
+                ejecutarAnalisisAsync(peticiones, callback);
+            } finally {
+                threadAnalisisActivo = null;
+            }
         }, "BurpIA-FlowAnalysis");
         
-        threadAnalisis.start();
+        threadAnalisisActivo = nuevoThread;
+        nuevoThread.start();
     }
     
     private void ejecutarAnalisisAsync(List<HttpRequestResponse> peticiones, FlowAnalysisCallback callback) {
@@ -290,6 +296,12 @@ public class FlowAnalysisManager {
     public void cancelar() {
         cancelado.set(true);
         gestorLogging.info(ORIGEN_LOG, "Solicitud de cancelación recibida");
+        
+        Thread thread = threadAnalisisActivo;
+        if (thread != null && thread.isAlive()) {
+            thread.interrupt();
+            gestorLogging.info(ORIGEN_LOG, "Thread de análisis interrumpido");
+        }
     }
     
     /**
@@ -299,5 +311,30 @@ public class FlowAnalysisManager {
      */
     public boolean estaCancelado() {
         return cancelado.get();
+    }
+    
+    /**
+     * Cierra el manager de forma segura, cancelando cualquier análisis en curso.
+     * <p>
+     * Debe llamarse al cerrar la aplicación para evitar threads huérfanos.
+     * </p>
+     */
+    public void shutdown() {
+        cancelado.set(true);
+        
+        Thread thread = threadAnalisisActivo;
+        if (thread != null && thread.isAlive()) {
+            thread.interrupt();
+            try {
+                thread.join(1000);
+                gestorLogging.info(ORIGEN_LOG, "Thread de análisis cerrado correctamente");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                gestorLogging.error(ORIGEN_LOG, "Interrupción durante shutdown del thread de análisis");
+            }
+        }
+        
+        threadAnalisisActivo = null;
+        gestorLogging.info(ORIGEN_LOG, "FlowAnalysisManager shutdown completado");
     }
 }

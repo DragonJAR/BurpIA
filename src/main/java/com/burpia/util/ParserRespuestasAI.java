@@ -170,7 +170,7 @@ public class ParserRespuestasAI {
                 JsonArray contenidos = obtenerArreglo(outputObject, "content");
                 if (contenidos != null) {
                     String texto = extraerTextoDesdeArreglo(contenidos);
-                    if (texto != null && !texto.isEmpty()) {
+                    if (Normalizador.noEsVacio(texto)) {
                         contenidoCompleto.append(texto);
                     }
                 }
@@ -201,7 +201,7 @@ public class ParserRespuestasAI {
                             }
                         } else if (contentElement.isJsonArray()) {
                             String contentPartes = extraerTextoDesdeArreglo(contentElement.getAsJsonArray());
-                            if (contentPartes != null && !contentPartes.isEmpty()) {
+                            if (Normalizador.noEsVacio(contentPartes)) {
                                 return contentPartes;
                             }
                         }

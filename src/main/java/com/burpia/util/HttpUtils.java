@@ -165,7 +165,7 @@ public final class HttpUtils {
     }
 
     private static void actualizarDigest(MessageDigest md, String valor) {
-        if (valor != null && !valor.isEmpty()) {
+        if (Normalizador.noEsVacio(valor)) {
             md.update(valor.getBytes(StandardCharsets.UTF_8));
         }
         md.update((byte) 0);
@@ -281,7 +281,7 @@ public final class HttpUtils {
     }
 
     public static boolean esRecursoEstatico(String url, Set<String> extensionesEstaticas) {
-        if (url == null || url.isEmpty() || extensionesEstaticas == null) {
+        if (Normalizador.esVacio(url) || Normalizador.esVacia(extensionesEstaticas)) {
             return false;
         }
 

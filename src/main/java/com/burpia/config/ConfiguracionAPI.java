@@ -1399,7 +1399,7 @@ public class ConfiguracionAPI {
 
         snapshot.maximoTareasTabla = this.maximoTareasTabla;
         snapshot.multiProveedorHabilitado = this.multiProveedorHabilitado;
-        if (this.proveedoresMultiConsulta != null && !this.proveedoresMultiConsulta.isEmpty()) {
+        if (Normalizador.noEsVacia(this.proveedoresMultiConsulta)) {
             snapshot.proveedoresMultiConsulta = new ArrayList<>(this.proveedoresMultiConsulta);
         }
 

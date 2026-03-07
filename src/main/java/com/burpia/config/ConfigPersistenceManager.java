@@ -263,7 +263,7 @@ public class ConfigPersistenceManager {
     }
 
     private String construirMensajeErroresValidacion(Map<String, String> errores) {
-        if (errores == null || errores.isEmpty()) {
+        if (Normalizador.esVacia(errores)) {
             return "";
         }
 

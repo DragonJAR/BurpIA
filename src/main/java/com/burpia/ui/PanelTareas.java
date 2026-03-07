@@ -532,7 +532,7 @@ public class PanelTareas extends JPanel {
     }
 
     private int contarSeleccion(List<TareaSeleccionada> seleccion, Predicate<String> estadoPermitido) {
-        if (seleccion == null || seleccion.isEmpty() || estadoPermitido == null) {
+        if (Normalizador.esVacia(seleccion) || estadoPermitido == null) {
             return 0;
         }
         int total = 0;
@@ -550,7 +550,7 @@ public class PanelTareas extends JPanel {
     private int procesarSeleccion(List<TareaSeleccionada> seleccion,
             Predicate<String> estadoPermitido,
             Function<String, Boolean> accionPorId) {
-        if (seleccion == null || seleccion.isEmpty() || estadoPermitido == null || accionPorId == null) {
+        if (Normalizador.esVacia(seleccion) || estadoPermitido == null || accionPorId == null) {
             return 0;
         }
         int contador = 0;

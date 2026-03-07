@@ -450,6 +450,9 @@ public class ConfigDialogController {
     }
 
     private void manejarCambioAgente() {
+        if (dialogo.obtenerComboAgente() == null) {
+            return;
+        }
         String agenteSeleccionado = (String) dialogo.obtenerComboAgente().getSelectedItem();
         if (Normalizador.esVacio(agenteSeleccionado)) {
             return;
@@ -520,7 +523,7 @@ public class ConfigDialogController {
 
                 try {
                     List<String> modelos = get();
-                    if (modelos == null || modelos.isEmpty()) {
+                    if (Normalizador.esVacia(modelos)) {
                         throw new IllegalStateException(
                             I18nUI.Configuracion.ERROR_API_SIN_MODELOS(proveedorSeleccionado));
                     }
@@ -1190,7 +1193,7 @@ public class ConfigDialogController {
             }
         }
         List<String> modelos = ProveedorAI.obtenerModelosDisponibles(proveedor);
-        if (modelos == null || modelos.isEmpty()) {
+        if (Normalizador.esVacia(modelos)) {
             throw new RuntimeException(I18nUI.Configuracion.ERROR_PROVEEDOR_SIN_LISTA());
         }
         return modelos;

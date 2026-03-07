@@ -16,6 +16,7 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.LimitadorTasa;
+import com.burpia.util.Normalizador;
 
 import javax.swing.*;
 import java.awt.Component;
@@ -96,7 +97,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     @Override
     public List<Component> provideMenuItems(ContextMenuEvent evento) {
         List<Component> itemsMenu = new ArrayList<>();
-        if (evento == null || evento.selectedRequestResponses() == null || evento.selectedRequestResponses().isEmpty()) {
+        if (evento == null || Normalizador.esVacia(evento.selectedRequestResponses())) {
             return itemsMenu;
         }
         final List<HttpRequestResponse> seleccion = new ArrayList<>(evento.selectedRequestResponses());
@@ -162,7 +163,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
 
     private void manejarAnalisisSeleccion(List<HttpRequestResponse> seleccion) {
-        if (seleccion == null || seleccion.isEmpty()) {
+        if (Normalizador.esVacia(seleccion)) {
             return;
         }
         int iniciadas = 0;
@@ -218,7 +219,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
 
     private void manejarEnvioAgente(List<HttpRequestResponse> seleccion, String nombreAgente) {
-        if (seleccion == null || seleccion.isEmpty() || manejadorAgente == null) {
+        if (Normalizador.esVacia(seleccion) || manejadorAgente == null) {
             return;
         }
         int exitosas = 0;

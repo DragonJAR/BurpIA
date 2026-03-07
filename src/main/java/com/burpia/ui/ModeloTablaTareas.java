@@ -57,7 +57,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
      * @param tareas Lista de tareas a agregar
      */
     public void agregarTareas(List<Tarea> tareas) {
-        if (tareas == null || tareas.isEmpty()) {
+        if (Normalizador.esVacia(tareas)) {
             return;
         }
 

@@ -733,7 +733,7 @@ public class OrquestadorAnalisis {
 
     private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {
         List<String> proveedores = config.obtenerProveedoresMultiConsulta();
-        if (proveedores == null || proveedores.isEmpty()) {
+        if (Normalizador.esVacia(proveedores)) {
             gestorLogging.info(ORIGEN_LOG, "Multi-consulta: No hay proveedores seleccionados, usando proveedor único");
             return ejecutarAnalisisProveedorUnico();
         }

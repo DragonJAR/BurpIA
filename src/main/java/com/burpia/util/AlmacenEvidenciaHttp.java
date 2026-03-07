@@ -21,8 +21,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -44,8 +42,8 @@ import java.util.zip.GZIPOutputStream;
  */
 public class AlmacenEvidenciaHttp {
 
-    private static final Logger LOGGER = Logger.getLogger(AlmacenEvidenciaHttp.class.getName());
-    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearConLogger(LOGGER);
+    private static final String ORIGEN_LOG = "AlmacenEvidenciaHttp";
+    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
 
     /** Tamaño máximo permitido para request o response (10 MB) para prevenir OOM */
     private static final int MAXIMO_BYTES_PARTE = 10 * 1024 * 1024;
@@ -378,21 +376,15 @@ public class AlmacenEvidenciaHttp {
     }
 
     private static void registrarError(String mensaje, Exception e) {
-        if (LOGGER.isLoggable(Level.SEVERE)) {
-            gestorLogging.error("AlmacenEvidenciaHttp", mensaje, e);
-        }
+        gestorLogging.error(ORIGEN_LOG, mensaje, e);
     }
 
     private static void registrarAdvertencia(String mensaje) {
-        if (LOGGER.isLoggable(Level.WARNING)) {
-            gestorLogging.warning("AlmacenEvidenciaHttp", mensaje);
-        }
+        gestorLogging.warning(ORIGEN_LOG, mensaje);
     }
 
     private static void registrarVerbose(String mensaje) {
-        if (LOGGER.isLoggable(Level.FINE)) {
-            gestorLogging.verbose("AlmacenEvidenciaHttp", mensaje);
-        }
+        gestorLogging.verbose(ORIGEN_LOG, mensaje);
     }
 
     private void eliminarArchivoSilencioso(Path archivo) {
@@ -402,7 +394,7 @@ public class AlmacenEvidenciaHttp {
         try {
             Files.deleteIfExists(archivo);
         } catch (Exception e) {
-            gestorLogging.verbose("AlmacenEvidenciaHttp", "Error al eliminar archivo: " + archivo);
+            gestorLogging.verbose(ORIGEN_LOG, "Error al eliminar archivo: " + archivo);
         }
     }
 

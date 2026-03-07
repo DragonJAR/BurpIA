@@ -2,6 +2,7 @@ package com.burpia.ui;
 
 import com.burpia.bulk.CompositeProxyHistoryFilter;
 import com.burpia.bulk.HistorialBurpProvider;
+import com.burpia.util.Normalizador;
 
 import javax.swing.*;
 import java.awt.*;
@@ -124,7 +125,7 @@ public class DialogoFiltroHistorial extends JDialog {
         }
         
         String metodo = (String) comboMetodo.getSelectedItem();
-        if (metodo != null && !metodo.isEmpty()) {
+        if (Normalizador.noEsVacio(metodo)) {
             builder.metodo(metodo);
         }
         

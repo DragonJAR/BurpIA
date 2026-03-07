@@ -905,7 +905,7 @@ public final class I18nUI {
                 String proveedorPrincipal,
                 String modeloPrincipal,
                 List<String> proveedoresAdicionales) {
-            if (proveedoresAdicionales == null || proveedoresAdicionales.isEmpty()) {
+            if (Normalizador.esVacia(proveedoresAdicionales)) {
                 return ESTADO_INICIAL_LLM_LISTO(proveedorPrincipal, modeloPrincipal);
             }
             return trf(

@@ -265,7 +265,7 @@ public class ConstructorPrompts {
      * @return el prompt completo para análisis de flujo
      */
     public String construirPromptFlujo(java.util.List<SolicitudAnalisis> solicitudes) {
-        if (solicitudes == null || solicitudes.isEmpty()) {
+        if (Normalizador.esVacia(solicitudes)) {
             return "";
         }
 

@@ -214,11 +214,12 @@ public final class ProviderConfigManager {
                 }
             }
 
+            cargarEstadoProveedor(nuevoProveedor);
+            
             proveedorActualUi = nuevoProveedor;
             if (comboProveedor != null) {
                 comboProveedor.setSelectedItem(nuevoProveedor);
             }
-            cargarEstadoProveedor(nuevoProveedor);
 
             if (chkHabilitarMultiProveedor != null && chkHabilitarMultiProveedor.isSelected() 
                 && !actualizandoListaMultiProveedor) {
@@ -226,6 +227,8 @@ public final class ProviderConfigManager {
             }
 
             gestorLogging.info(ORIGEN_LOG, "Proveedor cambiado a: " + nuevoProveedor);
+        } catch (Exception e) {
+            gestorLogging.error(ORIGEN_LOG, "Error al cambiar proveedor: " + e.getMessage(), e);
         } finally {
             actualizandoProveedorUi = false;
         }
@@ -589,6 +592,9 @@ public final class ProviderConfigManager {
         }
         if (!esOpcionModeloCustom(modeloActual)) {
             return normalizarModeloSeleccionado(modeloActual);
+        }
+        if (comboModelo.getEditor() == null) {
+            return "";
         }
         Object editorValue = comboModelo.getEditor().getItem();
         return editorValue != null ? normalizarModeloSeleccionado(editorValue.toString()) : "";

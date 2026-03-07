@@ -13,6 +13,7 @@ import com.burpia.util.Normalizador;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -37,7 +38,7 @@ public class BulkAnalysisManager {
     private final AtomicBoolean cancelado;
     private final AtomicInteger procesados;
     private final AtomicInteger errores;
-    private final List<BulkProgressObserver> observers;
+    private final List<BulkProgressObserver> observers;  // Thread-safe para observers
     
     public BulkAnalysisManager(HistorialBurpProvider provider,
                                 GestorTareas gestorTareas,
@@ -53,7 +54,7 @@ public class BulkAnalysisManager {
         this.cancelado = new AtomicBoolean(false);
         this.procesados = new AtomicInteger(0);
         this.errores = new AtomicInteger(0);
-        this.observers = new ArrayList<>();
+        this.observers = new CopyOnWriteArrayList<>();  // Thread-safe for concurrent access
     }
     
     /**

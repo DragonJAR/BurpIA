@@ -12,15 +12,14 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class GestorConsolaGUI {
-    private static final Logger LOGGER = Logger.getLogger(GestorConsolaGUI.class.getName());
+    private static final String ORIGEN_LOG = "GestorConsolaGUI";
+    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
     public enum TipoLog {
         INFO,
         VERBOSE,
@@ -479,9 +478,7 @@ public class GestorConsolaGUI {
             stderrOriginal.flush();
             return;
         }
-        if (LOGGER.isLoggable(Level.SEVERE)) {
-            LOGGER.log(Level.SEVERE, texto);
-        }
+        gestorLogging.error(ORIGEN_LOG, mensaje != null ? mensaje : "Error interno de consola");
     }
 
     private static final class EntradaLog {

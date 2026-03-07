@@ -54,6 +54,7 @@ public class TaskExecutionManager {
     private final Map<String, ContextoReintento> contextosReintento;
     private final Map<String, Future<?>> ejecucionesActivas;
     private final Map<String, AnalizadorAI> analizadoresActivos;
+    private final Object poolLock = new Object();
 
     private static final class ContextoReintento {
         private final SolicitudAnalisis solicitudAnalisis;
@@ -409,7 +410,7 @@ public class TaskExecutionManager {
     }
 
     private void actualizarPoolEjecucion(int nuevoMaximoConcurrente) {
-        synchronized (executorService) {
+        synchronized (poolLock) {
             int maxActual = executorService.getMaximumPoolSize();
             if (nuevoMaximoConcurrente == maxActual) {
                 return;

@@ -590,7 +590,7 @@ public class ExtensionBurpIA implements BurpExtension {
         // Multi-proveedor (condicional)
         if (config.esMultiProveedorHabilitado()) {
             List<String> proveedoresMulti = config.obtenerProveedoresMultiConsulta();
-            if (proveedoresMulti != null && !proveedoresMulti.isEmpty()) {
+            if (Normalizador.noEsVacia(proveedoresMulti)) {
                 registrar("  " + I18nLogs.Inicializacion.MULTI_PROVEEDOR()
                         + String.join(", ", proveedoresMulti));
             }
@@ -635,7 +635,7 @@ public class ExtensionBurpIA implements BurpExtension {
                 registrar(I18nLogs.Inicializacion.SECCION_MULTI_PROVEEDOR());
                 registrar("  " + I18nLogs.Inicializacion.MULTI_HABILITADO(true));
                 List<String> proveedoresMulti = config.obtenerProveedoresMultiConsulta();
-                if (proveedoresMulti != null && !proveedoresMulti.isEmpty()) {
+                if (Normalizador.noEsVacia(proveedoresMulti)) {
                     StringBuilder sb = new StringBuilder(I18nLogs.Inicializacion.PROVEEDORES());
                     for (String prov : proveedoresMulti) {
                         String provModelo = config.obtenerModeloParaProveedor(prov);
@@ -664,7 +664,7 @@ public class ExtensionBurpIA implements BurpExtension {
             if (config.agenteHabilitado()) {
                 registrar("  " + I18nLogs.Inicializacion.AGENTE_TIPO(config.obtenerTipoAgente()));
                 String rutaBinario = config.obtenerRutaBinarioAgente(config.obtenerTipoAgente());
-                if (rutaBinario != null && !rutaBinario.isEmpty()) {
+                if (Normalizador.noEsVacio(rutaBinario)) {
                     registrar("  " + I18nLogs.Inicializacion.AGENTE_BINARIO(rutaBinario));
                 }
             }

@@ -406,7 +406,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 rastrear("DIAGNOSTICO:   - Habilitado: " + multiHabilitado);
                 rastrear("DIAGNOSTICO:   - Proveedores: " +
                         (proveedores != null ? proveedores.size() + " elemento(s)" : "null"));
-                if (proveedores != null && !proveedores.isEmpty()) {
+                if (Normalizador.noEsVacia(proveedores)) {
                     rastrear("DIAGNOSTICO:   - Lista: " + String.join(", ", proveedores));
                 }
             }

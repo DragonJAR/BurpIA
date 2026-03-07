@@ -2,6 +2,8 @@ package com.burpia.ui;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
+import com.burpia.util.GestorLoggingUnificado;
+import com.burpia.util.Normalizador;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
@@ -10,13 +12,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class ModeloTablaHallazgos extends DefaultTableModel {
-    private static final Logger LOGGER = Logger.getLogger(ModeloTablaHallazgos.class.getName());
+    private static final String ORIGEN_LOG = "ModeloTablaHallazgos";
+    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
     private static final int TOTAL_COLUMNAS = 5;
     private final List<Hallazgo> datos;
     private int limiteFilas;
@@ -74,7 +75,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
 
     @SuppressWarnings("unchecked")
     public void agregarHallazgos(List<Hallazgo> hallazgos) {
-        if (hallazgos == null || hallazgos.isEmpty()) {
+        if (Normalizador.esVacia(hallazgos)) {
             return;
         }
 
@@ -491,9 +492,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     private static void registrarErrorEscucha(Exception e) {
-        if (LOGGER.isLoggable(Level.SEVERE)) {
-            LOGGER.log(Level.SEVERE, "Error en escucha de cambios: {0}", e.getMessage());
-        }
+        gestorLogging.error(ORIGEN_LOG, "Error en escucha de cambios: " + e.getMessage(), e);
     }
 
     @Override

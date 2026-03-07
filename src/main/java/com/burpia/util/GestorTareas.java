@@ -408,7 +408,7 @@ public class GestorTareas {
     }
 
     private void notificarCancelaciones(List<String> idsCanceladas) {
-        if (idsCanceladas == null || idsCanceladas.isEmpty()) {
+        if (Normalizador.esVacia(idsCanceladas)) {
             return;
         }
         for (String id : idsCanceladas) {
@@ -488,7 +488,7 @@ public class GestorTareas {
     }
 
     private void sincronizarTareasConPurgadoModelo(List<String> idsPurgadas, String idActual) {
-        if (idsPurgadas == null || idsPurgadas.isEmpty()) {
+        if (Normalizador.esVacia(idsPurgadas)) {
             return;
         }
         for (String idPurgado : idsPurgadas) {
