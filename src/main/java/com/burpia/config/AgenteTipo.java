@@ -25,6 +25,13 @@ public enum AgenteTipo {
             "%USERPROFILE%\\bin\\gemini.exe --yolo",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-ES.md",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-GEMINI-EN.md"
+    ),
+    OPEN_CODE(
+            "Open Code",
+            "~/.opencode/bin/opencode",
+            "%USERPROFILE%\\.opencode\\bin\\opencode.exe",
+            "https://github.com/anomalyco/opencode/blob/main/AGENTE-OPENCODE-ES.md",
+            "https://github.com/anomalyco/opencode/blob/main/AGENT-OPENCODE-EN.md"
     );
 
     private final String nombreVisible;

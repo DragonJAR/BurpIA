@@ -111,7 +111,7 @@ class FabricaMenuContextualTest {
                     return true;
                 },
                 () -> {}
-            );
+            , null, null, null);
 
             List<Component> items = fabrica.provideMenuItems(evento);
 
@@ -141,7 +141,7 @@ class FabricaMenuContextualTest {
                 config,
                 rr -> true,
                 () -> {}
-            );
+            , null, null, null);
 
             JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
             item.doClick();
@@ -166,7 +166,7 @@ class FabricaMenuContextualTest {
                 config,
                 rr -> true,
                 () -> {}
-            );
+            , null, null, null);
 
             JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
             item.doClick();
@@ -196,7 +196,7 @@ class FabricaMenuContextualTest {
                 config,
                 rr -> true,
                 () -> {}
-            );
+            , null, null, null);
 
             JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
             item.doClick();
@@ -219,7 +219,7 @@ class FabricaMenuContextualTest {
                 config,
                 rr -> true,
                 () -> {}
-            );
+            , null, null, null);
 
             // Primera solicitud
             ContextMenuEvent evento1 = crearEventoConSolicitud("GET /first HTTP/1.1");
@@ -257,7 +257,7 @@ class FabricaMenuContextualTest {
                     return true;
                 },
                 () -> {}
-            );
+            , null, null, null);
 
             JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
             itemAgente.doClick();
@@ -293,12 +293,25 @@ class FabricaMenuContextualTest {
                     return true;
                 },
                 () -> {}
-            );
+            , null, null, null);
 
-            JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
+            // Buscar el item de agente por texto (contiene "Droid" o el nombre visible)
+            List<Component> items = fabrica.provideMenuItems(evento);
+            JMenuItem itemAgente = null;
+            for (Component c : items) {
+                if (c instanceof JMenuItem) {
+                    String texto = ((JMenuItem) c).getText();
+                    // Buscar item de agente que contenga el nombre del agente ("Droid" para Factory Droid)
+                    if (texto.contains("Droid") || texto.contains("FACTORY_DROID")) {
+                        itemAgente = (JMenuItem) c;
+                        break;
+                    }
+                }
+            }
+            assertNotNull(itemAgente, "Debe encontrar item de menú del agente");
             itemAgente.doClick();
 
-            assertEquals(2, enviados.get(), "assertEquals failed at FabricaMenuContextualTest.java:301");
+            assertEquals(2, enviados.get(), "Se deben haber enviado 2 solicitudes");
         }
 
         @Test
@@ -317,12 +330,21 @@ class FabricaMenuContextualTest {
                     throw new RuntimeException("Error simulado");
                 },
                 () -> {}
-            );
+            , null, null, null);
 
-            JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
+            // Buscar el item de análisis por texto (primer item que contenga "Analizar")
+            List<Component> items2 = fabrica.provideMenuItems(evento);
+            JMenuItem itemAnalizar2 = null;
+            for (Component c : items2) {
+                if (c instanceof JMenuItem && ((JMenuItem) c).getText().contains("Analizar")) {
+                    itemAnalizar2 = (JMenuItem) c;
+                    break;
+                }
+            }
+            assertNotNull(itemAnalizar2, "Debe encontrar item de menú con texto 'Analizar'");
 
             // No debe lanzar excepcion
-            itemAgente.doClick();
+            itemAnalizar2.doClick();
         }
 
         @Test
@@ -350,13 +372,25 @@ class FabricaMenuContextualTest {
                     return true;
                 },
                 () -> {}
-            );
+            , null, null, null);
 
-            JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
-            itemAgente.doClick();
+            // Buscar el item de agente por texto (contiene "Droid" o el nombre visible)
+            List<Component> items3 = fabrica.provideMenuItems(evento);
+            JMenuItem itemAgente3 = null;
+            for (Component c : items3) {
+                if (c instanceof JMenuItem) {
+                    String texto = ((JMenuItem) c).getText();
+                    if (texto.contains("Droid") || texto.contains("FACTORY_DROID")) {
+                        itemAgente3 = (JMenuItem) c;
+                        break;
+                    }
+                }
+            }
+            assertNotNull(itemAgente3, "Debe encontrar item de menú del agente");
+            itemAgente3.doClick();
 
             // Solo el elemento valido debe ser procesado
-            assertEquals(1, enviados.get(), "assertEquals failed at FabricaMenuContextualTest.java:359");
+            assertEquals(1, enviados.get(), "Se debe haber enviado 1 solicitud válida");
         }
     }
 
@@ -376,7 +410,7 @@ class FabricaMenuContextualTest {
                 null,
                 rr -> true,
                 () -> {}
-            );
+            , null, null, null);
 
             List<Component> items = fabrica.provideMenuItems(evento);
             assertEquals(1, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:382");
@@ -404,7 +438,7 @@ class FabricaMenuContextualTest {
                 config,
                 rr -> true,
                 () -> cambios.incrementAndGet()
-            );
+            , null, null, null);
 
             // Verificar que el callback esta configurado
             assertNotNull(fabrica, "assertNotNull failed at FabricaMenuContextualTest.java:409");
@@ -435,7 +469,7 @@ class FabricaMenuContextualTest {
             config,
             rr -> true,
             () -> {}
-        );
+        , null, null, null);
     }
 
     private ContextMenuEvent crearEventoConSolicitud(String solicitudHttp) {

@@ -1,14 +1,25 @@
 package com.burpia.ui;
+
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
+import com.burpia.bulk.BulkAnalysisManager;
+import com.burpia.bulk.CompositeProxyHistoryFilter;
+import com.burpia.bulk.HistorialBurpProvider;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.flow.FlowAnalysisManager;
+import com.burpia.flow.FlowAnalysisCallback;
 import com.burpia.i18n.I18nUI;
+import com.burpia.model.Hallazgo;
+import com.burpia.util.GestorLoggingUnificado;
+import com.burpia.util.LimitadorTasa;
+
 import javax.swing.*;
 import java.awt.Component;
+import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +32,14 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final ConfiguracionAPI config;
     private final Predicate<HttpRequestResponse> manejadorAgente;
     private final Runnable manejadorCambioAlertasEnviarA;
+    private final HistorialBurpProvider historialBurpProvider;
+    private final BulkAnalysisManager bulkAnalysisManager;
+    private final Frame parentFrame;
     private final AtomicReference<RegistroClic> ultimoClic;
+    private final GestorLoggingUnificado gestorLogging;
+    private final LimitadorTasa limitador;
+    private final ModeloTablaHallazgos modeloTablaHallazgos;
+    private FlowAnalysisManager flowAnalysisManager;
     private static final long VENTANA_DEBOUNCE_MS = 500L;
 
     public interface ConsumerSolicitud {
@@ -32,13 +50,47 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                                  ConsumerSolicitud manejadorAnalisis,
                                  ConfiguracionAPI config,
                                  Predicate<HttpRequestResponse> manejadorAgente,
-                                 Runnable manejadorCambioAlertasEnviarA) {
+                                 Runnable manejadorCambioAlertasEnviarA,
+                                 HistorialBurpProvider historialBurpProvider,
+                                 BulkAnalysisManager bulkAnalysisManager,
+                                 Frame parentFrame) {
         this.api = api;
         this.manejadorAnalisis = manejadorAnalisis;
         this.config = config;
         this.manejadorAgente = manejadorAgente;
         this.manejadorCambioAlertasEnviarA = manejadorCambioAlertasEnviarA;
+        this.historialBurpProvider = historialBurpProvider;
+        this.bulkAnalysisManager = bulkAnalysisManager;
+        this.parentFrame = parentFrame;
         this.ultimoClic = new AtomicReference<>();
+        this.gestorLogging = GestorLoggingUnificado.crear(null, null, null, api, null);
+        this.limitador = new LimitadorTasa(1);
+        this.modeloTablaHallazgos = null;
+    }
+    
+    public FabricaMenuContextual(MontoyaApi api,
+                                 ConsumerSolicitud manejadorAnalisis,
+                                 ConfiguracionAPI config,
+                                 Predicate<HttpRequestResponse> manejadorAgente,
+                                 Runnable manejadorCambioAlertasEnviarA,
+                                 HistorialBurpProvider historialBurpProvider,
+                                 BulkAnalysisManager bulkAnalysisManager,
+                                 Frame parentFrame,
+                                 GestorLoggingUnificado gestorLogging,
+                                 LimitadorTasa limitador,
+                                 ModeloTablaHallazgos modeloTablaHallazgos) {
+        this.api = api;
+        this.manejadorAnalisis = manejadorAnalisis;
+        this.config = config;
+        this.manejadorAgente = manejadorAgente;
+        this.manejadorCambioAlertasEnviarA = manejadorCambioAlertasEnviarA;
+        this.historialBurpProvider = historialBurpProvider;
+        this.bulkAnalysisManager = bulkAnalysisManager;
+        this.parentFrame = parentFrame;
+        this.ultimoClic = new AtomicReference<>();
+        this.gestorLogging = gestorLogging != null ? gestorLogging : GestorLoggingUnificado.crear(null, null, null, api, null);
+        this.limitador = limitador != null ? limitador : new LimitadorTasa(1);
+        this.modeloTablaHallazgos = modeloTablaHallazgos;
     }
 
     @Override
@@ -55,6 +107,22 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         itemAnalizar.addActionListener(e -> manejarAnalisisSeleccion(seleccion));
 
         itemsMenu.add(itemAnalizar);
+
+        if (seleccion.size() >= 2) {
+            JMenuItem itemFlujo = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_FLUJO());
+            itemFlujo.setFont(EstilosUI.FUENTE_ESTANDAR);
+            itemFlujo.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO());
+            itemFlujo.addActionListener(e -> manejarAnalisisFlujo(seleccion));
+            itemsMenu.add(itemFlujo);
+        }
+
+        if (historialBurpProvider != null && bulkAnalysisManager != null) {
+            JMenuItem itemBulk = new JMenuItem("Analizar historial filtrado...");
+            itemBulk.setFont(EstilosUI.FUENTE_ESTANDAR);
+            itemBulk.setToolTipText("Analizar múltiples solicitudes del historial con filtros");
+            itemBulk.addActionListener(e -> manejarAnalisisBulk());
+            itemsMenu.add(itemBulk);
+        }
 
         if (config != null && config.agenteHabilitado() && manejadorAgente != null) {
             String nombreAgente = AgenteTipo.obtenerNombreVisible(
@@ -134,6 +202,20 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             );
         }
     }
+    
+    private void manejarAnalisisBulk() {
+        DialogoFiltroHistorial dialogo = new DialogoFiltroHistorial(parentFrame, historialBurpProvider);
+        dialogo.setVisible(true);
+        
+        CompositeProxyHistoryFilter filtro = dialogo.obtenerFiltro();
+        if (filtro != null && bulkAnalysisManager != null) {
+            PanelProgresoBulk panelProgreso = new PanelProgresoBulk(parentFrame);
+            panelProgreso.establecerCancelAction(() -> bulkAnalysisManager.cancelar());
+            panelProgreso.setVisible(true);
+            
+            bulkAnalysisManager.ejecutarAnalisisBulk(filtro, panelProgreso, null);
+        }
+    }
 
     private void manejarEnvioAgente(List<HttpRequestResponse> seleccion, String nombreAgente) {
         if (seleccion == null || seleccion.isEmpty() || manejadorAgente == null) {
@@ -180,6 +262,86 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 this::deshabilitarAlertasEnviarA
             );
         }
+    }
+    
+    private void manejarAnalisisFlujo(List<HttpRequestResponse> seleccion) {
+        if (seleccion == null || seleccion.size() < 2) {
+            if (GraphicsEnvironment.isHeadless()) {
+                return;
+            }
+            UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_FLUJO_REQUIERE_MULTIPLES(),
+                I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES(),
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+            return;
+        }
+        
+        if (flowAnalysisManager == null) {
+            flowAnalysisManager = new FlowAnalysisManager(
+                api,
+                config,
+                gestorLogging,
+                limitador,
+                null,
+                modeloTablaHallazgos
+            );
+        }
+        
+        api.logging().logToOutput(I18nUI.Contexto.LOG_FLUJO_INICIADO(seleccion.size()));
+        
+        if (!GraphicsEnvironment.isHeadless()) {
+            UIUtils.mostrarInfoConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_FLUJO_INICIADO(),
+                I18nUI.Contexto.MSG_FLUJO_INICIADO(seleccion.size()),
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+        }
+        
+        FlowAnalysisCallback callback = new FlowAnalysisCallback() {
+            @Override
+            public void onComplete(List<Hallazgo> hallazgos, List<String> urlsFlujo) {
+                api.logging().logToOutput(I18nUI.Contexto.LOG_FLUJO_COMPLETADO(hallazgos != null ? hallazgos.size() : 0));
+                
+                if (!GraphicsEnvironment.isHeadless()) {
+                    int cantidadHallazgos = hallazgos != null ? hallazgos.size() : 0;
+                    int cantidadPeticiones = urlsFlujo != null ? urlsFlujo.size() : seleccion.size();
+                    UIUtils.mostrarInfoConOptOutMenuContextual(
+                        null,
+                        I18nUI.Contexto.TITULO_FLUJO_COMPLETADO(),
+                        I18nUI.Contexto.MSG_FLUJO_COMPLETADO(cantidadHallazgos, cantidadPeticiones),
+                        alertasEnviarAHabilitadas(),
+                        FabricaMenuContextual.this::deshabilitarAlertasEnviarA
+                    );
+                }
+            }
+            
+            @Override
+            public void onError(String error) {
+                api.logging().logToError(I18nUI.Contexto.MSG_FLUJO_ERROR(error));
+                
+                if (!GraphicsEnvironment.isHeadless()) {
+                    UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
+                        null,
+                        I18nUI.Contexto.TITULO_FLUJO_ERROR(),
+                        I18nUI.Contexto.MSG_FLUJO_ERROR(error),
+                        alertasEnviarAHabilitadas(),
+                        FabricaMenuContextual.this::deshabilitarAlertasEnviarA
+                    );
+                }
+            }
+            
+            @Override
+            public void onCancelled() {
+                api.logging().logToOutput(I18nUI.Contexto.MSG_FLUJO_CANCELADO());
+            }
+        };
+        
+        flowAnalysisManager.ejecutarAnalisisFlujo(seleccion, callback);
     }
 
     private boolean alertasEnviarAHabilitadas() {

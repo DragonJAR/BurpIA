@@ -1,4 +1,5 @@
 package com.burpia.ui;
+
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
@@ -59,7 +60,7 @@ public class PanelTareas extends JPanel {
         panelControles = new JPanel();
         panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
         panelControles.setBorder(UIUtils.crearBordeTitulado(
-            I18nUI.Tareas.TITULO_CONTROLES(), 12, 16));
+                I18nUI.Tareas.TITULO_CONTROLES(), 12, 16));
 
         JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5)) {
             private boolean ultimoLayoutHorizontal = true;
@@ -82,22 +83,18 @@ public class PanelTareas extends JPanel {
             }
         };
 
-        // EFICIENCIA: Estadísticas PRIMERO para dar contexto inmediato al usuario
         etiquetaEstadisticas = new JLabel(I18nUI.Tareas.ESTADISTICAS(0, 0, 0));
         etiquetaEstadisticas.setFont(EstilosUI.FUENTE_MONO);
         etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
         panelTodosControles.add(etiquetaEstadisticas);
 
-        // CONFIABILIDAD: Separador visual entre información y acciones
         panelTodosControles.add(new JLabel("  "));
 
-        // Control de flujo (toggle pausar/reanudar)
         botonPausarReanudar = new JButton(I18nUI.Tareas.BOTON_PAUSAR_TODO());
         botonPausarReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.PAUSAR_REANUDAR());
         panelTodosControles.add(botonPausarReanudar);
 
-        // Acciones destructivas agrupadas (cancelar y limpiar)
         botonCancelar = new JButton(I18nUI.Tareas.BOTON_CANCELAR_TODO());
         botonCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonCancelar.setToolTipText(I18nUI.Tooltips.Tareas.CANCELAR());
@@ -112,7 +109,7 @@ public class PanelTareas extends JPanel {
 
         panelTablaWrapper = new JPanel(new BorderLayout());
         panelTablaWrapper.setBorder(UIUtils.crearBordeTitulado(
-            I18nUI.Tareas.TITULO_LISTA(), 12, 16));
+                I18nUI.Tareas.TITULO_LISTA(), 12, 16));
 
         tabla.setAutoCreateRowSorter(true);
         tabla.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
@@ -132,7 +129,8 @@ public class PanelTareas extends JPanel {
             } else if (estadisticas.activasSinPausadas > 0) {
                 gestorTareas.pausarTodasActivas();
             } else {
-                UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_GESTIONAR());
+                UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(),
+                        I18nUI.Tareas.INFO_SIN_TAREAS_GESTIONAR());
             }
             actualizarEstadisticas();
         });
@@ -147,10 +145,9 @@ public class PanelTareas extends JPanel {
             }
 
             boolean confirmacion = UIUtils.confirmarAdvertencia(
-                this,
-                I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
-                I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(activas)
-            );
+                    this,
+                    I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
+                    I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(activas));
             if (confirmacion) {
                 gestorTareas.cancelarTodas();
                 actualizarEstadisticas();
@@ -167,10 +164,9 @@ public class PanelTareas extends JPanel {
             }
 
             boolean confirmacion = UIUtils.confirmarPregunta(
-                this,
-                I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
-                I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(completadas)
-            );
+                    this,
+                    I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
+                    I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(completadas));
             if (confirmacion) {
                 gestorTareas.limpiarCompletadas();
                 actualizarEstadisticas();
@@ -223,9 +219,9 @@ public class PanelTareas extends JPanel {
     /**
      * Crea un JMenuItem con el formato estándar del menú contextual.
      *
-     * @param texto    Texto del item de menú
-     * @param tooltip  Tooltip del item de menú
-     * @param accion   ActionListener a ejecutar
+     * @param texto   Texto del item de menú
+     * @param tooltip Tooltip del item de menú
+     * @param accion  ActionListener a ejecutar
      * @return JMenuItem configurado con el estilo estándar
      */
     private JMenuItem crearMenuItemContextual(String texto, String tooltip, java.awt.event.ActionListener accion) {
@@ -237,24 +233,26 @@ public class PanelTareas extends JPanel {
     }
 
     /**
-     * Actualiza el texto y tooltip del botón Pausar/Reanudar según el estado de tareas.
+     * Actualiza el texto y tooltip del botón Pausar/Reanudar según el estado de
+     * tareas.
      *
      * @param tareasPausadas Número de tareas pausadas
      */
     private void actualizarBotonPausarReanudar(int tareasPausadas) {
         if (tareasPausadas > 0) {
             actualizarTextoYTooltip(botonPausarReanudar,
-                I18nUI.Tareas.BOTON_REANUDAR_TODO(),
-                I18nUI.Tooltips.Tareas.REANUDAR_TODO());
+                    I18nUI.Tareas.BOTON_REANUDAR_TODO(),
+                    I18nUI.Tooltips.Tareas.REANUDAR_TODO());
         } else {
             actualizarTextoYTooltip(botonPausarReanudar,
-                I18nUI.Tareas.BOTON_PAUSAR_TODO(),
-                I18nUI.Tooltips.Tareas.PAUSAR_TODO());
+                    I18nUI.Tareas.BOTON_PAUSAR_TODO(),
+                    I18nUI.Tooltips.Tareas.PAUSAR_TODO());
         }
     }
 
     /**
-     * Ejecuta una acción en el EDT si no estamos ya en él, o directamente si ya estamos.
+     * Ejecuta una acción en el EDT si no estamos ya en él, o directamente si ya
+     * estamos.
      *
      * @param accion Acción a ejecutar
      */
@@ -267,7 +265,8 @@ public class PanelTareas extends JPanel {
     }
 
     /**
-     * Actualiza tanto el texto como el tooltip de un componente UI en una sola operación.
+     * Actualiza tanto el texto como el tooltip de un componente UI en una sola
+     * operación.
      *
      * @param componente El componente a actualizar (JLabel, JButton, etc.)
      * @param texto      El nuevo texto para el componente
@@ -284,7 +283,8 @@ public class PanelTareas extends JPanel {
 
     private void mostrarMenuContextualDinamico(int x, int y) {
         int[] filas = tabla.getSelectedRows();
-        if (filas.length == 0) return;
+        if (filas.length == 0)
+            return;
 
         List<TareaSeleccionada> seleccion = capturarSeleccion(filas);
         if (seleccion.isEmpty()) {
@@ -312,83 +312,83 @@ public class PanelTareas extends JPanel {
 
         if (Tarea.ESTADO_ERROR.equals(estado)) {
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_VER_DETALLES_ERROR(),
-                I18nUI.Tooltips.Tareas.MENU_VER_DETALLES_ERROR(),
-                e -> {
-                    Tarea tarea = gestorTareas.obtenerTarea(tareaId);
-                    String mensajeError = (tarea != null) ? tarea.obtenerMensajeInfo() : "";
-                    String mensaje = I18nUI.Tareas.MSG_DETALLES_ERROR(seleccion.url, mensajeError, estado);
-                    UIUtils.mostrarError(PanelTareas.this, I18nUI.Tareas.TITULO_DETALLES_ERROR(), mensaje);
-                }
-            ));
+                    I18nUI.Tareas.MENU_VER_DETALLES_ERROR(),
+                    I18nUI.Tooltips.Tareas.MENU_VER_DETALLES_ERROR(),
+                    e -> {
+                        Tarea tarea = gestorTareas.obtenerTarea(tareaId);
+                        String url = (tarea != null) ? tarea.obtenerUrl() : seleccion.url;
+                        String errorDetails = (tarea != null) ? tarea.obtenerMensajeInfo() : "";
+
+                        UIUtils.ejecutarEnEdt(() -> {
+                            UIUtils.mostrarDetallesErrorAvanzado(PanelTareas.this, url, errorDetails);
+                        });
+                    }));
         }
 
         if (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado)) {
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_REINTENTAR(),
-                I18nUI.Tooltips.Tareas.MENU_REINTENTAR_UNA(),
-                e -> {
-                    reencolarTarea(tareaId);
-                    actualizarEstadisticas();
-                }
-            ));
+                    I18nUI.Tareas.MENU_REINTENTAR(),
+                    I18nUI.Tooltips.Tareas.MENU_REINTENTAR_UNA(),
+                    e -> {
+                        reencolarTarea(tareaId);
+                        actualizarEstadisticas();
+                    }));
         }
 
         if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado)) {
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_PAUSAR(),
-                I18nUI.Tooltips.Tareas.MENU_PAUSAR_UNA(),
-                e -> {
-                    if (gestorTareas.pausarTarea(tareaId)) {
-                        actualizarEstadisticas();
-                    }
-                }
-            ));
+                    I18nUI.Tareas.MENU_PAUSAR(),
+                    I18nUI.Tooltips.Tareas.MENU_PAUSAR_UNA(),
+                    e -> {
+                        if (gestorTareas.pausarTarea(tareaId)) {
+                            actualizarEstadisticas();
+                        }
+                    }));
         }
 
         if (Tarea.ESTADO_PAUSADO.equals(estado)) {
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_REANUDAR(),
-                I18nUI.Tooltips.Tareas.MENU_REANUDAR_UNA(),
-                e -> {
-                    if (gestorTareas.reanudarTarea(tareaId)) {
-                        actualizarEstadisticas();
-                    }
-                }
-            ));
+                    I18nUI.Tareas.MENU_REANUDAR(),
+                    I18nUI.Tooltips.Tareas.MENU_REANUDAR_UNA(),
+                    e -> {
+                        if (gestorTareas.reanudarTarea(tareaId)) {
+                            actualizarEstadisticas();
+                        }
+                    }));
         }
 
-        if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado) || Tarea.ESTADO_PAUSADO.equals(estado)) {
-            if (menu.getComponentCount() > 0) menu.addSeparator();
+        if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado)
+                || Tarea.ESTADO_PAUSADO.equals(estado)) {
+            if (menu.getComponentCount() > 0)
+                menu.addSeparator();
 
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_CANCELAR(),
-                I18nUI.Tooltips.Tareas.MENU_CANCELAR_UNA(),
-                e -> {
-                    boolean confirmacion = UIUtils.confirmarPregunta(
-                        PanelTareas.this,
-                        I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
-                        I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_UNA_TAREA()
-                    );
-                    if (confirmacion && gestorTareas.cancelarTarea(tareaId)) {
-                        actualizarEstadisticas();
-                    }
-                }
-            ));
+                    I18nUI.Tareas.MENU_CANCELAR(),
+                    I18nUI.Tooltips.Tareas.MENU_CANCELAR_UNA(),
+                    e -> {
+                        boolean confirmacion = UIUtils.confirmarPregunta(
+                                PanelTareas.this,
+                                I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
+                                I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_UNA_TAREA());
+                        if (confirmacion && gestorTareas.cancelarTarea(tareaId)) {
+                            actualizarEstadisticas();
+                        }
+                    }));
         }
 
-        if (Tarea.ESTADO_COMPLETADO.equals(estado) || Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado)) {
-            if (menu.getComponentCount() > 0) menu.addSeparator();
+        if (Tarea.ESTADO_COMPLETADO.equals(estado) || Tarea.ESTADO_ERROR.equals(estado)
+                || Tarea.ESTADO_CANCELADO.equals(estado)) {
+            if (menu.getComponentCount() > 0)
+                menu.addSeparator();
 
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_ELIMINAR_LISTA(),
-                I18nUI.Tooltips.Tareas.MENU_ELIMINAR_UNA(),
-                e -> {
-                    if (gestorTareas.limpiarTarea(tareaId)) {
-                        actualizarEstadisticas();
-                    }
-                }
-            ));
+                    I18nUI.Tareas.MENU_ELIMINAR_LISTA(),
+                    I18nUI.Tooltips.Tareas.MENU_ELIMINAR_UNA(),
+                    e -> {
+                        if (gestorTareas.limpiarTarea(tareaId)) {
+                            actualizarEstadisticas();
+                        }
+                    }));
         }
     }
 
@@ -414,47 +414,44 @@ public class PanelTareas extends JPanel {
 
         if (erroresCanceladas > 0) {
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_REINTENTAR_MULTIPLES(erroresCanceladas),
-                I18nUI.Tooltips.Tareas.MENU_REINTENTAR_MULTIPLES(),
-                e -> reintentarTareas(seleccion)
-            ));
+                    I18nUI.Tareas.MENU_REINTENTAR_MULTIPLES(erroresCanceladas),
+                    I18nUI.Tooltips.Tareas.MENU_REINTENTAR_MULTIPLES(),
+                    e -> reintentarTareas(seleccion)));
         }
 
         if (activas > 0) {
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_PAUSAR_MULTIPLES(activas),
-                I18nUI.Tooltips.Tareas.MENU_PAUSAR_MULTIPLES(),
-                e -> pausarTareas(seleccion)
-            ));
+                    I18nUI.Tareas.MENU_PAUSAR_MULTIPLES(activas),
+                    I18nUI.Tooltips.Tareas.MENU_PAUSAR_MULTIPLES(),
+                    e -> pausarTareas(seleccion)));
         }
 
         if (pausadas > 0) {
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_REANUDAR_MULTIPLES(pausadas),
-                I18nUI.Tooltips.Tareas.MENU_REANUDAR_MULTIPLES(),
-                e -> reanudarTareas(seleccion)
-            ));
+                    I18nUI.Tareas.MENU_REANUDAR_MULTIPLES(pausadas),
+                    I18nUI.Tooltips.Tareas.MENU_REANUDAR_MULTIPLES(),
+                    e -> reanudarTareas(seleccion)));
         }
 
         if (activas > 0 || pausadas > 0) {
-            if (menu.getComponentCount() > 0) menu.addSeparator();
+            if (menu.getComponentCount() > 0)
+                menu.addSeparator();
 
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_CANCELAR_MULTIPLES(activas + pausadas),
-                I18nUI.Tooltips.Tareas.MENU_CANCELAR_MULTIPLES(),
-                e -> cancelarTareas(seleccion)
-            ));
+                    I18nUI.Tareas.MENU_CANCELAR_MULTIPLES(activas + pausadas),
+                    I18nUI.Tooltips.Tareas.MENU_CANCELAR_MULTIPLES(),
+                    e -> cancelarTareas(seleccion)));
         }
 
         int totalFinalizadas = erroresCanceladas + finalizadas;
         if (totalFinalizadas > 0) {
-            if (menu.getComponentCount() > 0) menu.addSeparator();
+            if (menu.getComponentCount() > 0)
+                menu.addSeparator();
 
             menu.add(crearMenuItemContextual(
-                I18nUI.Tareas.MENU_ELIMINAR_MULTIPLES(totalFinalizadas),
-                I18nUI.Tooltips.Tareas.MENU_ELIMINAR_MULTIPLES(),
-                e -> eliminarTareasSeleccionadas(seleccion)
-            ));
+                    I18nUI.Tareas.MENU_ELIMINAR_MULTIPLES(totalFinalizadas),
+                    I18nUI.Tooltips.Tareas.MENU_ELIMINAR_MULTIPLES(),
+                    e -> eliminarTareasSeleccionadas(seleccion)));
         }
     }
 
@@ -504,11 +501,11 @@ public class PanelTareas extends JPanel {
         }
 
         boolean confirmacion = UIUtils.confirmarPregunta(
-            this,
-            I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
-            I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(total)
-        );
-        if (!confirmacion) return;
+                this,
+                I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
+                I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(total));
+        if (!confirmacion)
+            return;
 
         int contador = procesarSeleccion(seleccion, Tarea::esEstadoCancelable, gestorTareas::cancelarTarea);
         actualizarEstadisticas();
@@ -523,11 +520,11 @@ public class PanelTareas extends JPanel {
         }
 
         boolean confirmacion = UIUtils.confirmarPregunta(
-            this,
-            I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
-            I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(total)
-        );
-        if (!confirmacion) return;
+                this,
+                I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
+                I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(total));
+        if (!confirmacion)
+            return;
 
         int contador = procesarSeleccion(seleccion, Tarea::esEstadoEliminable, gestorTareas::limpiarTarea);
         actualizarEstadisticas();
@@ -551,8 +548,8 @@ public class PanelTareas extends JPanel {
     }
 
     private int procesarSeleccion(List<TareaSeleccionada> seleccion,
-                                  Predicate<String> estadoPermitido,
-                                  Function<String, Boolean> accionPorId) {
+            Predicate<String> estadoPermitido,
+            Function<String, Boolean> accionPorId) {
         if (seleccion == null || seleccion.isEmpty() || estadoPermitido == null || accionPorId == null) {
             return 0;
         }
@@ -574,16 +571,15 @@ public class PanelTareas extends JPanel {
         }
 
         return java.util.stream.IntStream.of(filasVista)
-            .filter(f -> f >= 0 && f < tabla.getRowCount())
-            .map(tabla::convertRowIndexToModel)
-            .filter(f -> f >= 0 && f < modelo.getRowCount())
-            .distinct()
-            .mapToObj(f -> new TareaSeleccionada(
-                modelo.obtenerIdTarea(f),
-                valorCeldaTexto(f, COLUMNA_ESTADO),
-                valorCeldaTexto(f, COLUMNA_URL)
-            ))
-            .collect(Collectors.toList());
+                .filter(f -> f >= 0 && f < tabla.getRowCount())
+                .map(tabla::convertRowIndexToModel)
+                .filter(f -> f >= 0 && f < modelo.getRowCount())
+                .distinct()
+                .mapToObj(f -> new TareaSeleccionada(
+                        modelo.obtenerIdTarea(f),
+                        valorCeldaTexto(f, COLUMNA_ESTADO),
+                        valorCeldaTexto(f, COLUMNA_URL)))
+                .collect(Collectors.toList());
     }
 
     private String valorCeldaTexto(int filaModelo, int columna) {
@@ -609,10 +605,9 @@ public class PanelTareas extends JPanel {
             EstadisticasTareas estadisticas = calcularEstadisticasTareas();
 
             etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
-                estadisticas.activas,
-                estadisticas.completadas,
-                estadisticas.errores
-            ));
+                    estadisticas.activas,
+                    estadisticas.completadas,
+                    estadisticas.errores));
 
             actualizarBotonPausarReanudar(estadisticas.pausadas);
         };
@@ -635,10 +630,6 @@ public class PanelTareas extends JPanel {
         repaint();
     }
 
-    /**
-     * Aplica el tema (claro/oscuro) al panel de tareas.
-     * Actualiza colores de fondo, bordes y componentes UI.
-     */
     public void aplicarTema() {
         Runnable aplicar = () -> {
             Color fondoPanel = EstilosUI.obtenerFondoPanel();
@@ -706,13 +697,12 @@ public class PanelTareas extends JPanel {
         int activas = activasSinPausadas + pausadas;
         int finalizadas = completadas + errores + canceladas;
         return new EstadisticasTareas(
-            activas,
-            activasSinPausadas,
-            pausadas,
-            completadas,
-            errores,
-            finalizadas
-        );
+                activas,
+                activasSinPausadas,
+                pausadas,
+                completadas,
+                errores,
+                finalizadas);
     }
 
     private static final class EstadisticasTareas {
@@ -724,11 +714,11 @@ public class PanelTareas extends JPanel {
         private final int finalizadas;
 
         private EstadisticasTareas(int activas,
-                                   int activasSinPausadas,
-                                   int pausadas,
-                                   int completadas,
-                                   int errores,
-                                   int finalizadas) {
+                int activasSinPausadas,
+                int pausadas,
+                int completadas,
+                int errores,
+                int finalizadas) {
             this.activas = activas;
             this.activasSinPausadas = activasSinPausadas;
             this.pausadas = pausadas;
@@ -743,6 +733,16 @@ public class PanelTareas extends JPanel {
             return;
         }
         modelo.establecerLimiteFilas(config.obtenerMaximoTareasTabla());
+    }
+
+    /**
+     * Obtiene la tabla de tareas.
+     * Método público para UI State Persistence.
+     *
+     * @return La tabla de tareas
+     */
+    public JTable obtenerTabla() {
+        return tabla;
     }
 
     private static final class TareaSeleccionada {

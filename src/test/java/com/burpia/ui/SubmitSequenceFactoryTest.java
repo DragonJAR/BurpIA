@@ -84,6 +84,22 @@ class SubmitSequenceFactoryTest {
     }
 
     @Nested
+    @DisplayName("construir para Open Code")
+    class OpenCodeTests {
+
+        @Test
+        @DisplayName("usa SMART_FALLBACK igual que Factory Droid")
+        void usaSmartFallback() {
+            SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
+                AgenteTipo.OPEN_CODE,
+                SubmitSequenceFactory.Plataforma.LINUX
+            );
+
+            assertCadenaSmartFallback(secuencia);
+        }
+    }
+
+    @Nested
     @DisplayName("Casos borde y valores nulos")
     class CasosBordeTests {
 

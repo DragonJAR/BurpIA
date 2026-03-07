@@ -18,6 +18,11 @@ import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.ui.EstilosUI;
 import com.burpia.ui.DialogoConfiguracion;
 import com.burpia.ui.FabricaMenuContextual;
+import com.burpia.ui.PanelProgresoBulk;
+import com.burpia.ui.DialogoFiltroHistorial;
+import com.burpia.bulk.HistorialBurpProvider;
+import com.burpia.bulk.BulkAnalysisManager;
+import com.burpia.bulk.CompositeProxyHistoryFilter;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
@@ -25,6 +30,7 @@ import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
 import com.burpia.util.VersionBurpIA;
 import javax.swing.*;
+import java.awt.Frame;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -60,6 +66,8 @@ public class ExtensionBurpIA implements BurpExtension {
     private ModeloTablaHallazgos modeloTablaHallazgos;
     private ModeloTablaTareas modeloTablaTareas;
     private FabricaMenuContextual fabricaMenuContextual;
+    private HistorialBurpProvider historialBurpProvider;
+    private BulkAnalysisManager bulkAnalysisManager;
     private boolean esProfessional = false;
 
     public ExtensionBurpIA() {
@@ -130,10 +138,11 @@ public class ExtensionBurpIA implements BurpExtension {
             () -> guardarConfiguracionSilenciosa("cambio-filtros-hallazgos")
         );
         api.http().registerHttpHandler(manejadorHttp);
-        // CONFIABILIDAD: Log compacto en modo normal, información técnica en modo detallado
         if (config.esDetallado()) {
             registrar("Manejador HTTP registrado exitosamente");
         }
+
+        inicializarBulkAnalysis();
 
         registrarMenuContextual();
         if (config.esDetallado()) {
@@ -186,6 +195,15 @@ public class ExtensionBurpIA implements BurpExtension {
             manejadorHttp.analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal);
         }
     }
+    
+    private void inicializarBulkAnalysis() {
+        historialBurpProvider = new HistorialBurpProvider(api, gestorLogging);
+        bulkAnalysisManager = new BulkAnalysisManager(
+            historialBurpProvider, gestorTareas, manejadorHttp, gestorLogging);
+        if (config.esDetallado()) {
+            registrar("Bulk analysis inicializado");
+        }
+    }
 
     private void registrarMenuContextual() {
         if (fabricaMenuContextual == null) {
@@ -194,9 +212,17 @@ public class ExtensionBurpIA implements BurpExtension {
                     this::analizarSolicitudManual,
                     config,
                     this::enviarAAgente,
-                    () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto"));
+                    () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto"),
+                    historialBurpProvider,
+                    bulkAnalysisManager,
+                    obtenerFramePadre());
             api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
         }
+    }
+    
+    private Frame obtenerFramePadre() {
+        return pestaniaPrincipal != null ? 
+            (Frame) SwingUtilities.getWindowAncestor(pestaniaPrincipal) : null;
     }
 
     private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta) {
@@ -501,7 +527,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private void crearYRegistrarPestaniaPrincipal() {
         Runnable crearUi = () -> {
             pestaniaPrincipal = new PestaniaPrincipal(api, estadisticas, gestorTareas, gestorConsola, modeloTablaTareas,
-                    modeloTablaHallazgos, esProfessional, config);
+                    modeloTablaHallazgos, esProfessional, config, gestorLogging);
             pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
             pestaniaPrincipal.establecerManejadorEnviarAAgente(this::enviarHallazgoAAgente);
             pestaniaPrincipal.establecerManejadorCambioAgente(() -> {

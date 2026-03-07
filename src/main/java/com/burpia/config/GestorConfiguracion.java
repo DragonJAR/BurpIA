@@ -338,6 +338,11 @@ public class GestorConfiguracion {
             config.establecerProveedoresMultiConsulta(archivo.proveedoresMultiConsulta);
         }
 
+        // Estado UI
+        if (archivo.estadoUI != null) {
+            config.establecerEstadoUI(archivo.estadoUI);
+        }
+
         return config;
     }
 
@@ -372,6 +377,7 @@ public class GestorConfiguracion {
         archivo.filtroSeveridadHallazgos = config.obtenerFiltroSeveridadHallazgos();
         archivo.persistirFiltroBusquedaHallazgos = config.persistirFiltroBusquedaHallazgos();
         archivo.persistirFiltroSeveridadHallazgos = config.persistirFiltroSeveridadHallazgos();
+        archivo.estadoUI = new HashMap<>(config.obtenerEstadoUI());
         archivo.rutasBinarioPorAgente = new HashMap<>(config.obtenerTodasLasRutasBinario());
         archivo.apiKeysPorProveedor = new HashMap<>(config.obtenerApiKeysPorProveedor());
         archivo.urlsBasePorProveedor = new HashMap<>(config.obtenerUrlsBasePorProveedor());
@@ -498,6 +504,9 @@ public class GestorConfiguracion {
         private String filtroSeveridadHallazgos;
         private Boolean persistirFiltroBusquedaHallazgos;
         private Boolean persistirFiltroSeveridadHallazgos;
+
+        // UI State Persistence - Estado general
+        private Map<String, String> estadoUI;
 
         // Multi-Proveedor Configuration
         private Boolean multiProveedorHabilitado;

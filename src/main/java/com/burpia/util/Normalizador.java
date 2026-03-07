@@ -1,5 +1,8 @@
 package com.burpia.util;
 
+import java.util.Collection;
+import java.util.Map;
+
 /**
  * Utilidad centralizada para normalización y validación de cadenas de texto.
  * <p>
@@ -81,6 +84,62 @@ public final class Normalizador {
      */
     public static boolean noEsVacio(String valor) {
         return !esVacio(valor);
+    }
+
+    /**
+     * Verifica si una colección está vacía o es {@code null}.
+     * <p>
+     * Una colección se considera vacía si es {@code null} o si no contiene elementos.
+     * </p>
+     *
+     * @param coleccion la colección a verificar
+     * @return {@code true} si la colección es {@code null} o está vacía,
+     *         {@code false} en caso contrario
+     */
+    public static boolean esVacia(Collection<?> coleccion) {
+        return coleccion == null || coleccion.isEmpty();
+    }
+
+    /**
+     * Verifica si un mapa está vacío o es {@code null}.
+     * <p>
+     * Un mapa se considera vacío si es {@code null} o si no contiene entradas.
+     * </p>
+     *
+     * @param mapa el mapa a verificar
+     * @return {@code true} si el mapa es {@code null} o está vacío,
+     *         {@code false} en caso contrario
+     */
+    public static boolean esVacia(Map<?, ?> mapa) {
+        return mapa == null || mapa.isEmpty();
+    }
+
+    /**
+     * Verifica si una colección tiene elementos (no está vacía ni es {@code null}).
+     * <p>
+     * Este método es la inversa de {@link #esVacia(Collection)}.
+     * </p>
+     *
+     * @param coleccion la colección a verificar
+     * @return {@code true} si la colección tiene elementos,
+     *         {@code false} si es {@code null} o está vacía
+     */
+    public static boolean noEsVacia(Collection<?> coleccion) {
+        return !esVacia(coleccion);
+    }
+
+    /**
+     * Verifica si un mapa tiene entradas (no está vacío ni es {@code null}).
+     * <p>
+     * Este método es la inversa de {@link #esVacia(Map)}.
+     * </p>
+     *
+     * @param mapa el mapa a verificar
+     * @return {@code true} si el mapa tiene entradas,
+     *         {@code false} si es {@code null} o está vacío
+     */
+    public static boolean noEsVacia(Map<?, ?> mapa) {
+        return !esVacia(mapa);
     }
 
     /**

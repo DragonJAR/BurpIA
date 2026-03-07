@@ -6,6 +6,7 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.util.GestorConsolaGUI;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
 
 import javax.swing.*;
@@ -15,6 +16,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import javax.swing.Timer;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
@@ -33,6 +35,7 @@ public class PestaniaPrincipal extends JPanel {
     private final PanelAgente panelAgente;
     private final JTabbedPane tabbedPane;
     private final ConfiguracionAPI config;
+    private final UIStateManager uiStateManager;
     private final PropertyChangeListener listenerLookAndFeel;
     private volatile Timer timerFocoAgente;
 
@@ -44,8 +47,10 @@ public class PestaniaPrincipal extends JPanel {
                             ModeloTablaTareas modeloTareas,
                             ModeloTablaHallazgos modeloHallazgos,
                             boolean esBurpProfessional,
-                            ConfiguracionAPI config) {
+                            ConfiguracionAPI config,
+                            GestorLoggingUnificado gestorLogging) {
         this.config = config;
+        this.uiStateManager = new UIStateManager(config, gestorLogging);
 
         panelTareas = new PanelTareas(gestorTareas, modeloTareas);
         panelTareas.establecerConfiguracion(config);
@@ -83,6 +88,96 @@ public class PestaniaPrincipal extends JPanel {
         };
         UIManager.addPropertyChangeListener(listenerLookAndFeel);
         aplicarTema();
+        
+        // Restaurar estado UI después de inicializar componentes
+        restaurarEstadoUI();
+        
+        // Configurar listeners para guardar cambios de estado
+        configurarListenersEstadoUI();
+    }
+
+    /**
+     * Restaura el estado UI guardado.
+     */
+    private void restaurarEstadoUI() {
+        try {
+            // Restaurar última pestaña seleccionada
+            uiStateManager.restaurarUltimaPestaniaSeleccionada(tabbedPane, 3); // Consola por defecto
+            
+            // Restaurar filtros de hallazgos
+            uiStateManager.restaurarEstadoFiltrosHallazgos(panelHallazgos);
+            
+            // Restaurar anchos de columna
+            uiStateManager.restaurarAnchosColumnasTabla(panelHallazgos.obtenerTabla(), "hallazgos");
+            uiStateManager.restaurarAnchosColumnasTabla(panelTareas.obtenerTabla(), "tareas");
+            
+        } catch (Exception e) {
+            // Silencioso para no interrumpir inicialización
+        }
+    }
+
+    /**
+     * Configura listeners para guardar cambios de estado UI.
+     */
+    private void configurarListenersEstadoUI() {
+        // Establecer UIStateManager en PanelHallazgos
+        panelHallazgos.establecerUIStateManager(uiStateManager);
+        
+        // Listener para cambios de anchos de columna en hallazgos
+        panelHallazgos.obtenerTabla().getColumnModel().addColumnModelListener(new javax.swing.event.TableColumnModelListener() {
+            private final Timer timerAnchos = new Timer(500, e -> {
+                uiStateManager.guardarAnchosColumnasTabla(panelHallazgos.obtenerTabla(), "hallazgos");
+            });
+            
+            {
+                timerAnchos.setRepeats(false);
+            }
+            
+            @Override
+            public void columnAdded(javax.swing.event.TableColumnModelEvent e) {}
+            
+            @Override
+            public void columnRemoved(javax.swing.event.TableColumnModelEvent e) {}
+            
+            @Override
+            public void columnMoved(javax.swing.event.TableColumnModelEvent e) {}
+            
+            @Override
+            public void columnMarginChanged(javax.swing.event.ChangeEvent e) {
+                timerAnchos.restart();
+            }
+            
+            @Override
+            public void columnSelectionChanged(javax.swing.event.ListSelectionEvent e) {}
+        });
+        
+        // Listener para cambios de anchos de columna en tareas
+        panelTareas.obtenerTabla().getColumnModel().addColumnModelListener(new javax.swing.event.TableColumnModelListener() {
+            private final Timer timerAnchos = new Timer(500, e -> {
+                uiStateManager.guardarAnchosColumnasTabla(panelTareas.obtenerTabla(), "tareas");
+            });
+            
+            {
+                timerAnchos.setRepeats(false);
+            }
+            
+            @Override
+            public void columnAdded(javax.swing.event.TableColumnModelEvent e) {}
+            
+            @Override
+            public void columnRemoved(javax.swing.event.TableColumnModelEvent e) {}
+            
+            @Override
+            public void columnMoved(javax.swing.event.TableColumnModelEvent e) {}
+            
+            @Override
+            public void columnMarginChanged(javax.swing.event.ChangeEvent e) {
+                timerAnchos.restart();
+            }
+            
+            @Override
+            public void columnSelectionChanged(javax.swing.event.ListSelectionEvent e) {}
+        });
     }
 
     /**
@@ -185,6 +280,13 @@ public class PestaniaPrincipal extends JPanel {
     }
 
     private void manejarCambioPestania() {
+        // Guardar última pestaña seleccionada
+        int indiceSeleccionado = tabbedPane.getSelectedIndex();
+        if (indiceSeleccionado >= 0) {
+            String tituloPestania = tabbedPane.getTitleAt(indiceSeleccionado);
+            uiStateManager.guardarUltimaPestaniaSeleccionada(tabbedPane, tituloPestania);
+        }
+        
         DestinoPestania destino = obtenerDestinoSeleccionado();
         if (destino != DestinoPestania.AGENTE) {
             return;
@@ -491,6 +593,24 @@ public class PestaniaPrincipal extends JPanel {
      * Debe llamarse cuando el panel ya no se va a usar.
      */
     public void destruir() {
+        // Guardar estado final antes de destruir
+        try {
+            if (uiStateManager != null) {
+                // Guardar última pestaña seleccionada
+                int indiceSeleccionado = tabbedPane.getSelectedIndex();
+                if (indiceSeleccionado >= 0) {
+                    String tituloPestania = tabbedPane.getTitleAt(indiceSeleccionado);
+                    uiStateManager.guardarUltimaPestaniaSeleccionada(tabbedPane, tituloPestania);
+                }
+                
+                // Guardar anchos de columna finales
+                uiStateManager.guardarAnchosColumnasTabla(panelHallazgos.obtenerTabla(), "hallazgos");
+                uiStateManager.guardarAnchosColumnasTabla(panelTareas.obtenerTabla(), "tareas");
+            }
+        } catch (Exception e) {
+            // Silencioso en el shutdown
+        }
+        
         UIManager.removePropertyChangeListener(listenerLookAndFeel);
         if (timerFocoAgente != null) {
             timerFocoAgente.stop();

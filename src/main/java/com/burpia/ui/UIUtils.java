@@ -1,4 +1,5 @@
 package com.burpia.ui;
+
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
@@ -9,21 +10,9 @@ import javax.swing.event.DocumentListener;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Container;
-import java.awt.Cursor;
-import java.awt.Dialog;
-import java.awt.Desktop;
-import java.awt.Dimension;
-import java.awt.Frame;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GraphicsEnvironment;
-import java.awt.Insets;
-import java.awt.KeyboardFocusManager;
-import java.awt.Window;
+import java.awt.*;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
@@ -47,14 +36,6 @@ public class UIUtils {
     private UIUtils() {
     }
 
-    /**
-     * Ejecuta una acción en el EDT (Event Dispatch Thread) esperando a que termine.
-     * Si ya estamos en el EDT, ejecuta la acción directamente.
-     * Si no, usa invokeAndWait para ejecutarla de forma síncrona.
-     *
-     * @param accion La acción a ejecutar. Si es null, no hace nada.
-     * @throws IllegalStateException si el hilo es interrumpido o hay un error en la ejecución
-     */
     public static void ejecutarEnEdtYEsperar(Runnable accion) {
         if (accion == null) {
             return;
@@ -67,20 +48,13 @@ public class UIUtils {
             SwingUtilities.invokeAndWait(accion);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupción esperando operación de UI", e);
+            throw new IllegalStateException(null, e);
         } catch (InvocationTargetException e) {
             Throwable causa = e.getCause() != null ? e.getCause() : e;
-            throw new IllegalStateException("Error ejecutando operación de UI", causa);
+            throw new IllegalStateException(null, causa);
         }
     }
 
-    /**
-     * Ejecuta una acción en el EDT de forma asíncrona.
-     * Si ya estamos en el EDT, ejecuta la acción directamente.
-     * Si no, usa invokeLater para programar la ejecución.
-     *
-     * @param accion La acción a ejecutar. Si es null, no hace nada.
-     */
     public static void ejecutarEnEdt(Runnable accion) {
         if (accion == null) {
             return;
@@ -107,15 +81,13 @@ public class UIUtils {
         Color fondoBase = EstilosUI.obtenerFondoPanel();
         Color colorBorde = EstilosUI.colorSeparador(fondoBase);
         return BorderFactory.createCompoundBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(colorBorde, 1),
-                titulo,
-                TitledBorder.LEFT,
-                TitledBorder.TOP,
-                EstilosUI.FUENTE_NEGRITA
-            ),
-            BorderFactory.createEmptyBorder(pV, pH, pV, pH)
-        );
+                BorderFactory.createTitledBorder(
+                        BorderFactory.createLineBorder(colorBorde, 1),
+                        titulo,
+                        TitledBorder.LEFT,
+                        TitledBorder.TOP,
+                        EstilosUI.FUENTE_NEGRITA),
+                BorderFactory.createEmptyBorder(pV, pH, pV, pH));
     }
 
     public static Border crearBordeTitulado(String titulo) {
@@ -143,41 +115,44 @@ public class UIUtils {
     }
 
     public static void mostrarInfoConOptOut(Component parent,
-                                            String titulo,
-                                            String mensaje,
-                                            boolean alertasHabilitadas,
-                                            Runnable onDeshabilitar) {
-        mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.INFORMATION_MESSAGE, alertasHabilitadas, onDeshabilitar);
+            String titulo,
+            String mensaje,
+            boolean alertasHabilitadas,
+            Runnable onDeshabilitar) {
+        mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.INFORMATION_MESSAGE, alertasHabilitadas,
+                onDeshabilitar);
     }
 
     public static void mostrarAdvertenciaConOptOut(Component parent,
-                                                   String titulo,
-                                                   String mensaje,
-                                                   boolean alertasHabilitadas,
-                                                   Runnable onDeshabilitar) {
-        mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.WARNING_MESSAGE, alertasHabilitadas, onDeshabilitar);
+            String titulo,
+            String mensaje,
+            boolean alertasHabilitadas,
+            Runnable onDeshabilitar) {
+        mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.WARNING_MESSAGE, alertasHabilitadas,
+                onDeshabilitar);
     }
 
     public static void mostrarInfoConOptOutMenuContextual(Component parent,
-                                                          String titulo,
-                                                          String mensaje,
-                                                          boolean alertasHabilitadas,
-                                                          Runnable onDeshabilitar) {
+            String titulo,
+            String mensaje,
+            boolean alertasHabilitadas,
+            Runnable onDeshabilitar) {
         mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.INFORMATION_MESSAGE,
-            alertasHabilitadas, onDeshabilitar, DIALOGO_DELAY_MENU_CONTEXTO_MS);
+                alertasHabilitadas, onDeshabilitar, DIALOGO_DELAY_MENU_CONTEXTO_MS);
     }
 
     public static void mostrarAdvertenciaConOptOutMenuContextual(Component parent,
-                                                                 String titulo,
-                                                                 String mensaje,
-                                                                 boolean alertasHabilitadas,
-                                                                 Runnable onDeshabilitar) {
+            String titulo,
+            String mensaje,
+            boolean alertasHabilitadas,
+            Runnable onDeshabilitar) {
         mostrarMensajeConOptOut(parent, titulo, mensaje, JOptionPane.WARNING_MESSAGE,
-            alertasHabilitadas, onDeshabilitar, DIALOGO_DELAY_MENU_CONTEXTO_MS);
+                alertasHabilitadas, onDeshabilitar, DIALOGO_DELAY_MENU_CONTEXTO_MS);
     }
 
     public static DocumentListener crearDocumentListener(Runnable onChange) {
-        Runnable accionSegura = onChange != null ? onChange : () -> { };
+        Runnable accionSegura = onChange != null ? onChange : () -> {
+        };
         return new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
@@ -197,16 +172,16 @@ public class UIUtils {
     }
 
     public static void mostrarErrorBinarioAgenteNoEncontrado(Component parent,
-                                                             String titulo,
-                                                             String mensajePrincipal,
-                                                             String textoEnlace,
-                                                             String urlEnlace) {
+            String titulo,
+            String mensajePrincipal,
+            String textoEnlace,
+            String urlEnlace) {
         ejecutarEnEdt(() -> {
             JPanel panel = new JPanel(new BorderLayout(0, 6));
             panel.setOpaque(false);
             panel.add(crearAreaMensajeDialogo(mensajePrincipal), BorderLayout.NORTH);
             if (Normalizador.noEsVacio(urlEnlace)
-                && Normalizador.noEsVacio(textoEnlace)) {
+                    && Normalizador.noEsVacio(textoEnlace)) {
                 String textoVisible = extraerTextoVisibleEnlace(textoEnlace);
                 JButton enlace = new JButton(textoVisible);
                 enlace.setFont(resolverFuenteUI("Label.font", EstilosUI.FUENTE_ESTANDAR));
@@ -242,12 +217,11 @@ public class UIUtils {
                 panel.add(panelEnlace, BorderLayout.SOUTH);
             }
             mostrarDialogoConContenido(
-                parent,
-                titulo,
-                new DialogoContenido(panel, null),
-                JOptionPane.ERROR_MESSAGE,
-                JOptionPane.DEFAULT_OPTION
-            );
+                    parent,
+                    titulo,
+                    new DialogoContenido(panel, null),
+                    JOptionPane.ERROR_MESSAGE,
+                    JOptionPane.DEFAULT_OPTION);
         });
     }
 
@@ -257,8 +231,8 @@ public class UIUtils {
         String mensaje = I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE(nombreAgente, rutaMensaje);
 
         if (!Normalizador.esVacio(comandoConfigurado)
-            && !Normalizador.esVacio(rutaMensaje)
-            && !comandoConfigurado.trim().equals(rutaMensaje)) {
+                && !Normalizador.esVacio(rutaMensaje)
+                && !comandoConfigurado.trim().equals(rutaMensaje)) {
             mensaje = mensaje + "\n" + I18nUI.Configuracion.Agentes.MSG_COMANDO_CONFIGURADO(comandoConfigurado);
         }
         return mensaje;
@@ -311,9 +285,9 @@ public class UIUtils {
     }
 
     public static boolean abrirUrlConFallbackInfo(Component parent,
-                                                  String titulo,
-                                                  String url,
-                                                  String mensajeFallback) {
+            String titulo,
+            String url,
+            String mensajeFallback) {
         boolean abierto = abrirUrlEnNavegador(url);
         if (!abierto && Normalizador.noEsVacio(mensajeFallback)) {
             mostrarInfo(parent, titulo, mensajeFallback);
@@ -322,21 +296,21 @@ public class UIUtils {
     }
 
     private static void mostrarMensajeConOptOut(Component parent,
-                                                String titulo,
-                                                String mensaje,
-                                                int tipoMensaje,
-                                                boolean alertasHabilitadas,
-                                                Runnable onDeshabilitar) {
+            String titulo,
+            String mensaje,
+            int tipoMensaje,
+            boolean alertasHabilitadas,
+            Runnable onDeshabilitar) {
         mostrarMensajeConOptOut(parent, titulo, mensaje, tipoMensaje, alertasHabilitadas, onDeshabilitar, 0);
     }
 
     private static void mostrarMensajeConOptOut(Component parent,
-                                                String titulo,
-                                                String mensaje,
-                                                int tipoMensaje,
-                                                boolean alertasHabilitadas,
-                                                Runnable onDeshabilitar,
-                                                int delayMs) {
+            String titulo,
+            String mensaje,
+            int tipoMensaje,
+            boolean alertasHabilitadas,
+            Runnable onDeshabilitar,
+            int delayMs) {
         if (!alertasHabilitadas) {
             return;
         }
@@ -346,12 +320,11 @@ public class UIUtils {
         ejecutarEnEDTConRetraso(() -> {
             DialogoContenido contenido = crearContenidoDialogo(mensaje, true);
             mostrarDialogoConContenido(
-                parent,
-                titulo,
-                contenido,
-                tipoMensaje,
-                JOptionPane.DEFAULT_OPTION
-            );
+                    parent,
+                    titulo,
+                    contenido,
+                    tipoMensaje,
+                    JOptionPane.DEFAULT_OPTION);
 
             if (contenido.chkNoMostrar != null && contenido.chkNoMostrar.isSelected() && onDeshabilitar != null) {
                 onDeshabilitar.run();
@@ -418,8 +391,7 @@ public class UIUtils {
         AtomicReference<Boolean> confirmado = new AtomicReference<>(false);
         try {
             SwingUtilities.invokeAndWait(() -> confirmado.set(
-                mostrarConfirmacionEnEdt(parent, titulo, mensaje, tipoMensaje)
-            ));
+                    mostrarConfirmacionEnEdt(parent, titulo, mensaje, tipoMensaje)));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return false;
@@ -432,12 +404,11 @@ public class UIUtils {
     private static boolean mostrarConfirmacionEnEdt(Component parent, String titulo, String mensaje, int tipoMensaje) {
         DialogoContenido contenido = crearContenidoDialogo(mensaje, false);
         int confirmacion = mostrarDialogoConContenido(
-            parent,
-            titulo,
-            contenido,
-            tipoMensaje,
-            JOptionPane.YES_NO_OPTION
-        );
+                parent,
+                titulo,
+                contenido,
+                tipoMensaje,
+                JOptionPane.YES_NO_OPTION);
         return confirmacion == JOptionPane.YES_OPTION;
     }
 
@@ -448,12 +419,11 @@ public class UIUtils {
         ejecutarEnEdt(() -> {
             DialogoContenido contenido = crearContenidoDialogo(mensaje, false);
             mostrarDialogoConContenido(
-                parent,
-                titulo,
-                contenido,
-                tipoMensaje,
-                JOptionPane.DEFAULT_OPTION
-            );
+                    parent,
+                    titulo,
+                    contenido,
+                    tipoMensaje,
+                    JOptionPane.DEFAULT_OPTION);
         });
     }
 
@@ -526,10 +496,10 @@ public class UIUtils {
     }
 
     private static int mostrarDialogoConContenido(Component parent,
-                                                  String titulo,
-                                                  DialogoContenido contenido,
-                                                  int tipoMensaje,
-                                                  int tipoOpcion) {
+            String titulo,
+            DialogoContenido contenido,
+            int tipoMensaje,
+            int tipoOpcion) {
         Component padreDialogo = resolverPadreDialogo(parent);
         Component mensajeConIcono = envolverContenidoConIcono(contenido.panel, tipoMensaje);
         JOptionPane optionPane = new JOptionPane(mensajeConIcono, JOptionPane.PLAIN_MESSAGE, tipoOpcion);
@@ -591,8 +561,8 @@ public class UIUtils {
         }
         Dimension actual = dialogo.getSize();
         int altoMinimo = tipoOpcion == JOptionPane.YES_NO_OPTION
-            ? DIALOGO_ALTO_MIN_CONFIRMACION
-            : DIALOGO_ALTO_MIN_MENSAJE;
+                ? DIALOGO_ALTO_MIN_CONFIRMACION
+                : DIALOGO_ALTO_MIN_MENSAJE;
         if (incluyeOptOut) {
             altoMinimo += DIALOGO_ALTO_EXTRA_OPT_OUT;
         }
@@ -655,5 +625,90 @@ public class UIUtils {
     private static Font resolverFuenteUI(String clave, Font fallback) {
         Font fuenteUI = clave != null ? UIManager.getFont(clave) : null;
         return fuenteUI != null ? fuenteUI : fallback;
+    }
+
+    public static void copiarAlPortapapeles(String texto) {
+        if (Normalizador.esVacio(texto))
+            return;
+        try {
+            StringSelection selection = new StringSelection(texto);
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public static void mostrarDetallesErrorAvanzado(Component parent, String url, String error) {
+        ejecutarEnEdt(() -> {
+            JDialog dialogo = new JDialog(resolverVentanaDialogoEstable(
+                    parent instanceof Window ? (Window) parent : SwingUtilities.getWindowAncestor(parent)),
+                    I18nUI.tr("Detalles del Error", "Error Details"), Dialog.ModalityType.APPLICATION_MODAL);
+
+            dialogo.setLayout(new BorderLayout(0, 0));
+            dialogo.setResizable(true);
+            dialogo.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+
+            JPanel panelPrincipal = new JPanel(new BorderLayout(15, 15));
+            panelPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+            panelPrincipal.setBackground(EstilosUI.obtenerFondoPanel());
+
+            JPanel panelCabecera = new JPanel(new BorderLayout(5, 5));
+            panelCabecera.setOpaque(false);
+
+            JLabel lblTitulo = new JLabel(
+                    I18nUI.tr("La tarea para la siguiente URL falló:", "The task for the following URL failed:"));
+            lblTitulo.setFont(EstilosUI.FUENTE_NEGRITA);
+            lblTitulo.setForeground(EstilosUI.COLOR_TEXTO_NORMAL);
+
+            JTextField txtUrl = new JTextField(url);
+            txtUrl.setEditable(false);
+            txtUrl.setBorder(null);
+            txtUrl.setOpaque(false);
+            txtUrl.setFont(EstilosUI.FUENTE_ESTANDAR);
+            txtUrl.setForeground(EstilosUI.colorTextoSecundario(panelPrincipal.getBackground()));
+
+            panelCabecera.add(lblTitulo, BorderLayout.NORTH);
+            panelCabecera.add(txtUrl, BorderLayout.CENTER);
+            panelPrincipal.add(panelCabecera, BorderLayout.NORTH);
+
+            JTextArea areaError = new JTextArea(error != null ? error : "");
+            areaError.setEditable(false);
+            areaError.setLineWrap(true);
+            areaError.setWrapStyleWord(true);
+            areaError.setFont(EstilosUI.FUENTE_MONO);
+            areaError.setBackground(EstilosUI.colorFondoSecundario(panelPrincipal.getBackground()));
+            areaError.setForeground(EstilosUI.COLOR_TEXTO_NORMAL);
+            areaError.setCaretPosition(0);
+
+            JScrollPane scroll = new JScrollPane(areaError);
+            scroll.setBorder(BorderFactory.createLineBorder(EstilosUI.colorSeparador(panelPrincipal.getBackground())));
+            panelPrincipal.add(scroll, BorderLayout.CENTER);
+
+            JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            panelBotones.setOpaque(false);
+
+            JButton btnCopiar = new JButton(I18nUI.tr("Copiar", "Copy"));
+            btnCopiar.addActionListener(e -> copiarAlPortapapeles(error));
+
+            JButton btnCerrar = new JButton(I18nUI.tr("Cerrar", "Close"));
+            btnCerrar.addActionListener(e -> dialogo.dispose());
+            btnCerrar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
+
+            panelBotones.add(btnCopiar);
+            panelBotones.add(btnCerrar);
+            panelPrincipal.add(panelBotones, BorderLayout.SOUTH);
+
+            dialogo.add(panelPrincipal, BorderLayout.CENTER);
+            dialogo.getRootPane().registerKeyboardAction(e -> dialogo.dispose(),
+                    KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                    JComponent.WHEN_IN_FOCUSED_WINDOW);
+
+            dialogo.pack();
+            if (dialogo.getWidth() < 500)
+                dialogo.setSize(500, dialogo.getHeight());
+            if (dialogo.getHeight() < 300)
+                dialogo.setSize(dialogo.getWidth(), 300);
+            dialogo.setLocationRelativeTo(parent);
+            dialogo.setVisible(true);
+        });
     }
 }

@@ -4,6 +4,7 @@ import burp.api.montoya.MontoyaApi;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.Estadisticas;
 import com.burpia.util.GestorConsolaGUI;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,7 @@ class PestaniaPrincipalTest {
     @Mock private ModeloTablaTareas modeloTablaTareas;
     @Mock private ModeloTablaHallazgos modeloTablaHallazgos;
     @Mock private ConfiguracionAPI configuracionAPI;
+    @Mock private GestorLoggingUnificado gestorLogging;
 
     private PestaniaPrincipal pestaniaPrincipal;
     private final AtomicBoolean agenteHabilitado = new AtomicBoolean(true);
@@ -63,7 +65,7 @@ class PestaniaPrincipalTest {
         final PestaniaPrincipal[] holder = new PestaniaPrincipal[1];
         SwingUtilities.invokeAndWait(() -> holder[0] = new PestaniaPrincipal(
             montoyaApi, estadisticas, gestorTareas, gestorConsolaGUI,
-            modeloTablaTareas, modeloTablaHallazgos, true, configuracionAPI
+            modeloTablaTareas, modeloTablaHallazgos, true, configuracionAPI, gestorLogging
         ));
         pestaniaPrincipal = holder[0];
     }

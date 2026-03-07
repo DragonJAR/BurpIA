@@ -156,13 +156,19 @@ class ManejadorHttpBurpIATest {
     void testCancelarEjecucionActivaLimpiaMapas() throws Exception {
         ManejadorHttpBurpIA manejador = crearManejador(null);
 
-        Field campoAnalizadores = ManejadorHttpBurpIA.class.getDeclaredField("analizadoresActivos");
+        // Obtener el TaskExecutionManager interno
+        Field campoTaskManager = ManejadorHttpBurpIA.class.getDeclaredField("taskExecutionManager");
+        campoTaskManager.setAccessible(true);
+        Object taskManager = campoTaskManager.get(manejador);
+        
+        // Acceder a los mapas internos del TaskExecutionManager
+        Field campoAnalizadores = taskManager.getClass().getDeclaredField("analizadoresActivos");
         campoAnalizadores.setAccessible(true);
-        Map<String, Object> analizadores = (Map<String, Object>) campoAnalizadores.get(manejador);
+        Map<String, Object> analizadores = (Map<String, Object>) campoAnalizadores.get(taskManager);
 
-        Field campoFutures = ManejadorHttpBurpIA.class.getDeclaredField("ejecucionesActivas");
+        Field campoFutures = taskManager.getClass().getDeclaredField("ejecucionesActivas");
         campoFutures.setAccessible(true);
-        Map<String, CompletableFuture<?>> futures = (Map<String, CompletableFuture<?>>) campoFutures.get(manejador);
+        Map<String, CompletableFuture<?>> futures = (Map<String, CompletableFuture<?>>) campoFutures.get(taskManager);
 
         String tareaId = "tarea-prueba";
         analizadores.put(tareaId, mock(com.burpia.analyzer.AnalizadorAI.class));
@@ -292,9 +298,14 @@ class ManejadorHttpBurpIATest {
      * @throws Exception si falla la invocación por reflexión
      */
     private boolean invocarEsRecursoEstatico(ManejadorHttpBurpIA manejador, String url) throws Exception {
-        Method metodo = ManejadorHttpBurpIA.class.getDeclaredMethod("esRecursoEstatico", String.class);
-        metodo.setAccessible(true);
-        return (boolean) metodo.invoke(manejador, url);
+        // Acceder al campo httpRequestProcessor por reflexión
+        Field field = ManejadorHttpBurpIA.class.getDeclaredField("httpRequestProcessor");
+        field.setAccessible(true);
+        Object processor = field.get(manejador);
+        
+        // Usar el método esRecursoEstatico de HttpRequestProcessor
+        Method metodo = processor.getClass().getMethod("esRecursoEstatico", String.class);
+        return (boolean) metodo.invoke(processor, url);
     }
 
     /**
@@ -310,9 +321,14 @@ class ManejadorHttpBurpIATest {
      * @throws Exception si falla la invocación por reflexión
      */
     private boolean invocarEstaEnScope(ManejadorHttpBurpIA manejador, HttpRequest solicitud) throws Exception {
-        Method metodo = ManejadorHttpBurpIA.class.getDeclaredMethod("estaEnScope", HttpRequest.class);
-        metodo.setAccessible(true);
-        return (boolean) metodo.invoke(manejador, solicitud);
+        // Acceder al campo httpRequestProcessor por reflexión
+        Field field = ManejadorHttpBurpIA.class.getDeclaredField("httpRequestProcessor");
+        field.setAccessible(true);
+        Object processor = field.get(manejador);
+        
+        // Usar el método estaEnScope de HttpRequestProcessor
+        Method metodo = processor.getClass().getMethod("estaEnScope", HttpRequest.class);
+        return (boolean) metodo.invoke(processor, solicitud);
     }
 
     /**

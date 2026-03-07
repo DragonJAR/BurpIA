@@ -6,6 +6,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Normalizador Tests")
@@ -211,6 +216,98 @@ class NormalizadorTest {
             void retornaTrueParaContenido() {
                 assertTrue(Normalizador.noEsVacio("texto"), "assertTrue failed at NormalizadorTest.java:212");
             }
+        }
+    }
+
+    @Nested
+    @DisplayName("Colecciones")
+    class Colecciones {
+        @Test
+        @DisplayName("esVacia - retorna true para null")
+        void retornaTrueParaNull() {
+            assertTrue(Normalizador.esVacia((List<String>) null), "assertTrue failed at NormalizadorTest.java:225");
+        }
+
+        @Test
+        @DisplayName("esVacia - retorna true para lista vacía")
+        void retornaTrueParaVacia() {
+            List<String> lista = new ArrayList<>();
+            assertTrue(Normalizador.esVacia(lista), "assertTrue failed at NormalizadorTest.java:231");
+        }
+
+        @Test
+        @DisplayName("esVacia - retorna false para lista con elementos")
+        void retornaFalseParaConElementos() {
+            List<String> lista = new ArrayList<>();
+            lista.add("elemento");
+            assertFalse(Normalizador.esVacia(lista), "assertFalse failed at NormalizadorTest.java:238");
+        }
+
+        @Test
+        @DisplayName("noEsVacia - retorna false para null")
+        void retornaFalseParaNull() {
+            assertFalse(Normalizador.noEsVacia((List<String>) null), "assertFalse failed at NormalizadorTest.java:243");
+        }
+
+        @Test
+        @DisplayName("noEsVacia - retorna false para lista vacía")
+        void retornaFalseParaVacia() {
+            List<String> lista = new ArrayList<>();
+            assertFalse(Normalizador.noEsVacia(lista), "assertFalse failed at NormalizadorTest.java:249");
+        }
+
+        @Test
+        @DisplayName("noEsVacia - retorna true para lista con elementos")
+        void retornaTrueParaConElementos() {
+            List<String> lista = new ArrayList<>();
+            lista.add("elemento");
+            assertTrue(Normalizador.noEsVacia(lista), "assertTrue failed at NormalizadorTest.java:256");
+        }
+    }
+
+    @Nested
+    @DisplayName("Mapas")
+    class Mapas {
+        @Test
+        @DisplayName("esVacia - retorna true para null")
+        void retornaTrueParaNull() {
+            assertTrue(Normalizador.esVacia((Map<String, String>) null), "assertTrue failed at NormalizadorTest.java:265");
+        }
+
+        @Test
+        @DisplayName("esVacia - retorna true para mapa vacío")
+        void retornaTrueParaVacio() {
+            Map<String, String> mapa = new HashMap<>();
+            assertTrue(Normalizador.esVacia(mapa), "assertTrue failed at NormalizadorTest.java:271");
+        }
+
+        @Test
+        @DisplayName("esVacia - retorna false para mapa con entradas")
+        void retornaFalseParaConEntradas() {
+            Map<String, String> mapa = new HashMap<>();
+            mapa.put("clave", "valor");
+            assertFalse(Normalizador.esVacia(mapa), "assertFalse failed at NormalizadorTest.java:278");
+        }
+
+        @Test
+        @DisplayName("noEsVacia - retorna false para null")
+        void retornaFalseParaNull() {
+            assertFalse(Normalizador.noEsVacia((Map<String, String>) null), "assertFalse failed at NormalizadorTest.java:283");
+        }
+
+        @Test
+        @DisplayName("noEsVacia - retorna false para mapa vacío")
+        void retornaFalseParaVacio() {
+            Map<String, String> mapa = new HashMap<>();
+            assertFalse(Normalizador.noEsVacia(mapa), "assertFalse failed at NormalizadorTest.java:289");
+        }
+
+        @Test
+        @DisplayName("noEsVacia - retorna true para mapa con entradas")
+        void retornaTrueParaConEntradas() {
+            Map<String, String> mapa = new HashMap<>();
+            mapa.put("clave", "valor");
+            assertTrue(Normalizador.noEsVacia(mapa), "assertTrue failed at NormalizadorTest.java:296");
         }
     }
 }

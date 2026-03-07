@@ -86,6 +86,9 @@ public class ConfiguracionAPI {
     // UI State Persistence flags
     private boolean persistirFiltroBusquedaHallazgos;
     private boolean persistirFiltroSeveridadHallazgos;
+    
+    // UI State Persistence - Estado general
+    private Map<String, String> estadoUI;
 
     public ConfiguracionAPI() {
         this.proveedorAI = "Z.ai";
@@ -128,6 +131,7 @@ public class ConfiguracionAPI {
         // Valores por defecto para estado UI
         this.textoFiltroHallazgos = "";
         this.filtroSeveridadHallazgos = "";
+        this.estadoUI = new HashMap<>();
 
         // Valores por defecto para flags de persistencia UI
         this.persistirFiltroBusquedaHallazgos = true;
@@ -449,6 +453,15 @@ public class ConfiguracionAPI {
 
     public void establecerPersistirFiltroSeveridadHallazgos(boolean persistir) {
         this.persistirFiltroSeveridadHallazgos = persistir;
+    }
+
+    // UI State Persistence - Estado general
+    public Map<String, String> obtenerEstadoUI() {
+        return new HashMap<>(estadoUI);
+    }
+
+    public void establecerEstadoUI(Map<String, String> estado) {
+        this.estadoUI = estado != null ? new HashMap<>(estado) : new HashMap<>();
     }
 
     public static String obtenerAgentePromptPorDefecto() {

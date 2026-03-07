@@ -80,6 +80,7 @@ public class PanelHallazgos extends JPanel {
     private Predicate<Hallazgo> manejadorEnviarAAgente;
     private Runnable manejadorCambioAlertasEnviarA;
     private Runnable manejadorCambioFiltros;
+    private UIStateManager uiStateManager;
     private final ExecutorService ejecutorAcciones;
     private final Timer temporizadorPersistenciaFiltros;
 
@@ -1215,6 +1216,11 @@ public class PanelHallazgos extends JPanel {
             config.establecerFiltroSeveridadHallazgos(severidadActual != null ? severidadActual : "");
         }
 
+        // Guardar estado adicional con UIStateManager si está disponible
+        if (uiStateManager != null) {
+            uiStateManager.guardarEstadoFiltrosHallazgos(textoActual, severidadActual);
+        }
+
         if (manejadorCambioFiltros != null) {
             manejadorCambioFiltros.run();
         }
@@ -1346,5 +1352,55 @@ public class PanelHallazgos extends JPanel {
         if (manejadorCambioAlertasEnviarA != null) {
             manejadorCambioAlertasEnviarA.run();
         }
+    }
+
+    /**
+     * Establece el texto del campo de búsqueda.
+     * Método público para UI State Persistence.
+     *
+     * @param texto Texto a establecer en el campo de búsqueda
+     */
+    public void establecerTextoFiltro(String texto) {
+        if (campoBusqueda != null && texto != null) {
+            ejecutarEnEdt(() -> {
+                campoBusqueda.setText(texto);
+                aplicarFiltros();
+            });
+        }
+    }
+
+    /**
+     * Establece el filtro de severidad seleccionado.
+     * Método público para UI State Persistence.
+     *
+     * @param severidad Severidad a establecer en el combo
+     */
+    public void establecerFiltroSeveridad(String severidad) {
+        if (comboSeveridad != null && severidad != null) {
+            ejecutarEnEdt(() -> {
+                comboSeveridad.setSelectedItem(severidad);
+                aplicarFiltros();
+            });
+        }
+    }
+
+    /**
+     * Obtiene la tabla de hallazgos.
+     * Método público para UI State Persistence.
+     *
+     * @return La tabla de hallazgos
+     */
+    public JTable obtenerTabla() {
+        return tabla;
+    }
+
+    /**
+     * Establece el gestor de estado UI.
+     * Método para integrar con UI State Persistence.
+     *
+     * @param uiStateManager Gestor de estado UI
+     */
+    public void establecerUIStateManager(UIStateManager uiStateManager) {
+        this.uiStateManager = uiStateManager;
     }
 }

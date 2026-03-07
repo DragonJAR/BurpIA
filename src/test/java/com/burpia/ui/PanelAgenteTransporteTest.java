@@ -254,16 +254,28 @@ class PanelAgenteTransporteTest {
         String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
         config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), binarioExistente);
 
         PanelAgente panel = crearPanelSinConsola(config);
         try {
             AtomicBoolean focoSolicitado = new AtomicBoolean(false);
             panel.establecerManejadorFocoPestania(() -> focoSolicitado.set(true));
 
+            // Probar el ciclo completo de agentes
             invocarCambiarAgenteRapido(panel);
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:268");
 
-            assertTrue(focoSolicitado.get(), "assertTrue failed at PanelAgenteTransporteTest.java:265");
-            assertEquals(AgenteTipo.CLAUDE_CODE.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:266");
+            invocarCambiarAgenteRapido(panel);
+            assertEquals(AgenteTipo.GEMINI_CLI.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:272");
+
+            invocarCambiarAgenteRapido(panel);
+            assertEquals(AgenteTipo.OPEN_CODE.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:276");
+
+            invocarCambiarAgenteRapido(panel);
+            assertEquals(AgenteTipo.FACTORY_DROID.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:280");
+
+            assertTrue(focoSolicitado.get(), "assertTrue failed at PanelAgenteTransporteTest.java:282");
         } finally {
             panel.destruir();
         }
@@ -365,6 +377,19 @@ class PanelAgenteTransporteTest {
                 "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-GEMINI-EN.md",
                 invocarResolverUrlGuia(panel)
             , "assertEquals failed at PanelAgenteTransporteTest.java:364");
+
+            config.establecerTipoAgente(AgenteTipo.OPEN_CODE.name());
+            config.establecerIdiomaUi("es");
+            assertEquals(
+                "https://github.com/anomalyco/opencode/blob/main/AGENTE-OPENCODE-ES.md",
+                invocarResolverUrlGuia(panel)
+            , "assertEquals failed at PanelAgenteTransporteTest.java:371");
+
+            config.establecerIdiomaUi("en");
+            assertEquals(
+                "https://github.com/anomalyco/opencode/blob/main/AGENT-OPENCODE-EN.md",
+                invocarResolverUrlGuia(panel)
+            , "assertEquals failed at PanelAgenteTransporteTest.java:376");
 
             config.establecerTipoAgente("INVALIDO");
             config.establecerIdiomaUi("en");

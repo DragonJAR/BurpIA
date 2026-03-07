@@ -2107,6 +2107,70 @@ public final class I18nUI {
                     "[BurpIA] Error sending request to agent: %s",
                     error);
         }
+        
+        public static String ITEM_ANALIZAR_FLUJO() {
+            return tr("🔗 Analizar como Flujo...", "🔗 Analyze as Flow...");
+        }
+        
+        public static String TOOLTIP_ANALIZAR_FLUJO() {
+            return tr("Analiza todas las peticiones seleccionadas como una secuencia lógica en una sola consulta al LLM.",
+                    "Analyze all selected requests as a logical sequence in a single LLM query.");
+        }
+        
+        public static String MSG_FLUJO_REQUIERE_MULTIPLES() {
+            return tr("Selecciona al menos 2 peticiones para análisis de flujo.",
+                    "Select at least 2 requests for flow analysis.");
+        }
+        
+        public static String TITULO_FLUJO_REQUIERE_MULTIPLES() {
+            return tr("Selección Insuficiente", "Insufficient Selection");
+        }
+        
+        public static String MSG_FLUJO_INICIADO(int cantidad) {
+            return trf("Analizando flujo de %d peticiones en una sola consulta al LLM.\n" +
+                    "Esto permite detectar vulnerabilidades en el contexto del flujo completo.",
+                    "Analyzing flow of %d requests in a single LLM query.\n" +
+                    "This allows detecting vulnerabilities in the context of the complete flow.",
+                    cantidad);
+        }
+        
+        public static String TITULO_FLUJO_INICIADO() {
+            return tr("BurpIA - Análisis de Flujo Iniciado", "BurpIA - Flow Analysis Started");
+        }
+        
+        public static String MSG_FLUJO_COMPLETADO(int hallazgos, int peticiones) {
+            return trf("Análisis de flujo completado: %d hallazgo(s) detectado(s) en %d peticiones.",
+                    "Flow analysis completed: %d finding(s) detected in %d requests.",
+                    hallazgos, peticiones);
+        }
+        
+        public static String TITULO_FLUJO_COMPLETADO() {
+            return tr("BurpIA - Análisis de Flujo Completado", "BurpIA - Flow Analysis Completed");
+        }
+        
+        public static String MSG_FLUJO_ERROR(String error) {
+            return trf("Error en análisis de flujo: %s", "Flow analysis error: %s", error);
+        }
+        
+        public static String TITULO_FLUJO_ERROR() {
+            return tr("BurpIA - Error en Análisis de Flujo", "BurpIA - Flow Analysis Error");
+        }
+        
+        public static String MSG_FLUJO_CANCELADO() {
+            return tr("Análisis de flujo cancelado por el usuario.", "Flow analysis cancelled by user.");
+        }
+        
+        public static String LOG_FLUJO_INICIADO(int cantidad) {
+            return trf("[BurpIA] Iniciando análisis de flujo con %d peticiones",
+                    "[BurpIA] Starting flow analysis with %d requests",
+                    cantidad);
+        }
+        
+        public static String LOG_FLUJO_COMPLETADO(int hallazgos) {
+            return trf("[BurpIA] Análisis de flujo completado: %d hallazgos",
+                    "[BurpIA] Flow analysis completed: %d findings",
+                    hallazgos);
+        }
     }
 
     public static final class Tablas {
@@ -2751,6 +2815,10 @@ public final class I18nUI {
                 return I18nUI.trf("Envía la solicitud seleccionada a %s.",
                         "Send selected request to %s.",
                         agente);
+            }
+            public static String ANALIZAR_FLUJO() {
+                return I18nUI.tr("Analiza todas las peticiones seleccionadas como una secuencia lógica en una sola consulta al LLM.",
+                        "Analyze all selected requests as a logical sequence in a single LLM query.");
             }
         }
     }

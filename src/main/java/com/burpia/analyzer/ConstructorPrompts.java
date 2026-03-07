@@ -253,4 +253,100 @@ public class ConstructorPrompts {
         return valor.trim();
     }
 
+    /**
+     * Construye un prompt para análisis de flujo de múltiples peticiones HTTP.
+     * <p>
+     * A diferencia del análisis individual, este prompt explica al LLM que
+     * está analizando una SECUENCIA de peticiones que representan un flujo
+     * de usuario (ej: login → dashboard → profile).
+     * </p>
+     *
+     * @param solicitudes Lista de solicitudes HTTP que componen el flujo
+     * @return el prompt completo para análisis de flujo
+     */
+    public String construirPromptFlujo(java.util.List<SolicitudAnalisis> solicitudes) {
+        if (solicitudes == null || solicitudes.isEmpty()) {
+            return "";
+        }
+
+        String idiomaSalida = obtenerIdiomaSalida();
+        
+        StringBuilder promptBuilder = new StringBuilder();
+        
+        promptBuilder.append(trPrompt(
+            "Eres un experto en seguridad web. Te voy a enviar una SECUENCIA de peticiones HTTP " +
+            "que representan un flujo de usuario (ej: login → dashboard → acción).",
+            "You are a web security expert. I will send you a SEQUENCE of HTTP requests " +
+            "that represent a user flow (e.g., login → dashboard → action)."
+        )).append("\n\n");
+        
+        promptBuilder.append(trPrompt(
+            "Analiza el flujo COMPLETO buscando:\n" +
+            "1. Bypasses de autenticación/autorización entre peticiones\n" +
+            "2. Escalada de privilegios a través del flujo\n" +
+            "3. Bugs de lógica de negocio (ej: manipulación de precios, estados)\n" +
+            "4. Exposición de datos sensibles entre endpoints\n" +
+            "5. Vulnerabilidades que solo aparecen en el contexto del flujo completo",
+            "Analyze the COMPLETE flow looking for:\n" +
+            "1. Authentication/authorization bypasses between requests\n" +
+            "2. Privilege escalation through the flow\n" +
+            "3. Business logic bugs (e.g., price manipulation, state tampering)\n" +
+            "4. Sensitive data exposure between endpoints\n" +
+            "5. Vulnerabilities that only appear in the context of the complete flow"
+        )).append("\n\n");
+        
+        promptBuilder.append(trPrompt(
+            "RESPONDE EN FORMATO JSON ESTRICTO:",
+            "RESPOND IN STRICT JSON FORMAT:"
+        )).append("\n");
+        
+        promptBuilder.append("{\n");
+        promptBuilder.append("  \"hallazgos\": [\n");
+        promptBuilder.append("    {\n");
+        promptBuilder.append("      \"titulo\": \"string\",\n");
+        promptBuilder.append("      \"severidad\": \"Critical|High|Medium|Low|Info\",\n");
+        promptBuilder.append("      \"confianza\": \"High|Medium|Low\",\n");
+        promptBuilder.append("      \"descripcion\": \"string. Referencias: [CWE-XXX] [OWASP A0X:2021 - Category]\",\n");
+        promptBuilder.append("      \"evidencia\": \"string con referencia a la petición afectada (ej: Petición 2)\"\n");
+        promptBuilder.append("    }\n");
+        promptBuilder.append("  ]\n");
+        promptBuilder.append("}\n\n");
+        
+        promptBuilder.append(trPrompt("IDIOMA DE SALIDA", "OUTPUT LANGUAGE")).append(": ").append(idiomaSalida).append("\n");
+        promptBuilder.append(trPrompt(
+            "Escribe \"descripcion\" estrictamente en IDIOMA DE SALIDA. Mantén \"severidad\" y \"confianza\" exactamente con valores canónicos.",
+            "Write \"descripcion\" strictly in OUTPUT LANGUAGE. Keep \"severidad\" and \"confianza\" exactly as canonical values."
+        )).append("\n\n");
+        
+        promptBuilder.append("═".repeat(80)).append("\n");
+        promptBuilder.append(trPrompt("SECUENCIA DE PETICIONES HTTP", "HTTP REQUEST SEQUENCE")).append("\n");
+        promptBuilder.append("═".repeat(80)).append("\n\n");
+        
+        for (int i = 0; i < solicitudes.size(); i++) {
+            SolicitudAnalisis solicitud = solicitudes.get(i);
+            
+            promptBuilder.append("┌").append("─".repeat(78)).append("┐\n");
+            promptBuilder.append("│ ").append(trPrompt("PETICIÓN", "REQUEST")).append(" ").append(i + 1).append("/").append(solicitudes.size());
+            promptBuilder.append(" ".repeat(Math.max(0, 75 - String.valueOf(i + 1).length() - String.valueOf(solicitudes.size()).length())));
+            promptBuilder.append("│\n");
+            promptBuilder.append("└").append("─".repeat(78)).append("┘\n\n");
+            
+            promptBuilder.append(trPrompt("SOLICITUD", "REQUEST")).append(":\n");
+            promptBuilder.append(construirBloqueRequest(solicitud)).append("\n\n");
+            
+            String encabezadosRespuesta = solicitud.obtenerEncabezadosRespuesta();
+            String cuerpoRespuesta = solicitud.obtenerCuerpoRespuesta();
+            int codigoEstado = solicitud.obtenerCodigoEstadoRespuesta();
+            
+            if (codigoEstado >= 0 || !Normalizador.esVacio(encabezadosRespuesta) || !Normalizador.esVacio(cuerpoRespuesta)) {
+                promptBuilder.append(trPrompt("RESPUESTA", "RESPONSE")).append(":\n");
+                promptBuilder.append(construirBloqueResponse(solicitud)).append("\n\n");
+            }
+            
+            promptBuilder.append("\n");
+        }
+        
+        return promptBuilder.toString();
+    }
+
 }

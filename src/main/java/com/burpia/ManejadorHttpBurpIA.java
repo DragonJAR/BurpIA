@@ -1,4 +1,5 @@
 package com.burpia;
+
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.http.handler.HttpHandler;
 import burp.api.montoya.http.handler.HttpRequestToBeSent;
@@ -27,7 +28,10 @@ import com.burpia.util.Normalizador;
 import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.DeduplicadorSolicitudes;
+import com.burpia.evidence.EvidenceManager;
 import com.burpia.util.AlmacenEvidenciaHttp;
+import com.burpia.processor.HttpRequestProcessor;
+import com.burpia.execution.TaskExecutionManager;
 import com.burpia.util.PoliticaMemoria;
 import javax.swing.*;
 import java.io.PrintWriter;
@@ -49,9 +53,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private static final String ORIGEN_LOG = "BurpIA";
     private static final long INTERVALO_ALERTA_CONFIG_MS = 120000L;
     // TTL específicos por estado de tarea (state-aware retention policy)
-    private static final long TTL_CONTEXTO_COMPLETADO_MS = 0L;                    // Purga inmediata para tareas exitosas
-    private static final long TTL_CONTEXTO_REINTENTABLE_MS = 5L * 60L * 1000L;  // 5 minutos para ERROR/CANCELADO
-    private static final long TTL_CONTEXTO_ACTIVO_MS = Long.MAX_VALUE;          // Mantener hasta cambio de estado
+    private static final long TTL_CONTEXTO_COMPLETADO_MS = 0L; // Purga inmediata para tareas exitosas
+    private static final long TTL_CONTEXTO_REINTENTABLE_MS = 15 * 60 * 1000L; // 15 minutos (aumentado según
+                                                                              // recomendación) para ERROR/CANCELADO
+    private static final long TTL_CONTEXTO_ACTIVO_MS = Long.MAX_VALUE; // Mantener hasta cambio de estado
     private static final int MAX_CONTEXTO_REINTENTO = 1000;
     private final MontoyaApi api;
     private final ConfiguracionAPI config;
@@ -60,7 +65,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final DeduplicadorSolicitudes deduplicador;
     private final PrintWriter stdout;
     private final PrintWriter stderr;
-    private final ThreadPoolExecutor executorService;
     private final Object logLock;
     private final boolean esBurpProfessional;
     private volatile boolean capturaActiva;
@@ -71,10 +75,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final GestorConsolaGUI gestorConsola;
     private final ModeloTablaHallazgos modeloTablaHallazgos;
     private final ControlBackpressureGlobal controlBackpressure;
-    private final AlmacenEvidenciaHttp almacenEvidencia;
-    private final Map<String, ContextoReintento> contextosReintento;
-    private final Map<String, Future<?>> ejecucionesActivas;
-    private final Map<String, com.burpia.analyzer.AnalizadorAI> analizadoresActivos;
+    private final EvidenceManager evidenceManager;
+    private final HttpRequestProcessor httpRequestProcessor;
+    private final TaskExecutionManager taskExecutionManager;
     private final Map<ConfiguracionAPI.CodigoValidacionConsulta, Long> alertasConfiguracionEmitidas;
 
     private static final class ContextoReintento {
@@ -83,7 +86,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         private final long creadoMs;
 
         private ContextoReintento(SolicitudAnalisis solicitudAnalisis,
-                                  String evidenciaId) {
+                String evidenciaId) {
             this.solicitudAnalisis = solicitudAnalisis;
             this.evidenciaId = evidenciaId;
             this.creadoMs = System.currentTimeMillis();
@@ -91,9 +94,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
-                             PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
-                             Estadisticas estadisticas, GestorTareas gestorTareas,
-                             GestorConsolaGUI gestorConsola, ModeloTablaHallazgos modeloTablaHallazgos) {
+            PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
+            Estadisticas estadisticas, GestorTareas gestorTareas,
+            GestorConsolaGUI gestorConsola, ModeloTablaHallazgos modeloTablaHallazgos) {
         ConfiguracionAPI configSegura = config != null ? config : new ConfiguracionAPI();
         this.api = api;
         this.config = configSegura;
@@ -106,45 +109,23 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.gestorConsola = gestorConsola;
         this.modeloTablaHallazgos = modeloTablaHallazgos;
         this.controlBackpressure = new ControlBackpressureGlobal();
-        this.almacenEvidencia = new AlmacenEvidenciaHttp();
-        this.contextosReintento = new ConcurrentHashMap<>();
-        this.ejecucionesActivas = new ConcurrentHashMap<>();
-        this.analizadoresActivos = new ConcurrentHashMap<>();
+        this.evidenceManager = new EvidenceManager(api);
+        this.httpRequestProcessor = new HttpRequestProcessor(api, configSegura);
+        this.taskExecutionManager = new TaskExecutionManager(configSegura, gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador, controlBackpressure);
         this.alertasConfiguracionEmitidas = new ConcurrentHashMap<>();
-        Hallazgo.establecerResolutorEvidencia(almacenEvidencia::obtener);
+        Hallazgo.establecerResolutorEvidencia(evidenceManager::obtenerEvidencia);
         this.esBurpProfessional = ExtensionBurpIA.esBurpProfessional(api);
         this.capturaActiva = configSegura.escaneoPasivoHabilitado();
         this.avisoIssuesNoDisponiblesEmitido = false;
 
         int maxThreads = configSegura.obtenerMaximoConcurrente() > 0 ? configSegura.obtenerMaximoConcurrente() : 10;
         this.limitador = limitador != null ? limitador : new LimitadorTasa(maxThreads);
-        int capacidadCola = Math.max(50, maxThreads * 20);
-        this.executorService = new ThreadPoolExecutor(
-            maxThreads,
-            maxThreads,
-            60L,
-            java.util.concurrent.TimeUnit.SECONDS,
-            new ArrayBlockingQueue<>(capacidadCola),
-            new java.util.concurrent.ThreadFactory() {
-                private final java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger(1);
-                @Override
-                public Thread newThread(Runnable runnable) {
-                    Thread thread = new Thread(runnable);
-                    thread.setDaemon(true);
-                    thread.setName("BurpIA-Thread-" + counter.getAndIncrement());
-                    return thread;
-                }
-            },
-            new ThreadPoolExecutor.AbortPolicy()
-        );
-
         this.logLock = new Object();
 
         registrar(I18nUI.Consola.LOG_MANEJADOR_INICIALIZADO(
-            configSegura.obtenerMaximoConcurrente(),
-            configSegura.obtenerRetrasoSegundos(),
-            configSegura.esDetallado()
-        ));
+                configSegura.obtenerMaximoConcurrente(),
+                configSegura.obtenerRetrasoSegundos(),
+                configSegura.esDetallado()));
         // EFICIENCIA: Solo registrar notas de scope en modo detallado
         if (configSegura.esDetallado()) {
             registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS());
@@ -154,9 +135,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
-                             PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador) {
+            PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador) {
         this(api, config, pestaniaPrincipal, stdout, stderr, limitador,
-             null, null, null, null);
+                null, null, null, null);
     }
 
     public void actualizarConfiguracion(ConfiguracionAPI nuevaConfig) {
@@ -170,40 +151,26 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         int nuevoMaximoConcurrente = nuevaConfig.obtenerMaximoConcurrente() > 0
-            ? nuevaConfig.obtenerMaximoConcurrente()
-            : 1;
+                ? nuevaConfig.obtenerMaximoConcurrente()
+                : 1;
 
         this.limitador.ajustarMaximoConcurrente(nuevoMaximoConcurrente);
-        actualizarPoolEjecucion(nuevoMaximoConcurrente);
+        
+        // Usar TaskExecutionManager para actualizar configuración
+        taskExecutionManager.actualizarConfiguracion(nuevaConfig);
 
         String proveedor = nuevaConfig.obtenerProveedorAI();
         String modelo = nuevaConfig.obtenerModelo();
         int timeout = nuevaConfig.obtenerTiempoEsperaParaModelo(proveedor, modelo);
 
         registrar(I18nUI.Consola.LOG_CONFIGURACION_ACTUALIZADA(
-            nuevoMaximoConcurrente,
-            nuevaConfig.obtenerRetrasoSegundos(),
-            modelo,
-            timeout
-        ));
+                nuevoMaximoConcurrente,
+                nuevaConfig.obtenerRetrasoSegundos(),
+                modelo,
+                timeout));
     }
 
-    private void actualizarPoolEjecucion(int nuevoMaximoConcurrente) {
-        synchronized (executorService) {
-            int maxActual = executorService.getMaximumPoolSize();
-            if (nuevoMaximoConcurrente == maxActual) {
-                return;
-            }
 
-            if (nuevoMaximoConcurrente > maxActual) {
-                executorService.setMaximumPoolSize(nuevoMaximoConcurrente);
-                executorService.setCorePoolSize(nuevoMaximoConcurrente);
-            } else {
-                executorService.setCorePoolSize(nuevoMaximoConcurrente);
-                executorService.setMaximumPoolSize(nuevoMaximoConcurrente);
-            }
-        }
-    }
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent solicitudAEnviar) {
@@ -219,27 +186,19 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        if (respuestaRecibida == null) {
-            registrarError("Respuesta recibida es null");
-            return ResponseReceivedAction.continueWith(respuestaRecibida);
-        }
-
-        if (respuestaRecibida.initiatingRequest() == null) {
-            registrarError("Solicitud iniciadora es null");
+        // Usar HttpRequestProcessor para validación
+        if (!httpRequestProcessor.esSolicitudValida(respuestaRecibida)) {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
         final HttpResponseReceived respuestaCapturada = respuestaRecibida;
+        final String url = respuestaRecibida.initiatingRequest().url() != null ? 
+                respuestaRecibida.initiatingRequest().url() : "[URL NULL]";
+        final String metodo = respuestaRecibida.initiatingRequest().method() != null ? 
+                respuestaRecibida.initiatingRequest().method() : "[METHOD NULL]";
+        final int codigoEstado = respuestaRecibida.statusCode();
 
-        String tempUrl = respuestaRecibida.initiatingRequest().url();
-        final String url = tempUrl != null ? tempUrl : "[URL NULL]";
-
-        String tempMetodo = respuestaRecibida.initiatingRequest().method();
-        final String metodo = tempMetodo != null ? tempMetodo : "[METHOD NULL]";
-
-        int codigoEstado = respuestaRecibida.statusCode();
-
-        if (config.soloProxy() && !respuestaRecibida.toolSource().isFromTool(ToolType.PROXY)) {
+        if (httpRequestProcessor.esSoloProxy(respuestaRecibida)) {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -249,13 +208,13 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         rastrear(() -> "Respuesta recibida: " + metodo + " " + url + " (estado: " + codigoEstado + ")");
 
-        if (!estaEnScope(respuestaRecibida.initiatingRequest())) {
+        if (!httpRequestProcessor.estaEnScope(respuestaRecibida.initiatingRequest())) {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
         rastrear(() -> "DENTRO DE SCOPE - Procesando: " + metodo + " " + url);
 
-        if (esRecursoEstatico(url)) {
+        if (httpRequestProcessor.esRecursoEstatico(url)) {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosBajaConfianza();
             }
@@ -263,14 +222,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        String contentTypeRespuesta = obtenerContentTypeRespuesta(respuestaRecibida);
-        if (!FiltroContenidoAnalizable.esAnalizable(contentTypeRespuesta, metodo, codigoEstado)) {
+        String contentTypeRespuesta = httpRequestProcessor.obtenerContentTypeRespuesta(respuestaRecibida);
+        if (!httpRequestProcessor.esContenidoAnalizable(contentTypeRespuesta, metodo, codigoEstado)) {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosBajaConfianza();
             }
             String contentTypeLog = Normalizador.esVacio(contentTypeRespuesta)
-                ? "desconocido"
-                : contentTypeRespuesta.trim();
+                    ? "desconocido"
+                    : contentTypeRespuesta.trim();
             rastrear(() -> "Omitiendo contenido no analizable: " + url + " (Content-Type: " + contentTypeLog + ")");
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
@@ -283,7 +242,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         String hashSolicitud = HttpUtils.generarHashRapido(respuestaRecibida.initiatingRequest(), respuestaRecibida);
-        String hashAbreviado = abreviarHash(hashSolicitud);
+        String hashAbreviado = httpRequestProcessor.abreviarHash(hashSolicitud);
         rastrear(() -> "Hash de solicitud: " + hashAbreviado + "...");
 
         if (deduplicador.esDuplicadoYAgregar(hashSolicitud)) {
@@ -303,35 +262,17 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         final int numEncabezados = conteoEncabezados;
 
         rastrear(() -> "Detalles de solicitud: Metodo=" + metodo + ", URL=" + url +
-            ", Encabezados=" + numEncabezados + ", Codigo respuesta=" + codigoEstado);
+                ", Encabezados=" + numEncabezados + ", Codigo respuesta=" + codigoEstado);
 
-        String encabezadosSolicitud = HttpUtils.extraerEncabezados(respuestaRecibida.initiatingRequest());
-        String cuerpoSolicitud = HttpUtils.extraerCuerpo(
-            respuestaRecibida.initiatingRequest(),
-            PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES
-        );
-        String encabezadosRespuesta = HttpUtils.extraerEncabezados(respuestaRecibida);
-        String cuerpoRespuesta = HttpUtils.extraerCuerpo(
-            respuestaRecibida,
-            PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES
-        );
-
-        SolicitudAnalisis solicitudAnalisis = new SolicitudAnalisis(
-            url,
-            metodo,
-            encabezadosSolicitud,
-            cuerpoSolicitud,
-            hashSolicitud,
-            respuestaRecibida.initiatingRequest(),
-            codigoEstado,
-            encabezadosRespuesta,
-            cuerpoRespuesta
-        );
+        // Usar HttpRequestProcessor para crear SolicitudAnalisis
+        SolicitudAnalisis solicitudAnalisis = httpRequestProcessor.crearSolicitudAnalisisDesdeRespuesta(respuestaRecibida);
+        HttpRequestResponse evidenciaHttp = httpRequestProcessor.construirEvidenciaHttp(
+                respuestaCapturada.initiatingRequest(), respuestaCapturada);
+        
         programarAnalisis(
-            solicitudAnalisis,
-            construirEvidenciaHttp(respuestaCapturada.initiatingRequest(), respuestaCapturada),
-            "Analisis HTTP"
-        );
+                solicitudAnalisis,
+                evidenciaHttp,
+                "Analisis HTTP");
 
         return ResponseReceivedAction.continueWith(respuestaRecibida);
     }
@@ -351,96 +292,39 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         if (!puedeIniciarAnalisis("Analisis Manual", url)) {
             return;
         }
-        String encabezados = HttpUtils.extraerEncabezados(solicitud);
-        String cuerpo = HttpUtils.extraerCuerpo(solicitud, PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES);
-        String hashSolicitud = HttpUtils.generarHashPartes(metodo, url, encabezados, cuerpo);
-        int codigoEstadoRespuesta = -1;
-        String encabezadosRespuesta = "";
-        String cuerpoRespuesta = "";
-        if (solicitudRespuestaOriginal != null) {
-            try {
-                if (solicitudRespuestaOriginal.hasResponse() && solicitudRespuestaOriginal.response() != null) {
-                    codigoEstadoRespuesta = solicitudRespuestaOriginal.response().statusCode();
-                    encabezadosRespuesta = HttpUtils.extraerEncabezados(solicitudRespuestaOriginal.response());
-                    cuerpoRespuesta = HttpUtils.extraerCuerpo(
-                        solicitudRespuestaOriginal.response(),
-                        PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES
-                    );
-                }
-            } catch (Exception e) {
-                rastrear("No se pudo capturar la respuesta para analisis manual", e);
-            }
-        }
 
-        SolicitudAnalisis solicitudAnalisis = new SolicitudAnalisis(
-            url,
-            metodo,
-            encabezados,
-            cuerpo,
-            hashSolicitud,
-            solicitud,
-            codigoEstadoRespuesta,
-            encabezadosRespuesta,
-            cuerpoRespuesta
-        );
-        registrar("Analisis forzado solicitado desde menu contextual: " + metodo + " " + url);
-        programarAnalisis(
-            solicitudAnalisis,
-            normalizarEvidenciaManual(solicitud, solicitudRespuestaOriginal),
-            "Analisis Manual"
-        );
-    }
-
-    public boolean reencolarTarea(String tareaId) {
-        if (Normalizador.esVacio(tareaId)) {
-            return false;
-        }
-        depurarContextosHuerfanos();
-        ContextoReintento contexto = contextosReintento.get(tareaId);
-        if (contexto == null) {
-            registrarError("No existe contexto para reintentar tarea: " + tareaId);
-            return false;
-        }
-
-        if (gestorTareas != null) {
-            gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_EN_COLA, "Reintentando...");
-        }
-
-        ejecutarAnalisisExistente(
-            tareaId,
-            contexto.solicitudAnalisis,
-            contexto.evidenciaId
-        );
-
-        registrar("Tarea reencolada: " + tareaId);
-        return true;
-    }
-
-    public void cancelarEjecucionActiva(String tareaId) {
-        if (Normalizador.esVacio(tareaId)) {
+        // Usar HttpRequestProcessor para crear SolicitudAnalisis y normalizar evidencia
+        SolicitudAnalisis solicitudAnalisis = httpRequestProcessor.crearSolicitudAnalisisForzada(solicitud, solicitudRespuestaOriginal);
+        if (solicitudAnalisis == null) {
+            registrarError("No se pudo crear solicitud de análisis forzada");
             return;
         }
 
-        // PRIMERO: Cancelar llamada HTTP activa (libera inmediatamente el socket)
-        com.burpia.analyzer.AnalizadorAI analizador = analizadoresActivos.remove(tareaId);
-        if (analizador != null) {
-            analizador.cancelarLlamadaHttpActiva();
-            rastrear("Llamada HTTP cancelada para tarea: " + tareaId);
-        }
+        registrar("Analisis forzado solicitado desde menu contextual: " + metodo + " " + url);
+        HttpRequestResponse evidenciaHttp = httpRequestProcessor.normalizarEvidenciaManual(solicitud, solicitudRespuestaOriginal);
+        programarAnalisis(
+                solicitudAnalisis,
+                evidenciaHttp,
+                "Analisis Manual");
+    }
 
-        // DESPUÉS: Cancelar Future (interrumpe el thread)
-        Future<?> future = ejecucionesActivas.remove(tareaId);
-        if (future != null) {
-            boolean cancelada = future.cancel(true);
-            if (cancelada) {
-                rastrear("Cancelación activa aplicada para tarea: " + tareaId);
-            }
+    public boolean reencolarTarea(String tareaId) {
+        // Usar TaskExecutionManager para reencolar
+        boolean resultado = taskExecutionManager.reencolarTarea(tareaId);
+        if (resultado) {
+            registrar("Tarea reencolada: " + tareaId);
         }
+        return resultado;
+    }
+
+    public void cancelarEjecucionActiva(String tareaId) {
+        // Usar TaskExecutionManager para cancelar ejecución activa
+        taskExecutionManager.cancelarEjecucionActiva(tareaId);
     }
 
     private String programarAnalisis(SolicitudAnalisis solicitudAnalisis,
-                                     HttpRequestResponse evidenciaHttp,
-                                     String tipoTarea) {
+            HttpRequestResponse evidenciaHttp,
+            String tipoTarea) {
         if (solicitudAnalisis == null) {
             registrarError("No se pudo programar analisis: solicitud null");
             return null;
@@ -449,347 +333,32 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return null;
         }
 
-        depurarContextosHuerfanos();
-        final String url = solicitudAnalisis.obtenerUrl();
-        final AtomicReference<String> tareaIdRef = new AtomicReference<>();
-
-        if (gestorTareas != null) {
-            final String evidenciaId = almacenarEvidenciaSiDisponible(evidenciaHttp);
-            Tarea tarea = gestorTareas.crearTarea(
-                tipoTarea,
-                url,
-                Tarea.ESTADO_EN_COLA,
-                "Esperando analisis"
-            );
-            tareaIdRef.set(tarea.obtenerId());
-            contextosReintento.put(
-                tarea.obtenerId(),
-                new ContextoReintento(solicitudAnalisis, evidenciaId)
-            );
-            ejecutarAnalisisExistente(tarea.obtenerId(), solicitudAnalisis, evidenciaId);
-        }
-        return tareaIdRef.get();
+        // Usar TaskExecutionManager para programar análisis
+        return taskExecutionManager.programarAnalisis(solicitudAnalisis, evidenciaHttp, tipoTarea);
     }
 
-    private void ejecutarAnalisisExistente(String tareaId,
-                                          SolicitudAnalisis solicitudAnalisis,
-                                          String evidenciaId) {
-        // CONFIABILIDAD: Usar Normalizador.esVacio() para Strings (principio DRY)
-        if (Normalizador.esVacio(tareaId) || solicitudAnalisis == null) {
-            return;
-        }
 
-        final String url = solicitudAnalisis.obtenerUrl();
-        final String tareaIdFinal = tareaId;
-        if (!puedeIniciarAnalisis("Reintento", url)) {
-            if (gestorTareas != null) {
-                gestorTareas.actualizarTarea(
-                    tareaIdFinal,
-                    Tarea.ESTADO_ERROR,
-                    I18nUI.Consola.TAREA_BLOQUEADA_CONFIG_LLM()
-                );
-            }
-            return;
-        }
 
-        ejecutarEnEdt(() -> {
-            if (pestaniaPrincipal != null) {
-                pestaniaPrincipal.registrar("Iniciando análisis (continuar/reintentar) para: " + url);
-            }
-        });
 
-        // Usar AtomicReference solo donde es necesario (en ManejadorResultadoAI para consistencia con callback)
-        final AtomicReference<String> tareaIdRef = new AtomicReference<>(tareaIdFinal);
 
-        AnalizadorAI analizador = new AnalizadorAI(
-            solicitudAnalisis,
-            config.crearSnapshot(),
-            stdout,
-            stderr,
-            limitador,
-            new ManejadorResultadoAI(tareaIdRef, url, evidenciaId),
-            () -> {
-                // CONFIABILIDAD: Usar Normalizador.noEsVacio() para Strings
-                if (gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal)) {
-                    boolean marcada = gestorTareas.marcarTareaAnalizando(tareaIdFinal, "Analizando");
-                    if (!marcada) {
-                        rastrear("No se pudo marcar tarea como analizando (estado no valido): " + tareaIdFinal);
-                    }
-                }
-            },
-            gestorConsola,
-            () -> gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal) && gestorTareas.estaTareaCancelada(tareaIdFinal),
-            () -> gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal) && gestorTareas.estaTareaPausada(tareaIdFinal),
-            controlBackpressure
-        );
 
-        String id = tareaIdFinal;
 
-        try {
-            // Almacenar analizador ANTES de ejecutar para permitir cancelación inmediata
-            analizadoresActivos.put(id, analizador);
 
-            Future<?> future = executorService.submit(analizador);
-            ejecucionesActivas.put(id, future);
-            registrar("Hilo de analisis iniciado para: " + url + " (ID: " + id + ")");
-            rastrearEstadoCola();
-        } catch (RejectedExecutionException ex) {
-            // La cola está saturada, marcar error y limpiar recursos
-            analizadoresActivos.remove(id);
-            finalizarEjecucionActiva(id);
-            contextosReintento.remove(id);
-            eliminarEvidenciaSiDisponible(evidenciaId);
-            if (gestorTareas != null) {
-                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Descartada por saturación de cola");
-            }
-            if (estadisticas != null) {
-                estadisticas.incrementarErrores();
-            }
-            registrarError("Cola de análisis saturada, solicitud descartada: " + url);
-        } catch (Exception ex) {
-            // Cualquier otra excepción durante el submit
-            analizadoresActivos.remove(id);
-            if (gestorTareas != null) {
-                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error al iniciar análisis: " + ex.getMessage());
-            }
-            finalizarEjecucionActiva(id);
-            contextosReintento.remove(id);
-            eliminarEvidenciaSiDisponible(evidenciaId);
-            registrarError("Error al iniciar análisis para " + url + ": " + ex.getMessage());
-        }
-    }
-
-    private HttpRequestResponse construirEvidenciaHttp(HttpRequest solicitud, burp.api.montoya.http.message.responses.HttpResponse respuesta) {
-        if (solicitud == null || respuesta == null) {
-            return null;
-        }
-        try {
-            return HttpRequestResponse.httpRequestResponse(solicitud, respuesta);
-        } catch (Exception e) {
-            rastrear("No se pudo construir HttpRequestResponse para evidencia de Issue", e);
-            return null;
-        }
-    }
-
-    private HttpRequestResponse normalizarEvidenciaManual(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
-        if (solicitudRespuestaOriginal == null) {
-            rastrear("Analisis manual sin request/response original: se registraran hallazgos, pero no Issue.");
-            return null;
-        }
-
-        try {
-            if (!solicitudRespuestaOriginal.hasResponse()) {
-                rastrear("Analisis manual sin response asociada: se registraran hallazgos, pero no Issue.");
-                return null;
-            }
-            if (solicitudRespuestaOriginal.request() != null && solicitudRespuestaOriginal.response() != null) {
-                return solicitudRespuestaOriginal;
-            }
-        } catch (Exception e) {
-            rastrear("No se pudo reutilizar la evidencia original del analisis manual", e);
-        }
-
-        try {
-            return construirEvidenciaHttp(solicitud, solicitudRespuestaOriginal.response());
-        } catch (Exception e) {
-            rastrear("No se pudo construir evidencia desde analisis manual", e);
-            return null;
-        }
-    }
-
-    private String almacenarEvidenciaSiDisponible(HttpRequestResponse evidenciaHttp) {
-        if (evidenciaHttp == null) {
-            return null;
-        }
-        try {
-            return almacenEvidencia.guardar(evidenciaHttp);
-        } catch (Exception e) {
-            rastrear("No se pudo persistir evidencia HTTP", e);
-            return null;
-        }
-    }
-
-    private HttpRequestResponse resolverEvidenciaHttp(String evidenciaId) {
-        if (Normalizador.esVacio(evidenciaId)) {
-            return null;
-        }
-        try {
-            return almacenEvidencia.obtener(evidenciaId);
-        } catch (Exception e) {
-            rastrear("No se pudo resolver evidencia HTTP", e);
-            return null;
-        }
-    }
-
-    private void eliminarEvidenciaSiDisponible(String evidenciaId) {
-        if (Normalizador.esVacio(evidenciaId)) {
-            return;
-        }
-        try {
-            almacenEvidencia.eliminar(evidenciaId);
-        } catch (Exception e) {
-            rastrear("No se pudo eliminar evidencia HTTP", e);
-        }
-    }
-
-    private void finalizarEjecucionActiva(String tareaId) {
-        if (Normalizador.esVacio(tareaId)) {
-            return;
-        }
-        ejecucionesActivas.remove(tareaId);
-        analizadoresActivos.remove(tareaId);
-    }
-
-    private void depurarContextosHuerfanos() {
-        if (gestorTareas == null || contextosReintento.isEmpty()) {
-            return;
-        }
-        long ahora = System.currentTimeMillis();
-        Iterator<Map.Entry<String, ContextoReintento>> it = contextosReintento.entrySet().iterator();
-
-        while (it.hasNext()) {
-            Map.Entry<String, ContextoReintento> entry = it.next();
-            if (entry == null) {
-                continue;
-            }
-
-            String tareaId = entry.getKey();
-            ContextoReintento contexto = entry.getValue();
-
-            // CONFIABILIDAD: Usar Normalizador.esVacio() para Strings (principio DRY)
-            if (Normalizador.esVacio(tareaId) || contexto == null) {
-                it.remove();
-                continue;
-            }
-
-            // Obtener estado actual de la tarea
-            String estado = null;
-            Tarea tarea = gestorTareas.obtenerTarea(tareaId);
-            if (tarea != null) {
-                estado = tarea.obtenerEstado();
-            }
-
-            // Calcular TTL según estado (state-aware policy)
-            long ttlAplicable = calcularTTLParaEstado(estado);
-
-            // Decidir purga: huérfano O expirado
-            boolean debePurgar = (estado == null) ||  // Tarea huérfana
-                                (ttlAplicable == 0L) || // TTL inmediato (COMPLETADO)
-                                (ttlAplicable != Long.MAX_VALUE &&
-                                 (ahora - contexto.creadoMs) > ttlAplicable); // Expiró
-
-            if (debePurgar) {
-                eliminarEvidenciaSiDisponible(contexto.evidenciaId);
-                it.remove();
-            }
-        }
-
-        // LRU eviction solo si todavía excede límite después de purga state-aware
-        if (contextosReintento.size() <= MAX_CONTEXTO_REINTENTO) {
-            return;
-        }
-        List<Map.Entry<String, ContextoReintento>> candidatos = new ArrayList<>(contextosReintento.entrySet());
-        candidatos.sort((a, b) -> Long.compare(
-            a != null && a.getValue() != null ? a.getValue().creadoMs : 0L,
-            b != null && b.getValue() != null ? b.getValue().creadoMs : 0L
-        ));
-        int excedente = candidatos.size() - MAX_CONTEXTO_REINTENTO;
-        for (int i = 0; i < excedente; i++) {
-            Map.Entry<String, ContextoReintento> entry = candidatos.get(i);
-            if (entry == null) {
-                continue;
-            }
-            ContextoReintento contexto = contextosReintento.remove(entry.getKey());
-            if (contexto != null) {
-                eliminarEvidenciaSiDisponible(contexto.evidenciaId);
-            }
-        }
-    }
-
-    /**
-     * Calcula el TTL aplicable para un contexto basado en el estado de la tarea.
-     * Sigue principio DRY reutilizando Tarea.esEstadoReintentable().
-     *
-     * Política de retención state-aware:
-     * - COMPLETADO: 0ms (purga inmediata, no necesita retry)
-     * - ERROR/CANCELADO: 5 minutos (ventana para reintento manual)
-     * - EN_COLA/ANALIZANDO/PAUSADO: Long.MAX_VALUE (mantener hasta cambio)
-     *
-     * @param estado Estado actual de la tarea (null si tarea no existe)
-     * @return TTL en milisegundos para este estado
-     */
-    private long calcularTTLParaEstado(String estado) {
-        // Tarea no existe (huérfana) o estado null
-        if (estado == null) {
-            return TTL_CONTEXTO_COMPLETADO_MS;
-        }
-
-        // Éxito = no necesita reintento
-        if (Tarea.ESTADO_COMPLETADO.equals(estado)) {
-            return TTL_CONTEXTO_COMPLETADO_MS;
-        }
-
-        // Error/Cancelado = reintentable, mantener 5 minutos
-        if (Tarea.esEstadoReintentable(estado)) {
-            return TTL_CONTEXTO_REINTENTABLE_MS;
-        }
-
-        // Estados activos (EN_COLA, ANALIZANDO, PAUSADO)
-        // Mantener hasta cambio de estado
-        return TTL_CONTEXTO_ACTIVO_MS;
-    }
-
-    private void rastrearEstadoCola() {
-        if (!config.esDetallado()) {
-            return;
-        }
-        rastrear(
-            "Estado cola analisis: activos=" + executorService.getActiveCount() +
-                ", enCola=" + executorService.getQueue().size() +
-                ", completadas=" + executorService.getCompletedTaskCount()
-        );
-    }
 
     private void guardarHallazgoEnIssuesSiAplica(Hallazgo hallazgo, String evidenciaId) {
         if (hallazgo == null) {
             return;
         }
-        if (!esBurpProfessional) {
-            registrarIssuesNoDisponiblesPorEdicionUnaVez();
-            return;
-        }
-        HttpRequestResponse evidenciaIssue = resolverEvidenciaHttp(evidenciaId);
-        if (evidenciaIssue == null) {
-            evidenciaIssue = hallazgo.obtenerEvidenciaHttp();
-        }
-        if (evidenciaIssue == null) {
-            rastrear("Hallazgo sin evidencia HTTP: no se puede crear AuditIssue");
-            return;
-        }
-
+        
         boolean enviarIssues = pestaniaPrincipal != null
-            && pestaniaPrincipal.obtenerPanelHallazgos() != null
-            && pestaniaPrincipal.obtenerPanelHallazgos().isGuardadoAutomaticoIssuesActivo();
+                && pestaniaPrincipal.obtenerPanelHallazgos() != null
+                && pestaniaPrincipal.obtenerPanelHallazgos().isGuardadoAutomaticoIssuesActivo();
         if (!enviarIssues) {
             rastrear("Hallazgo omitido en Issues (Autoguardado deshabilitado): " + hallazgo.obtenerHallazgo());
             return;
         }
-
-        try {
-            if (api == null || api.siteMap() == null) {
-                registrarError("No se pudo guardar AuditIssue: SiteMap API no disponible");
-                return;
-            }
-            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidenciaIssue);
-            if (!guardado) {
-                rastrear("AuditIssue no creado: hallazgo sin datos suficientes");
-                return;
-            }
-            rastrear("AuditIssue creado en Burp Suite para: " + hallazgo.obtenerHallazgo());
-        } catch (Exception e) {
-            registrarError("Error al crear AuditIssue en Burp Suite: " + e.getMessage());
-            rastrear("Stack trace:", e);
-        }
+        
+        evidenceManager.guardarHallazgoComoIssue(api, hallazgo, evidenciaId);
     }
 
     private void registrarIssuesNoDisponiblesPorEdicionUnaVez() {
@@ -813,42 +382,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         return hallazgo.conEvidenciaId(evidenciaId);
     }
 
-    private boolean estaEnScope(HttpRequest solicitud) {
-        if (solicitud == null) {
-            return false;
-        }
 
-        try {
-            String url = solicitud.url();
-            if (Normalizador.esVacio(url)) {
-                return false;
-            }
-
-            if (api != null && api.scope() != null) {
-                return api.scope().isInScope(url);
-            }
-
-            return false;
-
-        } catch (Exception e) {
-            registrarError("Error al verificar scope: " + e.getMessage());
-            return false;
-        }
-    }
-
-    private boolean esRecursoEstatico(String url) {
-        if (Normalizador.esVacio(url)) {
-            return false;
-        }
-
-        boolean esEstatico = HttpUtils.esRecursoEstatico(url);
-
-        if (esEstatico && config.esDetallado()) {
-            rastrear("Recurso coincidio con filtro estatico: " + url);
-        }
-
-        return esEstatico;
-    }
 
     private boolean puedeIniciarAnalisis(String origen, String url) {
         ConfiguracionAPI.CodigoValidacionConsulta codigo = codigoValidacionConsulta();
@@ -871,7 +405,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 rastrear("DIAGNOSTICO: Configuración multi-proveedor al inicio:");
                 rastrear("DIAGNOSTICO:   - Habilitado: " + multiHabilitado);
                 rastrear("DIAGNOSTICO:   - Proveedores: " +
-                         (proveedores != null ? proveedores.size() + " elemento(s)" : "null"));
+                        (proveedores != null ? proveedores.size() + " elemento(s)" : "null"));
                 if (proveedores != null && !proveedores.isEmpty()) {
                     rastrear("DIAGNOSTICO:   - Lista: " + String.join(", ", proveedores));
                 }
@@ -887,12 +421,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                     }
                 }
                 registrar(
-                    I18nUI.Consola.ESTADO_INICIAL_LLM_MULTIPROVEEDOR(
-                        proveedorPrincipal,
-                        config.obtenerModelo(),
-                        proveedoresAdicionales
-                    )
-                );
+                        I18nUI.Consola.ESTADO_INICIAL_LLM_MULTIPROVEEDOR(
+                                proveedorPrincipal,
+                                config.obtenerModelo(),
+                                proveedoresAdicionales));
                 return;
             }
 
@@ -902,19 +434,18 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 int numProveedores = proveedores != null ? proveedores.size() : 0;
                 if (numProveedores <= 1) {
                     registrar("AVISO: Multi-proveedor habilitado con " + numProveedores +
-                             " proveedor(s). Se usará proveedor único: " + config.obtenerProveedorAI());
+                            " proveedor(s). Se usará proveedor único: " + config.obtenerProveedorAI());
                 }
             }
 
             registrar(
-                I18nUI.Consola.ESTADO_INICIAL_LLM_LISTO(
-                    config.obtenerProveedorAI(),
-                    config.obtenerModelo()
-                )
-            );
+                    I18nUI.Consola.ESTADO_INICIAL_LLM_LISTO(
+                            config.obtenerProveedorAI(),
+                            config.obtenerModelo()));
             return;
         }
-        String razon = config != null ? config.validarParaConsultaModelo() : I18nUI.Configuracion.MSG_CONFIGURACION_NULA();
+        String razon = config != null ? config.validarParaConsultaModelo()
+                : I18nUI.Configuracion.MSG_CONFIGURACION_NULA();
         registrarError(I18nUI.Consola.ESTADO_INICIAL_LLM_BLOQUEADO_CABECERA(razon));
         registrar(I18nUI.Consola.ESTADO_INICIAL_LLM_BLOQUEADO_ACCION());
     }
@@ -928,10 +459,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void registrarAlertaConfiguracionLimitada(
-        ConfiguracionAPI.CodigoValidacionConsulta codigo,
-        String origen,
-        String url
-    ) {
+            ConfiguracionAPI.CodigoValidacionConsulta codigo,
+            String origen,
+            String url) {
         if (codigo == null || codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK) {
             return;
         }
@@ -944,30 +474,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             alertasConfiguracionEmitidas.put(codigo, ahora);
         }
 
-        String razon = config != null ? config.validarParaConsultaModelo() : I18nUI.Configuracion.MSG_CONFIGURACION_NULA();
+        String razon = config != null ? config.validarParaConsultaModelo()
+                : I18nUI.Configuracion.MSG_CONFIGURACION_NULA();
         String origenSeguro = Normalizador.noEsVacio(origen) ? origen : "desconocido";
         String urlSegura = Normalizador.noEsVacio(url) ? url : "[URL NULL]";
         registrarError(I18nUI.Consola.ANALISIS_BLOQUEADO_CONFIG(razon, origenSeguro, urlSegura));
     }
 
-    private String obtenerContentTypeRespuesta(HttpResponseReceived respuestaRecibida) {
-        if (respuestaRecibida == null || respuestaRecibida.headers() == null) {
-            return "";
-        }
-        try {
-            for (burp.api.montoya.http.message.HttpHeader header : respuestaRecibida.headers()) {
-                if (header == null || header.name() == null) {
-                    continue;
-                }
-                if ("Content-Type".equalsIgnoreCase(header.name())) {
-                    return header.value() != null ? header.value() : "";
-                }
-            }
-        } catch (Exception e) {
-            rastrear("No se pudo extraer Content-Type de respuesta", e);
-        }
-        return "";
-    }
+
 
     private void registrar(String mensaje) {
         registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[BurpIA] ");
@@ -988,7 +502,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return;
         }
         String mensaje = proveedorMensaje.get();
-        registrarInterno(mensaje != null ? mensaje : "", GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
+        registrarInterno(mensaje != null ? mensaje : "", GestorConsolaGUI.TipoLog.VERBOSE, false,
+                "[BurpIA] [RASTREO] ");
     }
 
     private void registrarError(String mensaje) {
@@ -1037,47 +552,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
     }
 
-    private String abreviarHash(String hashSolicitud) {
-        if (Normalizador.esVacio(hashSolicitud)) {
-            return "";
-        }
-        return hashSolicitud.substring(0, Math.min(8, hashSolicitud.length()));
-    }
+
 
     public void shutdown() {
-        // Cancelar todas las llamadas HTTP activas primero (libera sockets inmediatamente)
-        for (com.burpia.analyzer.AnalizadorAI analizador : analizadoresActivos.values()) {
-            if (analizador != null) {
-                analizador.cancelarLlamadaHttpActiva();
-            }
-        }
-        analizadoresActivos.clear();
-
-        // Después cancelar los futures
-        for (Map.Entry<String, Future<?>> entry : ejecucionesActivas.entrySet()) {
-            if (entry != null && entry.getValue() != null) {
-                entry.getValue().cancel(true);
-            }
-        }
-        ejecucionesActivas.clear();
-        contextosReintento.clear();
+        // Usar TaskExecutionManager para shutdown
+        taskExecutionManager.shutdown();
+        
         alertasConfiguracionEmitidas.clear();
-        almacenEvidencia.limpiarCacheMemoria();
-
-        if (executorService != null && !executorService.isShutdown()) {
-            registrar("Deteniendo ExecutorService de ManejadorHttpBurpIA...");
-            executorService.shutdown();
-            try {
-                if (!executorService.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS)) {
-                    registrar("ExecutorService no termino en 5 segundos, forzando shutdown...");
-                    executorService.shutdownNow();
-                }
-            } catch (InterruptedException e) {
-                registrarError("Error al esperar terminacion de ExecutorService: " + e.getMessage());
-                executorService.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
-        }
+        evidenceManager.limpiarEvidenciasAntiguas();
     }
 
     public void pausarCaptura() {
@@ -1094,163 +576,5 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         return capturaActiva;
     }
 
-    private class ManejadorResultadoAI implements AnalizadorAI.Callback {
-        private final AtomicReference<String> tareaIdRef;
-        private final String url;
-        private final String evidenciaId;
 
-        ManejadorResultadoAI(AtomicReference<String> tareaIdRef, String url, String evidenciaId) {
-            this.tareaIdRef = tareaIdRef;
-            this.url = url;
-            this.evidenciaId = evidenciaId;
-        }
-
-        /**
-         * Verifica si la tarea está cancelada (sin verificar finalización).
-         * Usado en alErrorAnalisis donde queremos marcar errores incluso si está finalizada.
-         *
-         * @return true si la tarea está cancelada, false en caso contrario
-         */
-        private boolean estaTareaCancelada(String id) {
-            if (gestorTareas == null || Normalizador.esVacio(id)) {
-                return false;
-            }
-            return gestorTareas.estaTareaCancelada(id);
-        }
-
-        /**
-         * Verifica si el resultado debe descartarse (cancelado O finalizado).
-         * Obtiene la tarea UNA sola vez (eficiencia - solo una adquisición de candado).
-         * Usado en alCompletarAnalisis donde no queremos sobrescribir estados finales.
-         *
-         * @return true si el resultado debe descartarse, false si debe procesarse
-         */
-        private boolean debeDescartarResultado(String id) {
-            if (gestorTareas == null || Normalizador.esVacio(id)) {
-                return false;
-            }
-
-            // Obtener tarea UNA vez para evitar múltiples adquisiciones de candado
-            Tarea tarea = gestorTareas.obtenerTarea(id);
-            if (tarea == null) {
-                return false;
-            }
-
-            // Verificar cancelación primero
-            if (Tarea.ESTADO_CANCELADO.equals(tarea.obtenerEstado())) {
-                registrar("Resultado descartado: tarea cancelada: " + url);
-                return true;
-            }
-
-            // Verificar finalización (solo para alCompletarAnalisis)
-            if (tarea.esFinalizada()) {
-                registrar("Tarea ya finalizada (" + tarea.obtenerEstado() + "), descartando resultado: " + url);
-                return true;
-            }
-
-            return false;
-        }
-
-        /**
-         * Limpia los recursos asociados a una tarea de forma centralizada.
-         * Elimina duplicación de código en bloques finally.
-         */
-        private void limpiarRecursosTarea(String id) {
-            finalizarEjecucionActiva(id);
-            contextosReintento.remove(id);
-        }
-
-        /**
-         * Actualiza las estadísticas en el EDT de forma centralizada.
-         * Elimina duplicación de código en callbacks.
-         */
-        private void actualizarEstadisticasEnEdt() {
-            ejecutarEnEdt(() -> {
-                if (pestaniaPrincipal != null) {
-                    pestaniaPrincipal.actualizarEstadisticas();
-                }
-            });
-        }
-
-        @Override
-        public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
-            final String id = tareaIdRef.get();
-
-            try {
-                if (debeDescartarResultado(id)) {
-                    return;
-                }
-
-                if (estadisticas != null) estadisticas.incrementarAnalizados();
-
-                // CONFIABILIDAD: Usar Normalizador.noEsVacio() para Strings
-                if (gestorTareas != null && Normalizador.noEsVacio(id)) {
-                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
-                        "Completado: " + (resultado != null ? resultado.obtenerNumeroHallazgos() : 0) + " hallazgos");
-                }
-
-                if (resultado != null && resultado.obtenerHallazgos() != null) {
-                    List<Hallazgo> hallazgosValidos = new ArrayList<>();
-                    for (Hallazgo hallazgo : resultado.obtenerHallazgos()) {
-                        if (hallazgo == null) continue;
-                        Hallazgo hConEvidencia = adjuntarEvidenciaSiDisponible(hallazgo, evidenciaId);
-                        hallazgosValidos.add(hConEvidencia);
-                        if (estadisticas != null) {
-                            String sev = hConEvidencia.obtenerSeveridad();
-                            if (sev != null) estadisticas.incrementarHallazgoSeveridad(sev);
-                        }
-                        guardarHallazgoEnIssuesSiAplica(hConEvidencia, evidenciaId);
-                    }
-                    if (modeloTablaHallazgos != null && !hallazgosValidos.isEmpty()) {
-                        modeloTablaHallazgos.agregarHallazgos(hallazgosValidos);
-                    }
-                }
-
-                String sevMax = resultado != null ? resultado.obtenerSeveridadMaxima() : "N/A";
-                registrar("Analisis completado: " + url + " (severidad maxima: " + sevMax + ")");
-
-                actualizarEstadisticasEnEdt();
-            } finally {
-                limpiarRecursosTarea(id);
-            }
-        }
-
-        @Override
-        public void alErrorAnalisis(String error) {
-            final String id = tareaIdRef.get();
-
-            try {
-                // Solo verificar cancelación, NO finalización (queremos marcar errores de tareas finalizadas)
-                if (estaTareaCancelada(id)) {
-                    registrar("Analisis detenido por cancelación: " + url);
-                    return;
-                }
-
-                if (estadisticas != null) estadisticas.incrementarErrores();
-                // CONFIABILIDAD: Usar Normalizador.noEsVacio() para Strings
-                if (gestorTareas != null && Normalizador.noEsVacio(id)) {
-                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error: " + (error != null ? error : "Error desconocido"));
-                }
-                registrarError("Analisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
-                actualizarEstadisticasEnEdt();
-            } finally {
-                limpiarRecursosTarea(id);
-            }
-        }
-
-        @Override
-        public void alCanceladoAnalisis() {
-            final String id = tareaIdRef.get();
-
-            try {
-                // CONFIABILIDAD: Usar Normalizador.noEsVacio() para Strings
-                if (gestorTareas != null && Normalizador.noEsVacio(id)) {
-                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
-                }
-                registrar("Analisis cancelado: " + url);
-            } finally {
-                limpiarRecursosTarea(id);
-            }
-        }
-    }
 }

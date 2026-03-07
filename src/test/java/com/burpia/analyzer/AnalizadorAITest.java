@@ -165,7 +165,7 @@ class AnalizadorAITest {
     }
 
     @Test
-    @DisplayName("Resuelve cliente HTTP según la configuración actual")
+    @DisplayName("AnalizadorHTTP resuelve cliente HTTP según la configuración actual")
     void testResuelveClienteHttpSegunConfiguracionActual() throws Exception {
         ConfiguracionAPI config = crearConfiguracionBasica(PROVEEDOR_ZAI);
         config.establecerModeloParaProveedor(PROVEEDOR_ZAI, MODELO_GLM5);
@@ -175,9 +175,16 @@ class AnalizadorAITest {
         SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com", "GET", "hash-timeout");
         AnalizadorAI analizador = crearAnalizadorParaTest(config, solicitud);
 
-        Method metodoResolver = AnalizadorAI.class.getDeclaredMethod("resolverClienteHttpActual");
-        metodoResolver.setAccessible(true);
-        okhttp3.OkHttpClient clienteInicial = (okhttp3.OkHttpClient) metodoResolver.invoke(analizador);
+        // Acceder al campo analizadorHTTP mediante reflexión
+        Field campoAnalizadorHTTP = AnalizadorAI.class.getDeclaredField("analizadorHTTP");
+        campoAnalizadorHTTP.setAccessible(true);
+        Object analizadorHTTP = campoAnalizadorHTTP.get(analizador);
+
+        // Acceder al método obtenerClienteHttp del AnalizadorHTTP
+        Class<?> claseAnalizadorHTTP = Class.forName("com.burpia.analyzer.AnalizadorHTTP");
+        Method metodoObtener = claseAnalizadorHTTP.getDeclaredMethod("obtenerClienteHttp");
+        metodoObtener.setAccessible(true);
+        okhttp3.OkHttpClient clienteInicial = (okhttp3.OkHttpClient) metodoObtener.invoke(analizadorHTTP);
         assertEquals(180_000, clienteInicial.readTimeoutMillis(),
             "El timeout inicial debe respetar la configuración del modelo");
 
@@ -186,11 +193,12 @@ class AnalizadorAITest {
         configActualizada.establecerTiempoEsperaAI(45);
         configActualizada.establecerTiempoEsperaParaModelo(PROVEEDOR_OPENAI, "gpt-5-mini", 45);
 
-        Field campoConfig = AnalizadorAI.class.getDeclaredField("config");
+        // Actualizar el campo config del analizadorHTTP
+        Field campoConfig = claseAnalizadorHTTP.getDeclaredField("config");
         campoConfig.setAccessible(true);
-        campoConfig.set(analizador, configActualizada);
+        campoConfig.set(analizadorHTTP, configActualizada);
 
-        okhttp3.OkHttpClient clienteActualizado = (okhttp3.OkHttpClient) metodoResolver.invoke(analizador);
+        okhttp3.OkHttpClient clienteActualizado = (okhttp3.OkHttpClient) metodoObtener.invoke(analizadorHTTP);
         assertEquals(45_000, clienteActualizado.readTimeoutMillis(),
             "El timeout debe recalcularse si cambia la configuración efectiva");
     }
