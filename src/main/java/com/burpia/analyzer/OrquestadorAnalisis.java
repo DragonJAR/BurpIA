@@ -788,6 +788,10 @@ public class OrquestadorAnalisis {
     }
 
     private String resumirParaLog(String texto) {
+        // Cuando el modo detallado está activo, mostrar todo sin truncar
+        if (config != null && config.esDetallado()) {
+            return texto != null ? texto : "";
+        }
         if (Normalizador.esVacio(texto)) {
             return "";
         }
