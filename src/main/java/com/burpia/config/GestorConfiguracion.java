@@ -343,6 +343,23 @@ public class GestorConfiguracion {
             config.establecerEstadoUI(archivo.estadoUI);
         }
 
+        // Niveles de logging
+        if (archivo.nivelErrorHabilitado != null) {
+            config.establecerNivelErrorHabilitado(archivo.nivelErrorHabilitado);
+        }
+        if (archivo.nivelWarnHabilitado != null) {
+            config.establecerNivelWarnHabilitado(archivo.nivelWarnHabilitado);
+        }
+        if (archivo.nivelInfoHabilitado != null) {
+            config.establecerNivelInfoHabilitado(archivo.nivelInfoHabilitado);
+        }
+        if (archivo.nivelDebugHabilitado != null) {
+            config.establecerNivelDebugHabilitado(archivo.nivelDebugHabilitado);
+        }
+        if (archivo.nivelTraceHabilitado != null) {
+            config.establecerNivelTraceHabilitado(archivo.nivelTraceHabilitado);
+        }
+
         return config;
     }
 
@@ -391,6 +408,13 @@ public class GestorConfiguracion {
         archivo.proveedoresMultiConsulta = Normalizador.noEsVacia(proveedores)
             ? new ArrayList<>(proveedores)
             : null;
+
+        // Niveles de logging
+        archivo.nivelErrorHabilitado = config.esNivelErrorHabilitado();
+        archivo.nivelWarnHabilitado = config.esNivelWarnHabilitado();
+        archivo.nivelInfoHabilitado = config.esNivelInfoHabilitado();
+        archivo.nivelDebugHabilitado = config.esNivelDebugHabilitado();
+        archivo.nivelTraceHabilitado = config.esNivelTraceHabilitado();
 
         return archivo;
     }
@@ -507,6 +531,13 @@ public class GestorConfiguracion {
 
         // UI State Persistence - Estado general
         private Map<String, String> estadoUI;
+
+        // Niveles de logging
+        private Boolean nivelErrorHabilitado;
+        private Boolean nivelWarnHabilitado;
+        private Boolean nivelInfoHabilitado;
+        private Boolean nivelDebugHabilitado;
+        private Boolean nivelTraceHabilitado;
 
         // Multi-Proveedor Configuration
         private Boolean multiProveedorHabilitado;

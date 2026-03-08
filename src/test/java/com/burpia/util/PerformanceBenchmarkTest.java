@@ -6,6 +6,7 @@ import com.burpia.model.Hallazgo;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
+import com.burpia.util.RutasBurpIA;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,9 @@ class PerformanceBenchmarkTest {
         if (userHomeOriginal != null) {
             System.setProperty("user.home", userHomeOriginal);
         }
+        // CRÍTICO: Limpiar caché de RutasBurpIA para evitar que apunte al temp dir
+        RutasBurpIA.limpiarCacheParaTests();
+        RutasBurpIA.establecerSuffixConfig(null);
         limpiarModelosSwing();
         limpiarDirectorioTemporal();
     }

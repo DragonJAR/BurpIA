@@ -24,6 +24,10 @@ public final class RutasBurpIA {
 
     /** Nombre del archivo de configuración JSON. */
     private static final String ARCHIVO_CONFIG = "config.json";
+    
+    /** Sufijo opcional para el archivo de configuración (usado en tests). */
+    private static final String CONFIG_SUFFIX_KEY = "burpia.config.suffix";
+    private static String configSuffixCache;
 
     /** Nombre del directorio para almacenar evidencias HTTP. */
     private static final String DIRECTORIO_EVIDENCIA = "evidence";
@@ -63,7 +67,27 @@ public final class RutasBurpIA {
      * @return la ruta absoluta al archivo de configuración JSON
      */
     public static Path obtenerRutaConfig() {
-        return obtenerDirectorioBase().resolve(ARCHIVO_CONFIG);
+        return obtenerDirectorioBase().resolve(obtenerNombreArchivoConfig());
+    }
+    
+    /**
+     * Obtiene el nombre del archivo de configuración con el sufijo opcional.
+     * Por defecto es "config.json", pero puede ser "config-test.json" si se configura.
+     *
+     * @return nombre del archivo de configuración
+     */
+    public static String obtenerNombreArchivoConfig() {
+        if (configSuffixCache == null) {
+            configSuffixCache = System.getProperty(CONFIG_SUFFIX_KEY, "");
+        }
+        String suffix = configSuffixCache;
+        if (suffix == null) {
+            suffix = "";
+        }
+        if (!suffix.isEmpty() && !suffix.startsWith("-")) {
+            suffix = "-" + suffix;
+        }
+        return suffix.isEmpty() ? ARCHIVO_CONFIG : "config" + suffix + ".json";
     }
 
     /**
@@ -113,6 +137,27 @@ public final class RutasBurpIA {
     public static void limpiarCacheParaTests() {
         synchronized (RutasBurpIA.class) {
             cacheHomeUsuario = null;
+            configSuffixCache = null;
+        }
+    }
+    
+    /**
+     * Establece un sufijo para el archivo de configuración.
+     * <p>
+     * Por ejemplo, si el sufijo es "test", usará "config-test.json".
+     * </p>
+     *
+     * @param suffix el sufijo a usar (sin guiones), null para resetear
+     */
+    public static void establecerSuffixConfig(String suffix) {
+        synchronized (RutasBurpIA.class) {
+            configSuffixCache = suffix;
+            // Also set the system property so it persists across the JVM
+            if (suffix != null) {
+                System.setProperty(CONFIG_SUFFIX_KEY, suffix);
+            } else {
+                System.clearProperty(CONFIG_SUFFIX_KEY);
+            }
         }
     }
 

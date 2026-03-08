@@ -186,7 +186,10 @@ public final class UIStateManager {
             }
             
             // Si no se encontró, usar la pestaña por defecto
-            tabbedPane.setSelectedIndex(pestaniaPorDefecto);
+            // Validar rango para evitar IndexOutOfBoundsException
+            int tabCount = tabbedPane.getTabCount();
+            int indiceValido = Math.max(0, Math.min(pestaniaPorDefecto, tabCount - 1));
+            tabbedPane.setSelectedIndex(indiceValido);
             
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG, "Error al restaurar última pestaña seleccionada", e);

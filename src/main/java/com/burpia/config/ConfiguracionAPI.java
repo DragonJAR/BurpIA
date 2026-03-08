@@ -57,6 +57,13 @@ public class ConfiguracionAPI {
     private boolean ignorarErroresSSL;
     private boolean soloProxy;
     private String nombreFuenteEstandar;
+    
+    // Configuración de niveles de logging
+    private boolean nivelErrorHabilitado = true;  // Siempre visible
+    private boolean nivelWarnHabilitado = true;   // Siempre visible
+    private boolean nivelInfoHabilitado = true;   // Siempre visible
+    private boolean nivelDebugHabilitado = false;  // Solo en modo detallado
+    private boolean nivelTraceHabilitado = false;  // Solo en modo detallado
     private int tamanioFuenteEstandar;
     private String nombreFuenteMono;
     private int tamanioFuenteMono;
@@ -217,6 +224,17 @@ public class ConfiguracionAPI {
 
     public void establecerDetallado(boolean detallado) {
         this.detallado = detallado;
+        
+        // Auto-configurar niveles de logging basado en modo detallado
+        if (detallado) {
+            // En modo detallado, habilitar todos los niveles
+            this.nivelDebugHabilitado = true;
+            this.nivelTraceHabilitado = true;
+        } else {
+            // En modo normal, deshabilitar niveles técnicos
+            this.nivelDebugHabilitado = false;
+            this.nivelTraceHabilitado = false;
+        }
     }
 
     public String obtenerProveedorAI() {
@@ -1488,4 +1506,50 @@ public class ConfiguracionAPI {
         return disponibles;
     }
 
+    // ==================== MÉTODOS DE NIVELES DE LOGGING ====================
+
+    public boolean esNivelErrorHabilitado() {
+        return nivelErrorHabilitado;
+    }
+
+    public void establecerNivelErrorHabilitado(boolean habilitado) {
+        this.nivelErrorHabilitado = habilitado; // Siempre visible
+    }
+
+    public boolean esNivelWarnHabilitado() {
+        return nivelWarnHabilitado;
+    }
+
+    public void establecerNivelWarnHabilitado(boolean habilitado) {
+        this.nivelWarnHabilitado = habilitado; // Siempre visible
+    }
+
+    public boolean esNivelInfoHabilitado() {
+        return nivelInfoHabilitado;
+    }
+
+    public void establecerNivelInfoHabilitado(boolean habilitado) {
+        this.nivelInfoHabilitado = habilitado; // Siempre visible
+    }
+
+    public boolean esNivelDebugHabilitado() {
+        return nivelDebugHabilitado;
+    }
+
+    public void establecerNivelDebugHabilitado(boolean habilitado) {
+        this.nivelDebugHabilitado = habilitado && esDetallado(); // Solo si está en modo detallado
+    }
+
+    public boolean esNivelTraceHabilitado() {
+        return nivelTraceHabilitado;
+    }
+
+    public void establecerNivelTraceHabilitado(boolean habilitado) {
+        this.nivelTraceHabilitado = habilitado && esDetallado(); // Solo si está en modo detallado
+    }
+
+    // Método helper para verificar si algún nivel de logging está habilitado
+    public boolean hayAlgúnNivelLoggingHabilitado() {
+        return nivelErrorHabilitado || nivelWarnHabilitado || nivelInfoHabilitado;
+    }
 }
