@@ -6,7 +6,7 @@
 
 BurpIA es una extensión para Burp Suite que analiza tráfico HTTP con LLMs para ayudarte a detectar hallazgos potenciales de seguridad en menos tiempo.
 
-**Versión actual:** `1.0.2`
+**Versión actual:** `1.5.0`
 
 English version: [README.en.md](README.en.md)
 
@@ -53,9 +53,9 @@ English version: [README.en.md](README.en.md)
 
 ---
 
-## Estado actual (v1.0.2)
+## Estado actual (v1.5.0)
 
-BurpIA está actualizado a `v1.0.2`.
+BurpIA está actualizado a `v1.5.0`.
 Consulta el resumen de cambios en **Historial de versiones**.
 
 
@@ -63,7 +63,15 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ## Historial de versiones
 
-### v1.0.2 (actual)
+### v1.5.0 (actual)
+
+- Análisis de flujo contextual: analiza múltiples peticiones HTTP como un flujo completo en una sola consulta al LLM.
+- Análisis de flujo con respuestas: ahora incluye tanto peticiones como respuestas en el análisis.
+- Menú contextual mejorado: nuevas opciones "🔍 Analizar este flujo" y "🤖 Enviar este flujo al agente" en el menú del proxy history.
+- Envío de flujo al agente: envía el flujo completo (peticiones + respuestas) al agente CLI con prompt especializado.
+- Eliminación de análisis bulk: funcionalidad removida para simplificar el proyecto.
+
+### v1.0.2
 
 - Nuevo sistema multiproveedor: permite consultar peticiones en hasta 5 proveedores distintos.
 - Sistema de notificación de actualizaciones.
@@ -88,10 +96,10 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ## Inicio rápido (3 minutos)
 
-1. Descarga el archivo `BurpIA-1.0.2.jar`.
+1. Descarga el archivo `BurpIA-1.5.0.jar`.
 2. Carga la extensión en Burp Suite:
     - Ve a la pestaña `Extensions` -> `Add`.
-    - Selecciona el archivo `BurpIA-1.0.2.jar`.
+    - Selecciona el archivo `BurpIA-1.5.0.jar`.
 3. Configura BurpIA en la pestaña del plugin:
     - Selecciona tu **Proveedor LLM**.
     - Ingresa la **API Key** (si aplica).

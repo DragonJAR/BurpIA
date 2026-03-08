@@ -6,7 +6,7 @@
 
 BurpIA is a Burp Suite extension that analyzes HTTP traffic with LLMs to help you detect potential security findings in less time.
 
-**Current version:** `1.0.2`
+**Current version:** `1.5.0`
 
 Spanish version: [README.md](README.md)
 
@@ -53,9 +53,9 @@ Spanish version: [README.md](README.md)
 
 ---
 
-## Current status (v1.0.2)
+## Current status (v1.5.0)
 
-BurpIA is updated to `v1.0.2`.
+BurpIA is updated to `v1.5.0`.
 See the change summary in **Version history**.
 
 
@@ -63,7 +63,15 @@ See the change summary in **Version history**.
 
 ## Version history
 
-### v1.0.2 (current)
+### v1.5.0 (current)
+
+- Contextual flow analysis: analyzes multiple HTTP requests as a complete flow in a single LLM query.
+- Flow analysis with responses: now includes both requests and responses in the analysis.
+- Improved context menu: new options "🔍 Analyze this flow" and "🤖 Send this flow to agent" in proxy history menu.
+- Send flow to agent: sends the complete flow (requests + responses) to the CLI agent with specialized prompt.
+- Bulk analysis removal: functionality removed to simplify the project.
+
+### v1.0.2
 
 - New multi-provider system: check requests using up to 5 different providers.
 - Update notification system.
@@ -88,10 +96,10 @@ See the change summary in **Version history**.
 
 ## Quick Start (3 minutes)
 
-1. Download the `BurpIA-1.0.2.jar` file.
+1. Download the `BurpIA-1.5.0.jar` file.
 2. Load the extension in Burp Suite:
    - Go to the `Extensions` tab -> `Add`.
-   - Select the `BurpIA-1.0.2.jar` file.
+   - Select the `BurpIA-1.5.0.jar` file.
 3. Configure BurpIA in the plugin tab:
    - Select your **LLM Provider**.
    - Enter the **API Key** (if applicable).
