@@ -57,13 +57,13 @@ public class ConfiguracionAPI {
     private boolean ignorarErroresSSL;
     private boolean soloProxy;
     private String nombreFuenteEstandar;
-    
+
     // Configuración de niveles de logging
-    private boolean nivelErrorHabilitado = true;  // Siempre visible
-    private boolean nivelWarnHabilitado = true;   // Siempre visible
-    private boolean nivelInfoHabilitado = true;   // Siempre visible
-    private boolean nivelDebugHabilitado = false;  // Solo en modo detallado
-    private boolean nivelTraceHabilitado = false;  // Solo en modo detallado
+    private boolean nivelErrorHabilitado = true; // Siempre visible
+    private boolean nivelWarnHabilitado = true; // Siempre visible
+    private boolean nivelInfoHabilitado = true; // Siempre visible
+    private boolean nivelDebugHabilitado = false; // Solo en modo detallado
+    private boolean nivelTraceHabilitado = false; // Solo en modo detallado
     private int tamanioFuenteEstandar;
     private String nombreFuenteMono;
     private int tamanioFuenteMono;
@@ -93,7 +93,7 @@ public class ConfiguracionAPI {
     // UI State Persistence flags
     private boolean persistirFiltroBusquedaHallazgos;
     private boolean persistirFiltroSeveridadHallazgos;
-    
+
     // UI State Persistence - Estado general
     private Map<String, String> estadoUI;
 
@@ -224,7 +224,7 @@ public class ConfiguracionAPI {
 
     public void establecerDetallado(boolean detallado) {
         this.detallado = detallado;
-        
+
         // Auto-configurar niveles de logging basado en modo detallado
         if (detallado) {
             // En modo detallado, habilitar todos los niveles
@@ -983,13 +983,14 @@ public class ConfiguracionAPI {
                 "1. Before generating JSON, internally reason through the request and response systematically (do not output this reasoning)\n"
                 +
                 "2. Output ONLY raw JSON. No markdown, no code blocks, no backticks, no explanation, no preamble\n" +
-                "2b. Respond ONLY with valid JSON, no additional text, no explanations, no markdown code blocks or backticks; properly escape quotes, line breaks, and any special characters within values.\n" +
+                "2b. CRITICAL: If your evidencia or descripcion contains HTML, XML, or other special characters (quotation marks, ampersands, square brackets) that require escaping in JSON. Example: \"evidencia\":\"<!-- template=\\\"/path\\\" -->\"\n"
+                +
                 "3. Start your response with { and end with }\n" +
                 "4. Every finding must have EXACTLY these five fields in this exact order: \"titulo\", \"severidad\", \"confianza\", \"descripcion\", \"evidencia\"\n"
                 +
                 "5. \"titulo\": Concise and descriptive title of the finding (max 50 characters) - written in {OUTPUT_LANGUAGE}\n"
                 +
-                "6. \"descripcion\": Detailed explanation of the vulnerability, attack vector, and recommended remediation - written in {OUTPUT_LANGUAGE}. When applicable, include at the end of this field the relevant CWE identifier (e.g., CWE-89) and OWASP Top 10 category (e.g., A03:2021 - Injection). Format: \"References: [CWE-XXX] [OWASP A0X:2021 - Category]\"\n"
+                "6. \"descripcion\": Detailed explanation of the vulnerability, attack vector, and recommended remediation - written in {OUTPUT_LANGUAGE}. When applicable, include at the end of this field the relevant CWE identifier (e.g., CWE-89) and OWASP Top 10 category (e.g., A03:2021 - Injection). Format: \"References: [CWE-XXX] [OWASP A0X:202X - Category]\"\n"
                 +
                 "7. \"evidencia\": The exact string, header name, parameter, or value from the HTTP data that supports this finding\n"
                 +
@@ -1014,7 +1015,7 @@ public class ConfiguracionAPI {
                 "\n" +
                 "OUTPUT LANGUAGE: {OUTPUT_LANGUAGE}\n" +
                 "\n" +
-                "{\"hallazgos\":[{\"titulo\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"descripcion\":\"string. References: [CWE-XXX] [OWASP A0X:2021 - Category]\",\"evidencia\":\"string\"}]}";
+                "OUTPUT JSON FORMAT: {\"hallazgos\":[{\"titulo\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"descripcion\":\"string. References: [CWE-XXX] [OWASP A0X:202X - Category]\",\"evidencia\":\"string\"}]}";
     }
 
     public String obtenerPromptConfigurable() {
@@ -1238,7 +1239,8 @@ public class ConfiguracionAPI {
     }
 
     /**
-     * Normaliza el tiempo de espera en segundos. Método público para uso desde otras clases.
+     * Normaliza el tiempo de espera en segundos. Método público para uso desde
+     * otras clases.
      */
     public static int normalizarTiempoEspera(int valor) {
         return normalizarRango(valor, TIEMPO_ESPERA_MIN_SEGUNDOS, TIEMPO_ESPERA_MAX_SEGUNDOS);

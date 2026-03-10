@@ -63,6 +63,12 @@ public class GestorConsolaGUI {
         this.versionCambios = new AtomicInteger(0);
     }
 
+    /**
+     * Establece el componente de texto donde se mostrarán los logs.
+     * También aplica el tema visual y programa el flush inicial de logs pendientes.
+     *
+     * @param consola el JTextPane donde se renderizarán los logs
+     */
     public void establecerConsola(JTextPane consola) {
         this.consola = consola;
         this.documento = consola.getStyledDocument();
@@ -71,6 +77,10 @@ public class GestorConsolaGUI {
         programarFlush();
     }
 
+    /**
+     * Aplica el tema visual a la consola actualmente configurada.
+     * No hace nada si no hay consola establecida.
+     */
     public void aplicarTemaConsola() {
         if (consola == null) {
             return;
@@ -78,6 +88,12 @@ public class GestorConsolaGUI {
         aplicarTemaConsola(consola);
     }
 
+    /**
+     * Aplica el tema visual a un componente de consola específico.
+     * Configura los estilos de texto para INFO, VERBOSE y ERROR, con variantes destacadas.
+     *
+     * @param nuevaConsola el JTextPane al que aplicar el tema
+     */
     public void aplicarTemaConsola(JTextPane nuevaConsola) {
         if (nuevaConsola == null) {
             return;
@@ -162,19 +178,49 @@ public class GestorConsolaGUI {
         return estilo;
     }
 
+    /**
+     * Captura las referencias a los streams originales de stdout y stderr.
+     * Permite duplicar los logs a la consola estándar además de la GUI.
+     *
+     * @param stdout stream de salida estándar original
+     * @param stderr stream de error estándar original
+     */
     public void capturarStreamsOriginales(PrintWriter stdout, PrintWriter stderr) {
         this.stdoutOriginal = stdout;
         this.stderrOriginal = stderr;
     }
 
+    /**
+     * Registra un mensaje en la consola con origen por defecto "BurpIA".
+     * El mensaje se traduce automáticamente según el idioma configurado.
+     *
+     * @param mensaje el mensaje a registrar
+     * @param tipo    el tipo de log (INFO, VERBOSE, ERROR)
+     */
     public void registrar(String mensaje, TipoLog tipo) {
         registrar("BurpIA", mensaje, tipo);
     }
 
+    /**
+     * Registra un mensaje en la consola con un origen específico.
+     * El mensaje se traduce automáticamente según el idioma configurado.
+     *
+     * @param origen  el identificador del origen del mensaje
+     * @param mensaje el mensaje a registrar
+     * @param tipo    el tipo de log (INFO, VERBOSE, ERROR)
+     */
     public void registrar(String origen, String mensaje, TipoLog tipo) {
         registrarInterno(origen, mensaje, tipo, true);
     }
 
+    /**
+     * Registra un mensaje técnico que NO debe traducirse.
+     * Útil para logs de depuración, stack traces, o datos JSON.
+     *
+     * @param origen  el identificador del origen del mensaje
+     * @param mensaje el mensaje técnico sin traducir
+     * @param tipo    el tipo de log (INFO, VERBOSE, ERROR)
+     */
     public void registrarTecnico(String origen, String mensaje, TipoLog tipo) {
         registrarInterno(origen, mensaje, tipo, false);
     }
@@ -195,30 +241,67 @@ public class GestorConsolaGUI {
         duplicarAStreamOriginal(origenSeguro, mensajeLocalizado, tipo, hora);
     }
 
+    /**
+     * Registra un mensaje de información con origen por defecto.
+     *
+     * @param mensaje el mensaje a registrar
+     */
     public void registrarInfo(String mensaje) {
         registrar(mensaje, TipoLog.INFO);
     }
 
+    /**
+     * Registra un mensaje de información con origen específico.
+     *
+     * @param origen  el identificador del origen del mensaje
+     * @param mensaje el mensaje a registrar
+     */
     public void registrarInfo(String origen, String mensaje) {
         registrar(origen, mensaje, TipoLog.INFO);
     }
 
+    /**
+     * Registra un mensaje de verbose (detallado) con origen por defecto.
+     *
+     * @param mensaje el mensaje a registrar
+     */
     public void registrarVerbose(String mensaje) {
         registrar(mensaje, TipoLog.VERBOSE);
     }
 
+    /**
+     * Registra un mensaje de verbose (detallado) con origen específico.
+     *
+     * @param origen  el identificador del origen del mensaje
+     * @param mensaje el mensaje a registrar
+     */
     public void registrarVerbose(String origen, String mensaje) {
         registrar(origen, mensaje, TipoLog.VERBOSE);
     }
 
+    /**
+     * Registra un mensaje de error con origen por defecto.
+     *
+     * @param mensaje el mensaje de error a registrar
+     */
     public void registrarError(String mensaje) {
         registrar(mensaje, TipoLog.ERROR);
     }
 
+    /**
+     * Registra un mensaje de error con origen específico.
+     *
+     * @param origen  el identificador del origen del error
+     * @param mensaje el mensaje de error a registrar
+     */
     public void registrarError(String origen, String mensaje) {
         registrar(origen, mensaje, TipoLog.ERROR);
     }
 
+    /**
+     * Limpia todo el contenido de la consola y reinicia los contadores.
+     * También vacía la cola de logs pendientes.
+     */
     public void limpiarConsola() {
         ejecutarEnEdt(() -> {
             try {
@@ -237,26 +320,56 @@ public class GestorConsolaGUI {
         });
     }
 
+    /**
+     * Activa o desactiva el desplazamiento automático al final de la consola.
+     *
+     * @param activado true para activar auto-scroll, false para desactivarlo
+     */
     public void establecerAutoScroll(boolean activado) {
         this.autoScroll = activado;
     }
 
+    /**
+     * Obtiene el total de logs registrados (info + verbose + error).
+     *
+     * @return el número total de logs
+     */
     public int obtenerTotalLogs() {
         return contadorInfo.get() + contadorVerbose.get() + contadorError.get();
     }
 
+    /**
+     * Obtiene el contador de logs de tipo INFO.
+     *
+     * @return el número de logs INFO
+     */
     public int obtenerContadorInfo() {
         return contadorInfo.get();
     }
 
+    /**
+     * Obtiene el contador de logs de tipo VERBOSE.
+     *
+     * @return el número de logs VERBOSE
+     */
     public int obtenerContadorVerbose() {
         return contadorVerbose.get();
     }
 
+    /**
+     * Obtiene el contador de logs de tipo ERROR.
+     *
+     * @return el número de logs ERROR
+     */
     public int obtenerContadorError() {
         return contadorError.get();
     }
 
+    /**
+     * Genera un resumen localizado de los logs registrados.
+     *
+     * @return cadena con el resumen de logs en el idioma configurado
+     */
     public String generarResumen() {
         return I18nUI.Consola.RESUMEN_LOGS(
             obtenerTotalLogs(),
@@ -315,6 +428,10 @@ public class GestorConsolaGUI {
         }
     }
 
+    /**
+     * Libera los recursos del gestor de consola.
+     * Limpia la cola de pendientes y libera las referencias a los streams originales.
+     */
     public void shutdown() {
         colaPendiente.clear();
         logsPendientes.set(0);
@@ -347,8 +464,8 @@ public class GestorConsolaGUI {
             if (autoScroll && consola != null) {
                 consola.setCaretPosition(documento.getLength());
             }
-        } catch (BadLocationException ignored) {
-            registrarErrorInterno("No se pudo renderizar log en consola GUI");
+        } catch (BadLocationException e) {
+            registrarErrorInterno("No se pudo renderizar log en consola GUI: " + e.getMessage());
         } finally {
             flushProgramado.set(false);
             if (documento != null && logsPendientes.get() > 0) {

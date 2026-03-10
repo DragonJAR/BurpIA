@@ -364,6 +364,50 @@ public final class I18nUI {
         public static String MSG_ELIMINADAS(int total) {
             return trf("Tareas eliminadas: %d", "Tasks removed: %d", total);
         }
+
+        public static String MSG_ESPERANDO_ANALISIS() {
+            return tr("Esperando análisis", "Waiting for analysis");
+        }
+
+        public static String MSG_REINTENTANDO() {
+            return tr("Reintentando...", "Retrying...");
+        }
+
+        public static String MSG_DESCARTADA_SATURACION() {
+            return tr("Descartada por saturación de cola", "Discarded due to queue saturation");
+        }
+
+        public static String MSG_ERROR_INICIAR(String error) {
+            return trf("Error al iniciar análisis: %s", "Error starting analysis: %s", error);
+        }
+
+        public static String MSG_ERROR_GENERICO(String error) {
+            return trf("Error: %s", "Error: %s", error);
+        }
+
+        public static String MSG_ERROR_DESCONOCIDO() {
+            return tr("Error desconocido", "Unknown error");
+        }
+
+        public static String MSG_COMPLETADO_HALLAZGOS(int cantidad) {
+            return trf("Completado: %d hallazgos", "Completed: %d findings", cantidad);
+        }
+
+        public static String MSG_CANCELADO_USUARIO() {
+            return tr("Cancelado por usuario", "Canceled by user");
+        }
+
+        public static String MSG_ID_VACIO() {
+            return tr("El ID de la tarea no puede estar vacío", "Task ID cannot be empty");
+        }
+
+        public static String MSG_TIPO_VACIO() {
+            return tr("El tipo de tarea no puede estar vacío", "Task type cannot be empty");
+        }
+
+        public static String MSG_URL_VACIA() {
+            return tr("La URL de la tarea no puede estar vacía", "Task URL cannot be empty");
+        }
     }
 
     public static final class Hallazgos {
@@ -1496,6 +1540,34 @@ public final class I18nUI {
             return tr("ALERTA: Clave API no configurada", "ALERT: API key is not configured");
         }
 
+        public static String ALERTA_MULTI_PROVEEDOR_SIN_PROVEEDORES() {
+            return tr("ALERTA: Multi-proveedor habilitado pero sin proveedores seleccionados",
+                    "ALERT: Multi-provider enabled but no providers selected");
+        }
+
+        public static String ALERTA_MULTI_PROVEEDOR_MENOS_DOS() {
+            return tr("ALERTA: Multi-proveedor requiere al menos 2 proveedores configurados",
+                    "ALERT: Multi-provider requires at least 2 configured providers");
+        }
+
+        public static String ALERTA_MULTI_PROVEEDOR_PROVEEDOR_VACIO() {
+            return tr("ALERTA: Un proveedor seleccionado está vacío",
+                    "ALERT: A selected provider is empty");
+        }
+
+        public static String ALERTA_MULTI_PROVEEDOR_PROVEEDOR_INVALIDO(String proveedor) {
+            return trf("ALERTA: Proveedor inválido: %s", "ALERT: Invalid provider: %s", proveedor);
+        }
+
+        public static String ALERTA_MULTI_PROVEEDOR_SIN_API_KEY(String proveedor) {
+            return trf("ALERTA: El proveedor %s requiere API key", "ALERT: Provider %s requires API key", proveedor);
+        }
+
+        public static String ALERTA_MULTI_PROVEEDOR_SIN_MODELO(String proveedor) {
+            return trf("ALERTA: El proveedor %s no tiene modelo configurado",
+                    "ALERT: Provider %s has no model configured", proveedor);
+        }
+
         public static String ERROR_TIMEOUT_RANGO() {
             return tr("Tiempo de espera debe estar entre 10 y 300 segundos",
                     "Timeout must be between 10 and 300 seconds");
@@ -2587,8 +2659,8 @@ public final class I18nUI {
             }
 
             public static String PROMPT_EDITOR() {
-                return I18nUI.tr("Define las instrucciones que recibe el modelo.\n\nRequisitos obligatorios:\n- {REQUEST}: Datos de la petición HTTP\n- JSON: Formato de salida válido\n\nOpcional pero recomendado:\n- {RESPONSE}: Datos de la respuesta HTTP\n\nFormato JSON esperado:\n{\"hallazgos\":[{\"titulo\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"descripcion\":\"string. References: [CWE-XXX] [OWASP A0X:2021 - Category]\",\"evidencia\":\"string\"}]}",
-                        "Define instructions sent to the model.\n\nRequired elements:\n- {REQUEST}: HTTP request data\n- JSON: Valid output format\n\nOptional but recommended:\n- {RESPONSE}: HTTP response data\n\nExpected JSON format:\n{\"hallazgos\":[{\"titulo\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"descripcion\":\"string. References: [CWE-XXX] [OWASP A0X:2021 - Category]\",\"evidencia\":\"string\"}]}");
+                return I18nUI.tr("Define las instrucciones que recibe el modelo.\n\nRequisitos obligatorios:\n- {REQUEST}: Datos de la petición HTTP\n- JSON: Formato de salida válido\n\nOpcional pero recomendado:\n- {RESPONSE}: Datos de la respuesta HTTP\n\nFormato JSON esperado:\n{\"hallazgos\":[{\"titulo\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"descripcion\":\"string. References: [CWE-XXX] [OWASP A0X:202X - Category]\",\"evidencia\":\"string\"}]}",
+                        "Define instructions sent to the model.\n\nRequired elements:\n- {REQUEST}: HTTP request data\n- JSON: Valid output format\n\nOptional but recommended:\n- {RESPONSE}: HTTP response data\n\nExpected JSON format:\n{\"hallazgos\":[{\"titulo\":\"string\",\"severidad\":\"Critical|High|Medium|Low|Info\",\"confianza\":\"High|Medium|Low\",\"descripcion\":\"string. References: [CWE-XXX] [OWASP A0X:202X - Category]\",\"evidencia\":\"string\"}]}");
             }
 
             public static String RESTAURAR_PROMPT() {
@@ -2820,6 +2892,37 @@ public final class I18nUI {
                 return I18nUI.tr("Analiza todas las peticiones seleccionadas como una secuencia lógica en una sola consulta al LLM.",
                         "Analyze all selected requests as a logical sequence in a single LLM query.");
             }
+        }
+    }
+
+    /**
+     * Mensajes de UI relacionados con errores de contexto excedido.
+     */
+    public static final class ContextoExcedido {
+        private ContextoExcedido() {
+        }
+
+        public static String TITULO_ERROR() {
+            return tr("Error de contexto", "Context error");
+        }
+
+        public static String MENSAJE_TRUNCADO(int intentos) {
+            return trf(
+                "El prompt excedió el límite de tokens.\nSe truncó automáticamente (%d intentos).",
+                "Prompt exceeded token limit.\nAutomatically truncated (%d attempts).",
+                intentos);
+        }
+
+        public static String MENSAJE_FALLIDO() {
+            return tr(
+                "El prompt no pudo ajustarse al límite de tokens del modelo.",
+                "Prompt could not fit within model token limit.");
+        }
+
+        public static String MENSAJE_EXITO() {
+            return tr(
+                "El prompt se ajustó automáticamente al límite de tokens.",
+                "Prompt was automatically adjusted to fit token limit.");
         }
     }
 }

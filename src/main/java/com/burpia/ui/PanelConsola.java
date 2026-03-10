@@ -13,6 +13,11 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 public class PanelConsola extends JPanel {
+    // Constantes de configuración
+    // DELAY_ACTUALIZACION_MS (1000ms): Intervalo de actualización del resumen de estadísticas.
+    // Balance entre responsividad UI y uso de CPU. Menos de 500ms es innecesario, más de 2000ms se siente lento.
+    private static final int DELAY_ACTUALIZACION_MS = 1000;
+
     private final JTextPane consola;
     private final JCheckBox checkboxAutoScroll;
     private final JButton botonLimpiar;
@@ -125,7 +130,7 @@ public class PanelConsola extends JPanel {
         panelBotones.add(botonLimpiar);
 
         // CONFIABILIDAD: Separador visual entre contexto/configuración y búsqueda
-        panelBotones.add(new JLabel("  "));
+        panelBotones.add(new JSeparator(SwingConstants.VERTICAL));
 
         // EFICIENCIA: BÚSQUEDA agrupada lógicamente
         campoBusqueda = new JTextField(15);
@@ -216,7 +221,7 @@ public class PanelConsola extends JPanel {
         botonSiguiente.addActionListener(e -> buscarSiguiente());
         botonAnterior.addActionListener(e -> buscarAnterior());
 
-        timerActualizacion = new Timer(1000, e -> actualizarResumen(false));
+        timerActualizacion = new Timer(DELAY_ACTUALIZACION_MS, e -> actualizarResumen(false));
         timerActualizacion.start();
 
         panelConsolaWrapper.add(panelDesplazable, BorderLayout.CENTER);
@@ -255,7 +260,7 @@ public class PanelConsola extends JPanel {
             actualizarBotonesBusqueda(false);
 
             UIUtils.mostrarError(this,
-                I18nUI.Consola.TITULO_ERROR_PTY(),
+                I18nUI.Consola.TITULO_INFORMACION(),
                 I18nUI.Consola.MSG_BUSQUENA_REGEX_INVALIDA(textoBusqueda, e.getMessage()));
         }
     }
@@ -413,6 +418,10 @@ public class PanelConsola extends JPanel {
         )));
     }
 
+    /**
+     * Aplica el idioma configurado a todos los elementos de la interfaz del panel.
+     * Debe llamarse cuando se cambia el idioma de la configuración.
+     */
     public void aplicarIdioma() {
         checkboxAutoScroll.setText(I18nUI.Consola.CHECK_AUTO_SCROLL());
         botonLimpiar.setText(I18nUI.Consola.BOTON_LIMPIAR());
@@ -428,6 +437,10 @@ public class PanelConsola extends JPanel {
         repaint();
     }
 
+    /**
+     * Aplica el tema visual (claro/oscuro) a todos los componentes del panel.
+     * Ajusta colores de fondo, texto y bordes según el tema actual.
+     */
     public void aplicarTema() {
         UIUtils.ejecutarEnEdt(() -> {
             Color fondoPanel = EstilosUI.obtenerFondoPanel();
@@ -457,22 +470,47 @@ public class PanelConsola extends JPanel {
         });
     }
 
+    /**
+     * Libera los recursos asociados al panel de consola.
+     * Detiene el timer de actualización de estadísticas.
+     */
     public void destruir() {
         timerActualizacion.stop();
     }
 
+    /**
+     * Obtiene el gestor de consola GUI asociado a este panel.
+     *
+     * @return el gestor de consola para agregar logs programáticamente
+     */
     public GestorConsolaGUI obtenerGestorConsola() {
         return gestorConsola;
     }
 
+    /**
+     * Establece un callback que se invoca cuando el usuario cambia el estado del auto-scroll.
+     *
+     * @param manejadorCambioAutoScroll consumidor que recibe true si auto-scroll está activo
+     */
     public void establecerManejadorCambioAutoScroll(Consumer<Boolean> manejadorCambioAutoScroll) {
         this.manejadorCambioAutoScroll = manejadorCambioAutoScroll;
     }
 
+    /**
+     * Establece el estado del auto-scroll programáticamente.
+     * Este método es thread-safe y puede llamarse desde cualquier hilo.
+     *
+     * @param activo true para activar auto-scroll, false para desactivarlo
+     */
     public void establecerAutoScrollActivo(boolean activo) {
         UIUtils.ejecutarEnEdtYEsperar(() -> aplicarAutoScrollEnEdt(activo, false));
     }
 
+    /**
+     * Obtiene el estado actual del auto-scroll.
+     *
+     * @return true si auto-scroll está activo, false en caso contrario
+     */
     public boolean isAutoScrollActivo() {
         return checkboxAutoScroll.isSelected();
     }

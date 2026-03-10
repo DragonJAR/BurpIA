@@ -175,10 +175,15 @@ public class GestorMultiProveedor {
         esperarSiPausada();
         
         String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
-        String respuesta = analizadorHTTP.llamarAPI(prompt);
         
-        registrar("Longitud de respuesta de API: " + respuesta.length() + " caracteres");
-        return respuesta;
+        try {
+            String respuesta = analizadorHTTP.llamarAPI(prompt);
+            registrar("Longitud de respuesta de API: " + respuesta.length() + " caracteres");
+            return respuesta;
+        } catch (ContextExceededException e) {
+            // Para multi-proveedor, propagar como IOException
+            throw new IOException("Contexto excedido en proveedor " + configActual.obtenerProveedorAI() + ": " + e.getMessage(), e);
+        }
     }
 
     private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {

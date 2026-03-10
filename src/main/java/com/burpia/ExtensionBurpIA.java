@@ -18,11 +18,6 @@ import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.ui.EstilosUI;
 import com.burpia.ui.DialogoConfiguracion;
 import com.burpia.ui.FabricaMenuContextual;
-import com.burpia.ui.PanelProgresoBulk;
-import com.burpia.ui.DialogoFiltroHistorial;
-import com.burpia.bulk.HistorialBurpProvider;
-import com.burpia.bulk.BulkAnalysisManager;
-import com.burpia.bulk.CompositeProxyHistoryFilter;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
@@ -66,8 +61,6 @@ public class ExtensionBurpIA implements BurpExtension {
     private ModeloTablaHallazgos modeloTablaHallazgos;
     private ModeloTablaTareas modeloTablaTareas;
     private FabricaMenuContextual fabricaMenuContextual;
-    private HistorialBurpProvider historialBurpProvider;
-    private BulkAnalysisManager bulkAnalysisManager;
     private boolean esProfessional = false;
 
     public ExtensionBurpIA() {
@@ -142,8 +135,6 @@ public class ExtensionBurpIA implements BurpExtension {
             registrar("Manejador HTTP registrado exitosamente");
         }
 
-        inicializarBulkAnalysis();
-
         registrarMenuContextual();
         if (config.esDetallado()) {
             registrar("Menu contextual de BurpIA registrado exitosamente");
@@ -195,15 +186,6 @@ public class ExtensionBurpIA implements BurpExtension {
             manejadorHttp.analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal);
         }
     }
-    
-    private void inicializarBulkAnalysis() {
-        historialBurpProvider = new HistorialBurpProvider(api, gestorLogging);
-        bulkAnalysisManager = new BulkAnalysisManager(
-            historialBurpProvider, gestorTareas, manejadorHttp, gestorLogging);
-        if (config.esDetallado()) {
-            registrar("Bulk analysis inicializado");
-        }
-    }
 
     private void registrarMenuContextual() {
         if (fabricaMenuContextual == null) {
@@ -213,8 +195,6 @@ public class ExtensionBurpIA implements BurpExtension {
                     config,
                     this::enviarAAgente,
                     () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto"),
-                    historialBurpProvider,
-                    bulkAnalysisManager,
                     obtenerFramePadre());
             api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
         }

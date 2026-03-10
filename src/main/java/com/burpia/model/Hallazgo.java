@@ -309,6 +309,16 @@ public class Hallazgo {
         return valorPorDefecto;
     }
 
+    /**
+     * Compara hallazgos por contenido semántico, no por referencia de solicitud HTTP.
+     * <p>
+     * Nota: solicitudHttp y evidenciaHttp NO se incluyen en equals/hashCode porque:
+     * <ul>
+     *   <li>HttpRequest no implementa equals/hashCode de forma consistente</li>
+     *   <li>Dos hallazgos con el mismo contenido pero diferentes requests deben considerarse iguales</li>
+     * </ul>
+     * </p>
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

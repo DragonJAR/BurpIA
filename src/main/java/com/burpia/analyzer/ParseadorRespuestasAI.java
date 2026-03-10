@@ -62,7 +62,9 @@ public class ParseadorRespuestasAI {
             rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
 
             try {
-                String contenidoLimpio = limpiarBloquesMarkdownJson(contenido);
+                // Sanitizar comillas escapadas antes de parsear
+                String contenidoSanitizado = sanitizarComillasEscapadas(contenido);
+                String contenidoLimpio = limpiarBloquesMarkdownJson(contenidoSanitizado);
                 JsonElement raiz = gson.fromJson(contenidoLimpio, JsonElement.class);
                 List<JsonObject> objetosHallazgos = JsonParserUtil.extraerObjetosHallazgos(raiz, ConstantesJsonAI.CAMPOS_HALLAZGOS);
 
@@ -333,6 +335,146 @@ public class ParseadorRespuestasAI {
             limpio = limpio.replaceFirst("\\s*```\\s*$", "");
         }
         return limpio.trim();
+    }
+
+    /**
+     * Sanitiza comillas escapadas incorrectamente por el LLM.
+     * El LLM genera: "evidencia": "valor con "texto" dentro"
+     * sin escapar las comillas internas. Esto rompe el JSON.
+     * 
+     * El LLM también genera: "evidencia": "valor con \"texto\" dentro"
+     * donde el backslash se interpreta incorrectamente como literal.
+     */
+    private String sanitizarComillasEscapadas(String contenido) {
+        if (Normalizador.esVacio(contenido)) {
+            return contenido;
+        }
+
+        // Solo procesar si contiene estructura JSON
+        if (!contenido.contains("{\"") && !contenido.contains("[{")) {
+            return contenido;
+        }
+
+        // Usar ReparadorJson para reparar comillas en campos evidencia
+        String resultado = ReparadorJson.repararJson(contenido);
+        
+        // Si ReparadorJson no pudo reparar, intentamos nuestro parser manual
+        if (resultado == null) {
+            resultado = reparadorManualComillas(contenido);
+        }
+        
+        return resultado != null ? resultado : contenido;
+    }
+    
+    /**
+     * Parser manual para reparar comillas sin escapar en valores JSON.
+     * Repara el caso específico donde el LLM genera: "campo": "valor con "texto" dentro"
+     */
+    private String reparadorManualComillas(String texto) {
+        if (Normalizador.esVacio(texto)) {
+            return texto;
+        }
+        
+        StringBuilder resultado = new StringBuilder(texto.length() + 64);
+        int i = 0;
+        
+        while (i < texto.length()) {
+            char c = texto.charAt(i);
+            
+            if (c == '"') {
+                // Inicio de string o final - verificar contexto
+                // Buscar si hay un : antes (indicador de campo)
+                boolean esInicioCampo = false;
+                for (int j = i - 1; j >= 0; j--) {
+                    char p = texto.charAt(j);
+                    if (p == ':') {
+                        esInicioCampo = true;
+                        break;
+                    } else if (p != ' ' && p != '\t') {
+                        break;
+                    }
+                }
+                
+                if (esInicioCampo) {
+                    // Encontrar el final de este valor
+                    int fin = encontrarFinString(texto, i + 1);
+                    if (fin == -1) {
+                        resultado.append(c);
+                        i++;
+                        continue;
+                    }
+                    
+                    // Extraer el valor y repararlo
+                    String valor = texto.substring(i + 1, fin);
+                    String valorReparado = reparadorComillasEnValor(valor);
+                    
+                    resultado.append('"').append(valorReparado).append('"');
+                    i = fin + 1;
+                } else {
+                    resultado.append(c);
+                    i++;
+                }
+            } else {
+                resultado.append(c);
+                i++;
+            }
+        }
+        
+        return resultado.toString();
+    }
+    
+    /**
+     * Encuentra el final de un string JSON (la comilla de cierre no escapada)
+     */
+    private int encontrarFinString(String texto, int inicio) {
+        boolean escapado = false;
+        for (int i = inicio; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+            if (escapado) {
+                escapado = false;
+                continue;
+            }
+            if (c == '\\') {
+                escapado = true;
+                continue;
+            }
+            if (c == '"') {
+                return i;
+            }
+        }
+        return -1;
+    }
+    
+    /**
+     * Repara comillas sin escapar dentro de un valor string.
+     * El LLM genera: valor con "texto" dentro -> valor con \"texto\" dentro
+     */
+    private String reparadorComillasEnValor(String valor) {
+        if (Normalizador.esVacio(valor)) {
+            return valor;
+        }
+        
+        StringBuilder resultado = new StringBuilder(valor.length() + 32);
+        boolean dentroDeTag = false;
+        
+        for (int i = 0; i < valor.length(); i++) {
+            char c = valor.charAt(i);
+            
+            if (c == '<') {
+                dentroDeTag = true;
+                resultado.append(c);
+            } else if (c == '>') {
+                dentroDeTag = false;
+                resultado.append(c);
+            } else if (c == '"' && dentroDeTag) {
+                // Comilla sin escapar dentro de tag HTML - escapar
+                resultado.append("\\\"");
+            } else {
+                resultado.append(c);
+            }
+        }
+        
+        return resultado.toString();
     }
 
     private void agregarHallazgoNormalizado(List<Hallazgo> destino,

@@ -1,4 +1,5 @@
 package com.burpia.util;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaTareas;
 import java.util.*;
@@ -172,7 +173,7 @@ public class GestorTareas {
             for (Tarea tarea : tareasAtascadas) {
                 tarea.establecerEstado(Tarea.ESTADO_ERROR);
                 tarea.establecerMensajeInfo(
-                    com.burpia.i18n.I18nUI.Tareas.ESTADO_TAREA_ATASCADA()
+                    I18nLogs.Tareas.ESTADO_ATASCADA()
                 );
                 String id = tarea.obtenerId();
                 if (Normalizador.noEsVacio(id)) {
@@ -185,7 +186,7 @@ public class GestorTareas {
 
         for (Tarea tarea : tareasAtascadas) {
             actualizarFilaTabla(tarea);
-            registrar(com.burpia.i18n.I18nUI.Tareas.LOG_TAREA_ATASCADA_DETECTADA() + tarea.obtenerId());
+            registrar(I18nLogs.Tareas.LOG_ATASCADA_DETECTADA() + tarea.obtenerId());
         }
         notificarCancelaciones(idsAInterrumpir);
         
@@ -510,7 +511,7 @@ public class GestorTareas {
         try {
             manejador.accept(id);
         } catch (Exception e) {
-            registrar("Error en manejador de " + tipoOperacion + ": " + e.getMessage());
+            registrar(I18nLogs.Tareas.LOG_ERROR_MANEJADOR(tipoOperacion) + e.getMessage());
         }
     }
 }

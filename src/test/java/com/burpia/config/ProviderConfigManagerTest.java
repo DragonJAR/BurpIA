@@ -1,5 +1,6 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,6 +68,12 @@ class ProviderConfigManagerTest {
     @Mock
     private JLabel lblEstadoMultiProveedor;
 
+    @Mock
+    private JList<String> listaProveedoresDisponibles;
+
+    @Mock
+    private JList<String> listaProveedoresSeleccionados;
+
     private DefaultListModel<String> modeloListaDisponibles;
     private DefaultListModel<String> modeloListaSeleccionados;
 
@@ -83,6 +90,7 @@ class ProviderConfigManagerTest {
 
         providerConfigManager = new ProviderConfigManager(config, gestorLogging);
         
+
         providerConfigManager.inicializarComponentesUI(
                 comboProveedor,
                 comboModelo,
@@ -97,7 +105,9 @@ class ProviderConfigManagerTest {
                 chkHabilitarMultiProveedor,
                 lblEstadoMultiProveedor,
                 modeloListaDisponibles,
-                modeloListaSeleccionados
+                modeloListaSeleccionados,
+                listaProveedoresDisponibles,
+                listaProveedoresSeleccionados
         );
     }
 
@@ -179,7 +189,121 @@ class ProviderConfigManagerTest {
     void testCambiarProveedorConEntradaVacia() {
         providerConfigManager.cambiarProveedor("");
         providerConfigManager.cambiarProveedor(null);
-        
+
         verify(comboProveedor, never()).setSelectedItem(anyString());
+    }
+
+    @Test
+    void testActualizarEstadoMultiProveedorDeshabilitado() {
+        when(chkHabilitarMultiProveedor.isSelected()).thenReturn(false);
+
+        assertDoesNotThrow(() -> {
+            java.lang.reflect.Method method = ProviderConfigManager.class.getDeclaredMethod("actualizarEstadoMultiProveedor");
+            method.setAccessible(true);
+            method.invoke(providerConfigManager);
+        });
+
+        verify(lblEstadoMultiProveedor).setText(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_DESHABILITADO());
+    }
+
+    @Test
+    void testActualizarEstadoMultiProveedorHabilitadoSinProveedores() {
+        when(chkHabilitarMultiProveedor.isSelected()).thenReturn(true);
+        modeloListaSeleccionados.clear();
+
+        assertDoesNotThrow(() -> {
+            java.lang.reflect.Method method = ProviderConfigManager.class.getDeclaredMethod("actualizarEstadoMultiProveedor");
+            method.setAccessible(true);
+            method.invoke(providerConfigManager);
+        });
+
+        verify(lblEstadoMultiProveedor).setText(
+                "⚠️ Multi-proveedor habilitado pero sin proveedores seleccionados");
+    }
+
+    @Test
+    void testActualizarEstadoMultiProveedorHabilitadoConUnProveedor() {
+        when(chkHabilitarMultiProveedor.isSelected()).thenReturn(true);
+        modeloListaSeleccionados.clear();
+        modeloListaSeleccionados.addElement("OpenAI");
+
+        assertDoesNotThrow(() -> {
+            java.lang.reflect.Method method = ProviderConfigManager.class.getDeclaredMethod("actualizarEstadoMultiProveedor");
+            method.setAccessible(true);
+            method.invoke(providerConfigManager);
+        });
+
+        verify(lblEstadoMultiProveedor).setText("⚠️ Se necesitan al menos 2 proveedores");
+    }
+
+    @Test
+    void testActualizarEstadoMultiProveedorHabilitadoConMultiplesProveedores() {
+        when(chkHabilitarMultiProveedor.isSelected()).thenReturn(true);
+        modeloListaSeleccionados.clear();
+        modeloListaSeleccionados.addElement("OpenAI");
+        modeloListaSeleccionados.addElement("Claude");
+        modeloListaSeleccionados.addElement("Gemini");
+
+        assertDoesNotThrow(() -> {
+            java.lang.reflect.Method method = ProviderConfigManager.class.getDeclaredMethod("actualizarEstadoMultiProveedor");
+            method.setAccessible(true);
+            method.invoke(providerConfigManager);
+        });
+
+        verify(lblEstadoMultiProveedor).setText("✅ Multi-proveedor habilitado (3 proveedores)");
+    }
+
+    @Test
+    void testActualizarBotonesMultiProveedorDeshabilitado() {
+        when(chkHabilitarMultiProveedor.isSelected()).thenReturn(false);
+
+        assertDoesNotThrow(() -> {
+            java.lang.reflect.Method method = ProviderConfigManager.class.getDeclaredMethod("actualizarBotonesMultiProveedor");
+            method.setAccessible(true);
+            method.invoke(providerConfigManager);
+        });
+
+        verify(btnAgregarProveedor).setEnabled(false);
+        verify(btnQuitarProveedor).setEnabled(false);
+    }
+
+    @Test
+    void testActualizarBotonesMultiProveedorHabilitadoSinSeleccion() {
+        when(chkHabilitarMultiProveedor.isSelected()).thenReturn(true);
+
+        assertDoesNotThrow(() -> {
+            java.lang.reflect.Method method = ProviderConfigManager.class.getDeclaredMethod("actualizarBotonesMultiProveedor");
+            method.setAccessible(true);
+            method.invoke(providerConfigManager);
+        });
+
+        verify(btnAgregarProveedor).setEnabled(false);
+        verify(btnQuitarProveedor).setEnabled(false);
+    }
+
+    @Test
+    void testActualizarBotonesMultiProveedorHabilitadoConSeleccion() {
+        when(chkHabilitarMultiProveedor.isSelected()).thenReturn(true);
+        modeloListaDisponibles.addElement("OpenAI");
+
+        JList<String> listaDisponiblesMock = mock(JList.class);
+        when(listaDisponiblesMock.getSelectedValue()).thenReturn("OpenAI");
+
+        java.lang.reflect.Field field = null;
+        try {
+            field = ProviderConfigManager.class.getDeclaredField("listaProveedoresDisponibles");
+            field.setAccessible(true);
+            field.set(providerConfigManager, listaDisponiblesMock);
+        } catch (Exception e) {
+            fail("No se pudo inyectar mock de listaProveedoresDisponibles: " + e.getMessage());
+        }
+
+        assertDoesNotThrow(() -> {
+            java.lang.reflect.Method method = ProviderConfigManager.class.getDeclaredMethod("actualizarBotonesMultiProveedor");
+            method.setAccessible(true);
+            method.invoke(providerConfigManager);
+        });
+
+        verify(btnAgregarProveedor).setEnabled(true);
     }
 }

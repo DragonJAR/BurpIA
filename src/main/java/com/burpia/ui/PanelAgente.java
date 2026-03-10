@@ -55,6 +55,14 @@ public class PanelAgente extends JPanel {
     private static final String SHELL_POR_DEFECTO = "/bin/bash";
     private static final String PARAMETRO_SHELL_LOGIN = "--login";
 
+    // Constantes de tiempo - explicación de valores:
+    // - DELAY_INICIO_BINARIO_MS (800ms): Tiempo para que el shell PTY esté listo antes de enviar comandos.
+    //   Menos de 500ms causa pérdida de comandos; más de 1500ms es innecesario.
+    // - DELAY_DIFERIDA_POST_ARRANQUE_MS (180ms): Margen adicional para inyecciones diferidas tras el arranque.
+    // - DELAY_ENTRE_CHUNKS_PTY_MS (10ms): Evita sobrecargar el buffer PTY con escrituras masivas.
+    // - DELAY_REINTENTO_ARRANQUE_MS (200ms): Tiempo entre reintentos de envío del comando de arranque.
+    // - DELAY_REINTENTO_FOCO_TERMINAL_MS (120ms): Espera antes de reintentar foco en terminal.
+
     private final Object lockInyectorPty = new Object();
     private ExecutorService inyectorPty;
 
@@ -179,13 +187,11 @@ public class PanelAgente extends JPanel {
     }
 
     /**
-     * Verifica si un texto es nulo (sin trim, para preservar caracteres de control).
-     * Usado para comandos crudos como Ctrl+C (\u0003) que serían eliminados por trim().
+     * Escribe un comando en la terminal, agregando automáticamente el carácter de fin de línea
+     * apropiado para el sistema operativo actual.
+     *
+     * @param comando El comando a enviar a la terminal
      */
-    private static boolean esNulo(String texto) {
-        return texto == null;
-    }
-
     public void escribirComando(String comando) {
         if (Normalizador.esVacio(comando)) {
             return;
@@ -193,6 +199,12 @@ public class PanelAgente extends JPanel {
         escribirComandoCrudo(OSUtils.prepararComando(comando));
     }
 
+    /**
+     * Escribe un comando crudo directamente a la terminal sin modificar su contenido.
+     * Útil para enviar caracteres de control como Ctrl+C (\u0003) o secuencias ANSI.
+     *
+     * @param comando El comando crudo a enviar (sin EOL automático)
+     */
     public void escribirComandoCrudo(String comando) {
         if (comando == null) {
             return;
@@ -221,7 +233,7 @@ public class PanelAgente extends JPanel {
     }
 
     private boolean escribirTextoViaTtyConnector(String texto) {
-        if (esNulo(texto) || ttyConnector == null) {
+        if (texto == null || ttyConnector == null) {
             return false;
         }
 
@@ -243,7 +255,7 @@ public class PanelAgente extends JPanel {
             });
             return true;
         } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error escribiendo por ttyConnector"));
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Error escribiendo por ttyConnector"));
             return false;
         }
     }
@@ -259,7 +271,7 @@ public class PanelAgente extends JPanel {
             os.flush();
             return true;
         } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error escritura raw PTY"));
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Error escritura raw PTY"));
             return false;
         }
     }
@@ -272,7 +284,9 @@ public class PanelAgente extends JPanel {
     }
 
     private boolean escribirTextoDirectoPTY(String texto) {
-        if (esNulo(texto)) {
+        // Nota: NO usar Normalizador.esVacio() porque elimina caracteres de control
+        // como Ctrl+C (\u0003) que son necesarios para comandos crudos
+        if (texto == null) {
             return false;
         }
 
@@ -300,7 +314,7 @@ public class PanelAgente extends JPanel {
             os.flush();
             return true;
         } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error escritura directa PTY"));
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Error escritura directa PTY"));
             return false;
         }
     }
@@ -364,6 +378,13 @@ public class PanelAgente extends JPanel {
     }
 
 
+    /**
+     * Inyecta un comando en la terminal del agente con un delay opcional.
+     * Si la consola no está lista, el comando se encola para ejecutarse cuando esté disponible.
+     *
+     * @param texto   El texto/comando a inyectar en la terminal
+     * @param delayMs Milisegundos de espera antes de la inyección (0 para inyección inmediata)
+     */
     public void inyectarComando(String texto, int delayMs) {
         if (Normalizador.esVacio(texto)) {
             return;
@@ -380,6 +401,10 @@ public class PanelAgente extends JPanel {
         ejecutarInyeccionConOpciones(texto, delayMs);
     }
 
+    /**
+     * Fuerza la inyección del prompt inicial (preflight) configurado.
+     * Solo se ejecuta una vez por sesión de terminal.
+     */
     public void forzarInyeccionPromptInicial() {
         if (promptInicialEnviado.compareAndSet(false, true)) {
             String prompt = obtenerPromptPreflightFijo();
@@ -387,12 +412,18 @@ public class PanelAgente extends JPanel {
         }
     }
 
+    /**
+     * Reinicializa la inyección del prompt inicial, permitiendo que se ejecute nuevamente.
+     */
     public void reinyectarPromptInicial() {
         promptInicialEnviado.set(false);
         inicializacionPendiente.set(false);
         forzarInyeccionPromptInicial();
     }
 
+    /**
+     * Reinicia la terminal del agente, destruyendo el proceso PTY actual y creando uno nuevo.
+     */
     public void reiniciar() {
         iniciarConsola();
     }
@@ -402,6 +433,10 @@ public class PanelAgente extends JPanel {
         solicitarFocoPestaniaAgente();
     }
 
+    /**
+     * Asegura que la consola del agente esté iniciada.
+     * Si ya está corriendo, no hace nada. Si no, la inicia.
+     */
     public void asegurarConsolaIniciada() {
         PtyProcess procesoActual = process;
         if (procesoActual != null && procesoActual.isAlive()) {
@@ -413,6 +448,11 @@ public class PanelAgente extends JPanel {
         iniciarConsola();
     }
 
+    /**
+     * Libera todos los recursos asociados al panel del agente.
+     * Detiene el proceso PTY, cierra conectores y limpia el widget de terminal.
+     * Este método debe llamarse cuando el panel ya no se vaya a utilizar más.
+     */
     public void destruir() {
         detenerReintentoFocoTimer();
         cerrarYCrearNuevaSesion();
@@ -430,6 +470,10 @@ public class PanelAgente extends JPanel {
         consolaArrancando.set(false);
     }
 
+    /**
+     * Aplica el idioma configurado a todos los elementos de la interfaz del panel.
+     * Debe llamarse cuando se cambia el idioma de la configuración.
+     */
     public void aplicarIdioma() {
         UIUtils.ejecutarEnEdtYEsperar(this::aplicarIdiomaEnEdt);
     }
@@ -899,9 +943,9 @@ public class PanelAgente extends JPanel {
                 consolaArrancando.set(false);
             });
 
-        } catch (Throwable t) {
+        } catch (Exception e) {
             consolaArrancando.set(false);
-            manejarErrorPty(t);
+            manejarErrorPty(e);
         }
     }
 
@@ -1202,19 +1246,19 @@ public class PanelAgente extends JPanel {
             .toLowerCase(java.util.Locale.ROOT);
     }
 
-    private void manejarErrorPty(Throwable t) {
-        if (t instanceof java.io.IOException) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error de E/S iniciando proceso PTY"), t);
-        } else if (t instanceof SecurityException) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error de seguridad iniciando proceso PTY"), t);
-        } else if (t instanceof InterruptedException) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Operación interrumpida al iniciar PTY"), t);
+    private void manejarErrorPty(Exception e) {
+        if (e instanceof java.io.IOException) {
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error de E/S iniciando proceso PTY"), e);
+        } else if (e instanceof SecurityException) {
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error de seguridad iniciando proceso PTY"), e);
+        } else if (e instanceof InterruptedException) {
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Operación interrumpida al iniciar PTY"), e);
             Thread.currentThread().interrupt();
         } else {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error inesperado iniciando Consola PTY"), t);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error inesperado iniciando Consola PTY"), e);
         }
 
-        String mensaje = t.getMessage() != null ? t.getMessage() : I18nLogs.tr("Error desconocido PTY");
+        String mensaje = e.getMessage() != null ? e.getMessage() : I18nLogs.tr("Error desconocido PTY");
         ejecutarEnEdt(() -> {
             UIUtils.mostrarError(PanelAgente.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje);
         });

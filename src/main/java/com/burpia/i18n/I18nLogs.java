@@ -443,6 +443,202 @@ public final class I18nLogs {
     }
 
     /**
+     * Mensajes de logging relacionados con errores de contexto excedido.
+     */
+    public static final class ContextoExcedido {
+        private ContextoExcedido() {
+        }
+
+        public static String DETECTADO() {
+            return tr("Contexto excedido detectado");
+        }
+
+        public static String TRUNCANDO(int intento) {
+            return String.format(tr("Truncando prompt (intento %d)"), intento);
+        }
+
+        public static String TRUNCADO(int original, int nuevo) {
+            return String.format(tr("Prompt truncado de %d a %d caracteres"), original, nuevo);
+        }
+
+        public static String MAX_INTENTOS(int max) {
+            return String.format(tr("Prompt excede límite después de %d truncados"), max);
+        }
+
+        public static String LIMITE_EXTRAIDO(int tokens) {
+            return String.format(tr("Límite de tokens extraído del error: %d"), tokens);
+        }
+
+        public static String RETRY_CON_TRUNCADO() {
+            return tr("Reintentando con prompt truncado");
+        }
+
+        public static String NO_RETRYABLE() {
+            return tr("Error de contexto no recuperable después de truncados");
+        }
+    }
+
+    /**
+     * Mensajes de logging relacionados con la gestión de tareas.
+     */
+    public static final class Tareas {
+        private Tareas() {
+        }
+
+        public static String ESTADO_ATASCADA() {
+            return tr("Tarea atascada - timeout");
+        }
+
+        public static String LOG_ATASCADA_DETECTADA() {
+            return tr("Tarea atascada detectada: ");
+        }
+
+        public static String LOG_ERROR_MANEJADOR(String tipoOperacion) {
+            return tr("Error en manejador de " + tipoOperacion + ": ");
+        }
+    }
+
+    /**
+     * Mensajes de logging relacionados con la gestión de evidencias.
+     */
+    public static final class Evidence {
+        private Evidence() {
+        }
+
+        public static String EVIDENCIA_NULA() {
+            return tr("Intentando almacenar evidencia nula");
+        }
+
+        public static String EVIDENCIA_ALMACENADA() {
+            return tr("Evidencia almacenada: ");
+        }
+
+        public static String ERROR_ALMACENAR() {
+            return tr("Error al almacenar evidencia");
+        }
+
+        public static String ERROR_OBTENER() {
+            return tr("Error al obtener evidencia: ");
+        }
+
+        public static String EVIDENCIA_ELIMINADA() {
+            return tr("Evidencia eliminada: ");
+        }
+
+        public static String ERROR_ELIMINAR() {
+            return tr("Error al eliminar evidencia: ");
+        }
+
+        public static String HALLAZGO_NULO_ISSUE() {
+            return tr("Intentando guardar hallazgo nulo como Issue");
+        }
+
+        public static String ISSUES_SOLO_PRO() {
+            return tr("Integración con Issues solo disponible en Burp Professional");
+        }
+
+        public static String HALLAZGO_SIN_EVIDENCIA() {
+            return tr("Hallazgo sin evidencia HTTP: no se puede crear AuditIssue");
+        }
+
+        public static String AUDIT_ISSUE_CREADO() {
+            return tr("AuditIssue creado para hallazgo: ");
+        }
+
+        public static String AUDIT_ISSUE_NO_CREADO() {
+            return tr("AuditIssue no creado: hallazgo sin datos suficientes");
+        }
+
+        public static String ERROR_GUARDAR_ISSUE() {
+            return tr("Error al guardar hallazgo como Issue");
+        }
+
+        public static String AUDIT_ISSUES_CREADOS(int creados, int total) {
+            return tr("Se crearon " + creados + " AuditIssues de " + total + " hallazgos");
+        }
+
+        public static String CACHE_LIMPIADO() {
+            return tr("Cache de memoria de evidencias limpiado");
+        }
+
+        public static String ERROR_LIMPIAR() {
+            return tr("Error al limpiar evidencias antiguas");
+        }
+    }
+
+    /**
+     * Mensajes de logging relacionados con el almacenamiento de evidencias en disco.
+     */
+    public static final class AlmacenEvidencia {
+        private AlmacenEvidencia() {
+        }
+
+        public static String ERROR_GUARDAR_LIMPIAR() {
+            return tr("Error al guardar evidencia, se limpia archivo: ");
+        }
+
+        public static String ERROR_RECONSTRUIR() {
+            return tr("Error al reconstruir evidencia: ");
+        }
+
+        public static String ERROR_CREAR_DIRECTORIO() {
+            return tr("Error al crear directorio de evidencia: ");
+        }
+
+        public static String TAMANIO_REQUEST_INVALIDO() {
+            return tr("Tamaño de request inválido en archivo: ");
+        }
+
+        public static String TAMANIO_RESPONSE_INVALIDO() {
+            return tr("Tamaño de response inválido en archivo: ");
+        }
+
+        public static String ERROR_RECONSTRUIR_BYTES() {
+            return tr("Error al reconstruir request/response desde bytes");
+        }
+
+        public static String ERROR_EXTRAER_REQUEST() {
+            return tr("Error al extraer bytes de request: ");
+        }
+
+        public static String ERROR_EXTRAER_RESPONSE() {
+            return tr("Error al extraer bytes de response: ");
+        }
+
+        public static String ERROR_DIRECTORIO_DEPURACION() {
+            return tr("Error al crear directorio para depuración: ");
+        }
+
+        public static String ERROR_MODIFICACION_ARCHIVO() {
+            return tr("Error al obtener modificación de archivo: ");
+        }
+
+        public static String ERROR_LISTAR_ARCHIVOS() {
+            return tr("Error al listar archivos de evidencia: ");
+        }
+
+        public static String ERROR_ULTIMA_MODIFICACION() {
+            return tr("Error al obtener última modificación: ");
+        }
+
+        public static String ERROR_ELIMINAR_ARCHIVO() {
+            return tr("Error al eliminar archivo: ");
+        }
+    }
+
+    /**
+     * Mensajes de logging relacionados con la tabla de hallazgos.
+     */
+    public static final class Hallazgos {
+        private Hallazgos() {
+        }
+
+        public static String ERROR_ESCUCHA_CAMBIOS() {
+            return tr("Error en escucha de cambios: ");
+        }
+    }
+
+    /**
      * Representa una entrada de reemplazo para la traducción de mensajes.
      * <p>
      * Contiene el texto origen, el texto destino, y opcionalmente un patrón

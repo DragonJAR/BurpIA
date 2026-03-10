@@ -11,11 +11,13 @@ import javax.swing.border.TitledBorder;
 import java.awt.*;
 
 public class ConfigDialogView {
-    private static final int ANCHO_DIALOGO = 800;
-    private static final int ALTO_DIALOGO = 720;
     private static final int FILAS_PROMPT_AGENTE = 6;
     private static final int ANCHO_SCROLL_PROMPT_AGENTE = 300;
     private static final int ALTO_SCROLL_PROMPT_AGENTE = 180;
+    
+    // Constantes de dimensiones del diálogo (compartidas con DialogoConfiguracion)
+    static final int ANCHO_DIALOGO = 800;
+    static final int ALTO_DIALOGO = 720;
 
     private JTabbedPane tabbedPane;
     private JPanel panelBotones;

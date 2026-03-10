@@ -142,9 +142,8 @@ class ConstructorPromptsI18nTest {
 
                 assertTrue(prompt.contains("<output_rules>"),
                                 "Debe contener bloque de instrucciones de salida");
-                assertTrue(prompt.contains(
-                                "Respond ONLY with valid JSON, no additional text, no explanations, no markdown code blocks or backticks; properly escape quotes, line breaks, and any special characters within values."),
-                                "Debe contener instrucción de formato JSON");
+                assertTrue(prompt.contains("CRITICAL: If your evidencia or descripcion contains HTML"),
+                                "Debe contener instrucción de escape de comillas en HTML");
         }
 
         @Test

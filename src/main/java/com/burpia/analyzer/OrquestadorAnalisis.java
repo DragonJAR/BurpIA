@@ -2,6 +2,7 @@ package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ProveedorAI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
@@ -14,6 +15,7 @@ import com.burpia.util.JsonParserUtil;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
 import com.burpia.util.ParserRespuestasAI;
+import com.burpia.util.PromptTruncador;
 import com.burpia.util.ReparadorJson;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -33,6 +35,7 @@ import java.util.function.BooleanSupplier;
 public class OrquestadorAnalisis {
     private static final String ORIGEN_LOG = "OrquestadorAnalisis";
     private static final int MAX_INTENTOS_RETRY = 5;
+    private static final int MAX_TRUNCADOS = 3;
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
     private static final long DELAY_ENTRE_PROVEEDORES_MS = 2000L;
@@ -52,6 +55,7 @@ public class OrquestadorAnalisis {
     private final ConstructorPrompts constructorPrompt;
     private final GestorLoggingUnificado gestorLogging;
     private final AnalizadorHTTP analizadorHTTP;
+    private final PromptTruncador promptTruncador;
 
     public interface Callback {
         void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
@@ -88,6 +92,7 @@ public class OrquestadorAnalisis {
         this.constructorPrompt = new ConstructorPrompts(this.config);
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
         this.analizadorHTTP = new AnalizadorHTTP(this.config, this.tareaCancelada, this.tareaPausada, this.gestorLogging);
+        this.promptTruncador = new PromptTruncador();
     }
 
     public void cancelarLlamadaHttpActiva() {
@@ -219,21 +224,98 @@ public class OrquestadorAnalisis {
     }
 
     private String llamarAPIAIConRetries() throws IOException {
-        try {
-            verificarCancelacion();
-            esperarSiPausada();
-            
-            String prompt = construirPromptAnalisis();
-            String respuesta = analizadorHTTP.llamarAPI(prompt);
-            
-            gestorLogging.info(ORIGEN_LOG, "Longitud de respuesta de API: " + respuesta.length() + " caracteres");
-            gestorLogging.verbose(ORIGEN_LOG, "Respuesta de API (preview):\n" + resumirParaLog(respuesta));
-            return respuesta;
-            
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("Sistema de retry cancelado/interrumpido", e);
+        String promptActual = construirPromptAnalisis();
+        int intentosTruncado = 0;
+        
+        while (intentosTruncado <= MAX_TRUNCADOS) {
+            try {
+                verificarCancelacion();
+                esperarSiPausada();
+                
+                String respuesta = analizadorHTTP.llamarAPI(promptActual);
+                gestorLogging.info(ORIGEN_LOG, "Longitud de respuesta de API: " + respuesta.length() + " caracteres");
+                gestorLogging.verbose(ORIGEN_LOG, "Respuesta de API (preview):\n" + resumirParaLog(respuesta));
+                return respuesta;
+                
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Sistema de retry cancelado/interrumpido", e);
+            } catch (ContextExceededException e) {
+                // Error de contexto - podemos truncar y reintentar
+                if (intentosTruncado < MAX_TRUNCADOS) {
+                    intentosTruncado++;
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.ContextoExcedido.TRUNCANDO(intentosTruncado));
+                    
+                    // Calcular tokens objetivo
+                    int tokensObjetivo = obtenerTokensObjetivo(e.obtenerCuerpoError());
+                    
+                    // Truncar prompt
+                    int longitudOriginal = promptActual.length();
+                    promptActual = promptTruncador.truncarPrompt(promptActual, tokensObjetivo);
+                    
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.ContextoExcedido.TRUNCADO(longitudOriginal, promptActual.length()));
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.ContextoExcedido.RETRY_CON_TRUNCADO());
+                    continue;
+                }
+                // Agotamos intentos de truncado
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.ContextoExcedido.MAX_INTENTOS(MAX_TRUNCADOS));
+                throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO(), e);
+            }
         }
+        
+        // No debería llegar aquí, pero por seguridad
+        throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO());
+    }
+    
+    /**
+     * Calcula el número objetivo de tokens basado en el error y configuración.
+     */
+    private int obtenerTokensObjetivo(String cuerpoError) {
+        // Intentar extraer límite del error
+        ContextExceededDetector detector = new ContextExceededDetector();
+        int limiteExtraido = detector.extraerLimiteTokens(cuerpoError);
+        
+        if (limiteExtraido > 0) {
+            // Dejar margen para respuesta (25% del context window)
+            return promptTruncador.calcularTokensDisponibles(limiteExtraido, limiteExtraido / 4);
+        }
+        
+        // Fallback: usar configuración del modelo
+        String proveedor = config.obtenerProveedorAI();
+        String modelo = config.obtenerModelo();
+        int maxTokens = config.obtenerMaxTokensParaProveedor(proveedor);
+        
+        if (maxTokens > 0) {
+            return promptTruncador.calcularTokensDisponibles(maxTokens, maxTokens / 4);
+        }
+        
+        // Último fallback: estimar según modelo conocido
+        int contextWindow = estimarContextWindow(modelo);
+        return promptTruncador.calcularTokensDisponibles(contextWindow, contextWindow / 4);
+    }
+    
+    /**
+     * Estima el context window de un modelo conocido.
+     * DRY - datos centralizados.
+     */
+    private int estimarContextWindow(String modelo) {
+        if (Normalizador.esVacio(modelo)) {
+            return 4000;
+        }
+        String m = modelo.toLowerCase();
+        if (m.contains("gpt-4o") || m.contains("gpt-4-32k")) return 128000;
+        if (m.contains("gpt-4")) return 8192;
+        if (m.contains("gpt-3.5-turbo-16k")) return 16384;
+        if (m.contains("gpt-3.5")) return 4096;
+        if (m.contains("claude-3-5-sonnet") || m.contains("claude-3-opus")) return 200000;
+        if (m.contains("claude-3")) return 100000;
+        if (m.contains("claude")) return 100000;
+        if (m.contains("gemini-1.5-pro")) return 1000000;
+        if (m.contains("gemini")) return 32000;
+        if (m.contains("llama-3") || m.contains("llama3")) return 8000;
+        if (m.contains("llama")) return 4096;
+        if (m.contains("mistral")) return 32000;
+        return 4000;
     }
 
     private String llamarAPIAIConRetriesConConfig(ConfiguracionAPI configProveedor) throws IOException {
@@ -254,6 +336,10 @@ public class OrquestadorAnalisis {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("Sistema de retry cancelado/interrumpido", e);
+        } catch (ContextExceededException e) {
+            // Para multi-proveedor, no implementamos truncado complejo por ahora
+            // Simplemente propagamos el error
+            throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO(), e);
         }
     }
 

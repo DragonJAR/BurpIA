@@ -42,6 +42,7 @@ public class PanelTareas extends JPanel {
     private static final int ANCHO_COLUMNA_ESTADO = 130;
     private static final int ANCHO_COLUMNA_DURACION = 100;
 
+    private static final int INTERVALO_ACTUALIZACION_MS = 1000;
     private static final int UMBRAL_RESPONSIVE = 800;
 
     @SuppressWarnings("this-escape")
@@ -173,7 +174,7 @@ public class PanelTareas extends JPanel {
             }
         });
 
-        timerActualizacion = new Timer(1000, e -> actualizarEstadisticas());
+        timerActualizacion = new Timer(INTERVALO_ACTUALIZACION_MS, e -> actualizarEstadisticas());
         timerActualizacion.start();
         aplicarIdioma();
 
@@ -247,20 +248,6 @@ public class PanelTareas extends JPanel {
             actualizarTextoYTooltip(botonPausarReanudar,
                     I18nUI.Tareas.BOTON_PAUSAR_TODO(),
                     I18nUI.Tooltips.Tareas.PAUSAR_TODO());
-        }
-    }
-
-    /**
-     * Ejecuta una acción en el EDT si no estamos ya en él, o directamente si ya
-     * estamos.
-     *
-     * @param accion Acción a ejecutar
-     */
-    private void ejecutarEnEdtSiEsNecesario(Runnable accion) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            accion.run();
-        } else {
-            ejecutarEnEdt(accion);
         }
     }
 
@@ -611,7 +598,7 @@ public class PanelTareas extends JPanel {
 
             actualizarBotonPausarReanudar(estadisticas.pausadas);
         };
-        ejecutarEnEdtSiEsNecesario(actualizarUi);
+        ejecutarEnEdt(actualizarUi);
     }
 
     public void aplicarIdioma() {
@@ -648,7 +635,7 @@ public class PanelTareas extends JPanel {
             repaint();
         };
 
-        ejecutarEnEdtSiEsNecesario(aplicar);
+        ejecutarEnEdt(aplicar);
     }
 
     private void configurarColumnasTabla() {

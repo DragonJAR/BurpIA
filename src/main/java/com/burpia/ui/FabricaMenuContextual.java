@@ -5,9 +5,6 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
-import com.burpia.bulk.BulkAnalysisManager;
-import com.burpia.bulk.CompositeProxyHistoryFilter;
-import com.burpia.bulk.HistorialBurpProvider;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.flow.FlowAnalysisManager;
@@ -33,8 +30,6 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final ConfiguracionAPI config;
     private final Predicate<HttpRequestResponse> manejadorAgente;
     private final Runnable manejadorCambioAlertasEnviarA;
-    private final HistorialBurpProvider historialBurpProvider;
-    private final BulkAnalysisManager bulkAnalysisManager;
     private final Frame parentFrame;
     private final AtomicReference<RegistroClic> ultimoClic;
     private final GestorLoggingUnificado gestorLogging;
@@ -52,16 +47,12 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                                  ConfiguracionAPI config,
                                  Predicate<HttpRequestResponse> manejadorAgente,
                                  Runnable manejadorCambioAlertasEnviarA,
-                                 HistorialBurpProvider historialBurpProvider,
-                                 BulkAnalysisManager bulkAnalysisManager,
                                  Frame parentFrame) {
         this.api = api;
         this.manejadorAnalisis = manejadorAnalisis;
         this.config = config;
         this.manejadorAgente = manejadorAgente;
         this.manejadorCambioAlertasEnviarA = manejadorCambioAlertasEnviarA;
-        this.historialBurpProvider = historialBurpProvider;
-        this.bulkAnalysisManager = bulkAnalysisManager;
         this.parentFrame = parentFrame;
         this.ultimoClic = new AtomicReference<>();
         this.gestorLogging = GestorLoggingUnificado.crear(null, null, null, api, null);
@@ -74,8 +65,6 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                                  ConfiguracionAPI config,
                                  Predicate<HttpRequestResponse> manejadorAgente,
                                  Runnable manejadorCambioAlertasEnviarA,
-                                 HistorialBurpProvider historialBurpProvider,
-                                 BulkAnalysisManager bulkAnalysisManager,
                                  Frame parentFrame,
                                  GestorLoggingUnificado gestorLogging,
                                  LimitadorTasa limitador,
@@ -85,8 +74,6 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         this.config = config;
         this.manejadorAgente = manejadorAgente;
         this.manejadorCambioAlertasEnviarA = manejadorCambioAlertasEnviarA;
-        this.historialBurpProvider = historialBurpProvider;
-        this.bulkAnalysisManager = bulkAnalysisManager;
         this.parentFrame = parentFrame;
         this.ultimoClic = new AtomicReference<>();
         this.gestorLogging = gestorLogging != null ? gestorLogging : GestorLoggingUnificado.crear(null, null, null, api, null);
@@ -115,14 +102,6 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             itemFlujo.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO());
             itemFlujo.addActionListener(e -> manejarAnalisisFlujo(seleccion));
             itemsMenu.add(itemFlujo);
-        }
-
-        if (historialBurpProvider != null && bulkAnalysisManager != null) {
-            JMenuItem itemBulk = new JMenuItem("Analizar historial filtrado...");
-            itemBulk.setFont(EstilosUI.FUENTE_ESTANDAR);
-            itemBulk.setToolTipText("Analizar múltiples solicitudes del historial con filtros");
-            itemBulk.addActionListener(e -> manejarAnalisisBulk());
-            itemsMenu.add(itemBulk);
         }
 
         if (config != null && config.agenteHabilitado() && manejadorAgente != null) {
@@ -201,20 +180,6 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 alertasEnviarAHabilitadas(),
                 this::deshabilitarAlertasEnviarA
             );
-        }
-    }
-    
-    private void manejarAnalisisBulk() {
-        DialogoFiltroHistorial dialogo = new DialogoFiltroHistorial(parentFrame, historialBurpProvider);
-        dialogo.setVisible(true);
-        
-        CompositeProxyHistoryFilter filtro = dialogo.obtenerFiltro();
-        if (filtro != null && bulkAnalysisManager != null) {
-            PanelProgresoBulk panelProgreso = new PanelProgresoBulk(parentFrame);
-            panelProgreso.establecerCancelAction(() -> bulkAnalysisManager.cancelar());
-            panelProgreso.setVisible(true);
-            
-            bulkAnalysisManager.ejecutarAnalisisBulk(filtro, panelProgreso, null);
         }
     }
 

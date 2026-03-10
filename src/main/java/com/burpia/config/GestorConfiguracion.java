@@ -405,9 +405,10 @@ public class GestorConfiguracion {
         // Multi-Proveedor Configuration
         archivo.multiProveedorHabilitado = config.esMultiProveedorHabilitado();
         List<String> proveedores = config.obtenerProveedoresMultiConsulta();
+        // Siempre guardar como ArrayList (vacío si no hay proveedores) para persistir el orden
         archivo.proveedoresMultiConsulta = Normalizador.noEsVacia(proveedores)
             ? new ArrayList<>(proveedores)
-            : null;
+            : new ArrayList<>();
 
         // Niveles de logging
         archivo.nivelErrorHabilitado = config.esNivelErrorHabilitado();

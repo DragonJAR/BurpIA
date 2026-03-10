@@ -1,30 +1,54 @@
 package com.burpia.config;
 
 import com.burpia.util.GestorLoggingUnificado;
+import com.burpia.util.RutasBurpIA;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.io.PrintWriter;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Tests para ConfigPersistenceManager.
+ * <p>
+ * IMPORTANTE: Este test usa directorio temporal para evitar tocar
+ * la configuración real del usuario en ~/.burpia/config.json
+ * </p>
+ */
 class ConfigPersistenceManagerTest {
-    
+
     @TempDir
-    File tempDir;
-    
+    Path tempDir;
+
+    private String userHomeOriginal;
     private GestorConfiguracion gestorConfig;
     private GestorLoggingUnificado gestorLogging;
     private ConfigPersistenceManager persistenceManager;
-    
+
     @BeforeEach
     void setUp() {
+        // Guardar user.home original y redirigir a directorio temporal
+        userHomeOriginal = System.getProperty("user.home");
+        RutasBurpIA.limpiarCacheParaTests();
+        System.setProperty("user.home", tempDir.toString());
+
         gestorConfig = new GestorConfiguracion(new PrintWriter(System.out), new PrintWriter(System.err));
         gestorLogging = GestorLoggingUnificado.crearMinimal(new PrintWriter(System.out), new PrintWriter(System.err));
         persistenceManager = new ConfigPersistenceManager(gestorConfig, gestorLogging);
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Restaurar user.home original
+        if (userHomeOriginal != null) {
+            System.setProperty("user.home", userHomeOriginal);
+        }
+        RutasBurpIA.limpiarCacheParaTests();
     }
     
     @Test

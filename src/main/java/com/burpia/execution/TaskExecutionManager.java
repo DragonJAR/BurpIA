@@ -3,6 +3,7 @@ package com.burpia.execution;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.model.Tarea;
 import com.burpia.ui.PestaniaPrincipal;
@@ -121,7 +122,7 @@ public class TaskExecutionManager {
                     tipoTarea,
                     url,
                     Tarea.ESTADO_EN_COLA,
-                    "Esperando analisis");
+                    I18nUI.Tareas.MSG_ESPERANDO_ANALISIS());
             tareaIdRef.set(tarea.obtenerId());
             contextosReintento.put(
                     tarea.obtenerId(),
@@ -143,7 +144,7 @@ public class TaskExecutionManager {
         }
 
         if (gestorTareas != null) {
-            gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_EN_COLA, "Reintentando...");
+            gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_EN_COLA, I18nUI.Tareas.MSG_REINTENTANDO());
         }
 
         ejecutarAnalisisExistente(
@@ -228,13 +229,13 @@ public class TaskExecutionManager {
             contextosReintento.remove(id);
             eliminarEvidenciaSiDisponible(evidenciaId);
             if (gestorTareas != null) {
-                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Descartada por saturación de cola");
+                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, I18nUI.Tareas.MSG_DESCARTADA_SATURACION());
             }
             gestorLogging.error(ORIGEN_LOG, "Cola de análisis saturada, solicitud descartada: " + url);
         } catch (Exception ex) {
             analizadoresActivos.remove(id);
             if (gestorTareas != null) {
-                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, "Error al iniciar análisis: " + ex.getMessage());
+                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, I18nUI.Tareas.MSG_ERROR_INICIAR(ex.getMessage()));
             }
             finalizarEjecucionActiva(id);
             contextosReintento.remove(id);
@@ -454,10 +455,20 @@ public class TaskExecutionManager {
             final String id = tareaIdRef.get();
 
             try {
+                // Agregar hallazgos al modelo de la tabla
+                if (resultado != null && resultado.obtenerHallazgos() != null 
+                        && !resultado.obtenerHallazgos().isEmpty()) {
+                    List<com.burpia.model.Hallazgo> hallazgos = resultado.obtenerHallazgos();
+                    ejecutarEnEdt(() -> {
+                        if (pestaniaPrincipal != null) {
+                            pestaniaPrincipal.agregarHallazgos(hallazgos);
+                        }
+                    });
+                }
+
                 if (gestorTareas != null && Normalizador.noEsVacio(id)) {
                     gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
-                            "Completado: " + (resultado != null ? resultado.obtenerNumeroHallazgos() : 0)
-                                    + " hallazgos");
+                            I18nUI.Tareas.MSG_COMPLETADO_HALLAZGOS(resultado != null ? resultado.obtenerNumeroHallazgos() : 0));
                 }
 
                 gestorLogging.info(ORIGEN_LOG, "Análisis completado: " + url);
@@ -479,7 +490,7 @@ public class TaskExecutionManager {
             try {
                 if (gestorTareas != null && Normalizador.noEsVacio(id)) {
                     gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR,
-                            "Error: " + (error != null ? error : "Error desconocido"));
+                            I18nUI.Tareas.MSG_ERROR_GENERICO(error != null ? error : I18nUI.Tareas.MSG_ERROR_DESCONOCIDO()));
                 }
                 gestorLogging.error(ORIGEN_LOG, "Análisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
 
@@ -499,7 +510,7 @@ public class TaskExecutionManager {
 
             try {
                 if (gestorTareas != null && Normalizador.noEsVacio(id)) {
-                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, "Cancelado por usuario");
+                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, I18nUI.Tareas.MSG_CANCELADO_USUARIO());
                 }
                 gestorLogging.info(ORIGEN_LOG, "Análisis cancelado: " + url);
             } finally {

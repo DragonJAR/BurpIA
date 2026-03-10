@@ -1,5 +1,6 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
@@ -35,6 +36,8 @@ public final class ProviderConfigManager {
 
     private DefaultListModel<String> modeloListaDisponibles;
     private DefaultListModel<String> modeloListaSeleccionados;
+    private JList<String> listaProveedoresDisponibles;
+    private JList<String> listaProveedoresSeleccionados;
     private JLabel lblEstadoMultiProveedor;
 
     private JComboBox<String> comboProveedor;
@@ -112,6 +115,8 @@ public final class ProviderConfigManager {
      * @param lblEstadoMultiProveedor Label de estado multi-proveedor
      * @param modeloListaDisponibles Modelo de lista de proveedores disponibles
      * @param modeloListaSeleccionados Modelo de lista de proveedores seleccionados
+     * @param listaProveedoresDisponibles JList de proveedores disponibles
+     * @param listaProveedoresSeleccionados JList de proveedores seleccionados
      */
     public void inicializarComponentesUI(JComboBox<String> comboProveedor,
                                        JComboBox<String> comboModelo,
@@ -126,7 +131,9 @@ public final class ProviderConfigManager {
                                        JCheckBox chkHabilitarMultiProveedor,
                                        JLabel lblEstadoMultiProveedor,
                                        DefaultListModel<String> modeloListaDisponibles,
-                                       DefaultListModel<String> modeloListaSeleccionados) {
+                                       DefaultListModel<String> modeloListaSeleccionados,
+                                       JList<String> listaProveedoresDisponibles,
+                                       JList<String> listaProveedoresSeleccionados) {
         this.comboProveedor = comboProveedor;
         this.comboModelo = comboModelo;
         this.txtUrl = txtUrl;
@@ -141,6 +148,8 @@ public final class ProviderConfigManager {
         this.lblEstadoMultiProveedor = lblEstadoMultiProveedor;
         this.modeloListaDisponibles = modeloListaDisponibles;
         this.modeloListaSeleccionados = modeloListaSeleccionados;
+        this.listaProveedoresDisponibles = listaProveedoresDisponibles;
+        this.listaProveedoresSeleccionados = listaProveedoresSeleccionados;
 
         if (comboProveedor != null) {
             comboProveedor.addActionListener(e -> alCambiarProveedor());
@@ -157,6 +166,17 @@ public final class ProviderConfigManager {
         if (btnBajarProveedor != null) {
             btnBajarProveedor.addActionListener(e -> bajarProveedorSeleccionado());
         }
+        if (chkHabilitarMultiProveedor != null) {
+            chkHabilitarMultiProveedor.addActionListener(e -> {
+                actualizarEstadoMultiProveedor();
+                actualizarBotonesMultiProveedor();
+
+                // Si se acaba de marcar, sincronizar el proveedor actual
+                if (chkHabilitarMultiProveedor.isSelected()) {
+                    sincronizarProveedorPrincipalConMultiProveedor();
+                }
+            });
+        }
 
         gestorLogging.info(ORIGEN_LOG, "Componentes UI inicializados");
     }
@@ -170,6 +190,11 @@ public final class ProviderConfigManager {
             return;
         }
 
+        // Obtener el proveedor GUARDADO en configuración, NO el primero del combo
+        String proveedorGuardado = config.obtenerProveedorAI();
+        if (Normalizador.noEsVacio(proveedorGuardado)) {
+            comboProveedor.setSelectedItem(proveedorGuardado);
+        }
         proveedorActualUi = (String) comboProveedor.getSelectedItem();
         cargarEstadoProveedor(proveedorActualUi);
 
@@ -182,8 +207,8 @@ public final class ProviderConfigManager {
         }
 
         modeloListaDisponibles.clear();
-        List<String> disponibles = config.obtenerProveedoresDisponibles();
-        for (String proveedor : disponibles) {
+        List<String> todosProveedores = ProveedorAI.obtenerNombresProveedores();
+        for (String proveedor : todosProveedores) {
             if (modeloListaSeleccionados.indexOf(proveedor) == -1) {
                 modeloListaDisponibles.addElement(proveedor);
             }
@@ -221,12 +246,11 @@ public final class ProviderConfigManager {
                 comboProveedor.setSelectedItem(nuevoProveedor);
             }
 
-            if (chkHabilitarMultiProveedor != null && chkHabilitarMultiProveedor.isSelected() 
-                && !actualizandoListaMultiProveedor) {
-                SwingUtilities.invokeLater(this::asegurarProveedorActualEnPrimeraPosicion);
-            }
-
             gestorLogging.info(ORIGEN_LOG, "Proveedor cambiado a: " + nuevoProveedor);
+
+            // Sincronizar proveedor principal con lista multi-proveedor
+            sincronizarProveedorPrincipalConMultiProveedor();
+
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG, "Error al cambiar proveedor: " + e.getMessage(), e);
         } finally {
@@ -433,7 +457,11 @@ public final class ProviderConfigManager {
         }
 
         modeloListaSeleccionados.addElement(proveedor);
-        modeloListaDisponibles.removeElement(proveedor);
+
+        // Verificar si modeloListaDisponibles está inicializado
+        if (modeloListaDisponibles != null) {
+            modeloListaDisponibles.removeElement(proveedor);
+        }
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
@@ -450,19 +478,15 @@ public final class ProviderConfigManager {
             return;
         }
 
-        int indiceSeleccionado = listaProveedoresSeleccionados.getSelectedIndex();
         String proveedorActual = obtenerProveedorActual();
 
-        if (indiceSeleccionado == 0 && proveedor.equals(proveedorActual)) {
+        if (proveedor.equals(proveedorActual)) {
             gestorLogging.error(ORIGEN_LOG, "No se puede quitar el proveedor principal: " + proveedor);
             return;
         }
 
         modeloListaSeleccionados.removeElement(proveedor);
-
-        if (!proveedor.equals(proveedorActual)) {
-            modeloListaDisponibles.addElement(proveedor);
-        }
+        modeloListaDisponibles.addElement(proveedor);
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
@@ -479,9 +503,21 @@ public final class ProviderConfigManager {
             return;
         }
 
-        String proveedor = modeloListaSeleccionados.remove(indice);
-        modeloListaSeleccionados.add(indice - 1, proveedor);
+        String proveedor = modeloListaSeleccionados.getElementAt(indice);
+
+        // SRP: Protección del proveedor principal
+        if (Normalizador.noEsVacio(proveedorActualUi) && proveedor.equals(proveedorActualUi)) {
+            gestorLogging.error(ORIGEN_LOG, "No se puede subir el proveedor principal: " + proveedor);
+            return;
+        }
+
+        String proveedorMovido = modeloListaSeleccionados.remove(indice);
+        modeloListaSeleccionados.add(indice - 1, proveedorMovido);
         listaProveedoresSeleccionados.setSelectedIndex(indice - 1);
+
+        actualizarEstadoMultiProveedor();
+        actualizarBotonesMultiProveedor();
+        gestorLogging.info(ORIGEN_LOG, "Proveedor subido en lista: " + proveedor);
     }
 
     private void bajarProveedorSeleccionado() {
@@ -494,31 +530,83 @@ public final class ProviderConfigManager {
             return;
         }
 
-        String proveedor = modeloListaSeleccionados.remove(indice);
-        modeloListaSeleccionados.add(indice + 1, proveedor);
-        listaProveedoresSeleccionados.setSelectedIndex(indice + 1);
-    }
+        String proveedor = modeloListaSeleccionados.getElementAt(indice);
 
-    private void asegurarProveedorActualEnPrimeraPosicion() {
-        if (proveedorActualUi == null || modeloListaSeleccionados == null) {
+        // SRP: Protección del proveedor principal
+        if (Normalizador.noEsVacio(proveedorActualUi) && proveedor.equals(proveedorActualUi)) {
+            gestorLogging.error(ORIGEN_LOG, "No se puede bajar el proveedor principal: " + proveedor);
             return;
         }
 
-        int indiceActual = modeloListaSeleccionados.indexOf(proveedorActualUi);
-        if (indiceActual > 0) {
-            String proveedor = modeloListaSeleccionados.remove(indiceActual);
-            modeloListaSeleccionados.add(0, proveedor);
+        String proveedorMovido = modeloListaSeleccionados.remove(indice);
+        modeloListaSeleccionados.add(indice + 1, proveedorMovido);
+        listaProveedoresSeleccionados.setSelectedIndex(indice + 1);
+
+        actualizarEstadoMultiProveedor();
+        actualizarBotonesMultiProveedor();
+        gestorLogging.info(ORIGEN_LOG, "Proveedor bajado en lista: " + proveedor);
+    }
+
+    private void sincronizarProveedorPrincipalConMultiProveedor() {
+        // 1. Precondiciones (SRP: Validación separada)
+        if (chkHabilitarMultiProveedor == null || !chkHabilitarMultiProveedor.isSelected()) {
+            return;
         }
+        if (Normalizador.esVacio(proveedorActualUi)) {
+            return;
+        }
+        if (modeloListaSeleccionados == null || modeloListaDisponibles == null) {
+            return;
+        }
+
+        // 2. Buscar proveedor actual en lista seleccionada
+        int indiceActual = modeloListaSeleccionados.indexOf(proveedorActualUi);
+
+        // 3. Caso A: El proveedor YA está en la lista seleccionada
+        if (indiceActual >= 0) {
+            if (indiceActual != 0) {
+                // Mover al inicio solo si no es el primero
+                String proveedor = modeloListaSeleccionados.remove(indiceActual);
+                modeloListaSeleccionados.add(0, proveedor);
+                gestorLogging.info(ORIGEN_LOG, "Proveedor '" + proveedorActualUi +
+                        "' movido a la primera posición en lista multi-proveedor");
+            }
+            // Si está en 0, no hacer nada (ya sincronizado)
+            actualizarEstadoMultiProveedor();
+            actualizarBotonesMultiProveedor();
+            return;
+        }
+
+        // 4. Caso B: El proveedor NO está en la lista, agregarlo
+        modeloListaSeleccionados.add(0, proveedorActualUi);
+
+        // 5. Eliminar de lista disponibles si estaba ahí
+        int indiceDisponibles = modeloListaDisponibles.indexOf(proveedorActualUi);
+        if (indiceDisponibles >= 0) {
+            modeloListaDisponibles.removeElement(proveedorActualUi);
+        }
+
+        gestorLogging.info(ORIGEN_LOG, "Proveedor '" + proveedorActualUi +
+                "' agregado a la primera posición en lista multi-proveedor");
+
+        // 6. Actualizar UI
+        actualizarEstadoMultiProveedor();
+        actualizarBotonesMultiProveedor();
     }
 
     private void actualizarEstadoMultiProveedor() {
-        if (lblEstadoMultiProveedor == null || modeloListaSeleccionados == null) {
+        if (lblEstadoMultiProveedor == null || modeloListaSeleccionados == null 
+                || chkHabilitarMultiProveedor == null) {
             return;
         }
 
+        boolean habilitado = chkHabilitarMultiProveedor.isSelected();
         int cantidad = modeloListaSeleccionados.getSize();
-        if (cantidad == 0) {
-            lblEstadoMultiProveedor.setText("Multi-proveedor deshabilitado");
+
+        if (!habilitado) {
+            lblEstadoMultiProveedor.setText(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_DESHABILITADO());
+        } else if (cantidad == 0) {
+            lblEstadoMultiProveedor.setText("⚠️ Multi-proveedor habilitado pero sin proveedores seleccionados");
         } else if (cantidad == 1) {
             lblEstadoMultiProveedor.setText("⚠️ Se necesitan al menos 2 proveedores");
         } else {
@@ -527,18 +615,38 @@ public final class ProviderConfigManager {
     }
 
     private void actualizarBotonesMultiProveedor() {
-        if (btnAgregarProveedor == null || btnQuitarProveedor == null || chkHabilitarMultiProveedor == null) {
+        if (btnAgregarProveedor == null || btnQuitarProveedor == null
+                || btnSubirProveedor == null || btnBajarProveedor == null
+                || chkHabilitarMultiProveedor == null) {
             return;
         }
 
         boolean habilitado = chkHabilitarMultiProveedor.isSelected();
-        boolean haySeleccionDisponible = listaProveedoresDisponibles != null 
+        boolean haySeleccionDisponible = listaProveedoresDisponibles != null
             && listaProveedoresDisponibles.getSelectedValue() != null;
-        boolean haySeleccionSeleccionados = listaProveedoresSeleccionados != null 
+        boolean haySeleccionSeleccionados = listaProveedoresSeleccionados != null
             && listaProveedoresSeleccionados.getSelectedValue() != null;
 
         btnAgregarProveedor.setEnabled(habilitado && haySeleccionDisponible);
         btnQuitarProveedor.setEnabled(habilitado && haySeleccionSeleccionados);
+
+        // FIX: Habilitar/Deshabilitar botones Subir y Bajar verificando posición
+        boolean puedeSubir = false;
+        boolean puedeBajar = false;
+
+        if (habilitado && listaProveedoresSeleccionados != null) {
+            int indiceSeleccionado = listaProveedoresSeleccionados.getSelectedIndex();
+            int cantidadElementos = modeloListaSeleccionados != null ? modeloListaSeleccionados.getSize() : 0;
+
+            // Solo puede subir si hay selección y NO es el primero (indice 0)
+            puedeSubir = haySeleccionSeleccionados && indiceSeleccionado > 0;
+
+            // Solo puede bajar si hay selección y NO es el último (indice >= cantidad - 1)
+            puedeBajar = haySeleccionSeleccionados && indiceSeleccionado >= 0 && indiceSeleccionado < cantidadElementos - 1;
+        }
+
+        btnSubirProveedor.setEnabled(puedeSubir);
+        btnBajarProveedor.setEnabled(puedeBajar);
     }
 
     private void actualizarTimeoutModeloSeleccionado() {
@@ -557,7 +665,7 @@ public final class ProviderConfigManager {
         }
 
         comboModelo.removeAllItems();
-        comboModelo.addItem("(Modelo personalizado)");
+        comboModelo.addItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
 
         List<String> modelosNormalizados = normalizarModelos(modelos);
         for (String modelo : modelosNormalizados) {
@@ -576,7 +684,7 @@ public final class ProviderConfigManager {
             }
         }
 
-        comboModelo.setSelectedItem("(Modelo personalizado)");
+        comboModelo.setSelectedItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
         comboModelo.getEditor().setItem(preferidoNormalizado);
         actualizarTimeoutModeloSeleccionado();
     }
@@ -601,7 +709,7 @@ public final class ProviderConfigManager {
     }
 
     private boolean esOpcionModeloCustom(String modelo) {
-        return "(Modelo personalizado)".equals(modelo);
+        return I18nUI.Configuracion.OPCION_MODELO_CUSTOM().equals(modelo);
     }
 
     private List<String> normalizarModelos(List<String> modelos) {
@@ -631,13 +739,5 @@ public final class ProviderConfigManager {
         } catch (NumberFormatException e) {
             return null;
         }
-    }
-
-    private JList<String> listaProveedoresDisponibles;
-    private JList<String> listaProveedoresSeleccionados;
-
-    public void setListasProveedores(JList<String> disponibles, JList<String> seleccionados) {
-        this.listaProveedoresDisponibles = disponibles;
-        this.listaProveedoresSeleccionados = seleccionados;
     }
 }

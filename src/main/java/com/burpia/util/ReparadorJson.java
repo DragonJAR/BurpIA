@@ -191,25 +191,171 @@ public final class ReparadorJson {
             return texto;
         }
 
-        Pattern evidenciaPattern = Pattern.compile(
-            "\"(evidencia|evidence)\"\\s*:\\s*\"([^\"]*?<[^>]*>[^\"]*?)\"",
-            Pattern.CASE_INSENSITIVE | Pattern.DOTALL
-        );
+        // El LLM frecuentemente genera JSON con comillas sin escapar en campos evidencia
+        // que contienen HTML. Ejemplo: "evidencia": "<!-- InstanceBegin template="/Templates/..."
+        // donde las comillas en los atributos HTML rompen el JSON.
+        //
+        // Solución: Parser manual que encuentra campos "evidencia" y re-escapea comillas
+        // dentro de los valores.
 
-        Matcher matcher = evidenciaPattern.matcher(texto);
-        StringBuffer sb = new StringBuffer();
+        String[] clavesABuscar = {"evidencia", "evidence", "prueba"};
 
-        while (matcher.find()) {
-            String claveOriginal = matcher.group(1);
-            String valor = matcher.group(2);
-            String valorEscapado = escaparComillasEnHtml(valor);
-            matcher.appendReplacement(sb, Matcher.quoteReplacement(
-                "\"" + claveOriginal + "\": \"" + valorEscapado + "\""
-            ));
+        for (String clave : clavesABuscar) {
+            texto = reparadorCampoHtml(texto, clave);
         }
-        matcher.appendTail(sb);
 
-        return sb.toString();
+        return texto;
+    }
+
+    /**
+     * Repara un campo específico que puede contener comillas sin escapar.
+     * Parser manual que encuentra ": valor" y re-escapea comillas dentro del valor.
+     */
+    private static String reparadorCampoHtml(String texto, String nombreCampo) {
+        if (Normalizador.esVacio(texto) || nombreCampo == null) {
+            return texto;
+        }
+
+        StringBuilder resultado = new StringBuilder(texto.length() + 64);
+        int indice = 0;
+
+        while (indice < texto.length()) {
+            // Buscar el nombre del campo (case insensitive)
+            int posCampo = buscarCampo(texto, nombreCampo, indice);
+            if (posCampo == -1) {
+                resultado.append(texto.substring(indice));
+                break;
+            }
+
+            // posCampo incluye las comillas del nombre del campo
+            // Ejemplo: "evidencia" está en posCampo, el valor empieza después de ": "
+            // Buscar ": " después del campo
+            int posDosPuntos = -1;
+            for (int i = posCampo + nombreCampo.length() + 2; i < texto.length() - 1; i++) {
+                if (texto.charAt(i) == ':' && texto.charAt(i + 1) == ' ') {
+                    posDosPuntos = i;
+                    break;
+                }
+            }
+
+            if (posDosPuntos == -1) {
+                indice = posCampo + nombreCampo.length() + 2;
+                continue;
+            }
+
+            // Agregar todo hasta después de ": "
+            resultado.append(texto.substring(indice, posDosPuntos + 2));
+            
+            // El valor empieza en posDosPuntos + 2 (después de ": ")
+            int posInicioValor = posDosPuntos + 2;
+
+            // Verificar que hay una comilla de apertura
+            if (posInicioValor >= texto.length() || texto.charAt(posInicioValor) != '"') {
+                indice = posInicioValor;
+                continue;
+            }
+
+            // Saltar la comilla de apertura
+            int posDespuesApertura = posInicioValor + 1;
+
+            // Encontrar el final del valor (la comilla de cierre que NO está escapada)
+            int posFinValor = encontrarFinValorJson(texto, posDespuesApertura);
+
+            if (posFinValor == -1) {
+                // No se pudo encontrar un cierre válido, intentar reparar comillas en lo que sigue
+                String resto = texto.substring(posDespuesApertura);
+                String restoReparado = reparadorComillasEnHtml(resto);
+                resultado.append(restoReparado);
+                break;
+            }
+
+            // Extraer el valor original (sin las comillas de apertura/cierre)
+            String valorOriginal = texto.substring(posDespuesApertura, posFinValor);
+
+            // Reparar comillas sin escapar dentro del valor
+            String valorReparado = reparadorComillasEnHtml(valorOriginal);
+
+            // Agregar el valor reparado con comillas
+            resultado.append('"').append(valorReparado).append('"');
+
+            indice = posFinValor + 1;
+        }
+
+        return resultado.toString();
+    }
+
+    /**
+     * Busca un campo en el texto (case insensitive)
+     */
+    private static int buscarCampo(String texto, String campo, int desde) {
+        String textoLower = texto.toLowerCase();
+        String campoLower = "\"" + campo.toLowerCase() + "\"";
+        return textoLower.indexOf(campoLower, desde);
+    }
+
+    /**
+     * Encuentra la posición de la comilla de cierre que cierra el valor JSON.
+     * Maneja correctamente comillas escapadas (\") vs. comillas literales (").
+     */
+    private static int encontrarFinValorJson(String texto, int inicio) {
+        boolean escapado = false;
+
+        for (int i = inicio; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+
+            if (escapado) {
+                escapado = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escapado = true;
+                continue;
+            }
+
+            if (c == '"') {
+                // Encontramos la comilla de cierre
+                return i;
+            }
+        }
+
+        return -1; // No se encontró cierre
+    }
+
+    /**
+     * Repara comillas sin escapar dentro de un valor que contiene HTML.
+     * El LLM genera: "valor con "texto" dentro" (roto)
+     * Debe convertirse a: "valor con \"texto\" dentro" (válido)
+     */
+    private static String reparadorComillasEnHtml(String valor) {
+        if (Normalizador.esVacio(valor)) {
+            return valor;
+        }
+
+        StringBuilder resultado = new StringBuilder(valor.length() + 32);
+        boolean dentroDeTag = false;
+
+        for (int i = 0; i < valor.length(); i++) {
+            char c = valor.charAt(i);
+
+            if (c == '<') {
+                dentroDeTag = true;
+                resultado.append(c);
+            } else if (c == '>') {
+                dentroDeTag = false;
+                resultado.append(c);
+            } else if (c == '"' && dentroDeTag) {
+                // Comilla sin escapar dentro de tag HTML - escapar
+                resultado.append("\\\"");
+            } else if (c == '\\' && i + 1 < valor.length() && valor.charAt(i + 1) == '"') {
+                // Backslash antes de comilla - mantenerlo
+                resultado.append(c);
+            } else {
+                resultado.append(c);
+            }
+        }
+
+        return resultado.toString();
     }
 
     private static String escaparComillasEnHtml(String html) {

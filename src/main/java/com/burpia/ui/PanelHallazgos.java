@@ -515,6 +515,15 @@ public class PanelHallazgos extends JPanel {
         modelo.agregarHallazgo(hallazgo);
     }
 
+    /**
+     * Agrega múltiples hallazgos al panel.
+     *
+     * @param hallazgos Lista de hallazgos a agregar
+     */
+    public void agregarHallazgos(List<Hallazgo> hallazgos) {
+        modelo.agregarHallazgos(hallazgos);
+    }
+
     public void limpiar() {
         // El modelo ya maneja EDT internamente, no es necesario envolver
         modelo.limpiar();

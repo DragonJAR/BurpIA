@@ -1,11 +1,11 @@
 package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
-import com.burpia.analyzer.PoliticaReintentos;
 import okhttp3.*;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,6 +31,7 @@ public class AnalizadorHTTP {
     private final BooleanSupplier tareaCancelada;
     private final BooleanSupplier tareaPausada;
     private final GestorLoggingUnificado gestorLogging;
+    private final ContextExceededDetector detectorContexto;
     private volatile Call llamadaHttpActiva;
     
     private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = Collections
@@ -58,9 +59,10 @@ public class AnalizadorHTTP {
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
         this.gestorLogging = gestorLogging != null ? gestorLogging : 
             GestorLoggingUnificado.crearMinimal(null, null);
+        this.detectorContexto = new ContextExceededDetector();
     }
 
-    public String llamarAPI(String prompt) throws IOException, InterruptedException {
+    public String llamarAPI(String prompt) throws IOException, InterruptedException, ContextExceededException {
         return llamarAPIConRetries(prompt);
     }
 
@@ -71,7 +73,7 @@ public class AnalizadorHTTP {
         }
     }
 
-    private String llamarAPIConRetries(String prompt) throws IOException, InterruptedException {
+    private String llamarAPIConRetries(String prompt) throws IOException, InterruptedException, ContextExceededException {
         IOException ultimaExcepcion = null;
         long backoffActualMs = BACKOFF_INICIAL_MS;
 
@@ -90,6 +92,11 @@ public class AnalizadorHTTP {
                 throw e;
             } catch (ApiHttpException e) {
                 ultimaExcepcion = e;
+                // Si es error de contexto, lanzar excepción específica (no reintentar aquí)
+                if (e.esErrorContextoExcedido()) {
+                    int limite = detectorContexto.extraerLimiteTokens(e.obtenerCuerpoError());
+                    throw new ContextExceededException(e.getMessage(), e.obtenerCuerpoError(), limite);
+                }
                 if (PoliticaReintentos.esCodigoNoReintentable(e.obtenerCodigoEstado(), e.obtenerCuerpoError())) {
                     throw new NonRetryableApiException(e.getMessage(), e);
                 }
@@ -188,7 +195,21 @@ public class AnalizadorHTTP {
                     String retryAfterHeader = respuesta.header("Retry-After");
                     String mensajeError = "Error de API: " + codigoRespuesta + " - " +
                             (Normalizador.noEsVacio(cuerpoError) ? cuerpoError : "sin cuerpo");
-                    throw new ApiHttpException(codigoRespuesta, cuerpoError, retryAfterHeader, mensajeError);
+                    
+                    // Detectar error de contexto excedido
+                    String proveedor = config.obtenerProveedorAI();
+                    boolean esErrorContexto = detectorContexto.esErrorContextoExcedido(
+                        proveedor, codigoRespuesta, cuerpoError);
+                    
+                    if (esErrorContexto) {
+                        gestorLogging.info(ORIGEN_LOG, I18nLogs.ContextoExcedido.DETECTADO());
+                        int limiteTokens = detectorContexto.extraerLimiteTokens(cuerpoError);
+                        if (limiteTokens > 0) {
+                            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.ContextoExcedido.LIMITE_EXTRAIDO(limiteTokens));
+                        }
+                    }
+                    
+                    throw new ApiHttpException(codigoRespuesta, cuerpoError, retryAfterHeader, mensajeError, esErrorContexto);
                 }
 
                 ResponseBody cuerpo = respuesta.body();
@@ -333,12 +354,15 @@ public class AnalizadorHTTP {
         private final int codigoEstado;
         private final String cuerpoError;
         private final String retryAfterHeader;
+        private final boolean esErrorContexto;
 
-        private ApiHttpException(int codigoEstado, String cuerpoError, String retryAfterHeader, String mensaje) {
+        private ApiHttpException(int codigoEstado, String cuerpoError, String retryAfterHeader, 
+                                String mensaje, boolean esErrorContexto) {
             super(mensaje);
             this.codigoEstado = codigoEstado;
             this.cuerpoError = cuerpoError != null ? cuerpoError : "";
             this.retryAfterHeader = retryAfterHeader != null ? retryAfterHeader.trim() : "";
+            this.esErrorContexto = esErrorContexto;
         }
 
         private int obtenerCodigoEstado() {
@@ -351,6 +375,10 @@ public class AnalizadorHTTP {
 
         private String obtenerRetryAfterHeader() {
             return retryAfterHeader;
+        }
+
+        private boolean esErrorContextoExcedido() {
+            return esErrorContexto;
         }
     }
 }

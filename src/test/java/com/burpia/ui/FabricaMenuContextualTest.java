@@ -110,8 +110,8 @@ class FabricaMenuContextualTest {
                     enviados.incrementAndGet();
                     return true;
                 },
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             List<Component> items = fabrica.provideMenuItems(evento);
 
@@ -140,8 +140,8 @@ class FabricaMenuContextualTest {
                 },
                 config,
                 rr -> true,
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
             item.doClick();
@@ -165,8 +165,8 @@ class FabricaMenuContextualTest {
                 },
                 config,
                 rr -> true,
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
             item.doClick();
@@ -195,8 +195,8 @@ class FabricaMenuContextualTest {
                 },
                 config,
                 rr -> true,
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
             item.doClick();
@@ -218,8 +218,8 @@ class FabricaMenuContextualTest {
                 },
                 config,
                 rr -> true,
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             // Primera solicitud
             ContextMenuEvent evento1 = crearEventoConSolicitud("GET /first HTTP/1.1");
@@ -256,8 +256,8 @@ class FabricaMenuContextualTest {
                     enviados.incrementAndGet();
                     return true;
                 },
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
             itemAgente.doClick();
@@ -292,8 +292,8 @@ class FabricaMenuContextualTest {
                     enviados.incrementAndGet();
                     return true;
                 },
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             // Buscar el item de agente por texto (contiene "Droid" o el nombre visible)
             List<Component> items = fabrica.provideMenuItems(evento);
@@ -329,8 +329,8 @@ class FabricaMenuContextualTest {
                 rr -> {
                     throw new RuntimeException("Error simulado");
                 },
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             // Buscar el item de análisis por texto (primer item que contenga "Analizar")
             List<Component> items2 = fabrica.provideMenuItems(evento);
@@ -371,8 +371,8 @@ class FabricaMenuContextualTest {
                     enviados.incrementAndGet();
                     return true;
                 },
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             // Buscar el item de agente por texto (contiene "Droid" o el nombre visible)
             List<Component> items3 = fabrica.provideMenuItems(evento);
@@ -409,8 +409,8 @@ class FabricaMenuContextualTest {
                 (solicitud, forzar, solicitudRespuestaOriginal) -> analisis.incrementAndGet(),
                 null,
                 rr -> true,
-                () -> {}
-            , null, null, null);
+                () -> {},
+                null);
 
             List<Component> items = fabrica.provideMenuItems(evento);
             assertEquals(1, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:382");
@@ -437,8 +437,8 @@ class FabricaMenuContextualTest {
                 (solicitud, forzar, solicitudRespuestaOriginal) -> {},
                 config,
                 rr -> true,
-                () -> cambios.incrementAndGet()
-            , null, null, null);
+                () -> cambios.incrementAndGet(),
+                null);
 
             // Verificar que el callback esta configurado
             assertNotNull(fabrica, "assertNotNull failed at FabricaMenuContextualTest.java:409");
@@ -468,8 +468,8 @@ class FabricaMenuContextualTest {
             (solicitud, forzar, solicitudRespuestaOriginal) -> {},
             config,
             rr -> true,
-            () -> {}
-        , null, null, null);
+            () -> {},
+            null);
     }
 
     private ContextMenuEvent crearEventoConSolicitud(String solicitudHttp) {

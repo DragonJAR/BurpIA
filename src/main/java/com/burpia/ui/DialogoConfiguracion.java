@@ -27,8 +27,9 @@ import java.awt.event.WindowEvent;
  */
 public class DialogoConfiguracion extends JDialog {
     
-    private static final int ANCHO_DIALOGO = 800;
-    private static final int ALTO_DIALOGO = 720;
+    // Dimensiones del diálogo (definidas en ConfigDialogView para centralizar)
+    private static final int ANCHO_DIALOGO = ConfigDialogView.ANCHO_DIALOGO;
+    private static final int ALTO_DIALOGO = ConfigDialogView.ALTO_DIALOGO;
     
     // Componentes principales
     private final ConfiguracionAPI config;

@@ -1,5 +1,6 @@
 package com.burpia.ui;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.util.GestorLoggingUnificado;
@@ -492,7 +493,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     private static void registrarErrorEscucha(Exception e) {
-        gestorLogging.error(ORIGEN_LOG, "Error en escucha de cambios: " + e.getMessage(), e);
+        gestorLogging.error(ORIGEN_LOG, I18nLogs.Hallazgos.ERROR_ESCUCHA_CAMBIOS() + e.getMessage(), e);
     }
 
     @Override

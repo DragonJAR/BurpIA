@@ -4,6 +4,7 @@ import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import com.burpia.i18n.I18nLogs;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -106,7 +107,7 @@ public class AlmacenEvidenciaHttp {
             }
             return evidenciaId;
         } catch (Exception e) {
-            registrarError("Error al guardar evidencia, se limpia archivo: " + rutaArchivo, e);
+            registrarError(I18nLogs.AlmacenEvidencia.ERROR_GUARDAR_LIMPIAR() + rutaArchivo, e);
             eliminarArchivoSilencioso(rutaArchivo);
             return null;
         }
@@ -148,7 +149,7 @@ public class AlmacenEvidenciaHttp {
             agregarACache(evidenciaId, evidencia, registro.requestBytes.length + registro.responseBytes.length);
             return evidencia;
         } catch (Exception e) {
-            registrarError("Error al reconstruir evidencia: " + evidenciaId, e);
+            registrarError(I18nLogs.AlmacenEvidencia.ERROR_RECONSTRUIR() + evidenciaId, e);
             return null;
         }
     }
@@ -194,7 +195,7 @@ public class AlmacenEvidenciaHttp {
         try {
             Files.createDirectories(directorioEvidencia);
         } catch (Exception e) {
-            registrarError("Error al crear directorio de evidencia: " + directorioEvidencia, e);
+            registrarError(I18nLogs.AlmacenEvidencia.ERROR_CREAR_DIRECTORIO() + directorioEvidencia, e);
         }
     }
 
@@ -253,7 +254,7 @@ public class AlmacenEvidenciaHttp {
         )))) {
             int reqLen = in.readInt();
             if (reqLen < 0 || reqLen > MAXIMO_BYTES_PARTE) {
-                registrarAdvertencia("Tamaño de request inválido en archivo: " + rutaArchivo + " (reqLen=" + reqLen + ")");
+                registrarAdvertencia(I18nLogs.AlmacenEvidencia.TAMANIO_REQUEST_INVALIDO() + rutaArchivo + " (reqLen=" + reqLen + ")");
                 throw new IOException("Tamaño de request inválido: " + reqLen);
             }
             byte[] requestBytes = new byte[reqLen];
@@ -261,7 +262,7 @@ public class AlmacenEvidenciaHttp {
 
             int resLen = in.readInt();
             if (resLen < 0 || resLen > MAXIMO_BYTES_PARTE) {
-                registrarAdvertencia("Tamaño de response inválido en archivo: " + rutaArchivo + " (resLen=" + resLen + ")");
+                registrarAdvertencia(I18nLogs.AlmacenEvidencia.TAMANIO_RESPONSE_INVALIDO() + rutaArchivo + " (resLen=" + resLen + ")");
                 throw new IOException("Tamaño de response inválido: " + resLen);
             }
             byte[] responseBytes = new byte[resLen];
@@ -281,7 +282,7 @@ public class AlmacenEvidenciaHttp {
             HttpResponse response = HttpResponse.httpResponse(ByteArray.byteArray(responseBytes));
             return HttpRequestResponse.httpRequestResponse(request, response);
         } catch (Exception e) {
-            registrarError("Error al reconstruir request/response desde bytes", e);
+            registrarError(I18nLogs.AlmacenEvidencia.ERROR_RECONSTRUIR_BYTES(), e);
             return null;
         }
     }
@@ -293,7 +294,7 @@ public class AlmacenEvidenciaHttp {
             }
             return evidencia.request().toByteArray().getBytes();
         } catch (Exception e) {
-            registrarVerbose("Error al extraer bytes de request: " + e.getMessage());
+            registrarVerbose(I18nLogs.AlmacenEvidencia.ERROR_EXTRAER_REQUEST() + e.getMessage());
             return new byte[0];
         }
     }
@@ -305,7 +306,7 @@ public class AlmacenEvidenciaHttp {
             }
             return evidencia.response().toByteArray().getBytes();
         } catch (Exception e) {
-            registrarVerbose("Error al extraer bytes de response: " + e.getMessage());
+            registrarVerbose(I18nLogs.AlmacenEvidencia.ERROR_EXTRAER_RESPONSE() + e.getMessage());
             return new byte[0];
         }
     }
@@ -318,7 +319,7 @@ public class AlmacenEvidenciaHttp {
         try {
             Files.createDirectories(directorioEvidencia);
         } catch (Exception e) {
-            registrarError("Error al crear directorio para depuración: " + directorioEvidencia, e);
+            registrarError(I18nLogs.AlmacenEvidencia.ERROR_DIRECTORIO_DEPURACION() + directorioEvidencia, e);
             return;
         }
 
@@ -338,7 +339,7 @@ public class AlmacenEvidenciaHttp {
                 }
                 candidatos.add(archivo);
             } catch (Exception e) {
-                registrarVerbose("Error al obtener modificación de archivo: " + archivo);
+                registrarVerbose(I18nLogs.AlmacenEvidencia.ERROR_MODIFICACION_ARCHIVO() + archivo);
                 eliminarArchivoSilencioso(archivo);
             }
         }
@@ -361,7 +362,7 @@ public class AlmacenEvidenciaHttp {
                 .filter(path -> path.getFileName() != null && path.getFileName().toString().endsWith(EXTENSION_ARCHIVO))
                 .forEach(archivos::add);
         } catch (Exception e) {
-            registrarError("Error al listar archivos de evidencia: " + directorioEvidencia, e);
+            registrarError(I18nLogs.AlmacenEvidencia.ERROR_LISTAR_ARCHIVOS() + directorioEvidencia, e);
         }
         return archivos;
     }
@@ -370,7 +371,7 @@ public class AlmacenEvidenciaHttp {
         try {
             return Files.getLastModifiedTime(archivo).toMillis();
         } catch (Exception e) {
-            registrarVerbose("Error al obtener última modificación: " + archivo);
+            registrarVerbose(I18nLogs.AlmacenEvidencia.ERROR_ULTIMA_MODIFICACION() + archivo);
             return 0L;
         }
     }
@@ -394,7 +395,7 @@ public class AlmacenEvidenciaHttp {
         try {
             Files.deleteIfExists(archivo);
         } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, "Error al eliminar archivo: " + archivo);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.AlmacenEvidencia.ERROR_ELIMINAR_ARCHIVO() + archivo);
         }
     }
 

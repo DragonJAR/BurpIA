@@ -306,7 +306,7 @@ public class ConstructorPrompts {
         promptBuilder.append("      \"titulo\": \"string\",\n");
         promptBuilder.append("      \"severidad\": \"Critical|High|Medium|Low|Info\",\n");
         promptBuilder.append("      \"confianza\": \"High|Medium|Low\",\n");
-        promptBuilder.append("      \"descripcion\": \"string. Referencias: [CWE-XXX] [OWASP A0X:2021 - Category]\",\n");
+        promptBuilder.append("      \"descripcion\": \"string. Referencias: [CWE-XXX] [OWASP A0X:202X - Category]\",\n");
         promptBuilder.append("      \"evidencia\": \"string con referencia a la petición afectada (ej: Petición 2)\"\n");
         promptBuilder.append("    }\n");
         promptBuilder.append("  ]\n");

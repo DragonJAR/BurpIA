@@ -12,6 +12,7 @@ import com.burpia.util.GestorTareas;
 import javax.swing.*;
 import java.awt.*;
 import java.beans.PropertyChangeListener;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -187,6 +188,15 @@ public class PestaniaPrincipal extends JPanel {
      */
     public void agregarHallazgo(Hallazgo hallazgo) {
         panelHallazgos.agregarHallazgo(hallazgo);
+    }
+
+    /**
+     * Agrega múltiples hallazgos al panel de hallazgos.
+     *
+     * @param hallazgos La lista de hallazgos a agregar
+     */
+    public void agregarHallazgos(List<Hallazgo> hallazgos) {
+        panelHallazgos.agregarHallazgos(hallazgos);
     }
 
 

@@ -1,5 +1,6 @@
 package com.burpia.model;
 
+import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstilosUI;
 import com.burpia.util.Normalizador;
 
@@ -42,13 +43,13 @@ public class Tarea {
      */
     public Tarea(String id, String tipo, String url, String estado) {
         if (Normalizador.esVacio(id)) {
-            throw new IllegalArgumentException("El ID de la tarea no puede estar vacío");
+            throw new IllegalArgumentException(I18nUI.Tareas.MSG_ID_VACIO());
         }
         if (Normalizador.esVacio(tipo)) {
-            throw new IllegalArgumentException("El tipo de tarea no puede estar vacío");
+            throw new IllegalArgumentException(I18nUI.Tareas.MSG_TIPO_VACIO());
         }
         if (Normalizador.esVacio(url)) {
-            throw new IllegalArgumentException("La URL de la tarea no puede estar vacía");
+            throw new IllegalArgumentException(I18nUI.Tareas.MSG_URL_VACIA());
         }
 
         this.id = id;

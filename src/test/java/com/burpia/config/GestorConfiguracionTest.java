@@ -24,11 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests para GestorConfiguracion.
  * <p>
- * Verifica la persistencia y carga de configuración, incluyendo:
- * - Preferencias runtime de usuario
- * - Prompts de agente
- * - Timeouts por modelo
- * - Localización de logs
+ * IMPORTANTE: Este test usa directorio temporal para evitar modificar
+ * el archivo de configuración real del usuario en ~/.burpia/config.json
  * </p>
  */
 @DisplayName("GestorConfiguracion Tests")
@@ -48,7 +45,10 @@ class GestorConfiguracionTest {
 
     @AfterEach
     void tearDown() {
-        restaurarUserHome();
+        if (userHomeOriginal != null) {
+            System.setProperty("user.home", userHomeOriginal);
+        }
+        RutasBurpIA.limpiarCacheParaTests();
         I18nUI.establecerIdioma("es");
     }
 
@@ -59,16 +59,6 @@ class GestorConfiguracionTest {
     private void configurarDirectorioTemporalComoHome() {
         System.setProperty("user.home", tempDir.toString());
         configDir = tempDir.resolve(".burpia");
-    }
-
-    /**
-     * Helper para restaurar el user.home original.
-     * Garantiza limpieza incluso si el test falla.
-     */
-    private void restaurarUserHome() {
-        if (userHomeOriginal != null) {
-            System.setProperty("user.home", userHomeOriginal);
-        }
     }
 
     /**

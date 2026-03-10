@@ -82,13 +82,23 @@ public class ConfigDialogController {
      * Esto es necesario para que el manager pueda extraer el estado actual de la UI.
      */
     private void configurarComponentesUIProvider() {
-        providerManager.configurarComponentes(
+        providerManager.inicializarComponentesUI(
             dialogo.obtenerComboProveedor(),
+            dialogo.obtenerComboModelo(),
             dialogo.obtenerTxtUrl(),
             dialogo.obtenerTxtClave(),
-            dialogo.obtenerComboModelo(),
+            dialogo.obtenerTxtMaxTokens(),
             dialogo.obtenerTxtTimeoutModelo(),
-            dialogo.obtenerTxtMaxTokens()
+            dialogo.obtenerBtnAgregarProveedor(),
+            dialogo.obtenerBtnQuitarProveedor(),
+            dialogo.obtenerBtnSubirProveedor(),
+            dialogo.obtenerBtnBajarProveedor(),
+            dialogo.obtenerChkHabilitarMultiProveedor(),
+            dialogo.obtenerLblEstadoMultiProveedor(),
+            dialogo.obtenerModeloListaDisponibles(),
+            dialogo.obtenerModeloListaSeleccionados(),
+            dialogo.obtenerListaProveedoresDisponibles(),
+            dialogo.obtenerListaProveedoresSeleccionados()
         );
     }
 
@@ -245,28 +255,9 @@ public class ConfigDialogController {
             config.aplicarDesde(configCargada);
         }
 
-        providerManager.inicializarComponentesUI(
-            dialogo.obtenerComboProveedor(),
-            dialogo.obtenerComboModelo(),
-            dialogo.obtenerTxtUrl(),
-            dialogo.obtenerTxtClave(),
-            dialogo.obtenerTxtMaxTokens(),
-            dialogo.obtenerTxtTimeoutModelo(),
-            dialogo.obtenerBtnAgregarProveedor(),
-            dialogo.obtenerBtnQuitarProveedor(),
-            dialogo.obtenerBtnSubirProveedor(),
-            dialogo.obtenerBtnBajarProveedor(),
-            dialogo.obtenerChkHabilitarMultiProveedor(),
-            dialogo.obtenerLblEstadoMultiProveedor(),
-            dialogo.obtenerModeloListaDisponibles(),
-            dialogo.obtenerModeloListaSeleccionados()
-        );
-
-        providerManager.setListasProveedores(
-            dialogo.obtenerListaProveedoresDisponibles(),
-            dialogo.obtenerListaProveedoresSeleccionados()
-        );
-
+        // Nota: providerManager.inicializarComponentesUI() ya se llamó en inicializarEventHandlers()
+        // No duplicar la llamada aquí para evitar listeners duplicados
+        
         providerManager.cargarConfiguracionInicial();
         
         rutasBinarioAgenteTemporal.clear();
@@ -690,6 +681,13 @@ public class ConfigDialogController {
                         return false;
                     }
 
+                    Map<String, String> erroresMultiProveedor = validarMultiProveedor(snapshot);
+                    if (!erroresMultiProveedor.isEmpty()) {
+                        errorBuilder.append(construirMensajeErroresValidacion(erroresMultiProveedor));
+                        errorMsg = errorBuilder.toString();
+                        return false;
+                    }
+
                     boolean guardado = persistenceManager.guardarConfiguracion(snapshot, errorBuilder);
                     errorMsg = errorBuilder.toString();
                     return guardado;
@@ -882,6 +880,15 @@ public class ConfigDialogController {
         JCheckBox chkHabilitarMultiProveedor = dialogo.obtenerChkHabilitarMultiProveedor();
         if (chkHabilitarMultiProveedor != null) {
             snapshot.establecerMultiProveedorHabilitado(chkHabilitarMultiProveedor.isSelected());
+
+            DefaultListModel<String> modeloListaSeleccionados = dialogo.obtenerModeloListaSeleccionados();
+            if (modeloListaSeleccionados != null) {
+                List<String> proveedoresSeleccionados = new ArrayList<>();
+                for (int i = 0; i < modeloListaSeleccionados.getSize(); i++) {
+                    proveedoresSeleccionados.add(modeloListaSeleccionados.getElementAt(i));
+                }
+                snapshot.establecerProveedoresMultiConsulta(proveedoresSeleccionados);
+            }
         }
     }
 
@@ -1256,6 +1263,59 @@ public class ConfigDialogController {
         StringBuilder mensaje = new StringBuilder(I18nUI.Configuracion.MSG_CORRIGE_CAMPOS());
         errores.values().forEach(valor -> mensaje.append(" - ").append(valor).append("\n"));
         return mensaje.toString().trim();
+    }
+
+    private Map<String, String> validarMultiProveedor(ConfiguracionAPI snapshot) {
+        Map<String, String> erroresMultiProveedor = new HashMap<>();
+
+        if (!snapshot.esMultiProveedorHabilitado()) {
+            return erroresMultiProveedor;
+        }
+
+        List<String> proveedores = snapshot.obtenerProveedoresMultiConsulta();
+        if (Normalizador.esVacia(proveedores)) {
+            erroresMultiProveedor.put("multiProveedor",
+                    I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_SIN_PROVEEDORES());
+            return erroresMultiProveedor;
+        }
+
+        if (proveedores.size() < 2) {
+            erroresMultiProveedor.put("multiProveedor",
+                    I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_MENOS_DOS());
+        }
+
+        for (String proveedor : proveedores) {
+            if (Normalizador.esVacio(proveedor)) {
+                erroresMultiProveedor.put("multiProveedor",
+                        I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_PROVEEDOR_VACIO());
+                continue;
+            }
+
+            if (!ProveedorAI.existeProveedor(proveedor)) {
+                erroresMultiProveedor.put("multiProveedor",
+                        I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_PROVEEDOR_INVALIDO(proveedor));
+                continue;
+            }
+
+            ProveedorAI.ConfiguracionProveedor configProveedor = 
+                    ProveedorAI.obtenerProveedor(proveedor);
+
+            if (configProveedor != null && configProveedor.requiereClaveApi()) {
+                String apiKey = snapshot.obtenerApiKeyParaProveedor(proveedor);
+                if (Normalizador.esVacio(apiKey)) {
+                    erroresMultiProveedor.put("multiProveedor",
+                            I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_SIN_API_KEY(proveedor));
+                }
+            }
+
+            String modelo = snapshot.obtenerModeloParaProveedor(proveedor);
+            if (Normalizador.esVacio(modelo)) {
+                erroresMultiProveedor.put("multiProveedor",
+                        I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_SIN_MODELO(proveedor));
+            }
+        }
+
+        return erroresMultiProveedor;
     }
 
     private static final class ResultadoActualizacion {

@@ -24,9 +24,10 @@ public final class RutasBurpIA {
 
     /** Nombre del archivo de configuración JSON. */
     private static final String ARCHIVO_CONFIG = "config.json";
-    
+
     /** Sufijo opcional para el archivo de configuración (usado en tests). */
     private static final String CONFIG_SUFFIX_KEY = "burpia.config.suffix";
+
     private static String configSuffixCache;
 
     /** Nombre del directorio para almacenar evidencias HTTP. */
@@ -138,6 +139,7 @@ public final class RutasBurpIA {
         synchronized (RutasBurpIA.class) {
             cacheHomeUsuario = null;
             configSuffixCache = null;
+            System.clearProperty(CONFIG_SUFFIX_KEY);
         }
     }
     

@@ -27,9 +27,9 @@ import java.util.function.BooleanSupplier;
 /**
  * Manager para análisis de flujo de peticiones HTTP.
  * <p>
- * A diferencia del análisis bulk que procesa cada petición por separado,
- * este manager combina múltiples peticiones en UNA SOLA consulta al LLM,
- * tratándolas como una secuencia lógica (ej: login → dashboard → profile).
+ * Combina múltiples peticiones en UNA SOLA consulta al LLM,
+ * tratándolas como una secuencia lógica (ej: login → dashboard → profile),
+ * en lugar de analizar cada petición de forma aislada.
  * </p>
  * <p>
  * Esto permite detectar vulnerabilidades que solo aparecen en el contexto
