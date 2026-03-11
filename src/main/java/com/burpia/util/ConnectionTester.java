@@ -2,7 +2,6 @@ package com.burpia.util;
 
 import java.io.IOException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -23,12 +22,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
-import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
@@ -37,7 +32,6 @@ import okhttp3.Response;
  */
 public class ConnectionTester {
     
-    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
     private static final int DEFAULT_TIMEOUT_SECONDS = 10;
     private static final String GITHUB_API_URL = "https://api.github.com/repos/DragonJAR/BurpIA/releases/latest";
     
@@ -70,8 +64,8 @@ public class ConnectionTester {
         String proveedor = config.obtenerProveedorAI();
         String apiKey = config.obtenerApiKeyParaProveedor(proveedor);
         String urlBase = config.obtenerUrlBaseParaProveedor(proveedor);
-        
-        if (Normalizador.esVacio(proveedor) || Normalizador.esVacio(apiKey) || Normalizador.esVacio(urlBase)) {
+
+        if (tieneConfiguracionProveedorIncompleta(proveedor, apiKey, urlBase)) {
             callback.alError(I18nUI.Conexion.ERROR_MISSING_PROVIDER_CONFIG());
             return;
         }
@@ -123,9 +117,14 @@ public class ConnectionTester {
         String proveedor = config.obtenerProveedorAI();
         String apiKey = config.obtenerApiKeyParaProveedor(proveedor);
         String urlBase = config.obtenerUrlBaseParaProveedor(proveedor);
-        
-        if (Normalizador.esVacio(proveedor) || Normalizador.esVacio(apiKey) || Normalizador.esVacio(urlBase)) {
+
+        if (tieneConfiguracionProveedorIncompleta(proveedor, apiKey, urlBase)) {
             callback.alError(I18nUI.Conexion.ERROR_MISSING_PROVIDER_CONFIG());
+            return;
+        }
+
+        if (!ProveedorAI.permiteCargaRemotaModelos(proveedor)) {
+            callback.alError(I18nUI.Conexion.ERROR_PROVEEDOR_LISTA_MODELOS_NO_SOPORTADO(proveedor));
             return;
         }
         
@@ -272,70 +271,6 @@ public class ConnectionTester {
             Thread.currentThread().interrupt();
         }
     }
-    
-private List<String> parsearModelosDesdeRespuesta(String proveedor, String responseBody) {
-        List<String> modelos = new ArrayList<>();
-        
-        try {
-            if ("OpenAI".equals(proveedor)) {
-                JsonObject openaiResponse = gson.fromJson(responseBody, JsonObject.class);
-                if (openaiResponse.has("data") && openaiResponse.get("data").isJsonArray()) {
-                    JsonArray data = openaiResponse.get("data").getAsJsonArray();
-                    for (JsonElement element : data) {
-                        JsonObject model = element.getAsJsonObject();
-                        if (model.has("id")) {
-                            modelos.add(model.get("id").getAsString());
-                        }
-                    }
-                }
-            } else if ("Claude".equals(proveedor)) {
-                JsonObject claudeResponse = gson.fromJson(responseBody, JsonObject.class);
-                if (claudeResponse.has("data") && claudeResponse.get("data").isJsonArray()) {
-                    JsonArray data = claudeResponse.get("data").getAsJsonArray();
-                    for (JsonElement element : data) {
-                        JsonObject model = element.getAsJsonObject();
-                        if (model.has("id")) {
-                            modelos.add(model.get("id").getAsString());
-                        }
-                    }
-                }
-            } else if ("Gemini".equals(proveedor)) {
-                JsonObject geminiResponse = gson.fromJson(responseBody, JsonObject.class);
-                if (geminiResponse.has("models") && geminiResponse.get("models").isJsonArray()) {
-                    JsonArray models = geminiResponse.get("models").getAsJsonArray();
-                    for (JsonElement element : models) {
-                        JsonObject model = element.getAsJsonObject();
-                        if (model.has("name")) {
-                            String nombre = model.get("name").getAsString();
-                            if (nombre.startsWith("models/")) {
-                                modelos.add(nombre.substring(7));
-                            } else {
-                                modelos.add(nombre);
-                            }
-                        }
-                    }
-                }
-            } else if ("Ollama".equals(proveedor)) {
-                JsonObject ollamaResponse = gson.fromJson(responseBody, JsonObject.class);
-                if (ollamaResponse.has("models") && ollamaResponse.get("models").isJsonArray()) {
-                    JsonArray models = ollamaResponse.get("models").getAsJsonArray();
-                    for (JsonElement element : models) {
-                        JsonObject model = element.getAsJsonObject();
-                        if (model.has("name")) {
-                            modelos.add(model.get("name").getAsString());
-                        }
-                    }
-                }
-            } else {
-                gestorLogging.info("ConnectionTester", I18nUI.Conexion.LOG_UNSUPPORTED_PROVIDER(proveedor));
-            }
-        } catch (Exception e) {
-            gestorLogging.error("ConnectionTester", I18nUI.Conexion.LOG_ERROR_PARSING_MODELS(), e);
-        }
-        
-        return modelos;
-    }
-    
     private int compararVersiones(String version1, String version2) {
         String[] v1Parts = version1.replaceAll("[^0-9.]", "").split("\\.");
         String[] v2Parts = version2.replaceAll("[^0-9.]", "").split("\\.");
@@ -406,7 +341,7 @@ private List<String> parsearModelosDesdeRespuesta(String proveedor, String respo
                 builder.addHeader("Authorization", "Bearer " + apiKey.trim());
             }
         } else if ("Claude".equals(proveedor)) {
-            endpoint = urlBase + "/messages";
+            endpoint = urlBase + "/models";
             builder.addHeader("x-api-key", apiKey);
             builder.addHeader("anthropic-version", "2023-06-01");
         } else if ("Gemini".equals(proveedor)) {
@@ -427,27 +362,28 @@ private List<String> parsearModelosDesdeRespuesta(String proveedor, String respo
         
         return builder.url(endpoint).get().build();
     }
-    
-    private Request crearSolicitudListarModelos(String proveedor, String apiKey, String urlBase) {
-        return crearSolicitudTestConexion(proveedor, apiKey, urlBase);
-    }
-    
+
     private List<String> listarModelosParaProveedor(String proveedor, String apiKey, String urlBase, ConfiguracionAPI config) {
         try {
             OkHttpClient client = crearClienteParaConfiguracion(config);
-            Request request = crearSolicitudListarModelos(proveedor, apiKey, urlBase);
-            
-            try (Response response = client.newCall(request).execute()) {
-                if (!response.isSuccessful()) {
-                    throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), response.message()));
-                }
-                
-                String responseBody = response.body().string();
-                return parsearModelosDesdeRespuesta(proveedor, responseBody);
-            }
+            return ConstructorSolicitudesProveedor.listarModelosRemotosProveedor(
+                proveedor,
+                urlBase,
+                apiKey,
+                client
+            );
         } catch (Exception e) {
             throw new RuntimeException(describirErrorVisible(e), e);
         }
+    }
+
+    private boolean tieneConfiguracionProveedorIncompleta(String proveedor, String apiKey, String urlBase) {
+        if (Normalizador.esVacio(proveedor) || Normalizador.esVacio(urlBase)) {
+            return true;
+        }
+        ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedor);
+        boolean requiereClaveApi = configProveedor != null && configProveedor.requiereClaveApi();
+        return requiereClaveApi && Normalizador.esVacio(apiKey);
     }
 
     private boolean esTimeout(Throwable throwable) {

@@ -260,7 +260,12 @@ public final class ProveedorAI {
      * @return {@code true} si la UI puede cargar modelos dinámicamente
      */
     public static boolean permiteCargaRemotaModelos(String proveedor) {
-        return !"minimax".equals(proveedor);
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (proveedorNormalizado.isEmpty()) {
+            return true;
+        }
+        return !"minimax".equals(proveedorNormalizado)
+                && !"Z.ai".equals(proveedorNormalizado);
     }
 
     /**

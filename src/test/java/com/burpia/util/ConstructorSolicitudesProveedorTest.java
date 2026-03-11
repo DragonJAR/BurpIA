@@ -357,6 +357,76 @@ class ConstructorSolicitudesProveedorTest {
     }
 
     @Nested
+    @DisplayName("listarModelosRemotosProveedor")
+    class ListarModelosRemotosProveedor {
+
+        @Test
+        @DisplayName("Claude usa GET /models y parsea ids")
+        void claudeUsaEndpointOficialModels() throws Exception {
+            String respuesta = "{\"data\":[{\"id\":\"claude-opus-4-6\"},{\"id\":\"claude-sonnet-4-6\"}]}";
+
+            servidor.enqueue(new MockResponse().setResponseCode(200).setBody(respuesta));
+            servidor.start();
+
+            List<String> modelos = ConstructorSolicitudesProveedor.listarModelosRemotosProveedor(
+                "Claude",
+                servidor.url("/v1").toString(),
+                "sk-ant-test",
+                clienteHttp
+            );
+
+            assertEquals(List.of("claude-opus-4-6", "claude-sonnet-4-6"), modelos,
+                "Claude debe parsear la lista oficial de modelos");
+
+            RecordedRequest request = servidor.takeRequest();
+            assertEquals("/v1/models", request.getPath(), "Claude debe consultar GET /v1/models");
+            assertEquals("2023-06-01", request.getHeader("anthropic-version"),
+                "Claude debe enviar anthropic-version");
+            assertEquals("sk-ant-test", request.getHeader("x-api-key"),
+                "Claude debe enviar x-api-key");
+        }
+
+        @Test
+        @DisplayName("Moonshot usa listado OpenAI-compatible en /models")
+        void moonshotUsaListadoCompatibleOpenAi() throws Exception {
+            String respuesta = "{\"data\":[{\"id\":\"kimi-k2.5\"},{\"id\":\"moonshot-v1-auto\"}]}";
+
+            servidor.enqueue(new MockResponse().setResponseCode(200).setBody(respuesta));
+            servidor.start();
+
+            List<String> modelos = ConstructorSolicitudesProveedor.listarModelosRemotosProveedor(
+                "Moonshot (Kimi)",
+                servidor.url("/v1").toString(),
+                "moonshot-key",
+                clienteHttp
+            );
+
+            assertEquals(List.of("kimi-k2.5", "moonshot-v1-auto"), modelos,
+                "Moonshot debe reutilizar el parser OpenAI-compatible");
+
+            RecordedRequest request = servidor.takeRequest();
+            assertEquals("/v1/models", request.getPath(),
+                "Moonshot debe consultar GET /v1/models");
+            assertEquals("Bearer moonshot-key", request.getHeader("Authorization"),
+                "Moonshot debe usar Authorization Bearer");
+        }
+
+        @Test
+        @DisplayName("Z.ai reporta proveedor sin listado remoto documentado")
+        void zAiReportaProveedorNoSoportado() {
+            IOException error = assertThrows(IOException.class, () ->
+                ConstructorSolicitudesProveedor.listarModelosRemotosProveedor(
+                    "Z.ai",
+                    "https://api.z.ai/api/paas/v4",
+                    "test-key",
+                    clienteHttp));
+
+            assertTrue(error.getMessage().contains("Z.ai"),
+                "El error debe mencionar al proveedor no soportado");
+        }
+    }
+
+    @Nested
     @DisplayName("construirSolicitud")
     class ConstruirSolicitud {
 

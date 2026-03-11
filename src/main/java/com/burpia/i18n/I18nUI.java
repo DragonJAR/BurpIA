@@ -1438,6 +1438,12 @@ public final class I18nUI {
                     "No valid models were found in the response");
         }
 
+        public static String ERROR_PROVEEDOR_LISTA_MODELOS_NO_SOPORTADO(String proveedor) {
+            return trf("El proveedor %s no expone una ruta documentada para listar modelos automáticamente",
+                    "Provider %s does not expose a documented endpoint to list models automatically",
+                    proveedor);
+        }
+
         public static String ERROR_CONNECTION_TIMEOUT(int segundos) {
             return trf("Tiempo de espera de conexión agotado después de %d segundos",
                     "Connection timeout after %d seconds", segundos);
@@ -3042,6 +3048,12 @@ public final class I18nUI {
             public static String CARGAR_MODELOS_NO_DISPONIBLE_MINIMAX() {
                 return I18nUI.tr("MiniMax no permite cargar modelos desde este botón. Selecciona otro proveedor para habilitar esta opción.",
                         "MiniMax does not allow loading models from this button. Select another provider to enable this option.");
+            }
+
+            public static String CARGAR_MODELOS_NO_DISPONIBLE_ZAI() {
+                return I18nUI.tr(
+                        "Z.ai no documenta una API oficial para listar modelos desde este botón. Usa la lista integrada o escribe el modelo manualmente.",
+                        "Z.ai does not document an official API to list models from this button. Use the built-in list or enter the model manually.");
             }
 
             public static String MAX_TOKENS() {

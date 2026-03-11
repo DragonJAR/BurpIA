@@ -581,7 +581,14 @@ public class ConfigDialogController {
         btnRefrescarModelos.setEnabled(permiteCargaModelos);
         btnRefrescarModelos.setToolTipText(permiteCargaModelos
                 ? tooltipCargarModelosPorDefecto
-                : I18nUI.Tooltips.Configuracion.CARGAR_MODELOS_NO_DISPONIBLE_MINIMAX());
+                : obtenerTooltipCargaModelosNoDisponible(proveedorSeleccionado));
+    }
+
+    private String obtenerTooltipCargaModelosNoDisponible(String proveedorSeleccionado) {
+        if ("Z.ai".equals(proveedorSeleccionado)) {
+            return I18nUI.Tooltips.Configuracion.CARGAR_MODELOS_NO_DISPONIBLE_ZAI();
+        }
+        return I18nUI.Tooltips.Configuracion.CARGAR_MODELOS_NO_DISPONIBLE_MINIMAX();
     }
 
     public void manejarProbarConexion() {

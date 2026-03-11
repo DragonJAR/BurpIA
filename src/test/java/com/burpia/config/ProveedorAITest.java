@@ -166,10 +166,12 @@ class ProveedorAITest {
         }
 
         @Test
-        @DisplayName("MiniMax no permite carga remota de modelos y otros proveedores si")
-        void minimaxNoPermiteCargaRemotaModelos() {
+        @DisplayName("MiniMax y Z.ai no permiten carga remota de modelos y otros proveedores si")
+        void proveedoresConCargaRemotaRestringida() {
             assertFalse(ProveedorAI.permiteCargaRemotaModelos("minimax"),
                 "minimax no deberia permitir carga remota de modelos");
+            assertFalse(ProveedorAI.permiteCargaRemotaModelos("Z.ai"),
+                "Z.ai no deberia permitir carga remota de modelos sin una ruta documentada");
             assertTrue(ProveedorAI.permiteCargaRemotaModelos("OpenAI"),
                 "OpenAI deberia permitir carga remota de modelos");
             assertTrue(ProveedorAI.permiteCargaRemotaModelos(null),

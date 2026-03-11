@@ -1144,6 +1144,44 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         }
     }
 
+    @Test
+    @DisplayName("Cargar modelos se deshabilita para Z.ai y muestra tooltip específico")
+    void testBotonCargarModelosSeActualizaSegunProveedorZai() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JButton btnRefrescarModelos = obtenerCampo(dialogo, "btnRefrescarModelos", JButton.class);
+            String tooltipOriginal = I18nUI.Tooltips.Configuracion.CARGAR_MODELOS();
+            String tooltipZai = I18nUI.Tooltips.Configuracion.CARGAR_MODELOS_NO_DISPONIBLE_ZAI();
+
+            assertTrue(btnRefrescarModelos.isEnabled(), "El botón debe iniciar habilitado para OpenAI");
+            assertEquals(tooltipOriginal, btnRefrescarModelos.getToolTipText(),
+                    "El tooltip inicial debe ser el original");
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("Z.ai"));
+            flushEdt();
+
+            assertFalse(btnRefrescarModelos.isEnabled(),
+                    "El botón debe deshabilitarse cuando se selecciona Z.ai");
+            assertEquals(tooltipZai, btnRefrescarModelos.getToolTipText(),
+                    "El tooltip debe explicar por qué Z.ai no permite carga remota");
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("Claude"));
+            flushEdt();
+
+            assertTrue(btnRefrescarModelos.isEnabled(),
+                    "El botón debe volver a habilitarse al salir de Z.ai");
+            assertEquals(tooltipOriginal, btnRefrescarModelos.getToolTipText(),
+                    "El tooltip original debe restaurarse al cambiar a un proveedor soportado");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
     /**
      * Espera a que el callback de guardado se ejecute, con timeout y procesamiento del EDT.
      * Utiliza un bucle con espera activa corta para evitar condiciones de carrera.

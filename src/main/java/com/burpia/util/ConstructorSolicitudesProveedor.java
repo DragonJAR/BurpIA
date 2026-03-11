@@ -1,17 +1,5 @@
 package com.burpia.util;
-import com.burpia.config.ConfiguracionAPI;
-import com.burpia.config.ProveedorAI;
-import com.burpia.i18n.I18nUI;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import okhttp3.HttpUrl;
-import okhttp3.MediaType;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -20,7 +8,21 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+
+import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.ProveedorAI;
+import com.burpia.i18n.I18nUI;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import okhttp3.HttpUrl;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public final class ConstructorSolicitudesProveedor {
 
@@ -35,6 +37,35 @@ public final class ConstructorSolicitudesProveedor {
         });
 
     private ConstructorSolicitudesProveedor() {
+    }
+
+    public static List<String> listarModelosRemotosProveedor(String proveedor,
+                                                             String urlBase,
+                                                             String apiKey,
+                                                             OkHttpClient clienteHttp) throws IOException {
+        String proveedorNormalizado = ProveedorAI.normalizarProveedor(proveedor);
+        if (Normalizador.esVacio(proveedorNormalizado)) {
+            throw new IOException(
+                I18nUI.Conexion.ERROR_PROVEEDOR_LISTA_MODELOS_NO_SOPORTADO(I18nUI.Conexion.ERROR_DESCONOCIDO()));
+        }
+
+        switch (proveedorNormalizado) {
+            case "Gemini":
+                return listarModelosGemini(urlBase, apiKey, clienteHttp);
+            case "Ollama":
+                return listarModelosOllama(urlBase, clienteHttp);
+            case "Claude":
+                return listarModelosClaude(urlBase, apiKey, clienteHttp);
+            case "OpenAI":
+            case "Moonshot (Kimi)":
+                return listarModelosCompatiblesOpenAI(urlBase, apiKey, clienteHttp);
+            default:
+                if (ProveedorAI.esProveedorCustom(proveedorNormalizado)) {
+                    return listarModelosCompatiblesOpenAI(urlBase, apiKey, clienteHttp);
+                }
+                throw new IOException(
+                    I18nUI.Conexion.ERROR_PROVEEDOR_LISTA_MODELOS_NO_SOPORTADO(proveedorNormalizado));
+        }
     }
 
     public static SolicitudPreparada construirSolicitud(ConfiguracionAPI config,
@@ -253,7 +284,45 @@ public final class ConstructorSolicitudesProveedor {
         }
     }
 
+    public static List<String> listarModelosClaude(String urlBase,
+                                                   String apiKey,
+                                                   OkHttpClient clienteHttp) throws IOException {
+        String base = ConfiguracionAPI.extraerUrlBase(urlBase);
+        if (Normalizador.esVacio(base)) {
+            throw new IOException(I18nUI.Conexion.ERROR_URL_BASE_MODELOS_INVALIDA());
+        }
+
+        String endpoint = base + "/models";
+        Request.Builder builder = new Request.Builder()
+            .url(endpoint)
+            .addHeader("Accept", "application/json")
+            .addHeader("anthropic-version", "2023-06-01");
+
+        if (Normalizador.noEsVacio(apiKey)) {
+            builder.addHeader("x-api-key", apiKey.trim());
+        }
+
+        try (Response response = clienteHttp.newCall(builder.build()).execute()) {
+            if (!response.isSuccessful()) {
+                String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+                throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));
+            }
+            String body = response.body() != null ? response.body().string() : "{}";
+            List<String> modelos = parsearModelosOpenAI(body);
+            if (modelos.isEmpty()) {
+                throw new IOException(I18nUI.Conexion.ERROR_MODELOS_RESPUESTA_VACIA());
+            }
+            return modelos;
+        }
+    }
+
     public static List<String> listarModelosOpenAI(String urlBase, String apiKey, OkHttpClient clienteHttp) throws IOException {
+        return listarModelosCompatiblesOpenAI(urlBase, apiKey, clienteHttp);
+    }
+
+    public static List<String> listarModelosCompatiblesOpenAI(String urlBase,
+                                                              String apiKey,
+                                                              OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
         if (Normalizador.esVacio(base)) {
             throw new IOException(I18nUI.Conexion.ERROR_URL_BASE_MODELOS_INVALIDA());

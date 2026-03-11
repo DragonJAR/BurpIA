@@ -1,7 +1,6 @@
 package com.burpia.util;
 
 import com.burpia.config.ConfiguracionAPI;
-import com.burpia.config.ProveedorAI;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
@@ -9,9 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -145,10 +143,137 @@ class ConnectionTesterTest {
     }
 
     @Test
+    @DisplayName("Obtener modelos funciona para Ollama sin API key")
+    void obtenerModelos_ollamaSinApiKey_retornaModelos() throws Exception {
+        ConfiguracionAPI configOllama = new ConfiguracionAPI();
+        configOllama.establecerProveedorAI("Ollama");
+        configOllama.establecerModeloParaProveedor("Ollama", "llama3");
+        configOllama.establecerUrlBaseParaProveedor("Ollama", mockWebServer.url("").toString());
+
+        mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setBody("{\"models\":[{\"name\":\"llama3:latest\"},{\"name\":\"mistral:latest\"}]}"));
+
+        CompletableFuture<List<String>> resultado = new CompletableFuture<>();
+
+        connectionTester.obtenerModelosDisponibles(configOllama, new ConnectionTester.CallbackModelos() {
+            @Override
+            public void alExito(List<String> modelos) {
+                resultado.complete(modelos);
+            }
+
+            @Override
+            public void alError(String error) {
+                resultado.completeExceptionally(new AssertionError(error));
+            }
+        });
+
+        assertEquals(List.of("llama3:latest", "mistral:latest"), resultado.get(5, TimeUnit.SECONDS),
+            "Ollama debe cargar modelos sin requerir API key");
+    }
+
+    @Test
+    @DisplayName("Obtener modelos usa GET /models para Claude")
+    void obtenerModelos_claudeUsaEndpointOficial() throws Exception {
+        ConfiguracionAPI configClaude = new ConfiguracionAPI();
+        configClaude.establecerProveedorAI("Claude");
+        configClaude.establecerApiKeyParaProveedor("Claude", "sk-ant-test");
+        configClaude.establecerUrlBaseParaProveedor("Claude", mockWebServer.url("/v1").toString());
+        configClaude.establecerModeloParaProveedor("Claude", "claude-sonnet-4-6");
+
+        mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setBody("{\"data\":[{\"id\":\"claude-opus-4-6\"},{\"id\":\"claude-sonnet-4-6\"}]}"));
+
+        CompletableFuture<List<String>> resultado = new CompletableFuture<>();
+
+        connectionTester.obtenerModelosDisponibles(configClaude, new ConnectionTester.CallbackModelos() {
+            @Override
+            public void alExito(List<String> modelos) {
+                resultado.complete(modelos);
+            }
+
+            @Override
+            public void alError(String error) {
+                resultado.completeExceptionally(new AssertionError(error));
+            }
+        });
+
+        assertEquals(List.of("claude-opus-4-6", "claude-sonnet-4-6"), resultado.get(5, TimeUnit.SECONDS),
+            "Claude debe devolver modelos desde GET /models");
+        assertEquals("/v1/models", mockWebServer.takeRequest().getPath(),
+            "Claude debe consultar el endpoint oficial /v1/models");
+    }
+
+    @Test
+    @DisplayName("Obtener modelos usa listado OpenAI-compatible para Moonshot")
+    void obtenerModelos_moonshotUsaListadoCompatibleOpenAi() throws Exception {
+        ConfiguracionAPI configMoonshot = new ConfiguracionAPI();
+        configMoonshot.establecerProveedorAI("Moonshot (Kimi)");
+        configMoonshot.establecerApiKeyParaProveedor("Moonshot (Kimi)", "moonshot-key");
+        configMoonshot.establecerUrlBaseParaProveedor("Moonshot (Kimi)", mockWebServer.url("/v1").toString());
+        configMoonshot.establecerModeloParaProveedor("Moonshot (Kimi)", "kimi-k2.5");
+
+        mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setBody("{\"data\":[{\"id\":\"moonshot-v1-auto\"},{\"id\":\"kimi-k2.5\"}]}"));
+
+        CompletableFuture<List<String>> resultado = new CompletableFuture<>();
+
+        connectionTester.obtenerModelosDisponibles(configMoonshot, new ConnectionTester.CallbackModelos() {
+            @Override
+            public void alExito(List<String> modelos) {
+                resultado.complete(modelos);
+            }
+
+            @Override
+            public void alError(String error) {
+                resultado.completeExceptionally(new AssertionError(error));
+            }
+        });
+
+        assertEquals(List.of("kimi-k2.5", "moonshot-v1-auto"), resultado.get(5, TimeUnit.SECONDS),
+            "Moonshot debe devolver modelos OpenAI-compatible");
+        assertEquals("/v1/models", mockWebServer.takeRequest().getPath(),
+            "Moonshot debe consultar GET /v1/models");
+    }
+
+    @Test
+    @DisplayName("Obtener modelos rechaza Z.ai al no tener listado remoto documentado")
+    void obtenerModelos_zAiRetornaErrorControlado() throws Exception {
+        ConfiguracionAPI configZai = new ConfiguracionAPI();
+        configZai.establecerProveedorAI("Z.ai");
+        configZai.establecerApiKeyParaProveedor("Z.ai", "test-key");
+        configZai.establecerUrlBaseParaProveedor("Z.ai", "https://api.z.ai/api/paas/v4");
+        configZai.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        CompletableFuture<String> resultado = new CompletableFuture<>();
+
+        connectionTester.obtenerModelosDisponibles(configZai, new ConnectionTester.CallbackModelos() {
+            @Override
+            public void alExito(List<String> modelos) {
+                resultado.complete("ok");
+            }
+
+            @Override
+            public void alError(String error) {
+                resultado.complete(error);
+            }
+        });
+
+        String error = resultado.get(5, TimeUnit.SECONDS);
+        assertTrue(error.contains("Z.ai"),
+            "El error debe explicar que Z.ai no soporta listado remoto documentado");
+    }
+
+    @Test
     @DisplayName("Error cuando falta configuración requerida")
     void probarConexion_configIncompleta_retornaError() {
         ConfiguracionAPI configIncompleta = new ConfiguracionAPI();
-        // No establecer API key
+        configIncompleta.establecerProveedorAI("OpenAI");
+        configIncompleta.establecerUrlBaseParaProveedor("OpenAI", mockWebServer.url("/v1").toString());
+        configIncompleta.establecerModeloParaProveedor("OpenAI", "gpt-4o");
+        // No establecer API key para un proveedor que sí la requiere
 
         CompletableFuture<Boolean> resultado = new CompletableFuture<>();
         
