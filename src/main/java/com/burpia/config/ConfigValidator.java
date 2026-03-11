@@ -6,6 +6,7 @@ import com.burpia.util.Normalizador;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -26,10 +27,10 @@ public final class ConfigValidator {
 
     private static final String ORIGEN_LOG = "ConfigValidator";
 
-    // Patrones de validación para API keys por proveedor
-    private static final Pattern OPENAI_API_KEY_PATTERN = Pattern.compile("^sk-[A-Za-z0-9]{48}$");
-    private static final Pattern CLAUDE_API_KEY_PATTERN = Pattern.compile("^sk-ant-[A-Za-z0-9_-]{95}$");
-    private static final Pattern GEMINI_API_KEY_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{39}$");
+    // Prefijos de API key por proveedor
+    private static final String OPENAI_API_KEY_PREFIX = "sk-";
+    private static final String CLAUDE_API_KEY_PREFIX = "sk-ant-";
+    private static final String GEMINI_API_KEY_PREFIX = "AIza";
     
     // Patrones de validación de URLs
     private static final Pattern HTTP_URL_PATTERN = Pattern.compile("^https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+$");
@@ -142,54 +143,52 @@ public final class ConfigValidator {
         }
 
         String apiKeyTrimmed = apiKey.trim();
-        
-        switch (proveedor.toLowerCase()) {
+
+        String proveedorNormalizado = ProveedorAI.normalizarProveedor(proveedor).toLowerCase(Locale.ROOT);
+        switch (proveedorNormalizado) {
             case "openai":
-                if (!OPENAI_API_KEY_PATTERN.matcher(apiKeyTrimmed).matches()) {
-                    return ValidationResult.invalido(
-                        I18nUI.trf("Formato de API key inválido para OpenAI. Debe comenzar con 'sk-' y tener 48 caracteres", 
-                                "Invalid API key format for OpenAI. Must start with 'sk-' and have 48 characters"), 
-                        "apiKey"
-                    );
-                }
-                break;
-                
+                return validarApiKeyConPrefijo(apiKeyTrimmed, proveedor, OPENAI_API_KEY_PREFIX);
             case "claude":
             case "anthropic":
-                if (!CLAUDE_API_KEY_PATTERN.matcher(apiKeyTrimmed).matches()) {
-                    return ValidationResult.invalido(
-                        I18nUI.trf("Formato de API key inválido para Claude. Debe comenzar con 'sk-ant-' y tener 95 caracteres", 
-                                "Invalid API key format for Claude. Must start with 'sk-ant-' and have 95 characters"), 
-                        "apiKey"
-                    );
-                }
-                break;
-                
+                return validarApiKeyConPrefijo(apiKeyTrimmed, proveedor, CLAUDE_API_KEY_PREFIX);
             case "gemini":
-                if (!GEMINI_API_KEY_PATTERN.matcher(apiKeyTrimmed).matches()) {
-                    return ValidationResult.invalido(
-                        I18nUI.trf("Formato de API key inválido para Gemini. Debe tener 39 caracteres alfanuméricos", 
-                                "Invalid API key format for Gemini. Must have 39 alphanumeric characters"), 
-                        "apiKey"
-                    );
-                }
-                break;
-                
+                return validarApiKeyConPrefijo(apiKeyTrimmed, proveedor, GEMINI_API_KEY_PREFIX);
             case "ollama":
                 // Ollama no requiere API key format validation
                 break;
-                
             default:
-                // Para proveedores personalizados, validación básica
-                if (apiKeyTrimmed.length() < 8) {
-                    return ValidationResult.invalido(
-                        I18nUI.tr("API key demasiado corta. Mínimo 8 caracteres", "API key too short. Minimum 8 characters"), 
-                        "apiKey"
-                    );
-                }
+                // Para proveedores sin prefijo conocido, basta con una clave no vacía.
         }
 
         return ValidationResult.valido();
+    }
+
+    private static ValidationResult validarApiKeyConPrefijo(String apiKey,
+                                                            String proveedor,
+                                                            String prefijoEsperado) {
+        if (apiKey.startsWith(prefijoEsperado)
+                && apiKey.length() > prefijoEsperado.length()
+                && !contieneEspacios(apiKey)) {
+            return ValidationResult.valido();
+        }
+
+        return ValidationResult.invalido(
+            I18nUI.trf(
+                "Formato de API key inválido para %s. Debe comenzar con '%s' y no contener espacios",
+                "Invalid API key format for %s. Must start with '%s' and contain no spaces",
+                proveedor,
+                prefijoEsperado),
+            "apiKey"
+        );
+    }
+
+    private static boolean contieneEspacios(String valor) {
+        for (int i = 0; i < valor.length(); i++) {
+            if (Character.isWhitespace(valor.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
