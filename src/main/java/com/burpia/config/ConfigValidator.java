@@ -91,7 +91,7 @@ public final class ConfigValidator {
          *
          * @return mensaje de error o null si es válido
          */
-        public String getMensajeError() {
+        public String obtenerMensajeError() {
             return mensajeError;
         }
 
@@ -100,7 +100,7 @@ public final class ConfigValidator {
          *
          * @return nombre del campo o null si es válido
          */
-        public String getCampo() {
+        public String obtenerCampo() {
             return campo;
         }
     }
@@ -680,7 +680,7 @@ public final class ConfigValidator {
          *
          * @return mensaje de error o null si es válido
          */
-        public String getMensajeError() {
+        public String obtenerMensajeError() {
             return mensajeError;
         }
 
@@ -689,7 +689,7 @@ public final class ConfigValidator {
          *
          * @return nombre del campo o null si es válido
          */
-        public String getCampo() {
+        public String obtenerCampo() {
             return campo;
         }
 
@@ -698,7 +698,7 @@ public final class ConfigValidator {
          *
          * @return el valor o null si la validación falló
          */
-        public Integer getValor() {
+        public Integer obtenerValor() {
             return valor;
         }
     }

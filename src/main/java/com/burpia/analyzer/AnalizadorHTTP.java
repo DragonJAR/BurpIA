@@ -2,6 +2,7 @@ package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
@@ -77,14 +78,14 @@ public class AnalizadorHTTP {
         IOException ultimaExcepcion = null;
         long backoffActualMs = BACKOFF_INICIAL_MS;
 
-        gestorLogging.info(ORIGEN_LOG, "Sistema de retry: hasta " + MAX_INTENTOS_RETRY + 
-                          " intentos con backoff exponencial");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Sistema de retry: hasta " + MAX_INTENTOS_RETRY +
+                          " intentos con backoff exponencial"));
 
         for (int intento = 1; intento <= MAX_INTENTOS_RETRY; intento++) {
             verificarCancelacion();
             esperarSiPausada();
             
-            gestorLogging.info(ORIGEN_LOG, "Intento #" + intento + " de " + MAX_INTENTOS_RETRY);
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Intento #" + intento + " de " + MAX_INTENTOS_RETRY));
             
             try {
                 return llamarAPISingle(prompt, intento == 1);
@@ -113,8 +114,8 @@ public class AnalizadorHTTP {
                         backoffActualMs,
                         intento);
                 long esperaSegundos = Math.max(1L, (esperaMs + 999L) / 1000L);
-                gestorLogging.info(ORIGEN_LOG, "Esperando " + esperaSegundos + 
-                                 " segundos antes del próximo reintento");
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando " + esperaSegundos +
+                                 " segundos antes del próximo reintento"));
                 esperarReintento(esperaMs);
                 backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
             } catch (IOException e) {
@@ -128,23 +129,24 @@ public class AnalizadorHTTP {
                 }
                 long esperaMs = PoliticaReintentos.calcularEsperaMs(-1, null, backoffActualMs, intento);
                 long esperaSegundos = Math.max(1L, (esperaMs + 999L) / 1000L);
-                gestorLogging.info(ORIGEN_LOG, "Esperando " + esperaSegundos + 
-                                 " segundos antes del próximo reintento");
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando " + esperaSegundos +
+                                 " segundos antes del próximo reintento"));
                 esperarReintento(esperaMs);
                 backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
             }
         }
 
-        gestorLogging.error(ORIGEN_LOG, "Todos los reintentos fallaron después de " + 
-                           MAX_INTENTOS_RETRY + " intentos");
-        gestorLogging.error(ORIGEN_LOG, "SUGERENCIA: Considera cambiar de proveedor de API.");
+        gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Todos los reintentos fallaron después de " +
+                           MAX_INTENTOS_RETRY + " intentos"));
+        gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("SUGERENCIA: Considera cambiar de proveedor de API."));
         
         if (ultimaExcepcion == null) {
-            ultimaExcepcion = new IOException("Fallo de retry sin detalle de excepción");
+            ultimaExcepcion = new IOException(I18nLogs.tr("Fallo de retry sin detalle de excepción"));
         }
         
-        gestorLogging.error(ORIGEN_LOG, "Último error: " + ultimaExcepcion.getClass().getSimpleName() + 
-                           " - " + ultimaExcepcion.getMessage());
+        gestorLogging.error(ORIGEN_LOG,
+                I18nLogs.tr("Último error: " + ultimaExcepcion.getClass().getSimpleName()),
+                ultimaExcepcion);
 
         throw ultimaExcepcion;
     }
@@ -160,16 +162,16 @@ public class AnalizadorHTTP {
                 .construirSolicitud(config, prompt, clienteHttp);
         Request solicitudHttp = preparada.request;
         
-        gestorLogging.info(ORIGEN_LOG, "Llamando a API: " + preparada.endpoint + 
-                          " con modelo: " + preparada.modeloUsado);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Llamando a API: " + preparada.endpoint +
+                          " con modelo: " + preparada.modeloUsado));
         
         if (Normalizador.noEsVacio(preparada.advertencia)) {
             gestorLogging.info(ORIGEN_LOG, preparada.advertencia);
         }
         
         if (registrarDetalleSolicitud) {
-            gestorLogging.info(ORIGEN_LOG, 
-                "Encabezados de solicitud: Content-Type=application/json, Authorization=Bearer [OCULTO]");
+            gestorLogging.info(ORIGEN_LOG,
+                I18nLogs.tr("Encabezados de solicitud: Content-Type=application/json, Authorization=Bearer [OCULTO]"));
         }
 
         Call call = clienteHttp.newCall(solicitudHttp);
@@ -178,8 +180,8 @@ public class AnalizadorHTTP {
         try {
             try (Response respuesta = call.execute()) {
                 int codigoRespuesta = respuesta.code();
-                gestorLogging.info(ORIGEN_LOG, "Código de respuesta de API: " + codigoRespuesta);
-                gestorLogging.info(ORIGEN_LOG, "Encabezados de respuesta de API: " + respuesta.headers());
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Código de respuesta de API: " + codigoRespuesta));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Encabezados de respuesta de API: " + respuesta.headers()));
 
                 if (!respuesta.isSuccessful()) {
                     String cuerpoError = "";
@@ -188,13 +190,13 @@ public class AnalizadorHTTP {
                         try {
                             cuerpoError = bodyError.string();
                         } catch (IOException e) {
-                            gestorLogging.error(ORIGEN_LOG, 
-                                "No se pudo leer cuerpo de error: " + e.getMessage());
+                            gestorLogging.error(ORIGEN_LOG,
+                                I18nLogs.tr("No se pudo leer cuerpo de error"), e);
                         }
                     }
                     String retryAfterHeader = respuesta.header("Retry-After");
-                    String mensajeError = "Error de API: " + codigoRespuesta + " - " +
-                            (Normalizador.noEsVacio(cuerpoError) ? cuerpoError : "sin cuerpo");
+                    String mensajeError = I18nLogs.tr("Error de API: " + codigoRespuesta + " - " +
+                            (Normalizador.noEsVacio(cuerpoError) ? cuerpoError : I18nUI.Conexion.DETALLE_SIN_CUERPO()));
                     
                     // Detectar error de contexto excedido
                     String proveedor = config.obtenerProveedorAI();
@@ -214,7 +216,7 @@ public class AnalizadorHTTP {
 
                 ResponseBody cuerpo = respuesta.body();
                 if (cuerpo == null) {
-                    throw new IOException("Respuesta de API sin cuerpo (null)");
+                    throw new IOException(I18nLogs.tr("Respuesta de API sin cuerpo (null)"));
                 }
                 
                 String cuerpoRespuesta = cuerpo.string();
@@ -222,8 +224,8 @@ public class AnalizadorHTTP {
                     cuerpoRespuesta = "";
                 }
                 
-                gestorLogging.info(ORIGEN_LOG, "Longitud de respuesta de API: " + 
-                                  cuerpoRespuesta.length() + " caracteres");
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Longitud de respuesta de API: " +
+                                  cuerpoRespuesta.length() + " caracteres"));
                 
                 return cuerpoRespuesta;
             }
@@ -232,7 +234,7 @@ public class AnalizadorHTTP {
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
-            throw new IOException("Error inesperado: " + e.getMessage(), e);
+            throw new IOException(I18nUI.General.ERROR_INESPERADO_TIPO(e.getClass().getSimpleName()), e);
         } finally {
             llamadaHttpActiva = null;
         }
@@ -301,14 +303,14 @@ public class AnalizadorHTTP {
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, 
-                "SSL inseguro no se pudo configurar, se usará configuración por defecto: " + e.getMessage());
+            gestorLogging.error(ORIGEN_LOG,
+                I18nUI.Conexion.LOG_SSL_INSECURE_ERROR(e.getClass().getSimpleName()));
         }
     }
 
     private void verificarCancelacion() throws InterruptedException {
         if (tareaCancelada.getAsBoolean()) {
-            throw new InterruptedException("Tarea cancelada por usuario");
+            throw new InterruptedException(I18nUI.Tareas.MSG_CANCELADO_USUARIO());
         }
     }
 
@@ -332,14 +334,14 @@ public class AnalizadorHTTP {
 
     private void registrarFalloIntento(int intento, IOException error) {
         String falloMsg = PoliticaReintentos.obtenerMensajeErrorAmigable(error);
-        gestorLogging.info(ORIGEN_LOG, "Intento #" + intento + " falló: " +
-                error.getClass().getSimpleName() + " - " + falloMsg);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Intento #" + intento + " falló: " +
+                error.getClass().getSimpleName() + " - " + falloMsg));
         
         if (error instanceof ApiHttpException) {
             ApiHttpException apiError = (ApiHttpException) error;
             String cuerpoError = apiError.obtenerCuerpoError();
             if (Normalizador.noEsVacio(cuerpoError)) {
-                gestorLogging.error(ORIGEN_LOG, "Cuerpo de respuesta de error de API: " + cuerpoError);
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Cuerpo de respuesta de error de API: " + cuerpoError));
             }
         }
     }

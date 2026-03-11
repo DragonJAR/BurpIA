@@ -28,7 +28,7 @@ public class ProbadorConexionAI {
      */
     public ProbadorConexionAI(ConfiguracionAPI config) {
         if (config == null) {
-            throw new IllegalArgumentException("La configuración no puede ser null");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_CONFIGURACION_NULA_ARGUMENTO());
         }
         this.config = config;
         int timeoutLectura = config.obtenerTiempoEsperaParaModelo(
@@ -78,7 +78,9 @@ public class ProbadorConexionAI {
             }
 
         } catch (Exception e) {
-            return new ResultadoPrueba(false, I18nUI.Conexion.ERROR_CONEXION() + e.getMessage(), null);
+            return new ResultadoPrueba(false,
+                    I18nUI.Conexion.ERROR_CONEXION() + describirErrorVisible(e),
+                    null);
         }
     }
 
@@ -93,8 +95,10 @@ public class ProbadorConexionAI {
                 return new ResultadoHttpPrueba(preparada.endpoint, respuestaBody, preparada.modeloUsado, preparada.advertencia);
             }
 
-            String cuerpoError = respuesta.body() != null ? respuesta.body().string() : "sin cuerpo";
-            throw new IOException("HTTP " + respuesta.code() + ": " + cuerpoError);
+            String cuerpoError = respuesta.body() != null
+                    ? respuesta.body().string()
+                    : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+            throw new IOException(I18nUI.Conexion.DETALLE_HTTP(respuesta.code(), cuerpoError));
         }
     }
 
@@ -162,6 +166,33 @@ public class ProbadorConexionAI {
             return texto.substring(0, longitudMaxima) + "...";
         }
         return texto;
+    }
+
+    private static String describirErrorVisible(Throwable error) {
+        if (error == null) {
+            return I18nUI.Conexion.ERROR_DESCONOCIDO();
+        }
+
+        String mensaje = error.getMessage();
+        if (Normalizador.noEsVacio(mensaje) && mensaje.startsWith("HTTP ")) {
+            return mensaje;
+        }
+        if (Normalizador.noEsVacio(mensaje)
+                && (mensaje.startsWith(I18nUI.Conexion.ERROR_CONEXION())
+                || mensaje.startsWith(I18nUI.Conexion.ERROR_PRUEBA_CONEXION(""))
+                || mensaje.equals(I18nUI.Conexion.SIN_RESPUESTA()))) {
+            return mensaje;
+        }
+
+        Throwable causa = error.getCause();
+        if (causa != null && causa != error) {
+            String detalleCausa = describirErrorVisible(causa);
+            if (Normalizador.noEsVacio(detalleCausa)) {
+                return detalleCausa;
+            }
+        }
+
+        return I18nUI.Conexion.ERROR_RED_INESPERADO(error.getClass().getSimpleName());
     }
 
     /**

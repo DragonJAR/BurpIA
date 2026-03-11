@@ -617,9 +617,9 @@ public class ExtensionBurpIA implements BurpExtension {
             SwingUtilities.invokeAndWait(crearUi);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("Inicializacion UI interrumpida", e);
+            throw new RuntimeException(I18nUI.General.ERROR_INICIALIZACION_UI_INTERRUPIDA(), e);
         } catch (InvocationTargetException e) {
-            throw new RuntimeException("No se pudo inicializar la UI de BurpIA", e);
+            throw new RuntimeException(I18nUI.General.ERROR_INICIALIZACION_UI_FALLIDA(), e);
         }
     }
 

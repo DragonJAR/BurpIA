@@ -125,9 +125,13 @@ public class ParseadorRespuestasAI {
                     Collections.emptyList());
 
         } catch (Exception e) {
-            String errorMsg = e.getMessage() != null ? e.getMessage() : "Error desconocido de parseo";
+            String errorMsg = Normalizador.noEsVacio(e.getMessage())
+                ? e.getMessage()
+                : I18nUI.Tareas.MSG_ERROR_DESCONOCIDO();
             String errorDesc = I18nUI.trf("Error al parsear respuesta: %s", "Error parsing response: %s", errorMsg);
-            gestorLogging.error(ORIGEN_LOG, "Error crítico al parsear respuesta de API para " + solicitud.obtenerUrl() + ": " + errorMsg);
+            gestorLogging.error(ORIGEN_LOG,
+                I18nLogs.tr("Error crítico al parsear respuesta de API para " + solicitud.obtenerUrl()),
+                e);
             throw new ParseExceptionAI(errorDesc, e);
         }
     }
@@ -639,7 +643,7 @@ public class ParseadorRespuestasAI {
             }
 
         } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, "Error parseando texto plano: " + e.getMessage());
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error parseando texto plano"), e);
         }
 
         return hallazgos;
@@ -693,7 +697,7 @@ public class ParseadorRespuestasAI {
     }
 
     private void rastrear(String mensaje) {
-        gestorLogging.info(ORIGEN_LOG, "[RASTREO] " + mensaje);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[RASTREO] " + mensaje));
     }
 
     public static class ParseExceptionAI extends RuntimeException {

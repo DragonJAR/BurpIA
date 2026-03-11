@@ -1,5 +1,6 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
@@ -84,15 +85,15 @@ public final class ProviderConfigManager {
             return valido;
         }
 
-        public EstadoProveedorUI getEstado() {
+        public EstadoProveedorUI obtenerEstado() {
             return estado;
         }
 
-        public String getMensajeError() {
+        public String obtenerMensajeError() {
             return mensajeError;
         }
 
-        public String getCampo() {
+        public String obtenerCampo() {
             return campo;
         }
     }
@@ -105,7 +106,7 @@ public final class ProviderConfigManager {
      */
     public ProviderConfigManager(ConfiguracionAPI config, GestorLoggingUnificado gestorLogging) {
         if (config == null || gestorLogging == null) {
-            throw new IllegalArgumentException("Configuración y gestorLogging no pueden ser nulos");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_CONFIG_Y_GESTOR_LOGGING_NULOS());
         }
 
         this.config = config;
@@ -113,7 +114,7 @@ public final class ProviderConfigManager {
         this.estadoProveedorTemporal = new HashMap<>();
         this.proveedorActualUi = null;
 
-        gestorLogging.info(ORIGEN_LOG, "ProviderConfigManager inicializado");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("ProviderConfigManager inicializado"));
     }
 
     /**
@@ -140,7 +141,7 @@ public final class ProviderConfigManager {
         this.txtTimeoutModelo = txtTimeoutModelo;
         this.txtMaxTokens = txtMaxTokens;
         
-        gestorLogging.info(ORIGEN_LOG, "Componentes básicos de UI configurados");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Componentes básicos de UI configurados"));
     }
 
     /**
@@ -229,7 +230,7 @@ public final class ProviderConfigManager {
             });
         }
 
-        gestorLogging.info(ORIGEN_LOG, "Componentes UI inicializados");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Componentes UI inicializados"));
     }
 
     /**
@@ -237,7 +238,7 @@ public final class ProviderConfigManager {
      */
     public void cargarConfiguracionInicial() {
         if (comboProveedor == null || modeloListaDisponibles == null || modeloListaSeleccionados == null) {
-            gestorLogging.error(ORIGEN_LOG, "Componentes UI no inicializados");
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Componentes UI no inicializados"));
             return;
         }
 
@@ -268,7 +269,7 @@ public final class ProviderConfigManager {
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
 
-        gestorLogging.info(ORIGEN_LOG, "Configuración inicial cargada");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Configuración inicial cargada"));
     }
 
     /**
@@ -297,13 +298,13 @@ public final class ProviderConfigManager {
                 comboProveedor.setSelectedItem(nuevoProveedor);
             }
 
-            gestorLogging.info(ORIGEN_LOG, "Proveedor cambiado a: " + nuevoProveedor);
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor cambiado a: " + nuevoProveedor));
 
             // Sincronizar proveedor principal con lista multi-proveedor
             sincronizarProveedorPrincipalConMultiProveedor();
 
         } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, "Error al cambiar proveedor: " + e.getMessage(), e);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al cambiar proveedor"), e);
         } finally {
             actualizandoProveedorUi = false;
         }
@@ -317,10 +318,10 @@ public final class ProviderConfigManager {
     public EstadoProveedorUI extraerEstadoActual() {
         ValidationResultEstadoProveedor resultado = validarEstadoActual(false, false);
         if (!resultado.esValido()) {
-            gestorLogging.error(ORIGEN_LOG, "Estado actual inválido: " + resultado.getMensajeError());
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Estado actual inválido: " + resultado.obtenerMensajeError()));
             return null;
         }
-        return resultado.getEstado();
+        return resultado.obtenerEstado();
     }
 
     /**
@@ -378,6 +379,20 @@ public final class ProviderConfigManager {
      */
     public ValidationResultEstadoProveedor validarEstadoActual(boolean requiereUrlExplicita,
                                                                boolean validarApiKey) {
+        return validarEstadoActualInterno(requiereUrlExplicita, validarApiKey, true);
+    }
+
+    /**
+     * Valida el estado mínimo necesario para cargas remotas de modelos.
+     * La operación requiere URL/API key válidas, pero no un modelo ya seleccionado.
+     */
+    public ValidationResultEstadoProveedor validarEstadoActualParaCargaModelos(boolean validarApiKey) {
+        return validarEstadoActualInterno(true, validarApiKey, false);
+    }
+
+    private ValidationResultEstadoProveedor validarEstadoActualInterno(boolean requiereUrlExplicita,
+                                                                      boolean validarApiKey,
+                                                                      boolean validarModelo) {
         String proveedor = obtenerProveedorActual();
         if (Normalizador.esVacio(proveedor)) {
             return ValidationResultEstadoProveedor.invalido(
@@ -386,40 +401,42 @@ public final class ProviderConfigManager {
         }
 
         String modelo = obtenerModeloSeleccionadoActual();
-        ConfigValidator.ValidationResult validacionModelo =
-                ConfigValidator.validarModelo(modelo, proveedor);
-        if (!validacionModelo.esValido()) {
-            return ValidationResultEstadoProveedor.invalido(
-                    validacionModelo.getMensajeError(),
-                    validacionModelo.getCampo());
+        if (validarModelo) {
+            ConfigValidator.ValidationResult validacionModelo =
+                    ConfigValidator.validarModelo(modelo, proveedor);
+            if (!validacionModelo.esValido()) {
+                return ValidationResultEstadoProveedor.invalido(
+                        validacionModelo.obtenerMensajeError(),
+                        validacionModelo.obtenerCampo());
+            }
         }
 
         Integer timeout = parsearEntero(txtTimeoutModelo != null ? txtTimeoutModelo.getText() : null);
         if (timeout == null) {
             ConfigValidator.ValidationResult validacionTimeout = ConfigValidator.validarTimeoutModelo(0);
             return ValidationResultEstadoProveedor.invalido(
-                    validacionTimeout.getMensajeError(),
-                    validacionTimeout.getCampo());
+                    validacionTimeout.obtenerMensajeError(),
+                    validacionTimeout.obtenerCampo());
         }
         ConfigValidator.ValidationResult validacionTimeout = ConfigValidator.validarTimeoutModelo(timeout);
         if (!validacionTimeout.esValido()) {
             return ValidationResultEstadoProveedor.invalido(
-                    validacionTimeout.getMensajeError(),
-                    validacionTimeout.getCampo());
+                    validacionTimeout.obtenerMensajeError(),
+                    validacionTimeout.obtenerCampo());
         }
 
         Integer maxTokens = parsearEntero(txtMaxTokens != null ? txtMaxTokens.getText() : null);
         if (maxTokens == null) {
             ConfigValidator.ValidationResult validacionTokens = ConfigValidator.validarMaxTokens(0);
             return ValidationResultEstadoProveedor.invalido(
-                    validacionTokens.getMensajeError(),
-                    validacionTokens.getCampo());
+                    validacionTokens.obtenerMensajeError(),
+                    validacionTokens.obtenerCampo());
         }
         ConfigValidator.ValidationResult validacionTokens = ConfigValidator.validarMaxTokens(maxTokens);
         if (!validacionTokens.esValido()) {
             return ValidationResultEstadoProveedor.invalido(
-                    validacionTokens.getMensajeError(),
-                    validacionTokens.getCampo());
+                    validacionTokens.obtenerMensajeError(),
+                    validacionTokens.obtenerCampo());
         }
 
         String baseUrl = txtUrl != null ? txtUrl.getText().trim() : "";
@@ -431,8 +448,8 @@ public final class ProviderConfigManager {
         ConfigValidator.ValidationResult validacionUrl = ConfigValidator.validarUrlApi(baseUrl);
         if (!validacionUrl.esValido()) {
             return ValidationResultEstadoProveedor.invalido(
-                    validacionUrl.getMensajeError(),
-                    validacionUrl.getCampo());
+                    validacionUrl.obtenerMensajeError(),
+                    validacionUrl.obtenerCampo());
         }
 
         String apiKey = txtClave != null ? new String(txtClave.getPassword()) : "";
@@ -441,8 +458,8 @@ public final class ProviderConfigManager {
                     ConfigValidator.validarApiKey(apiKey, proveedor);
             if (!validacionApiKey.esValido()) {
                 return ValidationResultEstadoProveedor.invalido(
-                        validacionApiKey.getMensajeError(),
-                        validacionApiKey.getCampo());
+                        validacionApiKey.obtenerMensajeError(),
+                        validacionApiKey.obtenerCampo());
             }
         }
 
@@ -522,7 +539,7 @@ public final class ProviderConfigManager {
         EstadoProveedorUI borrador = estadoProveedorTemporal.get(proveedor);
         ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedor);
         if (configProveedor == null) {
-            gestorLogging.error(ORIGEN_LOG, "No se encontró configuración para proveedor: " + proveedor);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se encontró configuración para proveedor: " + proveedor));
             return;
         }
 
@@ -535,17 +552,17 @@ public final class ProviderConfigManager {
 
     private void cargarEstadoDesdeBorrador(EstadoProveedorUI borrador, ProveedorAI.ConfiguracionProveedor configProveedor) {
         if (txtUrl != null) {
-            txtUrl.setText(borrador.getBaseUrl());
+            txtUrl.setText(borrador.obtenerBaseUrl());
         }
         if (txtClave != null) {
-            txtClave.setText(borrador.getApiKey());
+            txtClave.setText(borrador.obtenerApiKey());
         }
         if (txtMaxTokens != null) {
-            txtMaxTokens.setText(String.valueOf(borrador.getMaxTokens()));
+            txtMaxTokens.setText(String.valueOf(borrador.obtenerMaxTokens()));
         }
-        cargarModelosEnCombo(configProveedor.obtenerModelosDisponibles(), borrador.getModelo());
+        cargarModelosEnCombo(configProveedor.obtenerModelosDisponibles(), borrador.obtenerModelo());
         if (txtTimeoutModelo != null) {
-            txtTimeoutModelo.setText(String.valueOf(borrador.getTimeout()));
+            txtTimeoutModelo.setText(String.valueOf(borrador.obtenerTimeout()));
         }
     }
 
@@ -594,7 +611,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
-        gestorLogging.info(ORIGEN_LOG, "Proveedor agregado a lista: " + proveedor);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor agregado a lista: " + proveedor));
     }
 
     private void quitarProveedorSeleccionado() {
@@ -608,7 +625,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
-        gestorLogging.info(ORIGEN_LOG, "Proveedor quitado de lista: " + proveedor);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor quitado de lista: " + proveedor));
     }
 
     private void subirProveedorSeleccionado() {
@@ -625,7 +642,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
-        gestorLogging.info(ORIGEN_LOG, "Proveedor subido en lista: " + proveedor);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor subido en lista: " + proveedor));
     }
 
     private void bajarProveedorSeleccionado() {
@@ -642,7 +659,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
-        gestorLogging.info(ORIGEN_LOG, "Proveedor bajado en lista: " + proveedor);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor bajado en lista: " + proveedor));
     }
 
     private void sincronizarProveedorPrincipalConMultiProveedor() {
@@ -662,8 +679,8 @@ public final class ProviderConfigManager {
             if (indiceActual != 0) {
                 String proveedor = modeloListaSeleccionados.remove(indiceActual);
                 modeloListaSeleccionados.add(0, proveedor);
-                gestorLogging.info(ORIGEN_LOG, "Proveedor '" + proveedorActualUi +
-                        "' movido a la primera posición en lista multi-proveedor");
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor '" + proveedorActualUi +
+                    "' movido a la primera posición en lista multi-proveedor"));
             }
             actualizarEstadoMultiProveedor();
             actualizarBotonesMultiProveedor();
@@ -684,8 +701,8 @@ public final class ProviderConfigManager {
             modeloListaDisponibles.removeElement(proveedorActualUi);
         }
 
-        gestorLogging.info(ORIGEN_LOG, "Proveedor '" + proveedorActualUi +
-                "' agregado a la primera posición en lista multi-proveedor");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor '" + proveedorActualUi +
+            "' agregado a la primera posición en lista multi-proveedor"));
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
     }

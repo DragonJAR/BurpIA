@@ -83,25 +83,24 @@ public class ConnectionTester {
                 
                 try (Response response = client.newCall(request).execute()) {
                     if (response.isSuccessful()) {
-                        return "Connection successful";
+                        return I18nUI.Conexion.EXITO_CONEXION_SIMPLE();
                     } else {
-                        return "HTTP " + response.code() + ": " + response.message();
+                        return I18nUI.Conexion.DETALLE_HTTP(response.code(), response.message());
                     }
                 }
             } catch (Exception e) {
-                return "Connection failed: " + e.getMessage();
+                return I18nUI.Conexion.ERROR_CONNECTION_FAILED(describirErrorVisible(e));
             }
         }, executorService).orTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .whenComplete((resultado, throwable) -> {
             if (throwable != null) {
-                if (throwable instanceof TimeoutException) {
+                if (esTimeout(throwable)) {
                     callback.alError(I18nUI.Conexion.ERROR_CONNECTION_TIMEOUT(DEFAULT_TIMEOUT_SECONDS));
                 } else {
-                    String mensaje = throwable.getMessage() != null ? throwable.getMessage() : "Unknown error";
-                    callback.alError(I18nUI.Conexion.ERROR_CONNECTION_FAILED(mensaje));
+                    callback.alError(I18nUI.Conexion.ERROR_CONNECTION_FAILED(describirErrorVisible(throwable)));
                 }
             } else {
-                if (resultado.startsWith("Connection successful")) {
+                if (I18nUI.Conexion.EXITO_CONEXION_SIMPLE().equals(resultado)) {
                     callback.alExito(resultado);
                 } else {
                     callback.alError(resultado);
@@ -134,18 +133,15 @@ public class ConnectionTester {
             try {
                 return listarModelosParaProveedor(proveedor, apiKey, urlBase, config);
             } catch (Exception e) {
-                throw new RuntimeException("Failed to fetch models: " + e.getMessage(), e);
+                throw new RuntimeException(describirErrorVisible(e), e);
             }
         }, executorService).orTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .whenComplete((modelos, throwable) -> {
             if (throwable != null) {
-                if (throwable instanceof TimeoutException) {
+                if (esTimeout(throwable)) {
                     callback.alError(I18nUI.Conexion.ERROR_REQUEST_TIMEOUT(DEFAULT_TIMEOUT_SECONDS));
                 } else {
-                    String mensaje = throwable.getCause() != null && throwable.getCause().getMessage() != null 
-                            ? throwable.getCause().getMessage() 
-                            : "Unknown error";
-                    callback.alError(I18nUI.Conexion.ERROR_MODELS_FAILED(mensaje));
+                    callback.alError(I18nUI.Conexion.ERROR_MODELS_FAILED(describirErrorVisible(throwable)));
                 }
             } else {
                 callback.alExito(modelos);
@@ -178,7 +174,7 @@ public class ConnectionTester {
                 
                 try (Response response = client.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
-                        throw new IOException("HTTP " + response.code() + ": " + response.message());
+                        throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), response.message()));
                     }
                     
                     String responseBody = response.body().string();
@@ -206,18 +202,15 @@ public class ConnectionTester {
                         urlDescarga, hayActualizacion);
                 }
             } catch (Exception e) {
-                throw new RuntimeException("Failed to check updates: " + e.getMessage(), e);
+                throw new RuntimeException(describirErrorVisible(e), e);
             }
         }, executorService).orTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         .whenComplete((info, throwable) -> {
             if (throwable != null) {
-                if (throwable instanceof TimeoutException) {
+                if (esTimeout(throwable)) {
                     callback.alError(I18nUI.Conexion.ERROR_UPDATE_TIMEOUT(DEFAULT_TIMEOUT_SECONDS));
                 } else {
-                    String mensaje = throwable.getCause() != null && throwable.getCause().getMessage() != null 
-                            ? throwable.getCause().getMessage() 
-                            : "Unknown error";
-                    callback.alError(I18nUI.Conexion.ERROR_UPDATE_FAILED(mensaje));
+                    callback.alError(I18nUI.Conexion.ERROR_UPDATE_FAILED(describirErrorVisible(throwable)));
                 }
             } else {
                 callback.alExito(info);
@@ -249,18 +242,15 @@ public class ConnectionTester {
                         response.isSuccessful());
                 }
             } catch (Exception e) {
-                throw new RuntimeException("Network operation failed: " + e.getMessage(), e);
+                throw new RuntimeException(describirErrorVisible(e), e);
             }
         }, executorService).orTimeout(timeoutSegundos, TimeUnit.SECONDS)
         .whenComplete((respuesta, throwable) -> {
             if (throwable != null) {
-                if (throwable instanceof TimeoutException) {
+                if (esTimeout(throwable)) {
                     callback.alError(I18nUI.Conexion.ERROR_OPERATION_TIMEOUT(timeoutSegundos));
                 } else {
-                    String mensaje = throwable.getCause() != null && throwable.getCause().getMessage() != null 
-                            ? throwable.getCause().getMessage() 
-                            : "Unknown error";
-                    callback.alError(I18nUI.Conexion.ERROR_NETWORK_ERROR(mensaje));
+                    callback.alError(I18nUI.Conexion.ERROR_NETWORK_ERROR(describirErrorVisible(throwable)));
                 }
             } else {
                 callback.alExito(respuesta);
@@ -399,8 +389,8 @@ private List<String> parsearModelosDesdeRespuesta(String proveedor, String respo
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
-            String mensaje = e.getMessage() != null ? e.getMessage() : "Unknown error";
-            gestorLogging.error("ConnectionTester", I18nUI.Conexion.LOG_SSL_INSECURE_ERROR(mensaje));
+            gestorLogging.error("ConnectionTester",
+                    I18nUI.Conexion.LOG_SSL_INSECURE_ERROR(describirErrorVisible(e)));
         }
     }
     
@@ -449,15 +439,54 @@ private List<String> parsearModelosDesdeRespuesta(String proveedor, String respo
             
             try (Response response = client.newCall(request).execute()) {
                 if (!response.isSuccessful()) {
-                    throw new IOException("HTTP " + response.code() + ": " + response.message());
+                    throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), response.message()));
                 }
                 
                 String responseBody = response.body().string();
                 return parsearModelosDesdeRespuesta(proveedor, responseBody);
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch models: " + e.getMessage(), e);
+            throw new RuntimeException(describirErrorVisible(e), e);
         }
+    }
+
+    private boolean esTimeout(Throwable throwable) {
+        Throwable actual = throwable;
+        while (actual != null) {
+            if (actual instanceof TimeoutException) {
+                return true;
+            }
+            actual = actual.getCause();
+        }
+        return false;
+    }
+
+    private String describirErrorVisible(Throwable error) {
+        Throwable actual = error;
+        while (actual != null) {
+            if (actual instanceof TimeoutException) {
+                return I18nUI.Conexion.ERROR_CONNECTION_TIMEOUT(DEFAULT_TIMEOUT_SECONDS);
+            }
+
+            String mensaje = actual.getMessage();
+            if (Normalizador.noEsVacio(mensaje)
+                    && (mensaje.startsWith("HTTP ")
+                    || mensaje.startsWith(I18nUI.Conexion.ERROR_CONEXION())
+                    || mensaje.startsWith(I18nUI.Conexion.ERROR_MODELS_FAILED(""))
+                    || mensaje.startsWith(I18nUI.Conexion.ERROR_UPDATE_FAILED(""))
+                    || mensaje.startsWith(I18nUI.Conexion.ERROR_NETWORK_ERROR("")))) {
+                return mensaje;
+            }
+
+            if (Normalizador.noEsVacio(mensaje) && !mensaje.equals(actual.toString())) {
+                return mensaje;
+            }
+
+            actual = actual.getCause();
+        }
+
+        String tipo = error != null ? error.getClass().getSimpleName() : I18nUI.Conexion.ERROR_DESCONOCIDO();
+        return I18nUI.Conexion.ERROR_RED_INESPERADO(tipo);
     }
     
     /**

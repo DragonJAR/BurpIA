@@ -126,9 +126,9 @@ public class PanelTareas extends JPanel {
 
         botonPausarReanudar.addActionListener(e -> {
             ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
-            if (estadisticas.getPausadas() > 0) {
+            if (estadisticas.obtenerPausadas() > 0) {
                 gestorTareas.reanudarTodasPausadas();
-            } else if (estadisticas.getActivasSinPausadas() > 0) {
+            } else if (estadisticas.obtenerActivasSinPausadas() > 0) {
                 gestorTareas.pausarTodasActivas();
             } else {
                 UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(),
@@ -139,7 +139,7 @@ public class PanelTareas extends JPanel {
 
         botonCancelar.addActionListener(e -> {
             ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
-            int activas = estadisticas.getActivas();
+            int activas = estadisticas.obtenerActivas();
 
             if (activas == 0) {
                 UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
@@ -158,7 +158,7 @@ public class PanelTareas extends JPanel {
 
         botonLimpiarCompletadas.addActionListener(e -> {
             ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
-            int completadas = estadisticas.getFinalizadas();
+            int completadas = estadisticas.obtenerFinalizadas();
 
             if (completadas == 0) {
                 UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
@@ -242,31 +242,14 @@ public class PanelTareas extends JPanel {
      */
     private void actualizarBotonPausarReanudar(int tareasPausadas) {
         if (tareasPausadas > 0) {
-            actualizarTextoYTooltip(botonPausarReanudar,
+            UIUtils.actualizarTextoYTooltip(botonPausarReanudar,
                     I18nUI.Tareas.BOTON_REANUDAR_TODO(),
                     I18nUI.Tooltips.Tareas.REANUDAR_TODO());
         } else {
-            actualizarTextoYTooltip(botonPausarReanudar,
+            UIUtils.actualizarTextoYTooltip(botonPausarReanudar,
                     I18nUI.Tareas.BOTON_PAUSAR_TODO(),
                     I18nUI.Tooltips.Tareas.PAUSAR_TODO());
         }
-    }
-
-    /**
-     * Actualiza tanto el texto como el tooltip de un componente UI en una sola
-     * operación.
-     *
-     * @param componente El componente a actualizar (JLabel, JButton, etc.)
-     * @param texto      El nuevo texto para el componente
-     * @param tooltip    El nuevo tooltip para el componente
-     */
-    private void actualizarTextoYTooltip(JComponent componente, String texto, String tooltip) {
-        if (componente instanceof JLabel) {
-            ((JLabel) componente).setText(texto);
-        } else if (componente instanceof JButton) {
-            ((JButton) componente).setText(texto);
-        }
-        componente.setToolTipText(tooltip);
     }
 
     private void mostrarMenuContextualDinamico(int x, int y) {
@@ -594,11 +577,11 @@ public class PanelTareas extends JPanel {
 
         Runnable actualizarUi = () -> {
             etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
-                estadisticas.getActivas(),
-                estadisticas.getCompletadas(),
-                estadisticas.getErrores()));
+                estadisticas.obtenerActivas(),
+                estadisticas.obtenerCompletadas(),
+                estadisticas.obtenerErrores()));
 
-            actualizarBotonPausarReanudar(estadisticas.getPausadas());
+            actualizarBotonPausarReanudar(estadisticas.obtenerPausadas());
         };
         ejecutarEnEdt(actualizarUi);
     }

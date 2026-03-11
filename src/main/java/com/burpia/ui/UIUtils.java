@@ -22,7 +22,7 @@ import java.util.Map;
 import java.awt.font.TextAttribute;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class UIUtils {
+public final class UIUtils {
     private static final int DIALOGO_COLUMNAS_MIN = 36;
     private static final int DIALOGO_COLUMNAS_MAX = 52;
     private static final int DIALOGO_FILAS_MIN = 2;
@@ -75,6 +75,18 @@ public class UIUtils {
                 panel.repaint();
             }
         }
+    }
+
+    public static void actualizarTextoYTooltip(JComponent componente, String texto, String tooltip) {
+        if (componente == null) {
+            return;
+        }
+        if (componente instanceof JLabel) {
+            ((JLabel) componente).setText(texto);
+        } else if (componente instanceof AbstractButton) {
+            ((AbstractButton) componente).setText(texto);
+        }
+        componente.setToolTipText(tooltip);
     }
 
     public static Border crearBordeTitulado(String titulo, int pV, int pH) {

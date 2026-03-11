@@ -246,12 +246,12 @@ public class PanelHallazgos extends JPanel {
 
     private String textoBusquedaCacheado = "";
     private Pattern patronBusquedaCacheado;
-    private String severidadCacheada = "";
-    private String severidadQuotada = "";
+    private String severidadCanonicaCacheada = "";
 
     private void aplicarFiltros() {
         String textoBusqueda = campoBusqueda.getText().trim();
         String severidadSeleccionada = (String) comboSeveridad.getSelectedItem();
+        String severidadCanonica = I18nUI.Hallazgos.NORMALIZAR_FILTRO_SEVERIDAD(severidadSeleccionada);
 
         if (!textoBusqueda.equals(textoBusquedaCacheado)) {
             textoBusquedaCacheado = textoBusqueda;
@@ -260,9 +260,8 @@ public class PanelHallazgos extends JPanel {
                 : Pattern.compile(Pattern.quote(textoBusqueda), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         }
 
-        if (severidadSeleccionada != null && !severidadSeleccionada.equals(severidadCacheada)) {
-            severidadCacheada = severidadSeleccionada;
-            severidadQuotada = Pattern.quote(severidadSeleccionada);
+        if (!severidadCanonica.equals(severidadCanonicaCacheada)) {
+            severidadCanonicaCacheada = severidadCanonica;
         }
 
         List<RowFilter<Object, Object>> filtros = new ArrayList<>();
@@ -271,8 +270,8 @@ public class PanelHallazgos extends JPanel {
             filtros.add(crearFiltroBusqueda(patronBusquedaCacheado));
         }
 
-        if (severidadSeleccionada != null && comboSeveridad.getSelectedIndex() > 0) {
-            filtros.add(RowFilter.regexFilter("^" + severidadQuotada + "$", 3));
+        if (Normalizador.noEsVacio(severidadCanonica)) {
+            filtros.add(crearFiltroSeveridad(severidadCanonica));
         }
 
         if (Normalizador.noEsVacia(filtros)) {
@@ -292,8 +291,7 @@ public class PanelHallazgos extends JPanel {
         // Reset filter cache to ensure fresh state
         textoBusquedaCacheado = "";
         patronBusquedaCacheado = null;
-        severidadCacheada = "";
-        severidadQuotada = "";
+        severidadCanonicaCacheada = "";
     }
 
     private RowFilter<Object, Object> crearFiltroBusqueda(Pattern patronBusqueda) {
@@ -313,6 +311,22 @@ public class PanelHallazgos extends JPanel {
                 return contieneTexto(hallazgo.obtenerUrl(), patronBusqueda)
                     || contieneTexto(hallazgo.obtenerTitulo(), patronBusqueda)
                     || contieneTexto(hallazgo.obtenerHallazgo(), patronBusqueda);
+            }
+        };
+    }
+
+    private RowFilter<Object, Object> crearFiltroSeveridad(String severidadCanonica) {
+        return new RowFilter<>() {
+            @Override
+            public boolean include(Entry<?, ?> entry) {
+                Integer filaModelo = obtenerFilaModeloDesdeEntry(entry);
+                if (filaModelo == null) {
+                    return false;
+                }
+
+                Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
+                return hallazgo != null
+                    && severidadCanonica.equals(Hallazgo.normalizarSeveridad(hallazgo.obtenerSeveridad()));
             }
         };
     }
@@ -474,24 +488,6 @@ public class PanelHallazgos extends JPanel {
     private String obtenerCampoSeguro(Hallazgo hallazgo,
                                        java.util.function.Function<Hallazgo, String> extractor) {
         return hallazgo != null ? extractor.apply(hallazgo) : "";
-    }
-
-    /**
-     * Actualiza tanto el texto como el tooltip de un componente UI en una sola operación.
-     *
-     * @param componente El componente a actualizar (JLabel, JButton, etc.)
-     * @param texto      El nuevo texto para el componente
-     * @param tooltip    El nuevo tooltip para el componente
-     */
-    private void actualizarTextoYTooltip(JComponent componente, String texto, String tooltip) {
-        if (componente instanceof JLabel) {
-            ((JLabel) componente).setText(texto);
-        } else if (componente instanceof JButton) {
-            ((JButton) componente).setText(texto);
-        } else if (componente instanceof JCheckBox) {
-            ((JCheckBox) componente).setText(texto);
-        }
-        componente.setToolTipText(tooltip);
     }
 
     private String construirLineaCsv(Hallazgo hallazgo) {
@@ -1062,17 +1058,17 @@ public class PanelHallazgos extends JPanel {
     }
 
     public void aplicarIdioma() {
-        actualizarTextoYTooltip(etiquetaBusqueda, I18nUI.Hallazgos.ETIQUETA_BUSCAR(),
+        UIUtils.actualizarTextoYTooltip(etiquetaBusqueda, I18nUI.Hallazgos.ETIQUETA_BUSCAR(),
                                 I18nUI.Tooltips.Hallazgos.BUSQUEDA());
-        actualizarTextoYTooltip(botonLimpiarFiltro, I18nUI.Hallazgos.BOTON_LIMPIAR(),
+        UIUtils.actualizarTextoYTooltip(botonLimpiarFiltro, I18nUI.Hallazgos.BOTON_LIMPIAR(),
                                 I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
-        actualizarTextoYTooltip(botonExportarCSV, I18nUI.Hallazgos.BOTON_EXPORTAR_CSV(),
+        UIUtils.actualizarTextoYTooltip(botonExportarCSV, I18nUI.Hallazgos.BOTON_EXPORTAR_CSV(),
                                 I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
-        actualizarTextoYTooltip(botonExportarJSON, I18nUI.Hallazgos.BOTON_EXPORTAR_JSON(),
+        UIUtils.actualizarTextoYTooltip(botonExportarJSON, I18nUI.Hallazgos.BOTON_EXPORTAR_JSON(),
                                 I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
-        actualizarTextoYTooltip(botonLimpiarTodo, I18nUI.Hallazgos.BOTON_LIMPIAR_TODO(),
+        UIUtils.actualizarTextoYTooltip(botonLimpiarTodo, I18nUI.Hallazgos.BOTON_LIMPIAR_TODO(),
                                 I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
-        actualizarTextoYTooltip(chkGuardarEnIssues, obtenerEtiquetaGuardadoIssues(),
+        UIUtils.actualizarTextoYTooltip(chkGuardarEnIssues, obtenerEtiquetaGuardadoIssues(),
                                 obtenerTooltipGuardadoIssues());
 
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
@@ -1252,19 +1248,25 @@ public class PanelHallazgos extends JPanel {
             String severidadGuardada = config.persistirFiltroSeveridadHallazgos()
                 ? config.obtenerFiltroSeveridadHallazgos()
                 : "";
-            if (Normalizador.noEsVacio(severidadGuardada)) {
-                DefaultComboBoxModel<String> modelo = (DefaultComboBoxModel<String>) comboSeveridad.getModel();
-                for (int i = 0; i < modelo.getSize(); i++) {
-                    if (severidadGuardada.equals(modelo.getElementAt(i))) {
-                        comboSeveridad.setSelectedIndex(i);
-                        break;
-                    }
-                }
-            } else if (comboSeveridad.getItemCount() > 0) {
-                comboSeveridad.setSelectedIndex(0);
-            }
+            seleccionarFiltroSeveridadPersistido(severidadGuardada);
             aplicarFiltros();
         });
+    }
+
+    private void seleccionarFiltroSeveridadPersistido(String severidadGuardada) {
+        if (comboSeveridad == null || comboSeveridad.getItemCount() == 0) {
+            return;
+        }
+
+        String etiqueta = I18nUI.Hallazgos.ETIQUETA_FILTRO_SEVERIDAD(severidadGuardada);
+        DefaultComboBoxModel<String> modeloCombo = (DefaultComboBoxModel<String>) comboSeveridad.getModel();
+        for (int i = 0; i < modeloCombo.getSize(); i++) {
+            if (etiqueta.equals(modeloCombo.getElementAt(i))) {
+                comboSeveridad.setSelectedIndex(i);
+                return;
+            }
+        }
+        comboSeveridad.setSelectedIndex(0);
     }
 
     private Timer crearTemporizadorPersistenciaFiltros() {
@@ -1289,12 +1291,15 @@ public class PanelHallazgos extends JPanel {
         }
 
         String textoActual = campoBusqueda.getText().trim();
-        String severidadActual = (String) comboSeveridad.getSelectedItem();
+        String severidadActual = I18nUI.Hallazgos.NORMALIZAR_FILTRO_SEVERIDAD(
+            (String) comboSeveridad.getSelectedItem()
+        );
 
         // DRY: Solo guardar si el flag está habilitado y hubo cambio
         boolean textoCambio = !textoActual.equals(config.obtenerTextoFiltroHallazgos());
-        boolean severidadCambio = severidadActual != null &&
-            !severidadActual.equals(config.obtenerFiltroSeveridadHallazgos());
+        boolean severidadCambio = !severidadActual.equals(
+            I18nUI.Hallazgos.NORMALIZAR_FILTRO_SEVERIDAD(config.obtenerFiltroSeveridadHallazgos())
+        );
 
         boolean debeGuardarTexto = textoCambio && config.persistirFiltroBusquedaHallazgos();
         boolean debeGuardarSeveridad = severidadCambio && config.persistirFiltroSeveridadHallazgos();
@@ -1307,7 +1312,7 @@ public class PanelHallazgos extends JPanel {
             config.establecerTextoFiltroHallazgos(textoActual);
         }
         if (debeGuardarSeveridad) {
-            config.establecerFiltroSeveridadHallazgos(severidadActual != null ? severidadActual : "");
+            config.establecerFiltroSeveridadHallazgos(severidadActual);
         }
 
         // Guardar estado adicional con UIStateManager si está disponible
@@ -1483,7 +1488,7 @@ public class PanelHallazgos extends JPanel {
     public void establecerFiltroSeveridad(String severidad) {
         if (comboSeveridad != null && severidad != null) {
             ejecutarEnEdt(() -> {
-                comboSeveridad.setSelectedItem(severidad);
+                comboSeveridad.setSelectedItem(I18nUI.Hallazgos.ETIQUETA_FILTRO_SEVERIDAD(severidad));
                 aplicarFiltros();
             });
         }

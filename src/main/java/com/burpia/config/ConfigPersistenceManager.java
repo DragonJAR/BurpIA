@@ -23,7 +23,7 @@ public class ConfigPersistenceManager {
      */
     public ConfigPersistenceManager(GestorConfiguracion gestorConfig, GestorLoggingUnificado gestorLogging) {
         if (gestorConfig == null) {
-            throw new IllegalArgumentException("GestorConfiguracion no puede ser nulo");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_GESTOR_CONFIG_NULO());
         }
         this.gestorConfig = gestorConfig;
         // Si gestorLogging es null, crear uno mínimo sin stdout/stderr (usa Logger interno)

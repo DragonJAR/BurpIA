@@ -3,6 +3,7 @@ package com.burpia.util;
 import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import com.burpia.i18n.I18nUI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Collections;
@@ -60,7 +61,7 @@ public final class HttpUtils {
         try {
             return MessageDigest.getInstance("SHA-256");
         } catch (Exception e) {
-            throw new RuntimeException("SHA-256 no disponible", e);
+            throw new RuntimeException(I18nUI.General.ERROR_SHA256_NO_DISPONIBLE(), e);
         }
     });
 

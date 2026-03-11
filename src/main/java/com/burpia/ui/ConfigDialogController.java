@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import com.burpia.config.*;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.*;
@@ -34,10 +35,6 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ConfigDialogController {
 
     private static final String ORIGEN_LOG = "ConfigDialogController";
-    private static final int TIMEOUT_CONEXION_MODELOS_SEG = 8;
-    private static final int TIMEOUT_LECTURA_MODELOS_SEG = 12;
-    private static final int TIMEOUT_CONEXION_ACTUALIZACIONES_SEG = 8;
-    private static final int TIMEOUT_LECTURA_ACTUALIZACIONES_SEG = 12;
 
     private final DialogoConfiguracion dialogo;
     private final ConfiguracionAPI config;
@@ -46,6 +43,7 @@ public class ConfigDialogController {
     private final ProviderConfigManager providerManager;
     private final GestorLoggingUnificado gestorLogging;
     private final DialogStateManager dialogStateManager;
+    private final ConnectionTester connectionTester;
     private final Map<String, String> rutasBinarioAgenteTemporal;
     private final AtomicLong secuenciaRefrescoModelos;
     private final String tooltipCargarModelosPorDefecto;
@@ -96,7 +94,7 @@ public class ConfigDialogController {
                                 ConfiguracionAPI config, 
                                 GestorConfiguracion gestorConfig) {
         if (dialogo == null || config == null || gestorConfig == null) {
-            throw new IllegalArgumentException("Dialogo, configuración y gestorConfig no pueden ser nulos");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_DIALOGO_CONFIG_Y_GESTOR_NULOS());
         }
 
         this.dialogo = dialogo;
@@ -107,11 +105,12 @@ public class ConfigDialogController {
         this.persistenceManager = new ConfigPersistenceManager(gestorConfig, gestorLogging);
         this.providerManager = new ProviderConfigManager(config, gestorLogging);
         this.dialogStateManager = new DialogStateManager(gestorLogging);
+        this.connectionTester = new ConnectionTester();
         this.rutasBinarioAgenteTemporal = new HashMap<>();
         this.secuenciaRefrescoModelos = new AtomicLong(0);
         this.tooltipCargarModelosPorDefecto = I18nUI.Tooltips.Configuracion.CARGAR_MODELOS();
 
-        gestorLogging.info(ORIGEN_LOG, "ConfigDialogController inicializado");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("ConfigDialogController inicializado"));
     }
 
     /**
@@ -140,7 +139,7 @@ public class ConfigDialogController {
     }
 
     public void inicializarEventHandlers() {
-        gestorLogging.info(ORIGEN_LOG, "Inicializando manejadores de eventos");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Inicializando manejadores de eventos"));
         
         // Configurar componentes de UI primero
         configurarComponentesUIProvider();
@@ -150,7 +149,7 @@ public class ConfigDialogController {
         inicializarEventHandlersAcciones();
         inicializarEventHandlersDocumentos();
         
-        gestorLogging.info(ORIGEN_LOG, "Manejadores de eventos inicializados");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Manejadores de eventos inicializados"));
     }
 
     private void inicializarEventHandlersProvider() {
@@ -257,7 +256,7 @@ public class ConfigDialogController {
     }
 
     public void cargarConfiguracionInicial() {
-        gestorLogging.info(ORIGEN_LOG, "Cargando configuración inicial");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Cargando configuración inicial"));
         
         ConfiguracionAPI configCargada = persistenceManager.cargarConfiguracion();
         if (configCargada != null) {
@@ -278,7 +277,7 @@ public class ConfigDialogController {
         actualizarEstadoCargaModelosSegunProveedor();
         dialogStateManager.capturarEstadoInicial(new DialogoEstadoUIProvider());
 
-        gestorLogging.info(ORIGEN_LOG, "Configuración inicial cargada");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Configuración inicial cargada"));
     }
 
     private void cargarConfiguracionGeneral() {
@@ -416,13 +415,8 @@ public class ConfigDialogController {
         if (tipoAgente == null) {
             return false;
         }
-        
-        String rutaBinario = config.obtenerRutaBinarioAgente(codigoAgente);
-        if (Normalizador.esVacio(rutaBinario)) {
-            return false;
-        }
-        
-        return OSUtils.existeBinario(rutaBinario);
+
+        return OSUtils.existeBinario(resolverRutaBinarioAgente(codigoAgente));
     }
 
     private void cargarConfiguracionFuentes() {
@@ -448,7 +442,7 @@ public class ConfigDialogController {
     }
 
     private void manejarCambioModelo() {
-        gestorLogging.info(ORIGEN_LOG, "Manejando cambio de modelo");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Manejando cambio de modelo"));
         SwingUtilities.invokeLater(providerManager::actualizarTimeoutModeloSeleccionadoEnUI);
     }
 
@@ -468,7 +462,7 @@ public class ConfigDialogController {
                 JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
                 if (chkAgenteHabilitado != null) {
                     chkAgenteHabilitado.setText(
-                        I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE(enumAgente.getNombreVisible()));
+                        I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE(enumAgente.obtenerNombreVisible()));
                 }
 
                 String rutaSeleccionada = resolverRutaBinarioAgente(agenteSeleccionado);
@@ -477,7 +471,7 @@ public class ConfigDialogController {
                     if (Normalizador.noEsVacio(rutaSeleccionada)) {
                         txtAgenteBinario.setText(rutaSeleccionada);
                     } else {
-                        txtAgenteBinario.setText(enumAgente.getRutaPorDefecto());
+                        txtAgenteBinario.setText(enumAgente.obtenerRutaPorDefecto());
                     }
                 }
 
@@ -507,6 +501,16 @@ public class ConfigDialogController {
             return;
         }
 
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerManager.validarEstadoActualParaCargaModelos(true);
+        if (!resultado.esValido()) {
+            mostrarErrorValidacionProveedor(resultado, true);
+            return;
+        }
+
+        EstadoProveedorUI estadoUI = resultado.obtenerEstado();
+        ConfiguracionAPI configTemporal = crearConfiguracionTemporalProveedor(proveedorSeleccionado, estadoUI);
+
         final long seq = secuenciaRefrescoModelos.incrementAndGet();
         JButton btnRefrescarModelos = dialogo.obtenerBtnRefrescarModelos();
         if (btnRefrescarModelos != null) {
@@ -514,44 +518,56 @@ public class ConfigDialogController {
             btnRefrescarModelos.setText(I18nUI.Configuracion.BOTON_ACTUALIZANDO_MODELOS());
         }
 
-        SwingWorker<List<String>, Void> worker = new SwingWorker<>() {
+        connectionTester.obtenerModelosDisponibles(configTemporal, new ConnectionTester.CallbackModelos() {
             @Override
-            protected List<String> doInBackground() {
-                return obtenerModelosDesdeAPI(proveedorSeleccionado);
+            public void alExito(List<String> modelos) {
+                SwingUtilities.invokeLater(() -> {
+                    if (seq != secuenciaRefrescoModelos.get()) {
+                        return;
+                    }
+
+                    try {
+                        if (Normalizador.esVacia(modelos)) {
+                            throw new IllegalStateException(
+                                    I18nUI.Configuracion.ERROR_API_SIN_MODELOS(proveedorSeleccionado));
+                        }
+
+                        JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
+                        if (comboModelo != null) {
+                            String preferido = estadoUI.tieneModelo() ? estadoUI.obtenerModelo() : modelos.get(0);
+                            cargarModelosEnCombo(modelos, preferido);
+                        }
+
+                        UIUtils.mostrarInfo(dialogo, I18nUI.Configuracion.TITULO_MODELOS_ACTUALIZADOS(),
+                                I18nUI.Configuracion.MSG_MODELOS_ACTUALIZADOS(modelos.size(), proveedorSeleccionado));
+                    } catch (Exception e) {
+                        UIUtils.mostrarError(dialogo, I18nUI.Configuracion.TITULO_ERROR(),
+                                I18nUI.Configuracion.MSG_ERROR_PROCESAR_MODELOS(extraerMensajeError(e)));
+                    } finally {
+                        if (btnRefrescarModelos != null) {
+                            btnRefrescarModelos.setText(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
+                        }
+                        actualizarEstadoCargaModelosSegunProveedor();
+                    }
+                });
             }
 
             @Override
-            protected void done() {
-                if (seq != secuenciaRefrescoModelos.get()) {
-                    return;
-                }
+            public void alError(String error) {
+                SwingUtilities.invokeLater(() -> {
+                    if (seq != secuenciaRefrescoModelos.get()) {
+                        return;
+                    }
 
-                try {
-                    List<String> modelos = get();
-                    if (Normalizador.esVacia(modelos)) {
-                        throw new IllegalStateException(
-                            I18nUI.Configuracion.ERROR_API_SIN_MODELOS(proveedorSeleccionado));
-                    }
-                    
-                    JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
-                    if (comboModelo != null) {
-                        cargarModelosEnCombo(modelos, modelos.get(0));
-                    }
-                    
-                    UIUtils.mostrarInfo(dialogo, I18nUI.Configuracion.TITULO_MODELOS_ACTUALIZADOS(),
-                        I18nUI.Configuracion.MSG_MODELOS_ACTUALIZADOS(modelos.size(), proveedorSeleccionado));
-                } catch (Exception e) {
                     UIUtils.mostrarError(dialogo, I18nUI.Configuracion.TITULO_ERROR(),
-                        I18nUI.Configuracion.MSG_ERROR_PROCESAR_MODELOS(extraerMensajeError(e)));
-                } finally {
+                            I18nUI.Configuracion.MSG_ERROR_PROCESAR_MODELOS(error));
                     if (btnRefrescarModelos != null) {
                         btnRefrescarModelos.setText(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
                     }
                     actualizarEstadoCargaModelosSegunProveedor();
-                }
+                });
             }
-        };
-        worker.execute();
+        });
     }
 
     private void actualizarEstadoCargaModelosSegunProveedor() {
@@ -575,8 +591,7 @@ public class ConfigDialogController {
         }
 
         String proveedorSeleccionado = providerManager.obtenerProveedorActual();
-        String urlApi = estadoUI.getBaseUrl();
-        String claveApi = estadoUI.getApiKey().trim();
+        ConfiguracionAPI configTemporal = crearConfiguracionTemporalProveedor(proveedorSeleccionado, estadoUI);
 
         JButton btnProbarConexion = dialogo.obtenerBtnProbarConexion();
         if (btnProbarConexion != null) {
@@ -588,24 +603,12 @@ public class ConfigDialogController {
             @Override
             protected ProbadorConexionAI.ResultadoPrueba doInBackground() {
                 try {
-                    ConfiguracionAPI configTemp = new ConfiguracionAPI();
-                    configTemp.establecerProveedorAI(proveedorSeleccionado);
-                    configTemp.establecerClaveApi(claveApi);
-                    configTemp.establecerModelo(estadoUI.getModelo());
-                    configTemp.establecerUrlApi(
-                        ConfiguracionAPI.construirUrlApiProveedor(
-                            proveedorSeleccionado,
-                            urlApi,
-                            estadoUI.getModelo()));
-                    configTemp.establecerTiempoEsperaParaModelo(proveedorSeleccionado, 
-                        estadoUI.getModelo(), estadoUI.getTimeout());
-
-                    ProbadorConexionAI probador = new ProbadorConexionAI(configTemp);
+                    ProbadorConexionAI probador = new ProbadorConexionAI(configTemporal);
                     return probador.probarConexion();
                 } catch (Exception e) {
                     return new ProbadorConexionAI.ResultadoPrueba(
                         false,
-                        I18nUI.Conexion.ERROR_PRUEBA_CONEXION(e.getMessage()),
+                        I18nUI.Conexion.ERROR_PRUEBA_CONEXION(extraerMensajeError(e)),
                         null);
                 }
             }
@@ -623,7 +626,7 @@ public class ConfigDialogController {
                     }
                 } catch (Exception e) {
                     UIUtils.mostrarError(dialogo, I18nUI.Configuracion.TITULO_ERROR(),
-                        I18nUI.Configuracion.MSG_ERROR_PRUEBA_INESPERADO(e.getMessage()));
+                        I18nUI.Configuracion.MSG_ERROR_PRUEBA_INESPERADO(extraerMensajeError(e)));
                 } finally {
                     if (btnProbarConexion != null) {
                         btnProbarConexion.setEnabled(true);
@@ -702,7 +705,7 @@ public class ConfigDialogController {
                     errorMsg = errorBuilder.toString();
                     return guardado;
                 } catch (Exception e) {
-                    errorBuilder.append(e.getMessage());
+                    errorBuilder.append(extraerMensajeError(e));
                     errorMsg = errorBuilder.toString();
                     return false;
                 }
@@ -728,7 +731,7 @@ public class ConfigDialogController {
                     }
                 } catch (Exception e) {
                     UIUtils.mostrarError(dialogo, I18nUI.Configuracion.TITULO_ERROR_GUARDAR(),
-                        e.getMessage());
+                        extraerMensajeError(e));
                 } finally {
                     if (btnGuardar != null) {
                         btnGuardar.setEnabled(true);
@@ -762,12 +765,12 @@ public class ConfigDialogController {
             EstadoProveedorUI estadoProveedor = entry.getValue();
 
             if (estadoProveedor != null && Normalizador.noEsVacio(nombreProveedor)) {
-                snapshot.establecerApiKeyParaProveedor(nombreProveedor, estadoProveedor.getApiKey());
-                snapshot.establecerModeloParaProveedor(nombreProveedor, estadoProveedor.getModelo());
-                snapshot.establecerUrlBaseParaProveedor(nombreProveedor, estadoProveedor.getBaseUrl());
-                snapshot.establecerMaxTokensParaProveedor(nombreProveedor, estadoProveedor.getMaxTokens());
+                snapshot.establecerApiKeyParaProveedor(nombreProveedor, estadoProveedor.obtenerApiKey());
+                snapshot.establecerModeloParaProveedor(nombreProveedor, estadoProveedor.obtenerModelo());
+                snapshot.establecerUrlBaseParaProveedor(nombreProveedor, estadoProveedor.obtenerBaseUrl());
+                snapshot.establecerMaxTokensParaProveedor(nombreProveedor, estadoProveedor.obtenerMaxTokens());
                 snapshot.establecerTiempoEsperaParaModelo(nombreProveedor, 
-                    estadoProveedor.getModelo(), estadoProveedor.getTimeout());
+                    estadoProveedor.obtenerModelo(), estadoProveedor.obtenerTimeout());
             }
         }
 
@@ -897,46 +900,49 @@ public class ConfigDialogController {
         btnBuscarActualizaciones.setEnabled(false);
         btnBuscarActualizaciones.setText(I18nUI.Configuracion.BOTON_BUSCANDO_ACTUALIZACIONES());
 
-        SwingWorker<ResultadoActualizacion, Void> worker = new SwingWorker<>() {
+        connectionTester.verificarActualizaciones(
+                VersionBurpIA.obtenerVersionActual(),
+                new ConnectionTester.CallbackActualizacion() {
             @Override
-            protected ResultadoActualizacion doInBackground() throws Exception {
-                String versionRemota = obtenerVersionRemota();
-                String versionActual = VersionBurpIA.obtenerVersionActual();
-                boolean hayActualizacion = VersionBurpIA.sonVersionesDiferentes(versionActual, versionRemota);
-                return new ResultadoActualizacion(versionActual, versionRemota, hayActualizacion);
-            }
+            public void alExito(ConnectionTester.InfoActualizacion info) {
+                SwingUtilities.invokeLater(() -> {
+                    String versionActual = VersionBurpIA.obtenerVersionActual();
+                    String urlDescarga = Normalizador.noEsVacio(info.obtenerUrlDescarga())
+                            ? info.obtenerUrlDescarga()
+                            : VersionBurpIA.URL_DESCARGA;
 
-            @Override
-            protected void done() {
-                try {
-                    ResultadoActualizacion resultado = get();
-                    if (resultado.hayActualizacion) {
+                    if (info.hayActualizacion()) {
                         UIUtils.mostrarInfo(
-                            dialogo,
-                            I18nUI.Configuracion.TITULO_ACTUALIZACIONES(),
-                            I18nUI.Configuracion.MSG_ACTUALIZACION_DISPONIBLE(
-                                resultado.versionActual,
-                                resultado.versionRemota,
-                                VersionBurpIA.URL_DESCARGA));
+                                dialogo,
+                                I18nUI.Configuracion.TITULO_ACTUALIZACIONES(),
+                                I18nUI.Configuracion.MSG_ACTUALIZACION_DISPONIBLE(
+                                        versionActual,
+                                        info.obtenerVersion(),
+                                        urlDescarga));
                     } else {
                         UIUtils.mostrarInfo(
-                            dialogo,
-                            I18nUI.Configuracion.TITULO_ACTUALIZACIONES(),
-                            I18nUI.Configuracion.MSG_VERSION_AL_DIA(resultado.versionActual));
+                                dialogo,
+                                I18nUI.Configuracion.TITULO_ACTUALIZACIONES(),
+                                I18nUI.Configuracion.MSG_VERSION_AL_DIA(versionActual));
                     }
-                } catch (Exception e) {
-                    UIUtils.mostrarError(
-                        dialogo,
-                        I18nUI.Configuracion.TITULO_ERROR(),
-                        I18nUI.Configuracion.MSG_ERROR_VERIFICAR_ACTUALIZACIONES(extraerMensajeError(e)));
-                } finally {
+
                     btnBuscarActualizaciones.setEnabled(true);
                     btnBuscarActualizaciones.setText(I18nUI.Configuracion.BOTON_BUSCAR_ACTUALIZACIONES());
-                }
+                });
             }
-        };
 
-        worker.execute();
+            @Override
+            public void alError(String error) {
+                SwingUtilities.invokeLater(() -> {
+                    UIUtils.mostrarError(
+                            dialogo,
+                            I18nUI.Configuracion.TITULO_ERROR(),
+                            I18nUI.Configuracion.MSG_ERROR_VERIFICAR_ACTUALIZACIONES(error));
+                    btnBuscarActualizaciones.setEnabled(true);
+                    btnBuscarActualizaciones.setText(I18nUI.Configuracion.BOTON_BUSCAR_ACTUALIZACIONES());
+                });
+            }
+        });
     }
 
     private void manejarAbrirSitioWeb() {
@@ -1045,7 +1051,11 @@ public class ConfigDialogController {
             return rutaTemporal;
         }
         String rutaGuardada = config.obtenerRutaBinarioAgente(agenteSeleccionado);
-        return rutaGuardada != null ? rutaGuardada : "";
+        if (Normalizador.noEsVacio(rutaGuardada)) {
+            return rutaGuardada;
+        }
+        AgenteTipo tipoAgente = AgenteTipo.desdeCodigo(agenteSeleccionado, null);
+        return tipoAgente != null ? tipoAgente.obtenerRutaPorDefecto() : "";
     }
 
     private String obtenerModeloSeleccionado() {
@@ -1056,80 +1066,28 @@ public class ConfigDialogController {
         providerManager.cargarModelosEnComboEnUI(modelos, preferido);
     }
 
-    private List<String> obtenerModelosDesdeAPI(String proveedor) {
-        okhttp3.OkHttpClient cliente = crearClienteModelos();
-        if ("Gemini".equals(proveedor)) {
-            try {
-                return ConstructorSolicitudesProveedor.listarModelosGemini(
-                    dialogo.obtenerTxtUrl().getText().trim(),
-                    new String(dialogo.obtenerTxtClave().getPassword()).trim(),
-                    cliente);
-            } catch (Exception e) {
-                throw new RuntimeException(I18nUI.Configuracion.ERROR_OBTENER_GEMINI() + e.getMessage(), e);
-            }
+    private ConfiguracionAPI crearConfiguracionTemporalProveedor(String proveedor, EstadoProveedorUI estadoUI) {
+        ConfiguracionAPI configTemporal = new ConfiguracionAPI();
+        configTemporal.establecerProveedorAI(proveedor);
+        configTemporal.establecerApiKeyParaProveedor(proveedor, estadoUI.obtenerApiKey().trim());
+        configTemporal.establecerUrlBaseParaProveedor(proveedor, estadoUI.obtenerBaseUrl().trim());
+        configTemporal.establecerMaxTokensParaProveedor(proveedor, estadoUI.obtenerMaxTokens());
+        configTemporal.establecerIgnorarErroresSSL(
+                dialogo.obtenerChkIgnorarSSL() != null && dialogo.obtenerChkIgnorarSSL().isSelected());
+
+        if (Normalizador.noEsVacio(estadoUI.obtenerModelo())) {
+            configTemporal.establecerModeloParaProveedor(proveedor, estadoUI.obtenerModelo());
+            configTemporal.establecerTiempoEsperaParaModelo(
+                    proveedor,
+                    estadoUI.obtenerModelo(),
+                    estadoUI.obtenerTimeout());
         }
-        if ("Ollama".equals(proveedor)) {
-            try {
-                return ConstructorSolicitudesProveedor.listarModelosOllama(
-                    dialogo.obtenerTxtUrl().getText().trim(),
-                    cliente);
-            } catch (Exception e) {
-                throw new RuntimeException(I18nUI.Configuracion.ERROR_OBTENER_OLLAMA() + e.getMessage(), e);
-            }
-        }
-        if ("OpenAI".equals(proveedor) || "Z.ai".equals(proveedor) || "minimax".equals(proveedor)
-                || ProveedorAI.esProveedorCustom(proveedor)) {
-            try {
-                return ConstructorSolicitudesProveedor.listarModelosOpenAI(
-                    dialogo.obtenerTxtUrl().getText().trim(),
-                    new String(dialogo.obtenerTxtClave().getPassword()).trim(),
-                    cliente);
-            } catch (Exception e) {
-                throw new RuntimeException(I18nUI.Configuracion.ERROR_OBTENER_API() + e.getMessage(), e);
-            }
-        }
-        List<String> modelos = ProveedorAI.obtenerModelosDisponibles(proveedor);
-        if (Normalizador.esVacia(modelos)) {
-            throw new RuntimeException(I18nUI.Configuracion.ERROR_PROVEEDOR_SIN_LISTA());
-        }
-        return modelos;
+
+        return configTemporal;
     }
 
-    private okhttp3.OkHttpClient crearClienteModelos() {
-        return new okhttp3.OkHttpClient.Builder()
-            .connectTimeout(TIMEOUT_CONEXION_MODELOS_SEG, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(TIMEOUT_LECTURA_MODELOS_SEG, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
-    }
-
-    private String obtenerVersionRemota() throws Exception {
-        okhttp3.OkHttpClient cliente = crearClienteActualizaciones();
-        okhttp3.Request request = new okhttp3.Request.Builder()
-            .url(VersionBurpIA.URL_VERSION_REMOTA)
-            .get()
-            .build();
-
-        try (okhttp3.Response response = cliente.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IllegalStateException(I18nUI.Configuracion.MSG_ERROR_HTTP_VERSION_REMOTA(response.code()));
-            }
-            okhttp3.ResponseBody body = response.body();
-            if (body == null) {
-                throw new IllegalStateException(I18nUI.Configuracion.MSG_VERSION_REMOTA_VACIA());
-            }
-            String versionRemota = VersionBurpIA.normalizarVersion(body.string());
-            if (versionRemota.isEmpty()) {
-                throw new IllegalStateException(I18nUI.Configuracion.MSG_VERSION_REMOTA_VACIA());
-            }
-            return versionRemota;
-        }
-    }
-
-    private okhttp3.OkHttpClient crearClienteActualizaciones() {
-        return new okhttp3.OkHttpClient.Builder()
-            .connectTimeout(TIMEOUT_CONEXION_ACTUALIZACIONES_SEG, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(TIMEOUT_LECTURA_ACTUALIZACIONES_SEG, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
+    public void cerrar() {
+        connectionTester.cerrar();
     }
 
     private String extraerMensajeError(Exception error) {
@@ -1150,7 +1108,7 @@ public class ConfigDialogController {
         ProviderConfigManager.ValidationResultEstadoProveedor resultado =
                 providerManager.validarEstadoActual(requiereUrlExplicita, validarApiKey);
         if (resultado.esValido()) {
-            return resultado.getEstado();
+            return resultado.obtenerEstado();
         }
 
         mostrarErrorValidacionProveedor(resultado, mostrarComoError);
@@ -1220,9 +1178,9 @@ public class ConfigDialogController {
                 minimo,
                 maximo);
         if (!resultado.esValido()) {
-            return ResultadoValidacionEnteroDialogo.invalido(resultado.getMensajeError(), campo);
+            return ResultadoValidacionEnteroDialogo.invalido(resultado.obtenerMensajeError(), campo);
         }
-        return ResultadoValidacionEnteroDialogo.valido(resultado.getValor());
+        return ResultadoValidacionEnteroDialogo.valido(resultado.obtenerValor());
     }
 
     private String limpiarEtiquetaCampo(String etiqueta) {
@@ -1238,20 +1196,20 @@ public class ConfigDialogController {
 
     private void mostrarErrorValidacionProveedor(ProviderConfigManager.ValidationResultEstadoProveedor resultado,
                                                  boolean mostrarComoError) {
-        if (resultado == null || Normalizador.esVacio(resultado.getMensajeError())) {
+        if (resultado == null || Normalizador.esVacio(resultado.obtenerMensajeError())) {
             return;
         }
 
         if (mostrarComoError) {
             UIUtils.mostrarError(dialogo,
                     I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
-                    resultado.getMensajeError());
+                    resultado.obtenerMensajeError());
         } else {
             UIUtils.mostrarAdvertencia(dialogo,
                     I18nUI.Configuracion.TITULO_VALIDACION(),
-                    resultado.getMensajeError());
+                    resultado.obtenerMensajeError());
         }
-        enfocarCampoConfiguracion(resultado.getCampo());
+        enfocarCampoConfiguracion(resultado.obtenerCampo());
     }
 
     private void mostrarErrorValidacionGenerica(String mensajeError, String campo) {
@@ -1584,17 +1542,5 @@ public class ConfigDialogController {
         }
 
         return erroresMultiProveedor;
-    }
-
-    private static final class ResultadoActualizacion {
-        private final String versionActual;
-        private final String versionRemota;
-        private final boolean hayActualizacion;
-
-        private ResultadoActualizacion(String versionActual, String versionRemota, boolean hayActualizacion) {
-            this.versionActual = versionActual;
-            this.versionRemota = versionRemota;
-            this.hayActualizacion = hayActualizacion;
-        }
     }
 }

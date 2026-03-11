@@ -3,6 +3,7 @@ package com.burpia.i18n;
 import com.burpia.util.Normalizador;
 
 import java.util.List;
+import java.util.Locale;
 
 public final class I18nUI {
     private static volatile IdiomaUI idiomaActual = IdiomaUI.porDefecto();
@@ -110,6 +111,83 @@ public final class I18nUI {
 
         public static String SEPARADOR_ESTADISTICAS() {
             return tr(" | ", " | ");
+        }
+
+        public static String ERROR_GESTOR_CONFIG_NULO() {
+            return tr("GestorConfiguracion no puede ser nulo",
+                    "GestorConfiguracion cannot be null");
+        }
+
+        public static String ERROR_CONFIG_Y_GESTOR_LOGGING_NULOS() {
+            return tr("Configuración y gestorLogging no pueden ser nulos",
+                    "Configuration and logging manager cannot be null");
+        }
+
+        public static String ERROR_CONFIG_Y_GESTOR_CONFIG_NULOS() {
+            return tr("Configuración y gestorConfig no pueden ser nulos",
+                    "Configuration and config manager cannot be null");
+        }
+
+        public static String ERROR_DIALOGO_CONFIG_Y_GESTOR_NULOS() {
+            return tr("Dialogo, configuración y gestorConfig no pueden ser nulos",
+                    "Dialog, configuration, and config manager cannot be null");
+        }
+
+        public static String ERROR_INICIALIZACION_UI_INTERRUPIDA() {
+            return tr("Inicializacion UI interrumpida", "UI initialization interrupted");
+        }
+
+        public static String ERROR_INICIALIZACION_UI_FALLIDA() {
+            return tr("No se pudo inicializar la UI de BurpIA",
+                    "BurpIA UI could not be initialized");
+        }
+
+        public static String ERROR_SHA256_NO_DISPONIBLE() {
+            return tr("SHA-256 no disponible", "SHA-256 unavailable");
+        }
+
+        public static String ERROR_PALETA_ANSI_INVALIDA() {
+            return tr("La paleta ANSI debe tener al menos 16 colores",
+                    "ANSI palette must contain at least 16 colors");
+        }
+
+        public static String ERROR_TIPO_AGENTE_NULO() {
+            return tr("tipoAgente no puede ser null", "tipoAgente cannot be null");
+        }
+
+        public static String ERROR_DELAY_SUBMIT_INVALIDO(int valor) {
+            return trf("delaySubmitPostPasteMs debe ser >= 0, recibido: %d",
+                    "delaySubmitPostPasteMs must be >= 0, received: %d",
+                    valor);
+        }
+
+        public static String ERROR_SOLICITUD_NULA() {
+            return tr("La solicitud no puede ser null", "Request cannot be null");
+        }
+
+        public static String ERROR_CONFIGURACION_NULA_ARGUMENTO() {
+            return tr("La configuración no puede ser null", "Configuration cannot be null");
+        }
+
+        public static String ERROR_LISTA_SOLICITUDES_NULA() {
+            return tr("La lista de solicitudes no puede ser null",
+                    "Request list cannot be null");
+        }
+
+        public static String ERROR_INESPERADO_TIPO(String tipoError) {
+            return trf("Error inesperado (%s)", "Unexpected error (%s)", tipoError);
+        }
+
+        public static String ERROR_TAMANIO_REQUEST_INVALIDO(int longitud) {
+            return trf("Tamaño de request inválido: %d",
+                    "Invalid request size: %d",
+                    longitud);
+        }
+
+        public static String ERROR_TAMANIO_RESPONSE_INVALIDO(int longitud) {
+            return trf("Tamaño de response inválido: %d",
+                    "Invalid response size: %d",
+                    longitud);
         }
     }
 
@@ -373,6 +451,12 @@ public final class I18nUI {
             return tr("Reintentando...", "Retrying...");
         }
 
+        public static String MSG_INICIANDO_ANALISIS_REINTENTO(String url) {
+            return trf("Iniciando análisis (continuar/reintentar) para: %s",
+                    "Starting analysis (resume/retry) for: %s",
+                    url);
+        }
+
         public static String MSG_DESCARTADA_SATURACION() {
             return tr("Descartada por saturación de cola", "Discarded due to queue saturation");
         }
@@ -387,6 +471,11 @@ public final class I18nUI {
 
         public static String MSG_ERROR_DESCONOCIDO() {
             return tr("Error desconocido", "Unknown error");
+        }
+
+        public static String ERROR_RETRY_INTERRUPPIDO() {
+            return tr("Sistema de retry cancelado/interrumpido",
+                    "Retry system canceled/interrupted");
         }
 
         public static String MSG_COMPLETADO_HALLAZGOS(int cantidad) {
@@ -451,6 +540,48 @@ public final class I18nUI {
                 default:
                     return severidad;
             }
+        }
+
+        public static String NORMALIZAR_FILTRO_SEVERIDAD(String severidad) {
+            if (Normalizador.esVacio(severidad)) {
+                return "";
+            }
+
+            String normalizada = severidad.trim().toLowerCase(Locale.ROOT);
+            if (normalizada.equals(OPCION_TODAS_CRITICIDADES().toLowerCase(Locale.ROOT))
+                || "todas las severidades".equals(normalizada)
+                || "all severities".equals(normalizada)) {
+                return "";
+            }
+
+            switch (normalizada) {
+                case "critical":
+                case "critica":
+                case "crítica":
+                    return com.burpia.model.Hallazgo.SEVERIDAD_CRITICAL;
+                case "high":
+                case "alta":
+                    return com.burpia.model.Hallazgo.SEVERIDAD_HIGH;
+                case "medium":
+                case "media":
+                    return com.burpia.model.Hallazgo.SEVERIDAD_MEDIUM;
+                case "low":
+                case "baja":
+                    return com.burpia.model.Hallazgo.SEVERIDAD_LOW;
+                case "info":
+                case "informativa":
+                    return com.burpia.model.Hallazgo.SEVERIDAD_INFO;
+                default:
+                    return "";
+            }
+        }
+
+        public static String ETIQUETA_FILTRO_SEVERIDAD(String severidad) {
+            String severidadNormalizada = NORMALIZAR_FILTRO_SEVERIDAD(severidad);
+            if (Normalizador.esVacio(severidadNormalizada)) {
+                return OPCION_TODAS_CRITICIDADES();
+            }
+            return TRADUCIR_SEVERIDAD(severidadNormalizada);
         }
 
         public static String CONFIANZA_ALTA() {
@@ -1149,6 +1280,10 @@ public final class I18nUI {
             return tr("Error de conexión: ", "Connection error: ");
         }
 
+        public static String EXITO_CONEXION_SIMPLE() {
+            return tr("Conexión exitosa", "Connection successful");
+        }
+
         public static String ERROR_PRUEBA_CONEXION(String errorMsg) {
             return trf("Error durante la prueba de conexión:%n%n%s", "Error during connection test:%n%n%s", errorMsg);
         }
@@ -1241,6 +1376,53 @@ public final class I18nUI {
 
         public static String ERROR_MISSING_PROVIDER_CONFIG() {
             return tr("Falta configuración del proveedor", "Missing provider configuration");
+        }
+
+        public static String ERROR_DESCONOCIDO() {
+            return tr("Error desconocido", "Unknown error");
+        }
+
+        public static String DETALLE_HTTP(int codigoHttp, String detalle) {
+            return trf("HTTP %d: %s", "HTTP %d: %s", codigoHttp, detalle);
+        }
+
+        public static String DETALLE_SIN_CUERPO() {
+            return tr("sin cuerpo", "no body");
+        }
+
+        public static String ERROR_RED_INESPERADO(String tipoError) {
+            return trf("Fallo de red inesperado (%s)", "Unexpected network failure (%s)", tipoError);
+        }
+
+        public static String ERROR_URL_BASE_GEMINI_INVALIDA() {
+            return tr("URL base de Gemini vacía o inválida", "Gemini base URL is empty or invalid");
+        }
+
+        public static String ERROR_URL_BASE_GEMINI_INVALIDA(String base) {
+            return trf("URL base de Gemini inválida: %s", "Invalid Gemini base URL: %s", base);
+        }
+
+        public static String ERROR_GEMINI_SIN_MODELOS_COMPATIBLES() {
+            return tr("Gemini no reportó modelos compatibles con generateContent",
+                    "Gemini did not report models compatible with generateContent");
+        }
+
+        public static String ERROR_URL_BASE_OLLAMA_INVALIDA() {
+            return tr("URL base de Ollama vacía o inválida", "Ollama base URL is empty or invalid");
+        }
+
+        public static String ERROR_OLLAMA_SIN_MODELOS_VALIDOS() {
+            return tr("Ollama no reportó modelos válidos en /api/tags",
+                    "Ollama did not report valid models in /api/tags");
+        }
+
+        public static String ERROR_URL_BASE_MODELOS_INVALIDA() {
+            return tr("URL base vacía o inválida", "Base URL is empty or invalid");
+        }
+
+        public static String ERROR_MODELOS_RESPUESTA_VACIA() {
+            return tr("No se encontraron modelos válidos en la respuesta",
+                    "No valid models were found in the response");
         }
 
         public static String ERROR_CONNECTION_TIMEOUT(int segundos) {
@@ -3036,6 +3218,12 @@ public final class I18nUI {
             return tr(
                 "El prompt no pudo ajustarse al límite de tokens del modelo.",
                 "Prompt could not fit within model token limit.");
+        }
+
+        public static String MENSAJE_FALLIDO_PROVEEDOR(String proveedor) {
+            return trf("Contexto excedido en proveedor %s",
+                    "Context exceeded in provider %s",
+                    proveedor);
         }
 
         public static String MENSAJE_EXITO() {

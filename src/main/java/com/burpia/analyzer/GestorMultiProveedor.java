@@ -174,7 +174,7 @@ public class GestorMultiProveedor {
             return respuesta;
         } catch (ContextExceededException e) {
             // Para multi-proveedor, propagar como IOException
-            throw new IOException("Contexto excedido en proveedor " + configActual.obtenerProveedorAI() + ": " + e.getMessage(), e);
+            throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO_PROVEEDOR(configActual.obtenerProveedorAI()), e);
         }
     }
 
@@ -218,7 +218,7 @@ public class GestorMultiProveedor {
 
     private void verificarCancelacion() throws InterruptedException {
         if (tareaCancelada.getAsBoolean()) {
-            throw new InterruptedException("Tarea cancelada por usuario");
+            throw new InterruptedException(I18nUI.Tareas.MSG_CANCELADO_USUARIO());
         }
     }
 

@@ -983,203 +983,203 @@ public class ConfigDialogView {
         return panelPrincipal;
     }
 
-    public JTabbedPane getTabbedPane() {
+    public JTabbedPane obtenerTabbedPane() {
         return tabbedPane;
     }
 
-    public JPanel getPanelBotones() {
+    public JPanel obtenerPanelBotones() {
         return panelBotones;
     }
 
-    public JTextField getTxtUrl() {
+    public JTextField obtenerTxtUrl() {
         return txtUrl;
     }
 
-    public JPasswordField getTxtClave() {
+    public JPasswordField obtenerTxtClave() {
         return txtClave;
     }
 
-    public JTextField getTxtRetraso() {
+    public JTextField obtenerTxtRetraso() {
         return txtRetraso;
     }
 
-    public JTextField getTxtMaximoConcurrente() {
+    public JTextField obtenerTxtMaximoConcurrente() {
         return txtMaximoConcurrente;
     }
 
-    public JTextField getTxtMaximoHallazgosTabla() {
+    public JTextField obtenerTxtMaximoHallazgosTabla() {
         return txtMaximoHallazgosTabla;
     }
 
-    public JTextField getTxtMaximoTareas() {
+    public JTextField obtenerTxtMaximoTareas() {
         return txtMaximoTareas;
     }
 
-    public JCheckBox getChkDetallado() {
+    public JCheckBox obtenerChkDetallado() {
         return chkDetallado;
     }
 
-    public JCheckBox getChkIgnorarSSL() {
+    public JCheckBox obtenerChkIgnorarSSL() {
         return chkIgnorarSSL;
     }
 
-    public JCheckBox getChkSoloProxy() {
+    public JCheckBox obtenerChkSoloProxy() {
         return chkSoloProxy;
     }
 
-    public JCheckBox getChkAlertasHabilitadas() {
+    public JCheckBox obtenerChkAlertasHabilitadas() {
         return chkAlertasHabilitadas;
     }
 
-    public JCheckBox getChkPersistirBusqueda() {
+    public JCheckBox obtenerChkPersistirBusqueda() {
         return chkPersistirBusqueda;
     }
 
-    public JCheckBox getChkPersistirSeveridad() {
+    public JCheckBox obtenerChkPersistirSeveridad() {
         return chkPersistirSeveridad;
     }
 
-    public JTextArea getTxtPrompt() {
+    public JTextArea obtenerTxtPrompt() {
         return txtPrompt;
     }
 
-    public JButton getBtnRestaurarPrompt() {
+    public JButton obtenerBtnRestaurarPrompt() {
         return btnRestaurarPrompt;
     }
 
-    public JLabel getLblContadorPrompt() {
+    public JLabel obtenerLblContadorPrompt() {
         return lblContadorPrompt;
     }
 
-    public JComboBox<String> getComboAgente() {
+    public JComboBox<String> obtenerComboAgente() {
         return comboAgente;
     }
 
-    public JCheckBox getChkAgenteHabilitado() {
+    public JCheckBox obtenerChkAgenteHabilitado() {
         return chkAgenteHabilitado;
     }
 
-    public JTextField getTxtAgenteBinario() {
+    public JTextField obtenerTxtAgenteBinario() {
         return txtAgenteBinario;
     }
 
-    public JTextArea getTxtAgentePromptInicial() {
+    public JTextArea obtenerTxtAgentePromptInicial() {
         return txtAgentePromptInicial;
     }
 
-    public JTextArea getTxtAgentePrompt() {
+    public JTextArea obtenerTxtAgentePrompt() {
         return txtAgentePrompt;
     }
 
-    public JButton getBtnRestaurarPromptAgenteInicial() {
+    public JButton obtenerBtnRestaurarPromptAgenteInicial() {
         return btnRestaurarPromptAgenteInicial;
     }
 
-    public JButton getBtnRestaurarPromptAgente() {
+    public JButton obtenerBtnRestaurarPromptAgente() {
         return btnRestaurarPromptAgente;
     }
 
-    public JComboBox<String> getComboProveedor() {
+    public JComboBox<String> obtenerComboProveedor() {
         return comboProveedor;
     }
 
-    public JComboBox<String> getComboModelo() {
+    public JComboBox<String> obtenerComboModelo() {
         return comboModelo;
     }
 
-    public JComboBox<IdiomaUI> getComboIdioma() {
+    public JComboBox<IdiomaUI> obtenerComboIdioma() {
         return comboIdioma;
     }
 
-    public JButton getBtnRefrescarModelos() {
+    public JButton obtenerBtnRefrescarModelos() {
         return btnRefrescarModelos;
     }
 
-    public JButton getBtnProbarConexion() {
+    public JButton obtenerBtnProbarConexion() {
         return btnProbarConexion;
     }
 
-    public JButton getBtnBuscarActualizaciones() {
+    public JButton obtenerBtnBuscarActualizaciones() {
         return btnBuscarActualizaciones;
     }
 
-    public JCheckBox getChkHabilitarMultiProveedor() {
+    public JCheckBox obtenerChkHabilitarMultiProveedor() {
         return chkHabilitarMultiProveedor;
     }
 
-    public JList<String> getListaProveedoresDisponibles() {
+    public JList<String> obtenerListaProveedoresDisponibles() {
         return listaProveedoresDisponibles;
     }
 
-    public JList<String> getListaProveedoresSeleccionados() {
+    public JList<String> obtenerListaProveedoresSeleccionados() {
         return listaProveedoresSeleccionados;
     }
 
-    public DefaultListModel<String> getModeloListaDisponibles() {
+    public DefaultListModel<String> obtenerModeloListaDisponibles() {
         return modeloListaDisponibles;
     }
 
-    public DefaultListModel<String> getModeloListaSeleccionados() {
+    public DefaultListModel<String> obtenerModeloListaSeleccionados() {
         return modeloListaSeleccionados;
     }
 
-    public JButton getBtnAgregarProveedor() {
+    public JButton obtenerBtnAgregarProveedor() {
         return btnAgregarProveedor;
     }
 
-    public JButton getBtnQuitarProveedor() {
+    public JButton obtenerBtnQuitarProveedor() {
         return btnQuitarProveedor;
     }
 
-    public JButton getBtnSubirProveedor() {
+    public JButton obtenerBtnSubirProveedor() {
         return btnSubirProveedor;
     }
 
-    public JButton getBtnBajarProveedor() {
+    public JButton obtenerBtnBajarProveedor() {
         return btnBajarProveedor;
     }
 
-    public JLabel getLblEstadoMultiProveedor() {
+    public JLabel obtenerLblEstadoMultiProveedor() {
         return lblEstadoMultiProveedor;
     }
 
-    public JTextField getTxtMaxTokens() {
+    public JTextField obtenerTxtMaxTokens() {
         return txtMaxTokens;
     }
 
-    public JTextField getTxtTimeoutModelo() {
+    public JTextField obtenerTxtTimeoutModelo() {
         return txtTimeoutModelo;
     }
 
-    public JComboBox<String> getComboFuenteEstandar() {
+    public JComboBox<String> obtenerComboFuenteEstandar() {
         return comboFuenteEstandar;
     }
 
-    public JSpinner getSpinnerTamanioEstandar() {
+    public JSpinner obtenerSpinnerTamanioEstandar() {
         return spinnerTamanioEstandar;
     }
 
-    public JComboBox<String> getComboFuenteMono() {
+    public JComboBox<String> obtenerComboFuenteMono() {
         return comboFuenteMono;
     }
 
-    public JSpinner getSpinnerTamanioMono() {
+    public JSpinner obtenerSpinnerTamanioMono() {
         return spinnerTamanioMono;
     }
 
-    public JButton getBtnRestaurarFuentes() {
+    public JButton obtenerBtnRestaurarFuentes() {
         return btnRestaurarFuentes;
     }
 
-    public JButton getBtnGuardar() {
+    public JButton obtenerBtnGuardar() {
         return btnGuardar;
     }
 
-    public JButton getBtnCerrar() {
+    public JButton obtenerBtnCerrar() {
         return btnCerrar;
     }
 
-    public JButton getBtnSitioWeb() {
+    public JButton obtenerBtnSitioWeb() {
         return btnSitioWeb;
     }
 }

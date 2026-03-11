@@ -1,6 +1,7 @@
 package com.burpia.util;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.SolicitudAnalisis;
 
 import java.util.ArrayList;
@@ -138,7 +139,7 @@ public final class ProcesadorPromptHTTP {
      */
     public static String detectarModo(SolicitudAnalisis solicitud) {
         if (solicitud == null) {
-            throw new IllegalArgumentException("La solicitud no puede ser null");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_SOLICITUD_NULA());
         }
         
         boolean tieneResponse = solicitud.obtenerCodigoEstadoRespuesta() > 0 || 
@@ -152,19 +153,19 @@ public final class ProcesadorPromptHTTP {
     
     private static void validarParametrosIndividuales(SolicitudAnalisis solicitud, ConfiguracionAPI config) {
         if (solicitud == null) {
-            throw new IllegalArgumentException("La solicitud no puede ser null");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_SOLICITUD_NULA());
         }
         if (config == null) {
-            throw new IllegalArgumentException("La configuración no puede ser null");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_CONFIGURACION_NULA_ARGUMENTO());
         }
     }
     
     private static void validarParametrosFlujo(List<SolicitudAnalisis> solicitudes, ConfiguracionAPI config) {
         if (solicitudes == null) {
-            throw new IllegalArgumentException("La lista de solicitudes no puede ser null");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_LISTA_SOLICITUDES_NULA());
         }
         if (config == null) {
-            throw new IllegalArgumentException("La configuración no puede ser null");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_CONFIGURACION_NULA_ARGUMENTO());
         }
         // Lista vacía es tolerada: retorna prompt sin bloques de transacción
     }

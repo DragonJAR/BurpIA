@@ -5,6 +5,7 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -255,7 +256,7 @@ public class AlmacenEvidenciaHttp {
             int reqLen = in.readInt();
             if (reqLen < 0 || reqLen > MAXIMO_BYTES_PARTE) {
                 registrarAdvertencia(I18nLogs.AlmacenEvidencia.TAMANIO_REQUEST_INVALIDO() + rutaArchivo + " (reqLen=" + reqLen + ")");
-                throw new IOException("Tamaño de request inválido: " + reqLen);
+                throw new IOException(I18nUI.General.ERROR_TAMANIO_REQUEST_INVALIDO(reqLen));
             }
             byte[] requestBytes = new byte[reqLen];
             in.readFully(requestBytes);
@@ -263,7 +264,7 @@ public class AlmacenEvidenciaHttp {
             int resLen = in.readInt();
             if (resLen < 0 || resLen > MAXIMO_BYTES_PARTE) {
                 registrarAdvertencia(I18nLogs.AlmacenEvidencia.TAMANIO_RESPONSE_INVALIDO() + rutaArchivo + " (resLen=" + resLen + ")");
-                throw new IOException("Tamaño de response inválido: " + resLen);
+                throw new IOException(I18nUI.General.ERROR_TAMANIO_RESPONSE_INVALIDO(resLen));
             }
             byte[] responseBytes = new byte[resLen];
             if (resLen > 0) {

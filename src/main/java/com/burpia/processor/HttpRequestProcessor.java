@@ -8,6 +8,7 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.GestorLoggingUnificado;
@@ -52,7 +53,7 @@ public final class HttpRequestProcessor {
 
         } catch (Exception e) {
             if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, "Error al verificar scope: " + e.getMessage(), e);
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al verificar scope"), e);
             }
             return false;
         }
@@ -66,7 +67,7 @@ public final class HttpRequestProcessor {
         boolean esEstatico = HttpUtils.esRecursoEstatico(url);
 
         if (esEstatico && config.esDetallado() && gestorLogging != null) {
-            gestorLogging.info(ORIGEN_LOG, "Recurso coincidio con filtro estatico: " + url);
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Recurso coincidio con filtro estatico: " + url));
         }
 
         return esEstatico;
@@ -99,7 +100,7 @@ public final class HttpRequestProcessor {
             }
         } catch (Exception e) {
             if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, "No se pudo extraer Content-Type de respuesta", e);
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo extraer Content-Type de respuesta"), e);
             }
         }
         return "";
@@ -108,14 +109,14 @@ public final class HttpRequestProcessor {
     public boolean esSolicitudValida(HttpResponseReceived respuestaRecibida) {
         if (respuestaRecibida == null) {
             if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, "Respuesta recibida es null");
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Respuesta recibida es null"));
             }
             return false;
         }
 
         if (respuestaRecibida.initiatingRequest() == null) {
             if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, "Solicitud iniciadora es null");
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Solicitud iniciadora es null"));
             }
             return false;
         }
@@ -158,7 +159,7 @@ public final class HttpRequestProcessor {
     public SolicitudAnalisis crearSolicitudAnalisisForzada(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
         if (solicitud == null) {
             if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, "No se pudo analizar solicitud forzada: request null");
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo analizar solicitud forzada: request null"));
             }
             return null;
         }
@@ -183,7 +184,7 @@ public final class HttpRequestProcessor {
                 }
             } catch (Exception e) {
                 if (gestorLogging != null) {
-                    gestorLogging.error(ORIGEN_LOG, "No se pudo capturar la respuesta para analisis manual", e);
+                    gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo capturar la respuesta para analisis manual"), e);
                 }
             }
         }
@@ -208,7 +209,7 @@ public final class HttpRequestProcessor {
             return HttpRequestResponse.httpRequestResponse(solicitud, respuesta);
         } catch (Exception e) {
             if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, "No se pudo construir HttpRequestResponse para evidencia de Issue", e);
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo construir HttpRequestResponse para evidencia de Issue"), e);
             }
             return null;
         }
@@ -217,7 +218,7 @@ public final class HttpRequestProcessor {
     public HttpRequestResponse normalizarEvidenciaManual(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
         if (solicitudRespuestaOriginal == null) {
             if (gestorLogging != null) {
-                gestorLogging.info(ORIGEN_LOG, "Analisis manual sin request/response original: se registraran hallazgos, pero no Issue.");
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analisis manual sin solicitud/respuesta original: se registraran hallazgos, pero no Issue."));
             }
             return null;
         }
@@ -225,7 +226,7 @@ public final class HttpRequestProcessor {
         try {
             if (!solicitudRespuestaOriginal.hasResponse()) {
                 if (gestorLogging != null) {
-                    gestorLogging.info(ORIGEN_LOG, "Analisis manual sin response asociada: se registraran hallazgos, pero no Issue.");
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analisis manual sin response asociada: se registraran hallazgos, pero no Issue."));
                 }
                 return null;
             }
@@ -234,7 +235,7 @@ public final class HttpRequestProcessor {
             }
         } catch (Exception e) {
             if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, "No se pudo reutilizar la evidencia original del analisis manual", e);
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo reutilizar la evidencia original del analisis manual"), e);
             }
         }
 
@@ -242,7 +243,7 @@ public final class HttpRequestProcessor {
             return construirEvidenciaHttp(solicitud, solicitudRespuestaOriginal.response());
         } catch (Exception e) {
             if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, "No se pudo construir evidencia desde analisis manual", e);
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo construir evidencia desde analisis manual"), e);
             }
             return null;
         }

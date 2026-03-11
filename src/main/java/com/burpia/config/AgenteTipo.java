@@ -48,23 +48,23 @@ public enum AgenteTipo {
         this.urlDocEN = urlDocEN;
     }
 
-    public String getNombreVisible() {
+    public String obtenerNombreVisible() {
         return nombreVisible;
     }
 
-    public String getRutaPorDefecto() {
+    public String obtenerRutaPorDefecto() {
         return OSUtils.esWindows() ? rutaWindows : rutaUnix;
     }
 
-    public String getUrlDocES() {
+    public String obtenerUrlDocES() {
         return urlDocES;
     }
 
-    public String getUrlDocEN() {
+    public String obtenerUrlDocEN() {
         return urlDocEN;
     }
 
-    public String getUrlDocPorIdioma(String codigoIdioma) {
+    public String obtenerUrlDocPorIdioma(String codigoIdioma) {
         return "en".equalsIgnoreCase(codigoIdioma) ? urlDocEN : urlDocES;
     }
 
@@ -105,6 +105,6 @@ public enum AgenteTipo {
 
     public static String obtenerNombreVisible(String codigo, String porDefecto) {
         AgenteTipo tipo = desdeCodigo(codigo, null);
-        return tipo != null ? tipo.getNombreVisible() : porDefecto;
+        return tipo != null ? tipo.obtenerNombreVisible() : porDefecto;
     }
 }

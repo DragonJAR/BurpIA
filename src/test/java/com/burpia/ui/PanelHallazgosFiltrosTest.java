@@ -319,6 +319,77 @@ class PanelHallazgosFiltrosTest {
             "No debe restaurar severidad cuando la persistencia está deshabilitada");
     }
 
+    @Test
+    @DisplayName("Restaurar severidad localizada heredada sigue funcionando al cambiar idioma")
+    void testRestaurarFiltroSeveridadLocalizadaTrasCambioIdioma() throws Exception {
+        I18nUI.establecerIdioma("es");
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        modelo.agregarHallazgos(List.of(
+            new Hallazgo("https://example.com/a", "TA", "Hallazgo A", "High", "High"),
+            new Hallazgo("https://example.com/b", "TB", "Hallazgo B", "Low", "Medium")
+        ));
+        flushEdt();
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerFiltroSeveridadHallazgos(I18nUI.Hallazgos.SEVERIDAD_HIGH());
+        config.establecerPersistirFiltroSeveridadHallazgos(true);
+
+        I18nUI.establecerIdioma("en");
+        SwingUtilities.invokeAndWait(() -> {
+            panel.aplicarIdioma();
+            panel.establecerConfiguracion(config);
+        });
+        flushEdt();
+
+        JComboBox<?> comboSeveridad = obtenerCampo(panel, "comboSeveridad", JComboBox.class);
+        JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
+
+        assertEquals("High", comboSeveridad.getSelectedItem(),
+            "La severidad heredada debe mapearse al idioma actual");
+        assertEquals(1, tabla.getRowCount(),
+            "El filtro restaurado debe seguir aplicándose tras cambiar idioma");
+    }
+
+    @Test
+    @DisplayName("Guardar severidad persiste valor canónico independiente del idioma")
+    void testGuardarFiltroSeveridadPersisteValorCanonico() throws Exception {
+        I18nUI.establecerIdioma("es");
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerPersistirFiltroSeveridadHallazgos(true);
+        SwingUtilities.invokeAndWait(() -> panel.establecerConfiguracion(config));
+        flushEdt();
+
+        JComboBox<?> comboSeveridad = obtenerCampo(panel, "comboSeveridad", JComboBox.class);
+        Method guardarEstado = PanelHallazgos.class.getDeclaredMethod("guardarEstadoFiltrosAhora");
+        guardarEstado.setAccessible(true);
+
+        SwingUtilities.invokeAndWait(() -> {
+            comboSeveridad.setSelectedItem(I18nUI.Hallazgos.SEVERIDAD_HIGH());
+            try {
+                guardarEstado.invoke(panel);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+        flushEdt();
+
+        assertEquals(Hallazgo.SEVERIDAD_HIGH, config.obtenerFiltroSeveridadHallazgos(),
+            "La configuración debe almacenar la severidad con un valor estable");
+    }
+
     @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
     private <T> T obtenerCampo(Object target, String nombre, Class<T> tipo) throws Exception {
         Field field = target.getClass().getDeclaredField(nombre);

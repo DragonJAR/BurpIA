@@ -351,7 +351,7 @@ public class ConfiguracionAPI {
         String ruta = rutasBinarioPorAgente.get(agente);
         if (Normalizador.esVacio(ruta)) {
             AgenteTipo tipoEnum = AgenteTipo.desdeCodigo(agente, null);
-            return tipoEnum != null ? tipoEnum.getRutaPorDefecto() : "";
+            return tipoEnum != null ? tipoEnum.obtenerRutaPorDefecto() : "";
         }
         return ruta;
     }

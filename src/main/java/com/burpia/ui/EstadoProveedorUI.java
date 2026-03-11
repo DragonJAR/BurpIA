@@ -10,7 +10,7 @@ import com.burpia.util.Normalizador;
  *
  * @see com.burpia.ui.DialogoConfiguracion
  */
-public class EstadoProveedorUI {
+public final class EstadoProveedorUI {
 
     /** Valor por defecto para maxTokens según configuración de proveedores */
     public static final int MAX_TOKENS_POR_DEFECTO = 4096;
@@ -49,7 +49,7 @@ public class EstadoProveedorUI {
      *
      * @return API key, nunca null (puede ser string vacío)
      */
-    public String getApiKey() {
+    public String obtenerApiKey() {
         return apiKey;
     }
 
@@ -58,7 +58,7 @@ public class EstadoProveedorUI {
      *
      * @return Nombre del modelo, nunca null (puede ser string vacío)
      */
-    public String getModelo() {
+    public String obtenerModelo() {
         return modelo;
     }
 
@@ -67,7 +67,7 @@ public class EstadoProveedorUI {
      *
      * @return URL base, nunca null (puede ser string vacío)
      */
-    public String getBaseUrl() {
+    public String obtenerBaseUrl() {
         return baseUrl;
     }
 
@@ -76,7 +76,7 @@ public class EstadoProveedorUI {
      *
      * @return Máximo de tokens (siempre positivo)
      */
-    public int getMaxTokens() {
+    public int obtenerMaxTokens() {
         return maxTokens;
     }
 
@@ -85,7 +85,7 @@ public class EstadoProveedorUI {
      *
      * @return Timeout en segundos (siempre positivo)
      */
-    public int getTimeout() {
+    public int obtenerTimeout() {
         return timeout;
     }
 

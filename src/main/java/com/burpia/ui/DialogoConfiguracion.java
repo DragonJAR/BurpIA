@@ -18,7 +18,7 @@ import java.awt.event.WindowEvent;
  * - ConfigPersistenceManager: Persistencia de configuración
  * - ProviderConfigManager: Gestión de proveedores AI
  * - ConfigValidator: Validación de datos
- * - ConnectionTester: Pruebas de conexión
+ * - ProbadorConexionAI / ConnectionTester: Pruebas de conexión y operaciones remotas auxiliares
  * - DialogStateManager: Gestión de estado del diálogo
  * </p>
  * 
@@ -108,7 +108,7 @@ public class DialogoConfiguracion extends JDialog {
         super(padre, I18nUI.Configuracion.TITULO_DIALOGO(), Dialog.ModalityType.APPLICATION_MODAL);
         
         if (config == null || gestorConfig == null) {
-            throw new IllegalArgumentException("Configuración y gestorConfig no pueden ser nulos");
+            throw new IllegalArgumentException(I18nUI.General.ERROR_CONFIG_Y_GESTOR_CONFIG_NULOS());
         }
         
         this.config = config;
@@ -165,60 +165,68 @@ public class DialogoConfiguracion extends JDialog {
             }
         });
     }
+
+    @Override
+    public void dispose() {
+        if (controller != null) {
+            controller.cerrar();
+        }
+        super.dispose();
+    }
     
     /**
      * Inicializa los campos delegados para compatibilidad con tests.
      */
     private void inicializarCamposDelegados() {
         // Delegar todos los campos a la vista
-        this.comboProveedor = view.getComboProveedor();
-        this.comboModelo = view.getComboModelo();
-        this.txtUrl = view.getTxtUrl();
-        this.txtClave = view.getTxtClave();
-        this.txtMaxTokens = view.getTxtMaxTokens();
-        this.txtTimeoutModelo = view.getTxtTimeoutModelo();
-        this.btnRefrescarModelos = view.getBtnRefrescarModelos();
-        this.btnProbarConexion = view.getBtnProbarConexion();
-        this.btnGuardar = view.getBtnGuardar();
-        this.btnCerrar = view.getBtnCerrar();
-        this.btnBuscarActualizaciones = view.getBtnBuscarActualizaciones();
-        this.btnSitioWeb = view.getBtnSitioWeb();
-        this.btnRestaurarPrompt = view.getBtnRestaurarPrompt();
-        this.btnRestaurarFuentes = view.getBtnRestaurarFuentes();
-        this.comboAgente = view.getComboAgente();
-        this.chkAgenteHabilitado = view.getChkAgenteHabilitado();
-        this.txtAgenteBinario = view.getTxtAgenteBinario();
-        this.txtAgentePromptInicial = view.getTxtAgentePromptInicial();
-        this.txtAgentePrompt = view.getTxtAgentePrompt();
-        this.btnRestaurarPromptAgenteInicial = view.getBtnRestaurarPromptAgenteInicial();
-        this.btnRestaurarPromptAgente = view.getBtnRestaurarPromptAgente();
-        this.comboIdioma = view.getComboIdioma();
-        this.txtRetraso = view.getTxtRetraso();
-        this.txtMaximoConcurrente = view.getTxtMaximoConcurrente();
-        this.txtMaximoHallazgosTabla = view.getTxtMaximoHallazgosTabla();
-        this.txtMaximoTareas = view.getTxtMaximoTareas();
-        this.chkDetallado = view.getChkDetallado();
-        this.chkIgnorarSSL = view.getChkIgnorarSSL();
-        this.chkSoloProxy = view.getChkSoloProxy();
-        this.chkAlertasHabilitadas = view.getChkAlertasHabilitadas();
-        this.chkPersistirBusqueda = view.getChkPersistirBusqueda();
-        this.chkPersistirSeveridad = view.getChkPersistirSeveridad();
-        this.txtPrompt = view.getTxtPrompt();
-        this.lblContadorPrompt = view.getLblContadorPrompt();
-        this.chkHabilitarMultiProveedor = view.getChkHabilitarMultiProveedor();
-        this.listaProveedoresDisponibles = view.getListaProveedoresDisponibles();
-        this.listaProveedoresSeleccionados = view.getListaProveedoresSeleccionados();
-        this.modeloListaDisponibles = view.getModeloListaDisponibles();
-        this.modeloListaSeleccionados = view.getModeloListaSeleccionados();
-        this.btnAgregarProveedor = view.getBtnAgregarProveedor();
-        this.btnQuitarProveedor = view.getBtnQuitarProveedor();
-        this.btnSubirProveedor = view.getBtnSubirProveedor();
-        this.btnBajarProveedor = view.getBtnBajarProveedor();
-        this.lblEstadoMultiProveedor = view.getLblEstadoMultiProveedor();
-        this.comboFuenteEstandar = view.getComboFuenteEstandar();
-        this.spinnerTamanioEstandar = view.getSpinnerTamanioEstandar();
-        this.comboFuenteMono = view.getComboFuenteMono();
-        this.spinnerTamanioMono = view.getSpinnerTamanioMono();
+        this.comboProveedor = view.obtenerComboProveedor();
+        this.comboModelo = view.obtenerComboModelo();
+        this.txtUrl = view.obtenerTxtUrl();
+        this.txtClave = view.obtenerTxtClave();
+        this.txtMaxTokens = view.obtenerTxtMaxTokens();
+        this.txtTimeoutModelo = view.obtenerTxtTimeoutModelo();
+        this.btnRefrescarModelos = view.obtenerBtnRefrescarModelos();
+        this.btnProbarConexion = view.obtenerBtnProbarConexion();
+        this.btnGuardar = view.obtenerBtnGuardar();
+        this.btnCerrar = view.obtenerBtnCerrar();
+        this.btnBuscarActualizaciones = view.obtenerBtnBuscarActualizaciones();
+        this.btnSitioWeb = view.obtenerBtnSitioWeb();
+        this.btnRestaurarPrompt = view.obtenerBtnRestaurarPrompt();
+        this.btnRestaurarFuentes = view.obtenerBtnRestaurarFuentes();
+        this.comboAgente = view.obtenerComboAgente();
+        this.chkAgenteHabilitado = view.obtenerChkAgenteHabilitado();
+        this.txtAgenteBinario = view.obtenerTxtAgenteBinario();
+        this.txtAgentePromptInicial = view.obtenerTxtAgentePromptInicial();
+        this.txtAgentePrompt = view.obtenerTxtAgentePrompt();
+        this.btnRestaurarPromptAgenteInicial = view.obtenerBtnRestaurarPromptAgenteInicial();
+        this.btnRestaurarPromptAgente = view.obtenerBtnRestaurarPromptAgente();
+        this.comboIdioma = view.obtenerComboIdioma();
+        this.txtRetraso = view.obtenerTxtRetraso();
+        this.txtMaximoConcurrente = view.obtenerTxtMaximoConcurrente();
+        this.txtMaximoHallazgosTabla = view.obtenerTxtMaximoHallazgosTabla();
+        this.txtMaximoTareas = view.obtenerTxtMaximoTareas();
+        this.chkDetallado = view.obtenerChkDetallado();
+        this.chkIgnorarSSL = view.obtenerChkIgnorarSSL();
+        this.chkSoloProxy = view.obtenerChkSoloProxy();
+        this.chkAlertasHabilitadas = view.obtenerChkAlertasHabilitadas();
+        this.chkPersistirBusqueda = view.obtenerChkPersistirBusqueda();
+        this.chkPersistirSeveridad = view.obtenerChkPersistirSeveridad();
+        this.txtPrompt = view.obtenerTxtPrompt();
+        this.lblContadorPrompt = view.obtenerLblContadorPrompt();
+        this.chkHabilitarMultiProveedor = view.obtenerChkHabilitarMultiProveedor();
+        this.listaProveedoresDisponibles = view.obtenerListaProveedoresDisponibles();
+        this.listaProveedoresSeleccionados = view.obtenerListaProveedoresSeleccionados();
+        this.modeloListaDisponibles = view.obtenerModeloListaDisponibles();
+        this.modeloListaSeleccionados = view.obtenerModeloListaSeleccionados();
+        this.btnAgregarProveedor = view.obtenerBtnAgregarProveedor();
+        this.btnQuitarProveedor = view.obtenerBtnQuitarProveedor();
+        this.btnSubirProveedor = view.obtenerBtnSubirProveedor();
+        this.btnBajarProveedor = view.obtenerBtnBajarProveedor();
+        this.lblEstadoMultiProveedor = view.obtenerLblEstadoMultiProveedor();
+        this.comboFuenteEstandar = view.obtenerComboFuenteEstandar();
+        this.spinnerTamanioEstandar = view.obtenerSpinnerTamanioEstandar();
+        this.comboFuenteMono = view.obtenerComboFuenteMono();
+        this.spinnerTamanioMono = view.obtenerSpinnerTamanioMono();
     }
     
     // ===== MÉTODOS DE ACCESO PARA EL CONTROLADOR =====
@@ -232,195 +240,195 @@ public class DialogoConfiguracion extends JDialog {
     }
     
     public JComboBox<String> obtenerComboProveedor() {
-        return obtenerComponente(ConfigDialogView::getComboProveedor);
+        return obtenerComponente(ConfigDialogView::obtenerComboProveedor);
     }
     
     public JComboBox<String> obtenerComboModelo() {
-        return obtenerComponente(ConfigDialogView::getComboModelo);
+        return obtenerComponente(ConfigDialogView::obtenerComboModelo);
     }
     
     public JTextField obtenerTxtUrl() {
-        return obtenerComponente(ConfigDialogView::getTxtUrl);
+        return obtenerComponente(ConfigDialogView::obtenerTxtUrl);
     }
     
     public JPasswordField obtenerTxtClave() {
-        return obtenerComponente(ConfigDialogView::getTxtClave);
+        return obtenerComponente(ConfigDialogView::obtenerTxtClave);
     }
     
     public JTextField obtenerTxtMaxTokens() {
-        return obtenerComponente(ConfigDialogView::getTxtMaxTokens);
+        return obtenerComponente(ConfigDialogView::obtenerTxtMaxTokens);
     }
     
     public JTextField obtenerTxtTimeoutModelo() {
-        return obtenerComponente(ConfigDialogView::getTxtTimeoutModelo);
+        return obtenerComponente(ConfigDialogView::obtenerTxtTimeoutModelo);
     }
     
     public JButton obtenerBtnRefrescarModelos() {
-        return obtenerComponente(ConfigDialogView::getBtnRefrescarModelos);
+        return obtenerComponente(ConfigDialogView::obtenerBtnRefrescarModelos);
     }
     
     public JButton obtenerBtnProbarConexion() {
-        return obtenerComponente(ConfigDialogView::getBtnProbarConexion);
+        return obtenerComponente(ConfigDialogView::obtenerBtnProbarConexion);
     }
     
     public JButton obtenerBtnGuardar() {
-        return obtenerComponente(ConfigDialogView::getBtnGuardar);
+        return obtenerComponente(ConfigDialogView::obtenerBtnGuardar);
     }
     
     public JButton obtenerBtnCerrar() {
-        return obtenerComponente(ConfigDialogView::getBtnCerrar);
+        return obtenerComponente(ConfigDialogView::obtenerBtnCerrar);
     }
     
     public JButton obtenerBtnBuscarActualizaciones() {
-        return obtenerComponente(ConfigDialogView::getBtnBuscarActualizaciones);
+        return obtenerComponente(ConfigDialogView::obtenerBtnBuscarActualizaciones);
     }
     
     public JButton obtenerBtnSitioWeb() {
-        return obtenerComponente(ConfigDialogView::getBtnSitioWeb);
+        return obtenerComponente(ConfigDialogView::obtenerBtnSitioWeb);
     }
     
     public JButton obtenerBtnRestaurarPrompt() {
-        return obtenerComponente(ConfigDialogView::getBtnRestaurarPrompt);
+        return obtenerComponente(ConfigDialogView::obtenerBtnRestaurarPrompt);
     }
     
     public JButton obtenerBtnRestaurarFuentes() {
-        return obtenerComponente(ConfigDialogView::getBtnRestaurarFuentes);
+        return obtenerComponente(ConfigDialogView::obtenerBtnRestaurarFuentes);
     }
     
     public JComboBox<String> obtenerComboAgente() {
-        return obtenerComponente(ConfigDialogView::getComboAgente);
+        return obtenerComponente(ConfigDialogView::obtenerComboAgente);
     }
     
     public JCheckBox obtenerChkAgenteHabilitado() {
-        return obtenerComponente(ConfigDialogView::getChkAgenteHabilitado);
+        return obtenerComponente(ConfigDialogView::obtenerChkAgenteHabilitado);
     }
     
     public JTextField obtenerTxtAgenteBinario() {
-        return obtenerComponente(ConfigDialogView::getTxtAgenteBinario);
+        return obtenerComponente(ConfigDialogView::obtenerTxtAgenteBinario);
     }
     
     public JTextArea obtenerTxtAgentePromptInicial() {
-        return obtenerComponente(ConfigDialogView::getTxtAgentePromptInicial);
+        return obtenerComponente(ConfigDialogView::obtenerTxtAgentePromptInicial);
     }
     
     public JTextArea obtenerTxtAgentePrompt() {
-        return obtenerComponente(ConfigDialogView::getTxtAgentePrompt);
+        return obtenerComponente(ConfigDialogView::obtenerTxtAgentePrompt);
     }
     
     public JButton obtenerBtnRestaurarPromptAgenteInicial() {
-        return obtenerComponente(ConfigDialogView::getBtnRestaurarPromptAgenteInicial);
+        return obtenerComponente(ConfigDialogView::obtenerBtnRestaurarPromptAgenteInicial);
     }
     
     public JButton obtenerBtnRestaurarPromptAgente() {
-        return obtenerComponente(ConfigDialogView::getBtnRestaurarPromptAgente);
+        return obtenerComponente(ConfigDialogView::obtenerBtnRestaurarPromptAgente);
     }
     
     public JComboBox<com.burpia.i18n.IdiomaUI> obtenerComboIdioma() {
-        return obtenerComponente(ConfigDialogView::getComboIdioma);
+        return obtenerComponente(ConfigDialogView::obtenerComboIdioma);
     }
     
     public JTextField obtenerTxtRetraso() {
-        return obtenerComponente(ConfigDialogView::getTxtRetraso);
+        return obtenerComponente(ConfigDialogView::obtenerTxtRetraso);
     }
     
     public JTextField obtenerTxtMaximoConcurrente() {
-        return obtenerComponente(ConfigDialogView::getTxtMaximoConcurrente);
+        return obtenerComponente(ConfigDialogView::obtenerTxtMaximoConcurrente);
     }
     
     public JTextField obtenerTxtMaximoHallazgosTabla() {
-        return obtenerComponente(ConfigDialogView::getTxtMaximoHallazgosTabla);
+        return obtenerComponente(ConfigDialogView::obtenerTxtMaximoHallazgosTabla);
     }
     
     public JTextField obtenerTxtMaximoTareas() {
-        return obtenerComponente(ConfigDialogView::getTxtMaximoTareas);
+        return obtenerComponente(ConfigDialogView::obtenerTxtMaximoTareas);
     }
     
     public JCheckBox obtenerChkDetallado() {
-        return obtenerComponente(ConfigDialogView::getChkDetallado);
+        return obtenerComponente(ConfigDialogView::obtenerChkDetallado);
     }
     
     public JCheckBox obtenerChkIgnorarSSL() {
-        return obtenerComponente(ConfigDialogView::getChkIgnorarSSL);
+        return obtenerComponente(ConfigDialogView::obtenerChkIgnorarSSL);
     }
     
     public JCheckBox obtenerChkSoloProxy() {
-        return obtenerComponente(ConfigDialogView::getChkSoloProxy);
+        return obtenerComponente(ConfigDialogView::obtenerChkSoloProxy);
     }
     
     public JCheckBox obtenerChkAlertasHabilitadas() {
-        return obtenerComponente(ConfigDialogView::getChkAlertasHabilitadas);
+        return obtenerComponente(ConfigDialogView::obtenerChkAlertasHabilitadas);
     }
     
     public JCheckBox obtenerChkPersistirBusqueda() {
-        return obtenerComponente(ConfigDialogView::getChkPersistirBusqueda);
+        return obtenerComponente(ConfigDialogView::obtenerChkPersistirBusqueda);
     }
     
     public JCheckBox obtenerChkPersistirSeveridad() {
-        return obtenerComponente(ConfigDialogView::getChkPersistirSeveridad);
+        return obtenerComponente(ConfigDialogView::obtenerChkPersistirSeveridad);
     }
     
     public JTextArea obtenerTxtPrompt() {
-        return obtenerComponente(ConfigDialogView::getTxtPrompt);
+        return obtenerComponente(ConfigDialogView::obtenerTxtPrompt);
     }
     
     public JLabel obtenerLblContadorPrompt() {
-        return obtenerComponente(ConfigDialogView::getLblContadorPrompt);
+        return obtenerComponente(ConfigDialogView::obtenerLblContadorPrompt);
     }
     
     public JCheckBox obtenerChkHabilitarMultiProveedor() {
-        return obtenerComponente(ConfigDialogView::getChkHabilitarMultiProveedor);
+        return obtenerComponente(ConfigDialogView::obtenerChkHabilitarMultiProveedor);
     }
     
     public JList<String> obtenerListaProveedoresDisponibles() {
-        return obtenerComponente(ConfigDialogView::getListaProveedoresDisponibles);
+        return obtenerComponente(ConfigDialogView::obtenerListaProveedoresDisponibles);
     }
     
     public JList<String> obtenerListaProveedoresSeleccionados() {
-        return obtenerComponente(ConfigDialogView::getListaProveedoresSeleccionados);
+        return obtenerComponente(ConfigDialogView::obtenerListaProveedoresSeleccionados);
     }
     
     public DefaultListModel<String> obtenerModeloListaDisponibles() {
-        return obtenerComponente(ConfigDialogView::getModeloListaDisponibles);
+        return obtenerComponente(ConfigDialogView::obtenerModeloListaDisponibles);
     }
     
     public DefaultListModel<String> obtenerModeloListaSeleccionados() {
-        return obtenerComponente(ConfigDialogView::getModeloListaSeleccionados);
+        return obtenerComponente(ConfigDialogView::obtenerModeloListaSeleccionados);
     }
     
     public JButton obtenerBtnAgregarProveedor() {
-        return obtenerComponente(ConfigDialogView::getBtnAgregarProveedor);
+        return obtenerComponente(ConfigDialogView::obtenerBtnAgregarProveedor);
     }
     
     public JButton obtenerBtnQuitarProveedor() {
-        return obtenerComponente(ConfigDialogView::getBtnQuitarProveedor);
+        return obtenerComponente(ConfigDialogView::obtenerBtnQuitarProveedor);
     }
     
     public JButton obtenerBtnSubirProveedor() {
-        return obtenerComponente(ConfigDialogView::getBtnSubirProveedor);
+        return obtenerComponente(ConfigDialogView::obtenerBtnSubirProveedor);
     }
     
     public JButton obtenerBtnBajarProveedor() {
-        return obtenerComponente(ConfigDialogView::getBtnBajarProveedor);
+        return obtenerComponente(ConfigDialogView::obtenerBtnBajarProveedor);
     }
     
     public JLabel obtenerLblEstadoMultiProveedor() {
-        return obtenerComponente(ConfigDialogView::getLblEstadoMultiProveedor);
+        return obtenerComponente(ConfigDialogView::obtenerLblEstadoMultiProveedor);
     }
     
     public JComboBox<String> obtenerComboFuenteEstandar() {
-        return obtenerComponente(ConfigDialogView::getComboFuenteEstandar);
+        return obtenerComponente(ConfigDialogView::obtenerComboFuenteEstandar);
     }
     
     public JSpinner obtenerSpinnerTamanioEstandar() {
-        return obtenerComponente(ConfigDialogView::getSpinnerTamanioEstandar);
+        return obtenerComponente(ConfigDialogView::obtenerSpinnerTamanioEstandar);
     }
     
     public JComboBox<String> obtenerComboFuenteMono() {
-        return obtenerComponente(ConfigDialogView::getComboFuenteMono);
+        return obtenerComponente(ConfigDialogView::obtenerComboFuenteMono);
     }
     
     public JSpinner obtenerSpinnerTamanioMono() {
-        return obtenerComponente(ConfigDialogView::getSpinnerTamanioMono);
+        return obtenerComponente(ConfigDialogView::obtenerSpinnerTamanioMono);
     }
     
     /**

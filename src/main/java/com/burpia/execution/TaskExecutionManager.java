@@ -3,6 +3,7 @@ package com.burpia.execution;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.model.Tarea;
@@ -103,12 +104,12 @@ public class TaskExecutionManager {
                 },
                 new ThreadPoolExecutor.AbortPolicy());
 
-        gestorLogging.info(ORIGEN_LOG, "TaskExecutionManager inicializado con " + maxThreads + " hilos");
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("TaskExecutionManager inicializado con " + maxThreads + " hilos"));
     }
 
     public String programarAnalisis(SolicitudAnalisis solicitudAnalisis, HttpRequestResponse evidenciaHttp, String tipoTarea) {
         if (solicitudAnalisis == null) {
-            gestorLogging.error(ORIGEN_LOG, "No se pudo programar analisis: solicitud null");
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo programar analisis: solicitud null"));
             return null;
         }
 
@@ -139,7 +140,7 @@ public class TaskExecutionManager {
         depurarContextosHuerfanos();
         ContextoReintento contexto = contextosReintento.get(tareaId);
         if (contexto == null) {
-            gestorLogging.error(ORIGEN_LOG, "No existe contexto para reintentar tarea: " + tareaId);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No existe contexto para reintentar tarea: " + tareaId));
             return false;
         }
 
@@ -152,7 +153,7 @@ public class TaskExecutionManager {
                 contexto.solicitudAnalisis,
                 contexto.evidenciaId);
 
-        gestorLogging.info(ORIGEN_LOG, "Tarea reencolada: " + tareaId);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Tarea reencolada: " + tareaId));
         return true;
     }
 
@@ -164,14 +165,14 @@ public class TaskExecutionManager {
         AnalizadorAI analizador = analizadoresActivos.remove(tareaId);
         if (analizador != null) {
             analizador.cancelarLlamadaHttpActiva();
-            gestorLogging.verbose(ORIGEN_LOG, "Llamada HTTP cancelada para tarea: " + tareaId);
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Llamada HTTP cancelada para tarea: " + tareaId));
         }
 
         Future<?> future = ejecucionesActivas.remove(tareaId);
         if (future != null) {
             boolean cancelada = future.cancel(true);
             if (cancelada) {
-                gestorLogging.verbose(ORIGEN_LOG, "Cancelación activa aplicada para tarea: " + tareaId);
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Cancelación activa aplicada para tarea: " + tareaId));
             }
         }
     }
@@ -186,7 +187,7 @@ public class TaskExecutionManager {
 
         ejecutarEnEdt(() -> {
             if (pestaniaPrincipal != null) {
-                pestaniaPrincipal.registrar("Iniciando análisis (continuar/reintentar) para: " + url);
+                pestaniaPrincipal.registrar(I18nUI.Tareas.MSG_INICIANDO_ANALISIS_REINTENTO(url));
             }
         });
 
@@ -201,9 +202,11 @@ public class TaskExecutionManager {
                 new ManejadorResultadoAI(tareaIdRef, url, evidenciaId),
                 () -> {
                     if (gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal)) {
-                        boolean marcada = gestorTareas.marcarTareaAnalizando(tareaIdFinal, "Analizando");
+                        boolean marcada = gestorTareas.marcarTareaAnalizando(
+                                tareaIdFinal,
+                                I18nUI.Tareas.TRADUCIR_ESTADO(Tarea.ESTADO_ANALIZANDO));
                         if (!marcada) {
-                            gestorLogging.verbose(ORIGEN_LOG, "No se pudo marcar tarea como analizando: " + tareaIdFinal);
+                            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("No se pudo marcar tarea como analizando: " + tareaIdFinal));
                         }
                     }
                 },
@@ -221,7 +224,7 @@ public class TaskExecutionManager {
 
             Future<?> future = executorService.submit(analizador);
             ejecucionesActivas.put(id, future);
-            gestorLogging.info(ORIGEN_LOG, "Hilo de análisis iniciado para: " + url + " (ID: " + id + ")");
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Hilo de análisis iniciado para: " + url + " (ID: " + id + ")"));
             rastrearEstadoCola();
         } catch (RejectedExecutionException ex) {
             analizadoresActivos.remove(id);
@@ -231,16 +234,17 @@ public class TaskExecutionManager {
             if (gestorTareas != null) {
                 gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, I18nUI.Tareas.MSG_DESCARTADA_SATURACION());
             }
-            gestorLogging.error(ORIGEN_LOG, "Cola de análisis saturada, solicitud descartada: " + url);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Cola de análisis saturada, solicitud descartada: " + url));
         } catch (Exception ex) {
             analizadoresActivos.remove(id);
             if (gestorTareas != null) {
-                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, I18nUI.Tareas.MSG_ERROR_INICIAR(ex.getMessage()));
+                gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR,
+                        I18nUI.Tareas.MSG_ERROR_INICIAR(describirErrorVisible(ex)));
             }
             finalizarEjecucionActiva(id);
             contextosReintento.remove(id);
             eliminarEvidenciaSiDisponible(evidenciaId);
-            gestorLogging.error(ORIGEN_LOG, "Error al iniciar análisis para " + url + ": " + ex.getMessage());
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al iniciar análisis para " + url), ex);
         }
     }
 
@@ -333,9 +337,9 @@ public class TaskExecutionManager {
             return;
         }
         gestorLogging.verbose(ORIGEN_LOG,
-                "Estado cola analisis: activos=" + executorService.getActiveCount() +
+                I18nLogs.tr("Estado cola analisis: activos=" + executorService.getActiveCount() +
                         ", enCola=" + executorService.getQueue().size() +
-                        ", completadas=" + executorService.getCompletedTaskCount());
+                        ", completadas=" + executorService.getCompletedTaskCount()));
     }
 
     private String almacenarEvidenciaSiDisponible(HttpRequestResponse evidenciaHttp) {
@@ -345,7 +349,7 @@ public class TaskExecutionManager {
         try {
             return almacenEvidencia.guardar(evidenciaHttp);
         } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, "No se pudo persistir evidencia HTTP: " + e.getMessage());
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo persistir evidencia HTTP"), e);
             return null;
         }
     }
@@ -357,7 +361,7 @@ public class TaskExecutionManager {
         try {
             almacenEvidencia.eliminar(evidenciaId);
         } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, "No se pudo eliminar evidencia HTTP: " + e.getMessage());
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo eliminar evidencia HTTP"), e);
         }
     }
 
@@ -379,15 +383,15 @@ public class TaskExecutionManager {
         almacenEvidencia.limpiarCacheMemoria();
 
         if (executorService != null && !executorService.isShutdown()) {
-            gestorLogging.info(ORIGEN_LOG, "Deteniendo ExecutorService de TaskExecutionManager...");
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Deteniendo ExecutorService de TaskExecutionManager..."));
             executorService.shutdown();
             try {
                 if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
-                    gestorLogging.error(ORIGEN_LOG, "ExecutorService no terminó en 5 segundos, forzando shutdown...");
+                    gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("ExecutorService no terminó en 5 segundos, forzando shutdown..."));
                     executorService.shutdownNow();
                 }
             } catch (InterruptedException e) {
-                gestorLogging.error(ORIGEN_LOG, "Error al esperar terminación de ExecutorService: " + e.getMessage());
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al esperar terminación de ExecutorService"), e);
                 executorService.shutdownNow();
                 Thread.currentThread().interrupt();
             }
@@ -396,7 +400,7 @@ public class TaskExecutionManager {
 
     public void actualizarConfiguracion(ConfiguracionAPI nuevaConfig) {
         if (nuevaConfig == null) {
-            gestorLogging.error(ORIGEN_LOG, "No se pudo actualizar configuración: objeto nulo");
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo actualizar configuración: objeto nulo"));
             return;
         }
 
@@ -407,7 +411,7 @@ public class TaskExecutionManager {
         limitador.ajustarMaximoConcurrente(nuevoMaximoConcurrente);
         actualizarPoolEjecucion(nuevoMaximoConcurrente);
 
-        gestorLogging.info(ORIGEN_LOG, "Configuración actualizada: maxConcurrente=" + nuevoMaximoConcurrente);
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Configuración actualizada: maxConcurrente=" + nuevoMaximoConcurrente));
     }
 
     private void actualizarPoolEjecucion(int nuevoMaximoConcurrente) {
@@ -437,6 +441,17 @@ public class TaskExecutionManager {
 
     public long obtenerTareasCompletadas() {
         return executorService.getCompletedTaskCount();
+    }
+
+    private String describirErrorVisible(Throwable error) {
+        if (error == null) {
+            return I18nUI.Tareas.MSG_ERROR_DESCONOCIDO();
+        }
+        String mensaje = error.getMessage();
+        if (Normalizador.noEsVacio(mensaje)) {
+            return mensaje.trim();
+        }
+        return I18nUI.General.ERROR_INESPERADO_TIPO(error.getClass().getSimpleName());
     }
 
     private class ManejadorResultadoAI implements AnalizadorAI.Callback {
@@ -471,7 +486,7 @@ public class TaskExecutionManager {
                             I18nUI.Tareas.MSG_COMPLETADO_HALLAZGOS(resultado != null ? resultado.obtenerNumeroHallazgos() : 0));
                 }
 
-                gestorLogging.info(ORIGEN_LOG, "Análisis completado: " + url);
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Análisis completado: " + url));
 
                 ejecutarEnEdt(() -> {
                     if (pestaniaPrincipal != null) {
@@ -490,9 +505,12 @@ public class TaskExecutionManager {
             try {
                 if (gestorTareas != null && Normalizador.noEsVacio(id)) {
                     gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR,
-                            I18nUI.Tareas.MSG_ERROR_GENERICO(error != null ? error : I18nUI.Tareas.MSG_ERROR_DESCONOCIDO()));
+                            I18nUI.Tareas.MSG_ERROR_GENERICO(
+                                    Normalizador.noEsVacio(error) ? error : I18nUI.Tareas.MSG_ERROR_DESCONOCIDO()));
                 }
-                gestorLogging.error(ORIGEN_LOG, "Análisis fallido para " + url + ": " + (error != null ? error : "Error desconocido"));
+                gestorLogging.error(ORIGEN_LOG,
+                        I18nLogs.tr("Análisis fallido para " + url + ": " +
+                                (Normalizador.noEsVacio(error) ? error : I18nUI.Tareas.MSG_ERROR_DESCONOCIDO())));
 
                 ejecutarEnEdt(() -> {
                     if (pestaniaPrincipal != null) {
@@ -512,7 +530,7 @@ public class TaskExecutionManager {
                 if (gestorTareas != null && Normalizador.noEsVacio(id)) {
                     gestorTareas.actualizarTarea(id, Tarea.ESTADO_CANCELADO, I18nUI.Tareas.MSG_CANCELADO_USUARIO());
                 }
-                gestorLogging.info(ORIGEN_LOG, "Análisis cancelado: " + url);
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Análisis cancelado: " + url));
             } finally {
                 limpiarRecursosTarea(id);
             }

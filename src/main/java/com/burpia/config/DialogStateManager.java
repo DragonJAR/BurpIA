@@ -1,5 +1,6 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
@@ -42,7 +43,7 @@ public final class DialogStateManager {
         this.proveedorActualUi = uiProvider.obtenerProveedorSeleccionado();
         
         if (estadoInicial != null) {
-            gestorLogging.info("DialogStateManager", "Estado inicial capturado para proveedor: " + proveedorActualUi);
+            gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado inicial capturado para proveedor: " + proveedorActualUi));
         }
     }
 
@@ -51,7 +52,7 @@ public final class DialogStateManager {
      */
     public EstadoEdicionDialogo capturarEstadoActual(EstadoUIProvider uiProvider) {
         if (uiProvider == null) {
-            gestorLogging.error("DialogStateManager", "UIProvider es nulo");
+            gestorLogging.error("DialogStateManager", I18nLogs.tr("UIProvider es nulo"));
             return null;
         }
 
@@ -189,7 +190,7 @@ public final class DialogStateManager {
      */
     public void gestionarCambioProveedor(String nuevoProveedor, EstadoUIProvider uiProvider) {
         if (Normalizador.esVacio(nuevoProveedor)) {
-            gestorLogging.error("DialogStateManager", "Proveedor nuevo es vacío");
+            gestorLogging.error("DialogStateManager", I18nLogs.tr("Proveedor nuevo es vacío"));
             return;
         }
 
@@ -200,10 +201,10 @@ public final class DialogStateManager {
         String proveedorAnterior = proveedorActualUi;
         proveedorActualUi = nuevoProveedor;
 
-        gestorLogging.info("DialogStateManager", 
-            String.format("Cambiando proveedor: %s -> %s", 
-                proveedorAnterior != null ? proveedorAnterior : "null", 
-                nuevoProveedor));
+        gestorLogging.info("DialogStateManager",
+            I18nLogs.tr(String.format("Cambiando proveedor: %s -> %s",
+                proveedorAnterior != null ? proveedorAnterior : "null",
+                nuevoProveedor)));
 
         uiProvider.actualizarProveedorEnUI(nuevoProveedor);
     }
@@ -218,10 +219,10 @@ public final class DialogStateManager {
         
         if (estado != null) {
             estadoProveedorTemporal.put(proveedor, estado);
-            gestorLogging.info("DialogStateManager", "Estado temporal guardado para proveedor: " + proveedor);
+            gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado temporal guardado para proveedor: " + proveedor));
         } else {
             estadoProveedorTemporal.remove(proveedor);
-            gestorLogging.info("DialogStateManager", "Estado temporal eliminado para proveedor: " + proveedor);
+            gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado temporal eliminado para proveedor: " + proveedor));
         }
     }
 
@@ -235,11 +236,11 @@ public final class DialogStateManager {
         
         if (Normalizador.noEsVacio(ruta)) {
             rutasBinarioAgenteTemporal.put(agente, ruta);
-            gestorLogging.info("DialogStateManager", 
-                String.format("Ruta binaria guardada para agente %s: %s", agente, ruta));
+            gestorLogging.info("DialogStateManager",
+                I18nLogs.tr(String.format("Ruta binaria guardada para agente %s: %s", agente, ruta)));
         } else {
             rutasBinarioAgenteTemporal.remove(agente);
-            gestorLogging.info("DialogStateManager", "Ruta binaria eliminada para agente: " + agente);
+            gestorLogging.info("DialogStateManager", I18nLogs.tr("Ruta binaria eliminada para agente: " + agente));
         }
     }
 
@@ -249,7 +250,7 @@ public final class DialogStateManager {
     public void limpiarEstadoTemporal() {
         rutasBinarioAgenteTemporal.clear();
         estadoProveedorTemporal.clear();
-        gestorLogging.info("DialogStateManager", "Estado temporal limpiado");
+        gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado temporal limpiado"));
     }
 
     /**
@@ -281,11 +282,11 @@ public final class DialogStateManager {
                                                                 EstadoUIProvider uiProvider) {
         if (borrador != null) {
             return new EstadoProveedorSnapshot(
-                    textoSeguro(borrador.getApiKey()),
-                    textoSeguro(borrador.getModelo()),
-                    textoSeguro(borrador.getBaseUrl()),
-                    borrador.getMaxTokens(),
-                    borrador.getTimeout());
+                    textoSeguro(borrador.obtenerApiKey()),
+                    textoSeguro(borrador.obtenerModelo()),
+                    textoSeguro(borrador.obtenerBaseUrl()),
+                    borrador.obtenerMaxTokens(),
+                    borrador.obtenerTimeout());
         }
 
         ConfiguracionAPI config = uiProvider.obtenerConfiguracion();

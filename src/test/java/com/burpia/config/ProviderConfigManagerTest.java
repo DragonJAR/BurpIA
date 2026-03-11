@@ -168,11 +168,11 @@ class ProviderConfigManagerTest {
         EstadoProveedorUI estado = providerConfigManager.extraerEstadoActualRapido();
 
         assertNotNull(estado);
-        assertEquals("test-key", estado.getApiKey());
-        assertEquals("https://test.com", estado.getBaseUrl());
-        assertEquals(2048, estado.getMaxTokens());
-        assertEquals(60, estado.getTimeout());
-        assertEquals("gpt-4", estado.getModelo());
+        assertEquals("test-key", estado.obtenerApiKey());
+        assertEquals("https://test.com", estado.obtenerBaseUrl());
+        assertEquals(2048, estado.obtenerMaxTokens());
+        assertEquals(60, estado.obtenerTimeout());
+        assertEquals("gpt-4", estado.obtenerModelo());
     }
 
     @Test
@@ -438,8 +438,25 @@ class ProviderConfigManagerTest {
                 providerConfigManager.validarEstadoActual(false, false);
 
         assertFalse(resultado.esValido());
-        assertEquals("modelo", resultado.getCampo());
-        assertEquals(I18nUI.Configuracion.ERROR_MODELO_REQUERIDO(), resultado.getMensajeError());
+        assertEquals("modelo", resultado.obtenerCampo());
+        assertEquals(I18nUI.Configuracion.ERROR_MODELO_REQUERIDO(), resultado.obtenerMensajeError());
+    }
+
+    @Test
+    void testValidarEstadoActualParaCargaModelosPermiteModeloVacio() {
+        when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
+        when(comboModelo.getSelectedItem()).thenReturn("");
+        when(txtTimeoutModelo.getText()).thenReturn("60");
+        when(txtMaxTokens.getText()).thenReturn("2048");
+        when(txtUrl.getText()).thenReturn("https://api.openai.com/v1");
+        when(txtClave.getPassword()).thenReturn(("sk-" + "a".repeat(48)).toCharArray());
+
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerConfigManager.validarEstadoActualParaCargaModelos(true);
+
+        assertTrue(resultado.esValido());
+        assertNotNull(resultado.obtenerEstado());
+        assertEquals("", resultado.obtenerEstado().obtenerModelo());
     }
 
     @Test
@@ -454,10 +471,10 @@ class ProviderConfigManagerTest {
                 providerConfigManager.validarEstadoActual(false, false);
 
         assertFalse(resultado.esValido());
-        assertEquals("maxTokens", resultado.getCampo());
+        assertEquals("maxTokens", resultado.obtenerCampo());
         assertEquals(
-                ConfigValidator.validarMaxTokens(0).getMensajeError(),
-                resultado.getMensajeError());
+                ConfigValidator.validarMaxTokens(0).obtenerMensajeError(),
+                resultado.obtenerMensajeError());
     }
 
     @Test
@@ -473,8 +490,8 @@ class ProviderConfigManagerTest {
                 providerConfigManager.validarEstadoActual(true, true);
 
         assertFalse(resultado.esValido());
-        assertEquals("url", resultado.getCampo());
-        assertEquals(I18nUI.Configuracion.MSG_URL_VACIA(), resultado.getMensajeError());
+        assertEquals("url", resultado.obtenerCampo());
+        assertEquals(I18nUI.Configuracion.MSG_URL_VACIA(), resultado.obtenerMensajeError());
     }
 
     @Test
@@ -490,10 +507,10 @@ class ProviderConfigManagerTest {
                 providerConfigManager.validarEstadoActual(true, true);
 
         assertFalse(resultado.esValido());
-        assertEquals("apiKey", resultado.getCampo());
+        assertEquals("apiKey", resultado.obtenerCampo());
         assertEquals(
-                ConfigValidator.validarApiKey("", "OpenAI").getMensajeError(),
-                resultado.getMensajeError());
+                ConfigValidator.validarApiKey("", "OpenAI").obtenerMensajeError(),
+                resultado.obtenerMensajeError());
     }
 
     private ProviderConfigManager crearManagerConComponentesReales() {

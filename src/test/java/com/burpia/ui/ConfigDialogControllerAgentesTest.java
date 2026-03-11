@@ -3,6 +3,7 @@ package com.burpia.ui;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.util.OSUtils;
 import com.burpia.util.RutasBurpIA;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -212,6 +213,35 @@ class ConfigDialogControllerAgentesTest {
                 "Debe conservar seleccionado el agente configurado");
             assertEquals(rutaConArgumentos, txtAgenteBinario.getText(),
                 "La ruta con argumentos debe mostrarse íntegra para poder editarla");
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
+    @Test
+    @DisplayName("Prioriza agente con binario resoluble por la ruta por defecto")
+    void testPriorizaAgenteDisponiblePorRutaPorDefecto() throws IOException {
+        Path rutaDefault = Path.of(OSUtils.resolverEjecutableComando(AgenteTipo.CLAUDE_CODE.obtenerRutaPorDefecto()));
+        Files.createDirectories(rutaDefault.getParent());
+        Files.writeString(rutaDefault, "#!/bin/bash\necho 'claude-default'");
+        rutaDefault.toFile().setExecutable(true);
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        crearArchivoConfiguracion(config);
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(
+            null, new ConfiguracionAPI(), gestor, () -> {});
+
+        try {
+            JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
+            assertNotNull(comboAgente);
+
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), comboAgente.getItemAt(0),
+                "Los agentes disponibles por ruta por defecto deben priorizarse");
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), comboAgente.getSelectedItem(),
+                "El agente configurado debe conservarse seleccionado");
         } finally {
             dialogo.dispose();
         }

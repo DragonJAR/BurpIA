@@ -8,9 +8,12 @@ import com.google.gson.JsonArray;
 import java.util.List;
 import java.util.Locale;
 
-public class ParserRespuestasAI {
+public final class ParserRespuestasAI {
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
         java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
+
+    private ParserRespuestasAI() {
+    }
 
     public static String extraerCampoNoEstricto(String campo, String contenido) {
         if (Normalizador.esVacio(contenido)) {

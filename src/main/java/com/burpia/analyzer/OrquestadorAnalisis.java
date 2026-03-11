@@ -98,8 +98,8 @@ public class OrquestadorAnalisis {
             throw new IOException(error);
         }
 
-        gestorLogging.info(ORIGEN_LOG, "[" + nombreHilo + "] Orquestador iniciado para URL: " + solicitud.obtenerUrl());
-        gestorLogging.verbose(ORIGEN_LOG, "[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud());
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Orquestador iniciado para URL: " + solicitud.obtenerUrl()));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud()));
 
         try {
             verificarCancelacion();
@@ -115,32 +115,32 @@ public class OrquestadorAnalisis {
             // NOTA: El limitador YA fue adquirido por el llamador (AnalizadorAI o FlowAnalysisManager)
             // No adquirimos aquí para evitar doble adquisición que causa permisos negativos
 
-            gestorLogging.info(ORIGEN_LOG, "Analizando: " + solicitud.obtenerUrl());
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analizando: " + solicitud.obtenerUrl()));
 
             boolean multiHabilitado = config.esMultiProveedorHabilitado();
             List<String> proveedoresConfig = config.obtenerProveedoresMultiConsulta();
-            gestorLogging.verbose(ORIGEN_LOG, "DIAGNOSTICO: multiHabilitado=" + multiHabilitado + ", proveedoresConfig=" +
-                    (proveedoresConfig != null ? proveedoresConfig.size() + " elementos" : "null"));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("DIAGNOSTICO: multiHabilitado=" + multiHabilitado + ", proveedoresConfig=" +
+                    (proveedoresConfig != null ? proveedoresConfig.size() + " elementos" : "null")));
 
             ResultadoAnalisisMultiple resultadoMultiple;
             if (multiHabilitado && proveedoresConfig != null && proveedoresConfig.size() > 1) {
-                gestorLogging.verbose(ORIGEN_LOG, "DIAGNOSTICO: Ejecutando multi-proveedor con " + proveedoresConfig.size() + " proveedores");
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("DIAGNOSTICO: Ejecutando multi-proveedor con " + proveedoresConfig.size() + " proveedores"));
                 resultadoMultiple = ejecutarAnalisisMultiProveedorSecuencial();
             } else {
                 if (multiHabilitado) {
-                    gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: Multi-proveedor habilitado pero solo " +
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Multi-proveedor habilitado pero solo " +
                             (proveedoresConfig != null ? proveedoresConfig.size() : 0) +
-                            " proveedor(es) configurado(s). Usando proveedor único: " + config.obtenerProveedorAI());
+                            " proveedor(es) configurado(s). Usando proveedor único: " + config.obtenerProveedorAI()));
                 } else {
-                    gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: Usando proveedor único: " + config.obtenerProveedorAI());
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Usando proveedor único: " + config.obtenerProveedorAI()));
                 }
                 String respuesta = llamarAPIAIConRetries();
                 resultadoMultiple = parsearRespuesta(respuesta);
             }
 
             long duracion = System.currentTimeMillis() - tiempoInicio;
-            gestorLogging.info(ORIGEN_LOG, "Análisis completado: " + solicitud.obtenerUrl() + " (tomo " + duracion + "ms)");
-            gestorLogging.verbose(ORIGEN_LOG, "[" + nombreHilo + "] Severidad maxima: " + resultadoMultiple.obtenerSeveridadMaxima());
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Análisis completado: " + solicitud.obtenerUrl() + " (tomo " + duracion + "ms)"));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Severidad maxima: " + resultadoMultiple.obtenerSeveridadMaxima()));
 
             return resultadoMultiple;
 
@@ -157,7 +157,7 @@ public class OrquestadorAnalisis {
         try {
             alInicioAnalisis.run();
         } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, "No se pudo notificar inicio de análisis: " + e.getMessage());
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("No se pudo notificar inicio de análisis"));
         }
     }
 
@@ -171,7 +171,7 @@ public class OrquestadorAnalisis {
 
     private void verificarCancelacion() throws InterruptedException {
         if (tareaCancelada.getAsBoolean()) {
-            throw new InterruptedException("Tarea cancelada por usuario");
+            throw new InterruptedException(I18nUI.Tareas.MSG_CANCELADO_USUARIO());
         }
     }
 
@@ -194,13 +194,13 @@ public class OrquestadorAnalisis {
     }
 
     private String construirPromptAnalisis() {
-        gestorLogging.verbose(ORIGEN_LOG, "Construyendo prompt para URL: " + solicitud.obtenerUrl());
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Construyendo prompt para URL: " + solicitud.obtenerUrl()));
         String promptPreconstruido = solicitud.obtenerPromptPreconstruido();
         String prompt = Normalizador.noEsVacio(promptPreconstruido)
             ? promptPreconstruido
             : constructorPrompt.construirPromptAnalisis(solicitud);
-        gestorLogging.verbose(ORIGEN_LOG, "Longitud de prompt: " + prompt.length() + " caracteres");
-        gestorLogging.verbose(ORIGEN_LOG, "Prompt (preview):\n" + resumirParaLog(prompt));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Longitud de prompt: " + prompt.length() + " caracteres"));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Prompt (preview):\n" + resumirParaLog(prompt)));
         return prompt;
     }
 
@@ -214,13 +214,13 @@ public class OrquestadorAnalisis {
                 esperarSiPausada();
                 
                 String respuesta = analizadorHTTP.llamarAPI(promptActual);
-                gestorLogging.info(ORIGEN_LOG, "Longitud de respuesta de API: " + respuesta.length() + " caracteres");
-                gestorLogging.verbose(ORIGEN_LOG, "Respuesta de API (preview):\n" + resumirParaLog(respuesta));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Longitud de respuesta de API: " + respuesta.length() + " caracteres"));
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Respuesta de API (preview):\n" + resumirParaLog(respuesta)));
                 return respuesta;
                 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new IOException("Sistema de retry cancelado/interrumpido", e);
+                throw new IOException(I18nUI.Tareas.ERROR_RETRY_INTERRUPPIDO(), e);
             } catch (ContextExceededException e) {
                 // Error de contexto - podemos truncar y reintentar
                 if (intentosTruncado < MAX_TRUNCADOS) {
@@ -310,13 +310,13 @@ public class OrquestadorAnalisis {
             String prompt = construirPromptAnalisis();
             String respuesta = analizadorHTTPProveedor.llamarAPI(prompt);
             
-            gestorLogging.info(ORIGEN_LOG, "Longitud de respuesta de API: " + respuesta.length() + " caracteres");
-            gestorLogging.verbose(ORIGEN_LOG, "Respuesta de API (preview):\n" + resumirParaLog(respuesta));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Longitud de respuesta de API: " + respuesta.length() + " caracteres"));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Respuesta de API (preview):\n" + resumirParaLog(respuesta)));
             return respuesta;
             
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IOException("Sistema de retry cancelado/interrumpido", e);
+            throw new IOException(I18nUI.Tareas.ERROR_RETRY_INTERRUPPIDO(), e);
         } catch (ContextExceededException e) {
             // Para multi-proveedor, no implementamos truncado complejo por ahora
             // Simplemente propagamos el error
@@ -335,12 +335,12 @@ public class OrquestadorAnalisis {
     private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {
         List<String> proveedores = config.obtenerProveedoresMultiConsulta();
         if (Normalizador.esVacia(proveedores)) {
-            gestorLogging.info(ORIGEN_LOG, "Multi-consulta: No hay proveedores seleccionados, usando proveedor único");
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Multi-consulta: No hay proveedores seleccionados, usando proveedor único"));
             return ejecutarAnalisisProveedorUnico();
         }
 
         if (proveedores.size() == 1) {
-            gestorLogging.info(ORIGEN_LOG, "Multi-consulta: Solo 1 proveedor seleccionado, usando proveedor único");
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Multi-consulta: Solo 1 proveedor seleccionado, usando proveedor único"));
             return ejecutarAnalisisProveedorUnico();
         }
 
@@ -357,24 +357,24 @@ public class OrquestadorAnalisis {
                     continue;
                 }
                 if (!ProveedorAI.existeProveedor(proveedor)) {
-                    gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: Proveedor no existe: " + proveedor + ", omitiendo");
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Proveedor no existe: " + proveedor + ", omitiendo"));
                     continue;
                 }
 
                 String modelo = config.obtenerModeloParaProveedor(proveedor);
                 if (Normalizador.esVacio(modelo)) {
-                    gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo");
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo"));
                     continue;
                 }
 
                 if (!todosHallazgos.isEmpty()) {
                     long delaySegundos = DELAY_ENTRE_PROVEEDORES_MS / 1000L;
-                    gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: Esperando " + delaySegundos + " segundos antes del siguiente proveedor");
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Esperando " + delaySegundos + " segundos antes del siguiente proveedor"));
                     esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
                 }
 
                 gestorLogging.info(ORIGEN_LOG, LINEA_SEPARADORA_PROVEEDOR);
-                gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: " + proveedor + " (" + modelo + ")");
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: " + proveedor + " (" + modelo + ")"));
 
                 try {
                     ConfiguracionAPI configProveedor = new ConfiguracionAPI();
@@ -385,23 +385,23 @@ public class OrquestadorAnalisis {
                     ResultadoAnalisisMultiple resultado = parsearRespuestaConEtiqueta(respuesta, proveedor, modelo);
 
                     List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
-                    gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: " + proveedor + " completado - " + hallazgosProveedor.size()
-                            + " hallazgo(s) encontrado(s)");
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: " + proveedor + " completado - " + hallazgosProveedor.size()
+                            + " hallazgo(s) encontrado(s)"));
                     todosHallazgos.addAll(hallazgosProveedor);
 
                 } catch (Exception e) {
-                    gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: Error con " + proveedor + ": " + e.getMessage());
+                    gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Error con " + proveedor), e);
                     proveedoresFallidos.add(proveedor);
                 }
             }
 
             if (!proveedoresFallidos.isEmpty()) {
-                gestorLogging.error(ORIGEN_LOG, "PROVEEDOR: " + proveedoresFallidos.size() +
-                        " proveedor(es) fallaron: " + String.join(", ", proveedoresFallidos));
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: " + proveedoresFallidos.size() +
+                        " proveedor(es) fallaron: " + String.join(", ", proveedoresFallidos)));
             }
 
             gestorLogging.info(ORIGEN_LOG, LINEA_SEPARADORA_PROVEEDOR);
-            gestorLogging.info(ORIGEN_LOG, "PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size()));
 
             return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
                     solicitud.obtenerSolicitudHttp(), proveedoresFallidos);

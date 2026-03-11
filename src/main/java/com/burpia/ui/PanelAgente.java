@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
@@ -529,20 +530,20 @@ public class PanelAgente extends JPanel {
     }
 
     private JPanel crearPanelControles() {
-        btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(),
-            I18nUI.Tooltips.Agente.REINICIAR(), e -> reiniciarYSolicitarFoco());
+        btnReiniciar = crearBoton(this::obtenerTextoBotonReiniciar,
+            I18nUI.Tooltips.Agente::REINICIAR, e -> reiniciarYSolicitarFoco());
 
-        btnCtrlC = crearBoton("⚡ " + I18nUI.Consola.BOTON_CTRL_C(),
-            I18nUI.Tooltips.Agente.CTRL_C(), e -> escribirComandoCrudo("\u0003"));
+        btnCtrlC = crearBoton(this::obtenerTextoBotonCtrlC,
+            I18nUI.Tooltips.Agente::CTRL_C, e -> escribirComandoCrudo("\u0003"));
 
-        btnInyectarPayload = crearBoton("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD(),
-            I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD(), e -> inyectarPayloadInicialManual());
+        btnInyectarPayload = crearBoton(this::obtenerTextoBotonInyectarPayload,
+            I18nUI.Tooltips.Agente::INYECTAR_PAYLOAD, e -> inyectarPayloadInicialManual());
 
-        btnCambiarAgente = crearBoton("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO(),
-            I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO(), e -> cambiarAgenteRapido());
+        btnCambiarAgente = crearBoton(this::obtenerTextoBotonCambiarAgente,
+            I18nUI.Tooltips.Agente::CAMBIAR_AGENTE_RAPIDO, e -> cambiarAgenteRapido());
 
-        btnAyudaAgente = crearBoton("❓",
-            resolverTooltipAyudaAgente(), e -> abrirGuiaAgenteActual());
+        btnAyudaAgente = crearBoton(this::obtenerTextoBotonAyuda,
+            this::resolverTooltipAyudaAgente, e -> abrirGuiaAgenteActual());
 
         lblDelay = new JLabel(I18nUI.Consola.ETIQUETA_DELAY());
         lblDelay.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -586,13 +587,13 @@ public class PanelAgente extends JPanel {
 
             String rutaBinario = resolverRutaBinario(destino);
             if (!OSUtils.existeBinario(rutaBinario)) {
-                String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(destino.getNombreVisible(), rutaBinario);
+                String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(destino.obtenerNombreVisible(), rutaBinario);
                 UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
                     this,
-                    destino.getNombreVisible(),
+                    destino.obtenerNombreVisible(),
                     mensaje,
-                    I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(destino.getNombreVisible()),
-                    destino.getUrlDocPorIdioma(config.obtenerIdiomaUi())
+                    I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(destino.obtenerNombreVisible()),
+                    destino.obtenerUrlDocPorIdioma(config.obtenerIdiomaUi())
                 );
                 return;
             }
@@ -623,11 +624,11 @@ public class PanelAgente extends JPanel {
 
     private String resolverTooltipAyudaAgente() {
         AgenteTipo agenteActual = obtenerAgenteActualSeguro();
-        return I18nUI.Tooltips.Agente.GUIA_AGENTE(agenteActual.getNombreVisible());
+        return I18nUI.Tooltips.Agente.GUIA_AGENTE(agenteActual.obtenerNombreVisible());
     }
 
     private String resolverUrlGuiaAgenteActual() {
-        return obtenerAgenteActualSeguro().getUrlDocPorIdioma(config.obtenerIdiomaUi());
+        return obtenerAgenteActualSeguro().obtenerUrlDocPorIdioma(config.obtenerIdiomaUi());
     }
 
     private void abrirGuiaAgenteActual() {
@@ -667,26 +668,11 @@ public class PanelAgente extends JPanel {
     }
 
     private void refrescarTextosBotones() {
-        siBotonPresente(btnReiniciar, b -> {
-            b.setText("🔄 " + I18nUI.Consola.BOTON_REINICIAR());
-            b.setToolTipText(I18nUI.Tooltips.Agente.REINICIAR());
-        });
-        siBotonPresente(btnCtrlC, b -> {
-            b.setText("⚡ " + I18nUI.Consola.BOTON_CTRL_C());
-            b.setToolTipText(I18nUI.Tooltips.Agente.CTRL_C());
-        });
-        siBotonPresente(btnInyectarPayload, b -> {
-            b.setText("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD());
-            b.setToolTipText(I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD());
-        });
-        siBotonPresente(btnCambiarAgente, b -> {
-            b.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
-            b.setToolTipText(I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO());
-        });
-        siBotonPresente(btnAyudaAgente, b -> {
-            b.setText("❓");
-            b.setToolTipText(resolverTooltipAyudaAgente());
-        });
+        refrescarBoton(btnReiniciar, this::obtenerTextoBotonReiniciar, I18nUI.Tooltips.Agente::REINICIAR);
+        refrescarBoton(btnCtrlC, this::obtenerTextoBotonCtrlC, I18nUI.Tooltips.Agente::CTRL_C);
+        refrescarBoton(btnInyectarPayload, this::obtenerTextoBotonInyectarPayload, I18nUI.Tooltips.Agente::INYECTAR_PAYLOAD);
+        refrescarBoton(btnCambiarAgente, this::obtenerTextoBotonCambiarAgente, I18nUI.Tooltips.Agente::CAMBIAR_AGENTE_RAPIDO);
+        refrescarBoton(btnAyudaAgente, this::obtenerTextoBotonAyuda, this::resolverTooltipAyudaAgente);
     }
 
     private JPanel crearPanelResultados() {
@@ -695,12 +681,42 @@ public class PanelAgente extends JPanel {
         return panel;
     }
 
-    private JButton crearBoton(String texto, String tooltip, java.awt.event.ActionListener listener) {
-        JButton btn = new JButton(texto);
+    private void refrescarBoton(JButton boton, Supplier<String> textoProveedor, Supplier<String> tooltipProveedor) {
+        siBotonPresente(boton, b -> UIUtils.actualizarTextoYTooltip(
+            b,
+            textoProveedor != null ? textoProveedor.get() : "",
+            tooltipProveedor != null ? tooltipProveedor.get() : null
+        ));
+    }
+
+    private JButton crearBoton(Supplier<String> textoProveedor,
+                               Supplier<String> tooltipProveedor,
+                               java.awt.event.ActionListener listener) {
+        JButton btn = new JButton(textoProveedor != null ? textoProveedor.get() : "");
         btn.setFont(EstilosUI.FUENTE_ESTANDAR);
-        btn.setToolTipText(tooltip);
+        btn.setToolTipText(tooltipProveedor != null ? tooltipProveedor.get() : null);
         btn.addActionListener(listener);
         return btn;
+    }
+
+    private String obtenerTextoBotonReiniciar() {
+        return "🔄 " + I18nUI.Consola.BOTON_REINICIAR();
+    }
+
+    private String obtenerTextoBotonCtrlC() {
+        return "⚡ " + I18nUI.Consola.BOTON_CTRL_C();
+    }
+
+    private String obtenerTextoBotonInyectarPayload() {
+        return "💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD();
+    }
+
+    private String obtenerTextoBotonCambiarAgente() {
+        return "🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO();
+    }
+
+    private String obtenerTextoBotonAyuda() {
+        return "❓";
     }
 
     private long activarNuevaSesion() {
@@ -1011,7 +1027,7 @@ public class PanelAgente extends JPanel {
         
         if (Normalizador.esVacio(binarioConfig)) {
             return OSUtils.normalizarComandoParaShell(
-                tipo != null ? tipo.getRutaPorDefecto() : AgenteTipo.porDefecto().getRutaPorDefecto()
+                tipo != null ? tipo.obtenerRutaPorDefecto() : AgenteTipo.porDefecto().obtenerRutaPorDefecto()
             );
         }
 

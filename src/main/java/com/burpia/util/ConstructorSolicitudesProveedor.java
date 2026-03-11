@@ -1,6 +1,7 @@
 package com.burpia.util;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ProveedorAI;
+import com.burpia.i18n.I18nUI;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -146,7 +147,7 @@ public final class ConstructorSolicitudesProveedor {
                                                    OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
         if (Normalizador.esVacio(base)) {
-            throw new IOException("URL base de Gemini vacia o invalida");
+            throw new IOException(I18nUI.Conexion.ERROR_URL_BASE_GEMINI_INVALIDA());
         }
         long ahora = System.currentTimeMillis();
         depurarCacheGemini(ahora);
@@ -159,7 +160,7 @@ public final class ConstructorSolicitudesProveedor {
 
         HttpUrl urlModelos = HttpUrl.parse(base + "/models");
         if (urlModelos == null) {
-            throw new IOException("URL base de Gemini invalida: " + base);
+            throw new IOException(I18nUI.Conexion.ERROR_URL_BASE_GEMINI_INVALIDA(base));
         }
         HttpUrl.Builder urlBuilder = urlModelos.newBuilder();
         if (Normalizador.noEsVacio(apiKey)) {
@@ -173,13 +174,13 @@ public final class ConstructorSolicitudesProveedor {
 
         try (Response response = clienteHttp.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                String err = response.body() != null ? response.body().string() : "sin cuerpo";
-                throw new IOException("HTTP " + response.code() + ": " + err);
+                String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+                throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));
             }
             String body = response.body() != null ? response.body().string() : "{}";
             List<String> modelos = parsearModelosGemini(body);
             if (modelos.isEmpty()) {
-                throw new IOException("Gemini no reportó modelos compatibles con generateContent");
+                throw new IOException(I18nUI.Conexion.ERROR_GEMINI_SIN_MODELOS_COMPATIBLES());
             }
             CACHE_GEMINI.put(cacheKey, new CacheModelosGemini(modelos, ahora));
             return modelos;
@@ -229,7 +230,7 @@ public final class ConstructorSolicitudesProveedor {
     public static List<String> listarModelosOllama(String urlBase, OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
         if (Normalizador.esVacio(base)) {
-            throw new IOException("URL base de Ollama vacia o invalida");
+            throw new IOException(I18nUI.Conexion.ERROR_URL_BASE_OLLAMA_INVALIDA());
         }
 
         String endpoint = base + "/api/tags";
@@ -240,13 +241,13 @@ public final class ConstructorSolicitudesProveedor {
 
         try (Response response = clienteHttp.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                String err = response.body() != null ? response.body().string() : "sin cuerpo";
-                throw new IOException("HTTP " + response.code() + ": " + err);
+                String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+                throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));
             }
             String body = response.body() != null ? response.body().string() : "{}";
             List<String> modelos = ParserModelosOllama.extraerModelosDesdeTags(body);
             if (modelos.isEmpty()) {
-                throw new IOException("Ollama no reportó modelos válidos en /api/tags");
+                throw new IOException(I18nUI.Conexion.ERROR_OLLAMA_SIN_MODELOS_VALIDOS());
             }
             return modelos;
         }
@@ -255,7 +256,7 @@ public final class ConstructorSolicitudesProveedor {
     public static List<String> listarModelosOpenAI(String urlBase, String apiKey, OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
         if (Normalizador.esVacio(base)) {
-            throw new IOException("URL base vacia o invalida");
+            throw new IOException(I18nUI.Conexion.ERROR_URL_BASE_MODELOS_INVALIDA());
         }
 
         String endpoint = base + "/models";
@@ -269,13 +270,13 @@ public final class ConstructorSolicitudesProveedor {
 
         try (Response response = clienteHttp.newCall(builder.build()).execute()) {
             if (!response.isSuccessful()) {
-                String err = response.body() != null ? response.body().string() : "sin cuerpo";
-                throw new IOException("HTTP " + response.code() + ": " + err);
+                String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+                throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));
             }
             String body = response.body() != null ? response.body().string() : "{}";
             List<String> modelos = parsearModelosOpenAI(body);
             if (modelos.isEmpty()) {
-                throw new IOException("No se encontraron modelos validos en la respuesta");
+                throw new IOException(I18nUI.Conexion.ERROR_MODELOS_RESPUESTA_VACIA());
             }
             return modelos;
         }

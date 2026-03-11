@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import com.burpia.config.AgenteTipo;
+import com.burpia.i18n.I18nUI;
 import java.util.Objects;
 
 /**
@@ -52,9 +53,9 @@ final class AgentRuntimeOptions {
          * @throws NullPointerException si tipoAgente es null
          */
         EnterOptions(AgenteTipo tipoAgente, int delaySubmitPostPasteMs) {
-            this.tipoAgente = Objects.requireNonNull(tipoAgente, "tipoAgente no puede ser null");
+            this.tipoAgente = Objects.requireNonNull(tipoAgente, I18nUI.General.ERROR_TIPO_AGENTE_NULO());
             if (delaySubmitPostPasteMs < 0) {
-                throw new IllegalArgumentException("delaySubmitPostPasteMs debe ser >= 0, recibido: " + delaySubmitPostPasteMs);
+                throw new IllegalArgumentException(I18nUI.General.ERROR_DELAY_SUBMIT_INVALIDO(delaySubmitPostPasteMs));
             }
             this.delaySubmitPostPasteMs = delaySubmitPostPasteMs;
         }

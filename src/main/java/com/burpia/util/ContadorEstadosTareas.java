@@ -121,27 +121,27 @@ public final class ContadorEstadosTareas {
 
     // Getters
 
-    public int getEnCola() {
+    public int obtenerEnCola() {
         return enCola;
     }
 
-    public int getAnalizando() {
+    public int obtenerAnalizando() {
         return analizando;
     }
 
-    public int getPausadas() {
+    public int obtenerPausadas() {
         return pausadas;
     }
 
-    public int getCompletadas() {
+    public int obtenerCompletadas() {
         return completadas;
     }
 
-    public int getErrores() {
+    public int obtenerErrores() {
         return errores;
     }
 
-    public int getCanceladas() {
+    public int obtenerCanceladas() {
         return canceladas;
     }
 
@@ -150,7 +150,7 @@ public final class ContadorEstadosTareas {
      *
      * @return enCola + analizando
      */
-    public int getActivasSinPausadas() {
+    public int obtenerActivasSinPausadas() {
         return enCola + analizando;
     }
 
@@ -159,7 +159,7 @@ public final class ContadorEstadosTareas {
      *
      * @return enCola + analizando + pausadas
      */
-    public int getActivas() {
+    public int obtenerActivas() {
         return enCola + analizando + pausadas;
     }
 
@@ -168,7 +168,7 @@ public final class ContadorEstadosTareas {
      *
      * @return completadas + errores + canceladas
      */
-    public int getFinalizadas() {
+    public int obtenerFinalizadas() {
         return completadas + errores + canceladas;
     }
 
@@ -177,7 +177,7 @@ public final class ContadorEstadosTareas {
      *
      * @return errores + canceladas
      */
-    public int getErroresYCanceladas() {
+    public int obtenerErroresYCanceladas() {
         return errores + canceladas;
     }
 
@@ -186,7 +186,7 @@ public final class ContadorEstadosTareas {
      *
      * @return suma de todos los estados
      */
-    public int getTotal() {
+    public int obtenerTotal() {
         return enCola + analizando + pausadas + completadas + errores + canceladas;
     }
 }

@@ -1,5 +1,6 @@
 package com.burpia.ui;
 
+import com.burpia.i18n.I18nUI;
 import com.jediterm.terminal.TerminalColor;
 import com.jediterm.terminal.TextStyle;
 import com.jediterm.terminal.emulator.ColorPalette;
@@ -150,7 +151,7 @@ final class AgentTerminalSettingsProvider extends DefaultSettingsProvider {
 
         private AgentColorPalette(Color... colores) {
             if (colores == null || colores.length < 16) {
-                throw new IllegalArgumentException("La paleta ANSI debe tener al menos 16 colores");
+                throw new IllegalArgumentException(I18nUI.General.ERROR_PALETA_ANSI_INVALIDA());
             }
             this.colores = Arrays.copyOf(colores, colores.length);
         }

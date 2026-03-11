@@ -326,7 +326,7 @@ class HttpRequestProcessorTest {
         HttpRequestResponse resultado = processor.normalizarEvidenciaManual(request, null);
         assertNull(resultado);
         if (gestorLogging != null) {
-            verify(gestorLogging).info(eq("HttpRequestProcessor"), eq("Analisis manual sin request/response original: se registraran hallazgos, pero no Issue."));
+            verify(gestorLogging).info(eq("HttpRequestProcessor"), eq("Analisis manual sin solicitud/respuesta original: se registraran hallazgos, pero no Issue."));
         }
     }
 
