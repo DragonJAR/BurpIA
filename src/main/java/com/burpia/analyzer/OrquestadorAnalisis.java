@@ -7,21 +7,11 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
-import com.burpia.util.ConstantesJsonAI;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
-import com.burpia.util.GsonProvider;
-import com.burpia.util.JsonParserUtil;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
-import com.burpia.util.ParserRespuestasAI;
 import com.burpia.util.PromptTruncador;
-import com.burpia.util.ReparadorJson;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import okhttp3.*;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -29,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 public class OrquestadorAnalisis {
@@ -51,10 +40,10 @@ public class OrquestadorAnalisis {
     private final GestorConsolaGUI gestorConsola;
     private final BooleanSupplier tareaCancelada;
     private final BooleanSupplier tareaPausada;
-    private final Gson gson;
     private final ConstructorPrompts constructorPrompt;
     private final GestorLoggingUnificado gestorLogging;
     private final AnalizadorHTTP analizadorHTTP;
+    private final ParseadorRespuestasAI parseador;
     private final PromptTruncador promptTruncador;
 
     public interface Callback {
@@ -88,10 +77,10 @@ public class OrquestadorAnalisis {
         this.gestorConsola = gestorConsola;
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
-        this.gson = GsonProvider.get();
         this.constructorPrompt = new ConstructorPrompts(this.config);
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
         this.analizadorHTTP = new AnalizadorHTTP(this.config, this.tareaCancelada, this.tareaPausada, this.gestorLogging);
+        this.parseador = new ParseadorRespuestasAI(this.gestorLogging, this.config.obtenerIdiomaUi());
         this.promptTruncador = new PromptTruncador();
     }
 
@@ -125,10 +114,6 @@ public class OrquestadorAnalisis {
 
             // NOTA: El limitador YA fue adquirido por el llamador (AnalizadorAI o FlowAnalysisManager)
             // No adquirimos aquí para evitar doble adquisición que causa permisos negativos
-
-            int retrasoSegundos = config.obtenerRetrasoSegundos();
-            gestorLogging.verbose(ORIGEN_LOG, "[" + nombreHilo + "] Durmiendo por " + retrasoSegundos + " segundos antes de llamar a la API");
-            esperarConControl(retrasoSegundos * 1000L);
 
             gestorLogging.info(ORIGEN_LOG, "Analizando: " + solicitud.obtenerUrl());
 
@@ -337,345 +322,11 @@ public class OrquestadorAnalisis {
     }
 
     private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
-        gestorLogging.verbose(ORIGEN_LOG, "Parseando respuesta JSON");
-        List<Hallazgo> hallazgos = new ArrayList<>();
-        String respuestaOriginal = respuestaJson != null ? respuestaJson : "";
-
-        try {
-            String jsonReparado = ReparadorJson.repararJson(respuestaOriginal);
-            String respuestaProcesada = respuestaOriginal;
-            if (jsonReparado != null && !jsonReparado.equals(respuestaOriginal)) {
-                gestorLogging.verbose(ORIGEN_LOG, "JSON reparado exitosamente");
-                respuestaProcesada = jsonReparado;
-            }
-
-            String proveedor = config.obtenerProveedorAI() != null ? config.obtenerProveedorAI() : "";
-            String contenido = ParserRespuestasAI.extraerContenido(respuestaProcesada, proveedor);
-            if (Normalizador.esVacio(contenido)) {
-                contenido = respuestaProcesada;
-            }
-
-            gestorLogging.verbose(ORIGEN_LOG, "Contenido extraído - Longitud: " + contenido.length() + " caracteres");
-            gestorLogging.verbose(ORIGEN_LOG, "Contenido (preview):\n" + resumirParaLog(contenido));
-
-            try {
-                String contenidoLimpio = limpiarBloquesMarkdownJson(contenido);
-                JsonElement raiz = gson.fromJson(contenidoLimpio, JsonElement.class);
-                List<JsonObject> objetosHallazgos = JsonParserUtil.extraerObjetosHallazgos(raiz, ConstantesJsonAI.CAMPOS_HALLAZGOS);
-
-                if (!objetosHallazgos.isEmpty()) {
-                    gestorLogging.verbose(ORIGEN_LOG, "Se encontraron " + objetosHallazgos.size() + " hallazgos en JSON");
-                    for (JsonObject obj : objetosHallazgos) {
-                        agregarHallazgoNormalizado(
-                                hallazgos,
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO),
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION),
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD),
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA),
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA));
-                    }
-                } else {
-                    gestorLogging.verbose(ORIGEN_LOG, "JSON sin objetos de hallazgo, intentando parsing de texto plano");
-                    hallazgos.addAll(parsearTextoPlano(contenido));
-                }
-            } catch (Exception e) {
-                gestorLogging.verbose(ORIGEN_LOG, "No se pudo parsear como JSON de hallazgos: " + e.getMessage());
-                List<Hallazgo> hallazgosNoEstrictos = parsearHallazgosJsonNoEstricto(contenido);
-                if (!hallazgosNoEstrictos.isEmpty()) {
-                    gestorLogging.verbose(ORIGEN_LOG, "Fallback JSON no estricto recuperó " + hallazgosNoEstrictos.size() + " hallazgos");
-                    hallazgos.addAll(hallazgosNoEstrictos);
-                } else {
-                    gestorLogging.verbose(ORIGEN_LOG, "Intentando parsing de texto plano como fallback");
-                    hallazgos.addAll(parsearTextoPlano(contenido));
-                }
-            }
-
-            if (!respuestaProcesada.equals(respuestaOriginal)) {
-                String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedor);
-                if (Normalizador.esVacio(contenidoOriginal)) {
-                    contenidoOriginal = respuestaOriginal;
-                }
-
-                List<Hallazgo> hallazgosOriginalesNoEstrictos = parsearHallazgosJsonNoEstricto(contenidoOriginal);
-                if (hallazgosOriginalesNoEstrictos.size() > hallazgos.size()) {
-                    gestorLogging.verbose(ORIGEN_LOG, "Se detecto perdida de hallazgos tras reparación JSON; " +
-                            "se conserva parseo no estricto del payload original (" +
-                            hallazgosOriginalesNoEstrictos.size() + " > " + hallazgos.size() + ")");
-                    hallazgos.clear();
-                    hallazgos.addAll(hallazgosOriginalesNoEstrictos);
-                }
-            }
-
-            gestorLogging.verbose(ORIGEN_LOG, "Total de hallazgos parseados: " + hallazgos.size());
-
-            return new ResultadoAnalisisMultiple(
-                    solicitud.obtenerUrl(),
-                    hallazgos,
-                    solicitud.obtenerSolicitudHttp(),
-                    Collections.emptyList());
-
-        } catch (Exception e) {
-            String errorMsg = e.getMessage() != null ? e.getMessage() : "Error desconocido de parseo";
-            gestorLogging.error(ORIGEN_LOG,
-                    "Error crítico al parsear respuesta de API para " + solicitud.obtenerUrl() + ": " + errorMsg);
-            gestorLogging.verbose(ORIGEN_LOG, "JSON fallido (preview):\n" + resumirParaLog(respuestaJson));
-
-            throw new RuntimeException(descripcionErrorParseo(errorMsg), e);
-        }
+        return parsearRespuesta(respuestaJson, config != null ? config.obtenerProveedorAI() : "");
     }
 
-    private List<Hallazgo> parsearHallazgosJsonNoEstricto(String contenido) {
-        if (Normalizador.esVacio(contenido)) {
-            return new ArrayList<>();
-        }
-
-        JsonArray arrayHallazgos = ParserRespuestasAI.extraerArrayJsonInteligente(contenido, gson);
-
-        if (arrayHallazgos != null && arrayHallazgos.size() > 0) {
-            return convertirArrayAHallazgos(arrayHallazgos);
-        }
-
-        JsonArray arrayRecuperado = ParserRespuestasAI.extraerHallazgosPorDelimitadores(contenido, gson);
-
-        if (arrayRecuperado != null && arrayRecuperado.size() > 0) {
-            gestorLogging.verbose(ORIGEN_LOG, "Recuperación extrema: " + arrayRecuperado.size() + " hallazgos");
-            return convertirArrayAHallazgos(arrayRecuperado);
-        }
-
-        return parsearHallazgosCampoPorCampo(contenido);
-    }
-
-    private List<Hallazgo> convertirArrayAHallazgos(JsonArray array) {
-        List<Hallazgo> hallazgos = new ArrayList<>();
-        for (JsonElement item : array) {
-            if (item != null && item.isJsonObject()) {
-                JsonObject obj = item.getAsJsonObject();
-                agregarHallazgoNormalizado(
-                        hallazgos,
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO),
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION),
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD),
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA),
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA));
-            }
-        }
-        gestorLogging.verbose(ORIGEN_LOG, "Array JSON convertido a " + hallazgos.size() + " hallazgos");
-        return hallazgos;
-    }
-
-    private List<Hallazgo> parsearHallazgosCampoPorCampo(String contenido) {
-        List<Hallazgo> hallazgos = new ArrayList<>();
-        String bloqueHallazgos = extraerBloqueArrayHallazgos(contenido);
-        if (Normalizador.esVacio(bloqueHallazgos)) {
-            return hallazgos;
-        }
-
-        for (String objeto : extraerObjetosNoEstrictos(bloqueHallazgos)) {
-            String bloqueHallazgo = normalizarObjetoNoEstricto(objeto);
-            if (Normalizador.esVacio(bloqueHallazgo)) {
-                continue;
-            }
-
-            String titulo = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_TITULO, bloqueHallazgo);
-            String descripcion = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_DESCRIPCION, bloqueHallazgo);
-            String severidad = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_SEVERIDAD, bloqueHallazgo);
-            String confianza = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_CONFIANZA, bloqueHallazgo);
-            String evidencia = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_EVIDENCIA, bloqueHallazgo);
-
-            agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
-        }
-
-        if (!hallazgos.isEmpty()) {
-            gestorLogging.verbose(ORIGEN_LOG, "Parseo campo por campo recuperó " + hallazgos.size() + " hallazgos");
-        }
-
-        return hallazgos;
-    }
-
-    private String extraerCampoConFallback(String[] campos, String bloque) {
-        for (String campo : campos) {
-            String valor = ParserRespuestasAI.extraerCampoNoEstricto(campo, bloque);
-            if (Normalizador.noEsVacio(valor)) {
-                return valor;
-            }
-        }
-        return "";
-    }
-
-    private String extraerBloqueArrayHallazgos(String contenido) {
-        int indiceHallazgos = -1;
-        String[] claves = { "\"hallazgos\"", "\"findings\"", "\"issues\"", "\"vulnerabilidades\"" };
-        for (String clave : claves) {
-            int indice = contenido.indexOf(clave);
-            if (indice >= 0 && (indiceHallazgos < 0 || indice < indiceHallazgos)) {
-                indiceHallazgos = indice;
-            }
-        }
-        if (indiceHallazgos < 0) {
-            return "";
-        }
-        int inicioArray = contenido.indexOf('[', indiceHallazgos);
-        if (inicioArray < 0) {
-            return "";
-        }
-
-        int profundidad = 0;
-        boolean enComillas = false;
-        boolean escapado = false;
-        for (int i = inicioArray; i < contenido.length(); i++) {
-            char c = contenido.charAt(i);
-            if (escapado) {
-                escapado = false;
-                continue;
-            }
-            if (c == '\\') {
-                escapado = true;
-                continue;
-            }
-            if (c == '"') {
-                enComillas = !enComillas;
-                continue;
-            }
-            if (!enComillas) {
-                if (c == '[') {
-                    profundidad++;
-                } else if (c == ']') {
-                    profundidad--;
-                    if (profundidad == 0) {
-                        return contenido.substring(inicioArray + 1, i);
-                    }
-                }
-            }
-        }
-        return "";
-    }
-
-    private String normalizarObjetoNoEstricto(String objeto) {
-        if (objeto == null) {
-            return "";
-        }
-        String bloque = objeto.trim();
-        if (Normalizador.esVacio(bloque)) {
-            return "";
-        }
-        if (!bloque.startsWith("{")) {
-            bloque = "{" + bloque;
-        }
-        if (!bloque.endsWith("}")) {
-            bloque = bloque + "}";
-        }
-        return bloque;
-    }
-
-    private List<String> extraerObjetosNoEstrictos(String bloqueHallazgos) {
-        List<String> objetos = new ArrayList<>();
-        if (Normalizador.esVacio(bloqueHallazgos)) {
-            return objetos;
-        }
-        int inicioObjeto = -1;
-        int profundidad = 0;
-        boolean enComillas = false;
-        boolean escapado = false;
-        for (int i = 0; i < bloqueHallazgos.length(); i++) {
-            char c = bloqueHallazgos.charAt(i);
-            if (escapado) {
-                escapado = false;
-                continue;
-            }
-            if (c == '\\') {
-                escapado = true;
-                continue;
-            }
-            if (c == '"') {
-                enComillas = !enComillas;
-                continue;
-            }
-            if (enComillas) {
-                continue;
-            }
-            if (c == '{') {
-                if (profundidad == 0) {
-                    inicioObjeto = i;
-                }
-                profundidad++;
-            } else if (c == '}') {
-                profundidad--;
-                if (profundidad == 0 && inicioObjeto >= 0) {
-                    objetos.add(bloqueHallazgos.substring(inicioObjeto, i + 1));
-                    inicioObjeto = -1;
-                }
-            }
-        }
-        if (objetos.isEmpty()) {
-            String[] partes = bloqueHallazgos.split("\\}\\s*,\\s*\\{");
-            for (String parte : partes) {
-                if (Normalizador.noEsVacio(parte)) {
-                    objetos.add(parte);
-                }
-            }
-        }
-        return objetos;
-    }
-
-    private String etiquetaEvidencia() {
-        return "en".equalsIgnoreCase(config.obtenerIdiomaUi()) ? "Evidence" : "Evidencia";
-    }
-
-    private String limpiarBloquesMarkdownJson(String contenido) {
-        String limpio = contenido != null ? contenido.trim() : "";
-        if (limpio.startsWith("```")) {
-            limpio = limpio.replaceFirst("^```(?:json)?\\s*", "");
-            limpio = limpio.replaceFirst("\\s*```\\s*$", "");
-        }
-        return limpio.trim();
-    }
-
-    private void agregarHallazgoNormalizado(List<Hallazgo> destino,
-            String tituloRaw,
-            String descripcionRaw,
-            String severidadRaw,
-            String confianzaRaw,
-            String evidenciaRaw) {
-        if (destino == null) {
-            return;
-        }
-        String titulo = normalizarTextoSimple(tituloRaw, tituloPorDefecto());
-        String descripcion = normalizarTextoSimple(descripcionRaw, "");
-        String evidencia = normalizarTextoSimple(evidenciaRaw, "");
-        if (Normalizador.esVacio(descripcion)) {
-            descripcion = evidencia;
-        } else if (Normalizador.noEsVacio(evidencia) && !descripcion.contains(evidencia)) {
-            StringBuilder sb = new StringBuilder(
-                    descripcion.length() + evidencia.length() + 32);
-            sb.append(descripcion).append("\n").append(etiquetaEvidencia()).append(": ").append(evidencia);
-            descripcion = sb.toString();
-        }
-        if (Normalizador.esVacio(descripcion)) {
-            descripcion = descripcionPorDefecto();
-        }
-        String severidad = Hallazgo.normalizarSeveridad(normalizarTextoSimple(severidadRaw, Hallazgo.SEVERIDAD_INFO));
-        String confianza = Hallazgo.normalizarConfianza(normalizarTextoSimple(confianzaRaw, Hallazgo.CONFIANZA_BAJA));
-        destino.add(new Hallazgo(
-                solicitud.obtenerUrl(),
-                titulo,
-                descripcion,
-                severidad,
-                confianza,
-                solicitud.obtenerSolicitudHttp()));
-        if (config.esDetallado()) {
-            gestorLogging.verbose(ORIGEN_LOG, "Hallazgo agregado: " + titulo + " (" + severidad + ", " + confianza + ")");
-        }
-    }
-
-    private String normalizarTextoSimple(String valor, String porDefecto) {
-        if (valor == null) {
-            return porDefecto != null ? porDefecto : "";
-        }
-        String normalizado = Normalizador.normalizarTexto(valor);
-        if (normalizado.isEmpty()) {
-            return porDefecto != null ? porDefecto : "";
-        }
-        return normalizado;
+    private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson, String proveedor) {
+        return parseador.parsearRespuesta(respuestaJson, solicitud, proveedor);
     }
 
     private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {
@@ -765,7 +416,7 @@ public class OrquestadorAnalisis {
     private ResultadoAnalisisMultiple parsearRespuestaConEtiqueta(String respuestaJson,
             String proveedor,
             String modelo) {
-        ResultadoAnalisisMultiple resultado = parsearRespuesta(respuestaJson);
+        ResultadoAnalisisMultiple resultado = parsearRespuesta(respuestaJson, proveedor);
         List<Hallazgo> hallazgos = resultado.obtenerHallazgos();
         List<Hallazgo> hallazgosConEtiqueta = new ArrayList<>();
 
@@ -793,78 +444,6 @@ public class OrquestadorAnalisis {
                 Collections.emptyList());
     }
 
-    private List<Hallazgo> parsearTextoPlano(String contenido) {
-        List<Hallazgo> hallazgos = new ArrayList<>();
-        if (Normalizador.esVacio(contenido)) {
-            return hallazgos;
-        }
-
-        try {
-            String[] lineas = contenido.split("\n");
-            StringBuilder descripcion = new StringBuilder();
-            String severidad = Hallazgo.SEVERIDAD_INFO;
-            String confianza = Hallazgo.CONFIANZA_BAJA;
-
-            for (String linea : lineas) {
-                String lineaNormalizada = linea.trim();
-                String lineaLower = lineaNormalizada.toLowerCase();
-
-                if (lineaLower.contains("título:") || lineaLower.contains("title:")) {
-                    if (descripcion.length() > 0) {
-                        agregarHallazgoDesdeDescripcion(hallazgos, descripcion.toString(), severidad, confianza);
-                        descripcion.setLength(0);
-                    }
-                    descripcion.append(lineaNormalizada.replaceFirst("(?i)(título:|title:)", "").trim()).append(" - ");
-                } else if (lineaLower.contains("severidad:") || lineaLower.contains("severity:")) {
-                    String severidadLinea = lineaNormalizada.replaceFirst("(?i)(severidad:|severity:)", "").trim();
-                    severidad = Hallazgo.normalizarSeveridad(severidadLinea);
-                } else if (lineaLower.contains("confianza:") || lineaLower.contains("confidence:")) {
-                    String confianzaLinea = lineaNormalizada.replaceFirst("(?i)(confianza:|confidence:)", "").trim();
-                    confianza = Hallazgo.normalizarConfianza(confianzaLinea);
-                } else if (lineaLower.contains("descripción:") || lineaLower.contains("description:")) {
-                    descripcion.append(lineaNormalizada.replaceFirst("(?i)(descripción:|description:)", "").trim()).append(" ");
-                } else if (Normalizador.noEsVacio(lineaNormalizada)) {
-                    descripcion.append(lineaNormalizada).append(" ");
-                }
-            }
-
-            if (descripcion.length() > 0) {
-                agregarHallazgoDesdeDescripcion(hallazgos, descripcion.toString(), severidad, confianza);
-            }
-
-        } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, "Error parsing texto plano: " + e.getMessage());
-        }
-
-        return hallazgos;
-    }
-
-    private void agregarHallazgoDesdeDescripcion(List<Hallazgo> hallazgos, String descripcion, String severidad, String confianza) {
-        String descripcionLimpia = normalizarTextoSimple(descripcion, "");
-        if (Normalizador.esVacio(descripcionLimpia)) {
-            return;
-        }
-        
-        String titulo = tituloPorDefecto();
-        if (descripcionLimpia.length() > 50) {
-            int espacio = descripcionLimpia.indexOf(' ', 47);
-            if (espacio > 0) {
-                titulo = descripcionLimpia.substring(0, espacio) + "...";
-            } else {
-                titulo = descripcionLimpia.substring(0, 47) + "...";
-            }
-        } else {
-            titulo = descripcionLimpia;
-        }
-        
-        hallazgos.add(new Hallazgo(
-                solicitud.obtenerUrl(),
-                titulo,
-                descripcionLimpia,
-                severidad,
-                confianza,
-                solicitud.obtenerSolicitudHttp()));
-    }
 
     private String resumirParaLog(String texto) {
         // Cuando el modo detallado está activo, mostrar todo sin truncar
@@ -888,15 +467,4 @@ public class OrquestadorAnalisis {
         return I18nUI.tr("ALERTA: Configuracion de IA no disponible", "ALERT: AI configuration is unavailable");
     }
 
-    private static String tituloPorDefecto() {
-        return I18nUI.tr("Sin título", "Untitled");
-    }
-
-    private static String descripcionPorDefecto() {
-        return I18nUI.tr("Sin descripción", "No description");
-    }
-
-    private static String descripcionErrorParseo(String detalle) {
-        return I18nUI.trf("Error al parsear respuesta: %s", "Error parsing response: %s", detalle);
-    }
 }
