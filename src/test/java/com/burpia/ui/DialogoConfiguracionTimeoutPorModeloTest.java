@@ -15,6 +15,7 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JPasswordField;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -123,6 +124,35 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem(ProveedorAI.PROVEEDOR_CUSTOM_02));
             flushEdt();
             assertEquals(ProveedorAI.URL_CUSTOM_ES, txtUrl.getText(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:125");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Pestaña proveedor muestra la etiqueta de proveedores seleccionados")
+    void testPestaniaProveedorMuestraEtiquetaDeSeleccionados() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+        try {
+            final Component[] panelProveedorHolder = new Component[1];
+            SwingUtilities.invokeAndWait(() -> {
+                JTabbedPane tabsPrincipal = buscarPrimerComponente(dialogo.getContentPane(), JTabbedPane.class);
+                assertNotNull(tabsPrincipal, "El diálogo debe contener pestañas principales");
+                int indiceProveedor = tabsPrincipal.indexOfTab(I18nUI.Configuracion.TAB_PROVEEDOR());
+                assertTrue(indiceProveedor >= 0, "La pestaña Proveedor LLM debe existir");
+                panelProveedorHolder[0] = tabsPrincipal.getComponentAt(indiceProveedor);
+            });
+
+            List<JLabel> labels = new ArrayList<>();
+            recolectarComponentes(panelProveedorHolder[0], JLabel.class, labels);
+
+            boolean encontroEtiqueta = labels.stream()
+                    .anyMatch(label -> I18nUI.Configuracion.LABEL_PROVEEDORES_SELECCIONADOS().equals(label.getText()));
+            assertTrue(encontroEtiqueta,
+                    "La pestaña Proveedor debe etiquetar explícitamente la columna de proveedores seleccionados");
         } finally {
             destruirDialogo(dialogo);
         }

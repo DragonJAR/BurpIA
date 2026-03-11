@@ -426,6 +426,9 @@ public class ConfigDialogView {
         gbc.weightx = 1;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDORES_DISPONIBLES()), gbc);
 
+        gbc.gridx = 2;
+        panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDORES_SELECCIONADOS()), gbc);
+
         fila++;
 
         gbc.gridy = fila;

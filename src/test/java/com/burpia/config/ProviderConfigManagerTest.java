@@ -364,6 +364,69 @@ class ProviderConfigManagerTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void testActualizarBotonesMultiProveedorProtegeProveedorPrincipal() throws Exception {
+        ProviderConfigManager manager = crearManagerConComponentesReales();
+        JList<String> listaSeleccionados = obtenerCampoPrivado(manager, "listaProveedoresSeleccionados", JList.class);
+        JButton btnQuitar = obtenerCampoPrivado(manager, "btnQuitarProveedor", JButton.class);
+        JButton btnSubir = obtenerCampoPrivado(manager, "btnSubirProveedor", JButton.class);
+        JButton btnBajar = obtenerCampoPrivado(manager, "btnBajarProveedor", JButton.class);
+        JCheckBox chkMulti = obtenerCampoPrivado(manager, "chkHabilitarMultiProveedor", JCheckBox.class);
+        DefaultListModel<String> seleccionados = obtenerCampoPrivado(manager, "modeloListaSeleccionados", DefaultListModel.class);
+
+        chkMulti.setSelected(true);
+        seleccionados.addElement("OpenAI");
+        seleccionados.addElement("Claude");
+        seleccionados.addElement("Gemini");
+        manager.establecerProveedorActual("OpenAI");
+
+        listaSeleccionados.setSelectedIndex(0);
+        invocarMetodoPrivado(manager, "actualizarBotonesMultiProveedor");
+
+        assertFalse(btnQuitar.isEnabled(), "El proveedor principal no debe poder quitarse");
+        assertFalse(btnSubir.isEnabled(), "El proveedor principal no debe poder moverse");
+        assertFalse(btnBajar.isEnabled(), "El proveedor principal no debe poder moverse");
+
+        listaSeleccionados.setSelectedIndex(1);
+        invocarMetodoPrivado(manager, "actualizarBotonesMultiProveedor");
+
+        assertTrue(btnQuitar.isEnabled(), "Un proveedor secundario sí debe poder quitarse");
+        assertFalse(btnSubir.isEnabled(), "Ningún proveedor secundario debe adelantarse al principal");
+        assertTrue(btnBajar.isEnabled(), "Debe poder reordenarse debajo del principal");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testCambiarProveedorMantieneMaximoCincoEnMultiProveedor() {
+        ConfiguracionAPI configReal = new ConfiguracionAPI();
+        ProviderConfigManager manager = crearManagerConComponentesReales(configReal);
+        DefaultListModel<String> disponibles = obtenerCampoPrivado(manager, "modeloListaDisponibles", DefaultListModel.class);
+        DefaultListModel<String> seleccionados = obtenerCampoPrivado(manager, "modeloListaSeleccionados", DefaultListModel.class);
+        JCheckBox chkMulti = obtenerCampoPrivado(manager, "chkHabilitarMultiProveedor", JCheckBox.class);
+
+        chkMulti.setSelected(true);
+        seleccionados.addElement("OpenAI");
+        seleccionados.addElement("Claude");
+        seleccionados.addElement("Gemini");
+        seleccionados.addElement("Ollama");
+        seleccionados.addElement("Z.ai");
+        disponibles.addElement(ProveedorAI.PROVEEDOR_CUSTOM_01);
+
+        manager.establecerProveedorActual("OpenAI");
+        manager.cambiarProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01);
+
+        assertEquals(5, seleccionados.getSize(), "La sincronización del proveedor principal no debe superar el máximo");
+        assertEquals(ProveedorAI.PROVEEDOR_CUSTOM_01, seleccionados.getElementAt(0),
+                "El proveedor principal activo debe quedar primero");
+        assertEquals("OpenAI", seleccionados.getElementAt(1),
+                "El proveedor principal anterior debe conservarse en la lista");
+        assertFalse(contieneElemento(seleccionados, "Z.ai"),
+                "Debe expulsarse el último proveedor secundario para respetar el límite");
+        assertTrue(contieneElemento(disponibles, "Z.ai"),
+                "El proveedor desplazado debe volver a la lista de disponibles");
+    }
+
+    @Test
     void testValidarEstadoActualDetectaModeloVacio() {
         when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
         when(comboModelo.getSelectedItem()).thenReturn("");
@@ -431,5 +494,87 @@ class ProviderConfigManagerTest {
         assertEquals(
                 ConfigValidator.validarApiKey("", "OpenAI").getMensajeError(),
                 resultado.getMensajeError());
+    }
+
+    private ProviderConfigManager crearManagerConComponentesReales() {
+        return crearManagerConComponentesReales(new ConfiguracionAPI());
+    }
+
+    private ProviderConfigManager crearManagerConComponentesReales(ConfiguracionAPI configReal) {
+        ProviderConfigManager manager = new ProviderConfigManager(configReal, gestorLogging);
+        JComboBox<String> comboProveedorReal = new JComboBox<>(new String[] {
+            "OpenAI",
+            "Claude",
+            "Gemini",
+            "Ollama",
+            "Z.ai",
+            ProveedorAI.PROVEEDOR_CUSTOM_01
+        });
+        JComboBox<String> comboModeloReal = new JComboBox<>();
+        JTextField txtUrlReal = new JTextField();
+        JPasswordField txtClaveReal = new JPasswordField();
+        JTextField txtMaxTokensReal = new JTextField();
+        JTextField txtTimeoutReal = new JTextField();
+        JButton btnAgregarReal = new JButton();
+        JButton btnQuitarReal = new JButton();
+        JButton btnSubirReal = new JButton();
+        JButton btnBajarReal = new JButton();
+        JCheckBox chkMultiReal = new JCheckBox();
+        JLabel lblEstadoReal = new JLabel();
+        DefaultListModel<String> disponibles = new DefaultListModel<>();
+        DefaultListModel<String> seleccionados = new DefaultListModel<>();
+        JList<String> listaDisponiblesReal = new JList<>(disponibles);
+        JList<String> listaSeleccionadosReal = new JList<>(seleccionados);
+
+        manager.inicializarComponentesUI(
+                comboProveedorReal,
+                comboModeloReal,
+                txtUrlReal,
+                txtClaveReal,
+                txtMaxTokensReal,
+                txtTimeoutReal,
+                btnAgregarReal,
+                btnQuitarReal,
+                btnSubirReal,
+                btnBajarReal,
+                chkMultiReal,
+                lblEstadoReal,
+                disponibles,
+                seleccionados,
+                listaDisponiblesReal,
+                listaSeleccionadosReal
+        );
+        return manager;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T obtenerCampoPrivado(Object target, String nombreCampo, Class<T> tipo) {
+        try {
+            java.lang.reflect.Field field = target.getClass().getDeclaredField(nombreCampo);
+            field.setAccessible(true);
+            return (T) field.get(target);
+        } catch (ReflectiveOperationException e) {
+            fail("No se pudo leer el campo privado " + nombreCampo + ": " + e.getMessage());
+            return null;
+        }
+    }
+
+    private void invocarMetodoPrivado(Object target, String nombreMetodo) {
+        try {
+            java.lang.reflect.Method method = target.getClass().getDeclaredMethod(nombreMetodo);
+            method.setAccessible(true);
+            method.invoke(target);
+        } catch (ReflectiveOperationException e) {
+            fail("No se pudo invocar el método privado " + nombreMetodo + ": " + e.getMessage());
+        }
+    }
+
+    private boolean contieneElemento(DefaultListModel<String> modelo, String valor) {
+        for (int i = 0; i < modelo.size(); i++) {
+            if (valor.equals(modelo.getElementAt(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 }
