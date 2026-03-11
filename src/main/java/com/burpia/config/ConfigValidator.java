@@ -225,27 +225,30 @@ public final class ConfigValidator {
     // ============ VALIDACIÓN DE CAMPOS NUMÉRICOS ============
 
     /**
+     * DRY: Método helper para validar enteros en un rango.
+     */
+    private static ValidationResult validarRangoEntero(int valor, int minimo, int maximo, 
+                                                        String mensajeError, String campo) {
+        if (valor < minimo || valor > maximo) {
+            return ValidationResult.invalido(mensajeError, campo);
+        }
+        return ValidationResult.valido();
+    }
+
+    /**
      * Valida el valor de retraso en segundos.
      *
      * @param retrasoSegundos el valor a validar
      * @return resultado de la validación
      */
     public static ValidationResult validarRetrasoSegundos(int retrasoSegundos) {
-        if (retrasoSegundos < ConfiguracionAPI.MINIMO_RETRASO_SEGUNDOS) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.ERROR_RETRASO_RANGO(ConfiguracionAPI.MINIMO_RETRASO_SEGUNDOS, ConfiguracionAPI.MAXIMO_RETRASO_SEGUNDOS), 
-                "retrasoSegundos"
-            );
-        }
-
-        if (retrasoSegundos > ConfiguracionAPI.MAXIMO_RETRASO_SEGUNDOS) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.ERROR_RETRASO_RANGO(ConfiguracionAPI.MINIMO_RETRASO_SEGUNDOS, ConfiguracionAPI.MAXIMO_RETRASO_SEGUNDOS), 
-                "retrasoSegundos"
-            );
-        }
-
-        return ValidationResult.valido();
+        return validarRangoEntero(
+            retrasoSegundos,
+            ConfiguracionAPI.MINIMO_RETRASO_SEGUNDOS,
+            ConfiguracionAPI.MAXIMO_RETRASO_SEGUNDOS,
+            I18nUI.Configuracion.ERROR_RETRASO_RANGO(ConfiguracionAPI.MINIMO_RETRASO_SEGUNDOS, ConfiguracionAPI.MAXIMO_RETRASO_SEGUNDOS),
+            "retrasoSegundos"
+        );
     }
 
     /**
@@ -255,21 +258,13 @@ public final class ConfigValidator {
      * @return resultado de la validación
      */
     public static ValidationResult validarMaximoConcurrente(int maximoConcurrente) {
-        if (maximoConcurrente < ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.ERROR_MAXIMO_CONCURRENTE_RANGO(ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE, ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE), 
-                "maximoConcurrente"
-            );
-        }
-
-        if (maximoConcurrente > ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.ERROR_MAXIMO_CONCURRENTE_RANGO(ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE, ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE), 
-                "maximoConcurrente"
-            );
-        }
-
-        return ValidationResult.valido();
+        return validarRangoEntero(
+            maximoConcurrente,
+            ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE,
+            ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE,
+            I18nUI.Configuracion.ERROR_MAXIMO_CONCURRENTE_RANGO(ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE, ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE),
+            "maximoConcurrente"
+        );
     }
 
     /**
@@ -279,21 +274,13 @@ public final class ConfigValidator {
      * @return resultado de la validación
      */
     public static ValidationResult validarMaximoHallazgos(int maximoHallazgos) {
-        if (maximoHallazgos < ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.ERROR_MAXIMO_HALLAZGOS_TABLA_RANGO(ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA, ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA), 
-                "maximoHallazgos"
-            );
-        }
-
-        if (maximoHallazgos > ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.ERROR_MAXIMO_HALLAZGOS_TABLA_RANGO(ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA, ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA), 
-                "maximoHallazgos"
-            );
-        }
-
-        return ValidationResult.valido();
+        return validarRangoEntero(
+            maximoHallazgos,
+            ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA,
+            ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA,
+            I18nUI.Configuracion.ERROR_MAXIMO_HALLAZGOS_TABLA_RANGO(ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA, ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA),
+            "maximoHallazgos"
+        );
     }
 
     /**
@@ -303,23 +290,14 @@ public final class ConfigValidator {
      * @return resultado de la validación
      */
     public static ValidationResult validarMaximoTareas(int maximoTareas) {
-        if (maximoTareas < ConfiguracionAPI.MINIMO_TAREAS_TABLA) {
-            return ValidationResult.invalido(
-                I18nUI.trf("Máximo de tareas debe estar entre %d y %d", "Max tasks must be between %d and %d", 
-                            ConfiguracionAPI.MINIMO_TAREAS_TABLA, ConfiguracionAPI.MAXIMO_TAREAS_TABLA), 
-                "maximoTareas"
-            );
-        }
-
-        if (maximoTareas > ConfiguracionAPI.MAXIMO_TAREAS_TABLA) {
-            return ValidationResult.invalido(
-                I18nUI.trf("Máximo de tareas debe estar entre %d y %d", "Max tasks must be between %d and %d", 
-                            ConfiguracionAPI.MINIMO_TAREAS_TABLA, ConfiguracionAPI.MAXIMO_TAREAS_TABLA), 
-                "maximoTareas"
-            );
-        }
-
-        return ValidationResult.valido();
+        return validarRangoEntero(
+            maximoTareas,
+            ConfiguracionAPI.MINIMO_TAREAS_TABLA,
+            ConfiguracionAPI.MAXIMO_TAREAS_TABLA,
+            I18nUI.trf("Máximo de tareas debe estar entre %d y %d", "Max tasks must be between %d and %d", 
+                        ConfiguracionAPI.MINIMO_TAREAS_TABLA, ConfiguracionAPI.MAXIMO_TAREAS_TABLA),
+            "maximoTareas"
+        );
     }
 
     /**
@@ -329,21 +307,13 @@ public final class ConfigValidator {
      * @return resultado de la validación
      */
     public static ValidationResult validarTimeoutModelo(int timeoutSegundos) {
-        if (timeoutSegundos < ConfiguracionAPI.TIEMPO_ESPERA_MIN_SEGUNDOS) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.ERROR_TIMEOUT_RANGO(), 
-                "timeout"
-            );
-        }
-
-        if (timeoutSegundos > ConfiguracionAPI.TIEMPO_ESPERA_MAX_SEGUNDOS) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.ERROR_TIMEOUT_RANGO(), 
-                "timeout"
-            );
-        }
-
-        return ValidationResult.valido();
+        return validarRangoEntero(
+            timeoutSegundos,
+            ConfiguracionAPI.TIEMPO_ESPERA_MIN_SEGUNDOS,
+            ConfiguracionAPI.TIEMPO_ESPERA_MAX_SEGUNDOS,
+            I18nUI.Configuracion.ERROR_TIMEOUT_RANGO(),
+            "timeout"
+        );
     }
 
     /**
@@ -353,21 +323,13 @@ public final class ConfigValidator {
      * @return resultado de la validación
      */
     public static ValidationResult validarMaxTokens(int maxTokens) {
-        if (maxTokens < 1) {
-            return ValidationResult.invalido(
-                I18nUI.trf("Máximo de tokens debe ser al menos %d", "Max tokens must be at least %d", 1), 
-                "maxTokens"
-            );
-        }
-
-        if (maxTokens > 200000) {
-            return ValidationResult.invalido(
-                I18nUI.trf("Máximo de tokens no puede exceder %d", "Max tokens cannot exceed %d", 200000), 
-                "maxTokens"
-            );
-        }
-
-        return ValidationResult.valido();
+        return validarRangoEntero(
+            maxTokens,
+            1,
+            200000,
+            I18nUI.trf("Máximo de tokens debe estar entre %d y %d", "Max tokens must be between %d and %d", 1, 200000),
+            "maxTokens"
+        );
     }
 
     /**
@@ -377,21 +339,13 @@ public final class ConfigValidator {
      * @return resultado de la validación
      */
     public static ValidationResult validarAgenteDelay(int delayMs) {
-        if (delayMs < 0) {
-            return ValidationResult.invalido(
-                I18nUI.tr("El delay del agente no puede ser negativo", "Agent delay cannot be negative"), 
-                "agenteDelay"
-            );
-        }
-
-        if (delayMs > 60000) {
-            return ValidationResult.invalido(
-                I18nUI.trf("El delay del agente no puede exceder %d ms", "Agent delay cannot exceed %d ms", 60000), 
-                "agenteDelay"
-            );
-        }
-
-        return ValidationResult.valido();
+        return validarRangoEntero(
+            delayMs,
+            0,
+            60000,
+            I18nUI.trf("El delay del agente debe estar entre %d y %d ms", "Agent delay must be between %d and %d ms", 0, 60000),
+            "agenteDelay"
+        );
     }
 
     // ============ VALIDACIÓN DE TEXTOS Y PROMPTS ============

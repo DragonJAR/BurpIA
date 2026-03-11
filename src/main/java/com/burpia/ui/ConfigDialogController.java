@@ -116,74 +116,25 @@ public class ConfigDialogController {
     }
 
     private void inicializarEventHandlersProvider() {
-        JComboBox<String> comboProveedor = dialogo.obtenerComboProveedor();
-        if (comboProveedor != null) {
-            comboProveedor.addActionListener(e -> manejarCambioProveedor());
-        }
-
-        JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
-        if (comboModelo != null) {
-            comboModelo.addActionListener(e -> manejarCambioModelo());
-        }
-
-        JButton btnRefrescarModelos = dialogo.obtenerBtnRefrescarModelos();
-        if (btnRefrescarModelos != null) {
-            btnRefrescarModelos.addActionListener(e -> manejarRefrescarModelos());
-        }
-
-        JButton btnProbarConexion = dialogo.obtenerBtnProbarConexion();
-        if (btnProbarConexion != null) {
-            btnProbarConexion.addActionListener(e -> manejarProbarConexion());
-        }
+        agregarListenerSiPresente(dialogo.obtenerComboProveedor(), e -> manejarCambioProveedor());
+        agregarListenerSiPresente(dialogo.obtenerComboModelo(), e -> manejarCambioModelo());
+        agregarListenerSiPresente(dialogo.obtenerBtnRefrescarModelos(), e -> manejarRefrescarModelos());
+        agregarListenerSiPresente(dialogo.obtenerBtnProbarConexion(), e -> manejarProbarConexion());
     }
 
     private void inicializarEventHandlersAgent() {
-        JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
-        if (comboAgente != null) {
-            comboAgente.addActionListener(e -> manejarCambioAgente());
-        }
-
-        JButton btnRestaurarPromptAgenteInicial = dialogo.obtenerBtnRestaurarPromptAgenteInicial();
-        if (btnRestaurarPromptAgenteInicial != null) {
-            btnRestaurarPromptAgenteInicial.addActionListener(e -> manejarRestaurarPromptAgenteInicial());
-        }
-
-        JButton btnRestaurarPromptAgente = dialogo.obtenerBtnRestaurarPromptAgente();
-        if (btnRestaurarPromptAgente != null) {
-            btnRestaurarPromptAgente.addActionListener(e -> manejarRestaurarPromptAgente());
-        }
+        agregarListenerSiPresente(dialogo.obtenerComboAgente(), e -> manejarCambioAgente());
+        agregarListenerSiPresente(dialogo.obtenerBtnRestaurarPromptAgenteInicial(), e -> manejarRestaurarPromptAgenteInicial());
+        agregarListenerSiPresente(dialogo.obtenerBtnRestaurarPromptAgente(), e -> manejarRestaurarPromptAgente());
     }
 
     private void inicializarEventHandlersAcciones() {
-        JButton btnGuardar = dialogo.obtenerBtnGuardar();
-        if (btnGuardar != null) {
-            btnGuardar.addActionListener(e -> manejarGuardarConfiguracion());
-        }
-
-        JButton btnCerrar = dialogo.obtenerBtnCerrar();
-        if (btnCerrar != null) {
-            btnCerrar.addActionListener(e -> manejarCerrarDialogo());
-        }
-
-        JButton btnBuscarActualizaciones = dialogo.obtenerBtnBuscarActualizaciones();
-        if (btnBuscarActualizaciones != null) {
-            btnBuscarActualizaciones.addActionListener(e -> manejarVerificarActualizaciones());
-        }
-
-        JButton btnSitioWeb = dialogo.obtenerBtnSitioWeb();
-        if (btnSitioWeb != null) {
-            btnSitioWeb.addActionListener(e -> manejarAbrirSitioWeb());
-        }
-
-        JButton btnRestaurarPrompt = dialogo.obtenerBtnRestaurarPrompt();
-        if (btnRestaurarPrompt != null) {
-            btnRestaurarPrompt.addActionListener(e -> manejarRestaurarPromptPorDefecto());
-        }
-
-        JButton btnRestaurarFuentes = dialogo.obtenerBtnRestaurarFuentes();
-        if (btnRestaurarFuentes != null) {
-            btnRestaurarFuentes.addActionListener(e -> manejarRestaurarFuentesPorDefecto());
-        }
+        agregarListenerSiPresente(dialogo.obtenerBtnGuardar(), e -> manejarGuardarConfiguracion());
+        agregarListenerSiPresente(dialogo.obtenerBtnCerrar(), e -> manejarCerrarDialogo());
+        agregarListenerSiPresente(dialogo.obtenerBtnBuscarActualizaciones(), e -> manejarVerificarActualizaciones());
+        agregarListenerSiPresente(dialogo.obtenerBtnSitioWeb(), e -> manejarAbrirSitioWeb());
+        agregarListenerSiPresente(dialogo.obtenerBtnRestaurarPrompt(), e -> manejarRestaurarPromptPorDefecto());
+        agregarListenerSiPresente(dialogo.obtenerBtnRestaurarFuentes(), e -> manejarRestaurarFuentesPorDefecto());
     }
 
     private void inicializarEventHandlersDialog() {
@@ -196,15 +147,8 @@ public class ConfigDialogController {
     }
 
     private void inicializarEventHandlersDocumentos() {
-        JTextArea txtPrompt = dialogo.obtenerTxtPrompt();
-        if (txtPrompt != null) {
-            txtPrompt.getDocument().addDocumentListener(crearDocumentListenerPrompt());
-        }
-
-        JTextField txtAgenteBinario = dialogo.obtenerTxtAgenteBinario();
-        if (txtAgenteBinario != null) {
-            txtAgenteBinario.getDocument().addDocumentListener(crearDocumentListenerAgenteBinario());
-        }
+        agregarDocumentListenerSiPresente(dialogo.obtenerTxtPrompt(), crearDocumentListenerPrompt());
+        agregarDocumentListenerSiPresente(dialogo.obtenerTxtAgenteBinario(), crearDocumentListenerAgenteBinario());
     }
 
     private DocumentListener crearDocumentListenerPrompt() {
@@ -243,6 +187,44 @@ public class ConfigDialogController {
                 actualizarRutaEnMemoria();
             }
         };
+    }
+
+    // ===== MÉTODOS DRY PARA EVENT HANDLERS =====
+
+    /**
+     * DRY: Agrega un ActionListener a un componente si no es null.
+     */
+    private void agregarListenerSiPresente(JButton boton, java.awt.event.ActionListener listener) {
+        if (boton != null) {
+            boton.addActionListener(listener);
+        }
+    }
+
+    /**
+     * DRY: Agrega un ActionListener a un combo box si no es null.
+     */
+    private void agregarListenerSiPresente(JComboBox<?> combo, java.awt.event.ActionListener listener) {
+        if (combo != null) {
+            combo.addActionListener(listener);
+        }
+    }
+
+    /**
+     * DRY: Agrega un DocumentListener a un JTextArea si no es null.
+     */
+    private void agregarDocumentListenerSiPresente(JTextArea textArea, javax.swing.event.DocumentListener listener) {
+        if (textArea != null) {
+            textArea.getDocument().addDocumentListener(listener);
+        }
+    }
+
+    /**
+     * DRY: Agrega un DocumentListener a un JTextField si no es null.
+     */
+    private void agregarDocumentListenerSiPresente(JTextField textField, javax.swing.event.DocumentListener listener) {
+        if (textField != null) {
+            textField.getDocument().addDocumentListener(listener);
+        }
     }
 
     public void cargarConfiguracionInicial() {

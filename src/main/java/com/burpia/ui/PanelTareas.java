@@ -125,7 +125,7 @@ public class PanelTareas extends JPanel {
         panelTablaWrapper.add(panelDesplazable, BorderLayout.CENTER);
 
         botonPausarReanudar.addActionListener(e -> {
-            ContadorEstadosTareas estadisticas = modelo.contarEstados();
+            ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
             if (estadisticas.getPausadas() > 0) {
                 gestorTareas.reanudarTodasPausadas();
             } else if (estadisticas.getActivasSinPausadas() > 0) {
@@ -138,7 +138,7 @@ public class PanelTareas extends JPanel {
         });
 
         botonCancelar.addActionListener(e -> {
-            ContadorEstadosTareas estadisticas = modelo.contarEstados();
+            ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
             int activas = estadisticas.getActivas();
 
             if (activas == 0) {
@@ -157,7 +157,7 @@ public class PanelTareas extends JPanel {
         });
 
         botonLimpiarCompletadas.addActionListener(e -> {
-            ContadorEstadosTareas estadisticas = modelo.contarEstados();
+            ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
             int completadas = estadisticas.getFinalizadas();
 
             if (completadas == 0) {
@@ -584,23 +584,28 @@ public class PanelTareas extends JPanel {
     }
 
     private void actualizarEstadisticas(boolean forzar) {
-        ContadorEstadosTareas estadisticas = modelo != null ? modelo.contarEstados() : ContadorEstadosTareas.vacio();
-        etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
+        ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
+
+        Runnable actualizarUi = () -> {
+            etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
                 estadisticas.getActivas(),
                 estadisticas.getCompletadas(),
                 estadisticas.getErrores()));
 
-        actualizarBotonPausarReanudar(estadisticas.getPausadas());
-    }
-
-            etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
-                    estadisticas.getActivas(),
-                    estadisticas.getCompletadas(),
-                    estadisticas.getErrores()));
-
             actualizarBotonPausarReanudar(estadisticas.getPausadas());
         };
         ejecutarEnEdt(actualizarUi);
+    }
+
+    /**
+     * DRY: Obtiene estadísticas de forma segura, manejando null en modelo o en el resultado.
+     */
+    private ContadorEstadosTareas obtenerEstadisticasSeguras() {
+        if (modelo == null) {
+            return ContadorEstadosTareas.vacio();
+        }
+        ContadorEstadosTareas resultado = modelo.contarEstados();
+        return resultado != null ? resultado : ContadorEstadosTareas.vacio();
     }
 
     public void aplicarIdioma() {

@@ -227,196 +227,203 @@ public class DialogoConfiguracion extends JDialog {
     // ===== MÉTODOS DE ACCESO PARA EL CONTROLADOR =====
     // Estos métodos permiten que el controlador acceda a los componentes UI
     
+    /**
+     * DRY: Método genérico para obtener componentes de la vista de forma segura.
+     */
+    private <T> T obtenerComponente(java.util.function.Function<ConfigDialogView, T> getter) {
+        return view != null ? getter.apply(view) : null;
+    }
+    
     public JComboBox<String> obtenerComboProveedor() {
-        return view != null ? view.getComboProveedor() : null;
+        return obtenerComponente(ConfigDialogView::getComboProveedor);
     }
     
     public JComboBox<String> obtenerComboModelo() {
-        return view != null ? view.getComboModelo() : null;
+        return obtenerComponente(ConfigDialogView::getComboModelo);
     }
     
     public JTextField obtenerTxtUrl() {
-        return view != null ? view.getTxtUrl() : null;
+        return obtenerComponente(ConfigDialogView::getTxtUrl);
     }
     
     public JPasswordField obtenerTxtClave() {
-        return view != null ? view.getTxtClave() : null;
+        return obtenerComponente(ConfigDialogView::getTxtClave);
     }
     
     public JTextField obtenerTxtMaxTokens() {
-        return view != null ? view.getTxtMaxTokens() : null;
+        return obtenerComponente(ConfigDialogView::getTxtMaxTokens);
     }
     
     public JTextField obtenerTxtTimeoutModelo() {
-        return view != null ? view.getTxtTimeoutModelo() : null;
+        return obtenerComponente(ConfigDialogView::getTxtTimeoutModelo);
     }
     
     public JButton obtenerBtnRefrescarModelos() {
-        return view != null ? view.getBtnRefrescarModelos() : null;
+        return obtenerComponente(ConfigDialogView::getBtnRefrescarModelos);
     }
     
     public JButton obtenerBtnProbarConexion() {
-        return view != null ? view.getBtnProbarConexion() : null;
+        return obtenerComponente(ConfigDialogView::getBtnProbarConexion);
     }
     
     public JButton obtenerBtnGuardar() {
-        return view != null ? view.getBtnGuardar() : null;
+        return obtenerComponente(ConfigDialogView::getBtnGuardar);
     }
     
     public JButton obtenerBtnCerrar() {
-        return view != null ? view.getBtnCerrar() : null;
+        return obtenerComponente(ConfigDialogView::getBtnCerrar);
     }
     
     public JButton obtenerBtnBuscarActualizaciones() {
-        return view != null ? view.getBtnBuscarActualizaciones() : null;
+        return obtenerComponente(ConfigDialogView::getBtnBuscarActualizaciones);
     }
     
     public JButton obtenerBtnSitioWeb() {
-        return view != null ? view.getBtnSitioWeb() : null;
+        return obtenerComponente(ConfigDialogView::getBtnSitioWeb);
     }
     
     public JButton obtenerBtnRestaurarPrompt() {
-        return view != null ? view.getBtnRestaurarPrompt() : null;
+        return obtenerComponente(ConfigDialogView::getBtnRestaurarPrompt);
     }
     
     public JButton obtenerBtnRestaurarFuentes() {
-        return view != null ? view.getBtnRestaurarFuentes() : null;
+        return obtenerComponente(ConfigDialogView::getBtnRestaurarFuentes);
     }
     
     public JComboBox<String> obtenerComboAgente() {
-        return view != null ? view.getComboAgente() : null;
+        return obtenerComponente(ConfigDialogView::getComboAgente);
     }
     
     public JCheckBox obtenerChkAgenteHabilitado() {
-        return view != null ? view.getChkAgenteHabilitado() : null;
+        return obtenerComponente(ConfigDialogView::getChkAgenteHabilitado);
     }
     
     public JTextField obtenerTxtAgenteBinario() {
-        return view != null ? view.getTxtAgenteBinario() : null;
+        return obtenerComponente(ConfigDialogView::getTxtAgenteBinario);
     }
     
     public JTextArea obtenerTxtAgentePromptInicial() {
-        return view != null ? view.getTxtAgentePromptInicial() : null;
+        return obtenerComponente(ConfigDialogView::getTxtAgentePromptInicial);
     }
     
     public JTextArea obtenerTxtAgentePrompt() {
-        return view != null ? view.getTxtAgentePrompt() : null;
+        return obtenerComponente(ConfigDialogView::getTxtAgentePrompt);
     }
     
     public JButton obtenerBtnRestaurarPromptAgenteInicial() {
-        return view != null ? view.getBtnRestaurarPromptAgenteInicial() : null;
+        return obtenerComponente(ConfigDialogView::getBtnRestaurarPromptAgenteInicial);
     }
     
     public JButton obtenerBtnRestaurarPromptAgente() {
-        return view != null ? view.getBtnRestaurarPromptAgente() : null;
+        return obtenerComponente(ConfigDialogView::getBtnRestaurarPromptAgente);
     }
     
     public JComboBox<com.burpia.i18n.IdiomaUI> obtenerComboIdioma() {
-        return view != null ? view.getComboIdioma() : null;
+        return obtenerComponente(ConfigDialogView::getComboIdioma);
     }
     
     public JTextField obtenerTxtRetraso() {
-        return view != null ? view.getTxtRetraso() : null;
+        return obtenerComponente(ConfigDialogView::getTxtRetraso);
     }
     
     public JTextField obtenerTxtMaximoConcurrente() {
-        return view != null ? view.getTxtMaximoConcurrente() : null;
+        return obtenerComponente(ConfigDialogView::getTxtMaximoConcurrente);
     }
     
     public JTextField obtenerTxtMaximoHallazgosTabla() {
-        return view != null ? view.getTxtMaximoHallazgosTabla() : null;
+        return obtenerComponente(ConfigDialogView::getTxtMaximoHallazgosTabla);
     }
     
     public JTextField obtenerTxtMaximoTareas() {
-        return view != null ? view.getTxtMaximoTareas() : null;
+        return obtenerComponente(ConfigDialogView::getTxtMaximoTareas);
     }
     
     public JCheckBox obtenerChkDetallado() {
-        return view != null ? view.getChkDetallado() : null;
+        return obtenerComponente(ConfigDialogView::getChkDetallado);
     }
     
     public JCheckBox obtenerChkIgnorarSSL() {
-        return view != null ? view.getChkIgnorarSSL() : null;
+        return obtenerComponente(ConfigDialogView::getChkIgnorarSSL);
     }
     
     public JCheckBox obtenerChkSoloProxy() {
-        return view != null ? view.getChkSoloProxy() : null;
+        return obtenerComponente(ConfigDialogView::getChkSoloProxy);
     }
     
     public JCheckBox obtenerChkAlertasHabilitadas() {
-        return view != null ? view.getChkAlertasHabilitadas() : null;
+        return obtenerComponente(ConfigDialogView::getChkAlertasHabilitadas);
     }
     
     public JCheckBox obtenerChkPersistirBusqueda() {
-        return view != null ? view.getChkPersistirBusqueda() : null;
+        return obtenerComponente(ConfigDialogView::getChkPersistirBusqueda);
     }
     
     public JCheckBox obtenerChkPersistirSeveridad() {
-        return view != null ? view.getChkPersistirSeveridad() : null;
+        return obtenerComponente(ConfigDialogView::getChkPersistirSeveridad);
     }
     
     public JTextArea obtenerTxtPrompt() {
-        return view != null ? view.getTxtPrompt() : null;
+        return obtenerComponente(ConfigDialogView::getTxtPrompt);
     }
     
     public JLabel obtenerLblContadorPrompt() {
-        return view != null ? view.getLblContadorPrompt() : null;
+        return obtenerComponente(ConfigDialogView::getLblContadorPrompt);
     }
     
     public JCheckBox obtenerChkHabilitarMultiProveedor() {
-        return view != null ? view.getChkHabilitarMultiProveedor() : null;
+        return obtenerComponente(ConfigDialogView::getChkHabilitarMultiProveedor);
     }
     
     public JList<String> obtenerListaProveedoresDisponibles() {
-        return view != null ? view.getListaProveedoresDisponibles() : null;
+        return obtenerComponente(ConfigDialogView::getListaProveedoresDisponibles);
     }
     
     public JList<String> obtenerListaProveedoresSeleccionados() {
-        return view != null ? view.getListaProveedoresSeleccionados() : null;
+        return obtenerComponente(ConfigDialogView::getListaProveedoresSeleccionados);
     }
     
     public DefaultListModel<String> obtenerModeloListaDisponibles() {
-        return view != null ? view.getModeloListaDisponibles() : null;
+        return obtenerComponente(ConfigDialogView::getModeloListaDisponibles);
     }
     
     public DefaultListModel<String> obtenerModeloListaSeleccionados() {
-        return view != null ? view.getModeloListaSeleccionados() : null;
+        return obtenerComponente(ConfigDialogView::getModeloListaSeleccionados);
     }
     
     public JButton obtenerBtnAgregarProveedor() {
-        return view != null ? view.getBtnAgregarProveedor() : null;
+        return obtenerComponente(ConfigDialogView::getBtnAgregarProveedor);
     }
     
     public JButton obtenerBtnQuitarProveedor() {
-        return view != null ? view.getBtnQuitarProveedor() : null;
+        return obtenerComponente(ConfigDialogView::getBtnQuitarProveedor);
     }
     
     public JButton obtenerBtnSubirProveedor() {
-        return view != null ? view.getBtnSubirProveedor() : null;
+        return obtenerComponente(ConfigDialogView::getBtnSubirProveedor);
     }
     
     public JButton obtenerBtnBajarProveedor() {
-        return view != null ? view.getBtnBajarProveedor() : null;
+        return obtenerComponente(ConfigDialogView::getBtnBajarProveedor);
     }
     
     public JLabel obtenerLblEstadoMultiProveedor() {
-        return view != null ? view.getLblEstadoMultiProveedor() : null;
+        return obtenerComponente(ConfigDialogView::getLblEstadoMultiProveedor);
     }
     
     public JComboBox<String> obtenerComboFuenteEstandar() {
-        return view != null ? view.getComboFuenteEstandar() : null;
+        return obtenerComponente(ConfigDialogView::getComboFuenteEstandar);
     }
     
     public JSpinner obtenerSpinnerTamanioEstandar() {
-        return view != null ? view.getSpinnerTamanioEstandar() : null;
+        return obtenerComponente(ConfigDialogView::getSpinnerTamanioEstandar);
     }
     
     public JComboBox<String> obtenerComboFuenteMono() {
-        return view != null ? view.getComboFuenteMono() : null;
+        return obtenerComponente(ConfigDialogView::getComboFuenteMono);
     }
     
     public JSpinner obtenerSpinnerTamanioMono() {
-        return view != null ? view.getSpinnerTamanioMono() : null;
+        return obtenerComponente(ConfigDialogView::getSpinnerTamanioMono);
     }
     
     /**
