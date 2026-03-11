@@ -75,34 +75,36 @@ See the change summary in **Version history**.
 ### v1.5.0 (current)
 
 - **Contextual flow analysis:** analyzes multiple HTTP requests as a complete flow in a single LLM query, now including both requests and responses.
-- **Improved context menu:** new options "🔍 Analyze this flow" and "🤖 Send this flow to agent" in proxy history menu.
 - **Send flow to agent:** sends the complete flow (requests + responses) to the CLI agent with specialized prompt for deep validation.
+- **Flow correlation in context menu:** enables joint analysis of up to 4 requests from Proxy History using the new "🔍 Analyze this flow" and "🤖 Send this flow to agent" options, optimizing the detection of state-based or logic flow vulnerabilities.
 - **Visual and UI improvements:** native support for Burp Suite Dark and Light themes, responsive settings window, and font customization (standard and mono).
 - **Alert management:** new option to suppress confirmation messages ("Do not show this message again") to streamline workflow.
 - **New Agents:** official integration with **Gemini CLI** and **Open Code**, along with stability improvements for **Claude Code** and **Factory Droid**.
-- **New Providers:** optimized support for **Gemini** (Google) and **DeepSeek** models (via Ollama/Custom).
+- **New Providers and Flexibility:** expanded catalog of supported providers and the ability to configure up to 3 independent custom profiles (OpenAI-API compatible) for maximum versatility.
 - **I18n Improvements:** complete refinement of Spanish and English translations and technical documentation enhancements.
 
 
 ### v1.0.2
 
-- New multi-provider system: check requests using up to 5 different providers.
-- Update notification system.
-- User experience improvements.
-- Interface customization improvements.
-- Performance improvements.
+- **Multi-provider System:** ability to query requests using up to 5 different configured providers simultaneously.
+- **Update Notifications:** new alert engine for available version updates.
+- **User Experience:** optimizations for navigation and general usability.
+- **Interface Customization:** enhancements to visual environment settings.
+- **Performance:** optimized response and loading times.
 
 ### v1.0.1
 
-- Now with dynamic agentic manual testing using Factory Droid, Claude Code, and the Burp Suite MCP.
-- New LLM provider: Moonshot.
-- Translation and usability improvements.
-- Efficiency and overall performance improvements.
+- **Dynamic Agentic Testing:** integration with Factory Droid, Claude Code, and Burp Suite MCP for advanced manual validation.
+- **New Provider:** official support for Moonshot AI.
+- **Internationalization:** refinement of translations and multi-language usability.
+- **General Efficiency:** structural improvements in plugin performance.
 
 ### v1.0.0
 
-- Functional baseline for hybrid analysis, task/finding management, and passive/manual workflow.
-- Initial integration with major LLM providers and result export support.
+- **Hybrid Analysis:** functional baseline for passive and manual HTTP traffic scanning.
+- **Task Management:** centralized findings orchestration and analysis queue.
+- **LLM Integration:** initial compatibility with major language model providers.
+- **Data Export:** support for saving results in standard formats.
 
 
 ---

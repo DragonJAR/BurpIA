@@ -75,34 +75,36 @@ Consulta el resumen de cambios en **Historial de versiones**.
 ### v1.5.0 (actual)
 
 - **Análisis de flujo contextual:** analiza múltiples peticiones HTTP como un flujo completo en una sola consulta al LLM, incluyendo ahora tanto peticiones como respuestas.
-- **Menú contextual mejorado:** nuevas opciones "🔍 Analizar este flujo" y "🤖 Enviar este flujo al agente" en el menú del proxy history.
 - **Envío de flujo al agente:** envía el flujo completo (peticiones + respuestas) al agente CLI con prompt especializado para validación profunda.
+- **Correlación de flujos en menú contextual:** permite seleccionar y analizar de forma conjunta hasta 4 peticiones del Proxy History mediante las nuevas opciones "🔍 Analizar este flujo" y "🤖 Enviar este flujo al agente", optimizando la detección de vulnerabilidades de estado o flujos lógicos.
 - **Mejoras visuales y UI:** soporte nativo para los temas Dark y Light de Burp Suite, ventana de ajustes responsive y personalización de fuentes (estándar y mono).
 - **Gestión de alertas:** nueva opción para omitir mensajes de confirmación ("No volver a mostrar") para agilizar el flujo de trabajo.
 - **Nuevos Agentes:** integración oficial con **Gemini CLI** y **Open Code**, junto a mejoras de estabilidad en **Claude Code** y **Factory Droid**.
-- **Nuevos Proveedores:** soporte optimizado para **Gemini** (Google) y modelos **DeepSeek** (vía Ollama/Custom).
+- **Nuevos Proveedores y Flexibilidad:** mayor catálogo de proveedores soportados y capacidad de configurar hasta 3 perfiles personalizados independientes (compatibles con la API de OpenAI) para máxima versatilidad.
 - **Mejoras de I18n:** refinamiento completo de las traducciones en español e inglés y mejoras en la documentación técnica.
 
 
 ### v1.0.2
 
-- Nuevo sistema multiproveedor: permite consultar peticiones en hasta 5 proveedores distintos.
-- Sistema de notificación de actualizaciones.
-- Mejoras en la experiencia de usuario.
-- Mejoras en la personalización de la interfaz.
-- Mejoras de rendimiento.
+- **Sistema Multi-proveedor:** capacidad de consultar peticiones utilizando hasta 5 proveedores configurados simultáneamente.
+- **Notificaciones de Actualización:** nuevo motor de aviso para nuevas versiones disponibles.
+- **Experiencia de Usuario:** optimizaciones en la navegación y usabilidad general.
+- **Personalización de Interfaz:** mejoras en la customización del entorno visual.
+- **Rendimiento:** optimización de tiempos de respuesta y carga.
 
 ### v1.0.1
 
-- Ahora con pruebas manuales dinámicas agénticas, con Factory Droid, Claude Code y el MCP de Burp Suite.
-- Nuevo proveedor de LLM: Moonshot.
-- Mejoras en traducción y usabilidad.
-- Mejoras en eficiencia y rendimiento general.
+- **Pruebas Agénticas Dinámicas:** integración con Factory Droid, Claude Code y el MCP de Burp Suite para validación manual avanzada.
+- **Nuevo Proveedor:** soporte oficial para Moonshot AI.
+- **Interacionalización:** refinamiento de traducciones y usabilidad multilingüe.
+- **Eficiencia General:** mejoras estructurales en el rendimiento del plugin.
 
 ### v1.0.0
 
-- Base funcional de análisis híbrido, gestión de tareas/hallazgos y flujo de trabajo pasivo/manual.
-- Integración inicial con proveedores LLM principales y exportación de resultados.
+- **Análisis Híbrido:** base funcional para escaneo pasivo y manual de tráfico HTTP.
+- **Gestión de Tareas:** orquestación centralizada de hallazgos y cola de análisis.
+- **Integración LLM:** compatibilidad inicial con los principales proveedores de modelos de lenguaje.
+- **Exportación:** soporte para descarga de resultados en formatos estándar.
 
 
 ---
