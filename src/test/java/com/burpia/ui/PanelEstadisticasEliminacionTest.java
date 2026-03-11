@@ -217,6 +217,7 @@ class PanelEstadisticasEliminacionTest {
     @Test
     @DisplayName("Al cambiar el límite, la etiqueta del resumen refleja el nuevo valor")
     void alCambiarLimiteEtiquetaReflejaNuevoValor() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {});
         assertEquals(I18nUI.Estadisticas.LIMITE_HALLAZGOS(1000),
             obtenerTextoEtiqueta(panelEstadisticas, "etiquetaLimiteHallazgos"),
             "La etiqueta inicial debe mostrar el límite configurado");

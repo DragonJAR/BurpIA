@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
@@ -19,6 +20,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
     private int limiteFilas;
     private final ReentrantLock lock;
     private final AtomicInteger versionCambios = new AtomicInteger(0);
+    private volatile Consumer<List<String>> manejadorPurgado;
 
     public ModeloTablaTareas() {
         this(LIMITE_DEFECTO_TAREAS);
@@ -74,17 +76,19 @@ public class ModeloTablaTareas extends DefaultTableModel {
         }
 
         ejecutarEnEdt(() -> {
+            List<String> idsPurgadas;
             lock.lock();
             try {
                 for (Tarea tarea : tareasFiltradas) {
                     datos.add(tarea);
                 }
                 marcarCambio();
-                aplicarLimiteFilasEnDatos();
+                idsPurgadas = aplicarLimiteFilasEnDatos();
             } finally {
                 lock.unlock();
             }
 
+            notificarTareasPurgadas(idsPurgadas);
             sincronizarTablaDesdeDatosEnEdt();
         });
     }
@@ -109,6 +113,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
+        notificarTareasPurgadas(idsPurgadas);
         return idsPurgadas;
     }
 
@@ -380,9 +385,14 @@ public class ModeloTablaTareas extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
+        notificarTareasPurgadas(idsPurgadas);
         if (!idsPurgadas.isEmpty()) {
             programarSincronizacionTabla();
         }
+    }
+
+    public void establecerManejadorPurgado(Consumer<List<String>> manejadorPurgado) {
+        this.manejadorPurgado = manejadorPurgado;
     }
 
     /**
@@ -401,5 +411,13 @@ public class ModeloTablaTareas extends DefaultTableModel {
         } finally {
             lock.unlock();
         }
+    }
+
+    private void notificarTareasPurgadas(List<String> idsPurgadas) {
+        Consumer<List<String>> manejador = this.manejadorPurgado;
+        if (manejador == null || Normalizador.esVacia(idsPurgadas)) {
+            return;
+        }
+        manejador.accept(new ArrayList<>(idsPurgadas));
     }
 }

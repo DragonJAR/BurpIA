@@ -584,7 +584,13 @@ public class PanelTareas extends JPanel {
     }
 
     private void actualizarEstadisticas(boolean forzar) {
+        int versionActual = modelo != null ? modelo.obtenerVersion() : -1;
+        if (!forzar && versionActual == ultimaVersionTareas) {
+            return;
+        }
+
         ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
+        ultimaVersionTareas = versionActual;
 
         Runnable actualizarUi = () -> {
             etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(

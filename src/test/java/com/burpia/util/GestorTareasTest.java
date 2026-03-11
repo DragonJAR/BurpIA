@@ -234,6 +234,28 @@ class GestorTareasTest {
     }
 
     @Test
+    @DisplayName("Cambio de límite en el modelo también sincroniza el mapa del gestor")
+    void testCambioLimiteModeloSincronizaMapaGestor() throws Exception {
+        ModeloTablaTareas modeloAjustable = new ModeloTablaTareas(10);
+        GestorTareas gestorAjustable = new GestorTareas(modeloAjustable, logs::add);
+        try {
+            Tarea antigua = gestorAjustable.crearTarea("A", "https://example.com/old-limit", Tarea.ESTADO_COMPLETADO, "");
+            Tarea reciente = gestorAjustable.crearTarea("B", "https://example.com/new-limit", Tarea.ESTADO_ERROR, "");
+            flushEdt();
+
+            modeloAjustable.establecerLimiteFilas(1);
+            flushEdt();
+
+            assertNull(gestorAjustable.obtenerTarea(antigua.obtenerId()), "assertNull failed at GestorTareasTest.java:244");
+            assertNotNull(gestorAjustable.obtenerTarea(reciente.obtenerId()), "assertNotNull failed at GestorTareasTest.java:245");
+            assertEquals(1, modeloAjustable.obtenerNumeroTareas(), "assertEquals failed at GestorTareasTest.java:246");
+            assertEquals(reciente.obtenerId(), modeloAjustable.obtenerIdTarea(0), "assertEquals failed at GestorTareasTest.java:247");
+        } finally {
+            gestorAjustable.detener();
+        }
+    }
+
+    @Test
     @DisplayName("Id de tarea se mantiene unico bajo creacion masiva")
     void testIdUnicoEnAltaConcurrencia() {
         int total = 1000;

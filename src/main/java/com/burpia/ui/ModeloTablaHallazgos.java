@@ -172,19 +172,23 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
 
     public void marcarComoIgnorado(int fila) {
         boolean filaValida;
+        boolean huboCambio = false;
         lock.lock();
         try {
             filaValida = esIndiceValido(fila);
             if (filaValida) {
-                filasIgnoradas.add(fila);
+                huboCambio = filasIgnoradas.add(fila);
             }
         } finally {
             lock.unlock();
         }
-        if (!filaValida) {
+        if (!filaValida || !huboCambio) {
             return;
         }
-        ejecutarEnEdt(() -> fireTableRowsUpdated(fila, fila));
+        ejecutarEnEdt(() -> {
+            fireTableRowsUpdated(fila, fila);
+            notificarCambios();
+        });
     }
 
     public boolean estaIgnorado(int fila) {
@@ -356,14 +360,19 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     public void establecerLimiteFilas(int nuevoLimite) {
         int limiteNormalizado = Math.max(1, nuevoLimite);
         ejecutarEnEdt(() -> {
+            boolean limiteCambio;
             lock.lock();
             try {
+                limiteCambio = limiteFilas != limiteNormalizado;
                 limiteFilas = limiteNormalizado;
                 if (aplicarLimiteFilas()) {
                     fireTableDataChanged();
                 }
             } finally {
                 lock.unlock();
+            }
+            if (limiteCambio) {
+                notificarCambios();
             }
         });
     }

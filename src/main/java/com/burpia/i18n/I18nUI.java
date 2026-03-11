@@ -475,6 +475,14 @@ public final class I18nUI {
             };
         }
 
+        public static String[] OPCIONES_CONFIANZA() {
+            return new String[] {
+                    CONFIANZA_ALTA(),
+                    CONFIANZA_MEDIA(),
+                    CONFIANZA_BAJA()
+            };
+        }
+
         public static String TRADUCIR_CONFIANZA(String confianza) {
             if (Normalizador.esVacio(confianza))
                 return "";

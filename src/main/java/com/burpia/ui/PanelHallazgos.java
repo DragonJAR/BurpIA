@@ -80,6 +80,7 @@ public class PanelHallazgos extends JPanel {
     private Predicate<Hallazgo> manejadorEnviarAAgente;
     private Runnable manejadorCambioAlertasEnviarA;
     private Runnable manejadorCambioFiltros;
+    private Runnable manejadorFiltrosAplicados;
     private UIStateManager uiStateManager;
     private final ExecutorService ejecutorAcciones;
     private final Timer temporizadorPersistenciaFiltros;
@@ -281,6 +282,7 @@ public class PanelHallazgos extends JPanel {
         }
 
         programarPersistenciaFiltros();
+        notificarFiltrosAplicados();
     }
 
     private void limpiarFiltros() {
@@ -1318,6 +1320,12 @@ public class PanelHallazgos extends JPanel {
         }
     }
 
+    private void notificarFiltrosAplicados() {
+        if (manejadorFiltrosAplicados != null) {
+            manejadorFiltrosAplicados.run();
+        }
+    }
+
     public void establecerManejadorEnviarAAgente(Predicate<Hallazgo> manejador) {
         this.manejadorEnviarAAgente = manejador;
     }
@@ -1328,6 +1336,10 @@ public class PanelHallazgos extends JPanel {
 
     public void establecerManejadorCambioFiltros(Runnable manejador) {
         this.manejadorCambioFiltros = manejador;
+    }
+
+    public void establecerManejadorFiltrosAplicados(Runnable manejador) {
+        this.manejadorFiltrosAplicados = manejador;
     }
 
     public void establecerGuardadoAutomaticoIssuesActivo(boolean activo) {

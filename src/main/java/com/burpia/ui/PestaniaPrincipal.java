@@ -99,6 +99,7 @@ public class PestaniaPrincipal extends JPanel {
         panelHallazgos.establecerConfiguracion(config);
 
         panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas, panelHallazgos);
+        panelHallazgos.establecerManejadorFiltrosAplicados(panelEstadisticas::actualizarForzado);
         this.panelConsola = new PanelConsola(gestorConsola);
         this.panelAgente = new PanelAgente(config, config.agenteHabilitado());
         this.panelAgente.establecerManejadorFocoPestania(this::enfocarPestaniaAgenteDesdeManejador);

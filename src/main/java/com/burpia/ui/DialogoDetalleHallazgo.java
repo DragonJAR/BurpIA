@@ -93,11 +93,7 @@ public class DialogoDetalleHallazgo extends JDialog {
         lblConfianza.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.CONFIANZA());
         panelClasificacion.add(lblConfianza);
 
-        comboConfianza = new JComboBox<>(new String[]{
-            I18nUI.Hallazgos.CONFIANZA_ALTA(),
-            I18nUI.Hallazgos.CONFIANZA_MEDIA(),
-            I18nUI.Hallazgos.CONFIANZA_BAJA()
-        });
+        comboConfianza = new JComboBox<>(I18nUI.Hallazgos.OPCIONES_CONFIANZA());
         comboConfianza.setFont(EstilosUI.FUENTE_ESTANDAR);
         comboConfianza.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.CONFIANZA());
         panelClasificacion.add(comboConfianza);

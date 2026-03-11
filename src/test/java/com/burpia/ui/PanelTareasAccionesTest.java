@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("PanelTareas Acciones Tests")
@@ -206,6 +207,40 @@ class PanelTareasAccionesTest {
         SwingUtilities.invokeAndWait(() -> panel.establecerConfiguracion(config));
 
         assertEquals(321, modelo.obtenerLimiteFilas(), "assertEquals failed at PanelTareasAccionesTest.java:208");
+    }
+
+    @Test
+    @DisplayName("establecerConfiguracion purga finalizadas y sincroniza el gestor")
+    void testEstablecerConfiguracionPurgaFinalizadasYSincronizaGestor() throws Exception {
+        Tarea antigua = null;
+        Tarea reciente = null;
+        for (int i = 0; i < 101; i++) {
+            Tarea tarea = gestor.crearTarea(
+                "A",
+                "https://example.com/task-" + i,
+                i == 100 ? Tarea.ESTADO_ERROR : Tarea.ESTADO_COMPLETADO,
+                ""
+            );
+            if (i == 0) {
+                antigua = tarea;
+            }
+            if (i == 100) {
+                reciente = tarea;
+            }
+        }
+        flushEdt();
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerMaximoTareasTabla(100);
+
+        SwingUtilities.invokeAndWait(() -> panel.establecerConfiguracion(config));
+        flushEdt();
+
+        assertNotNull(antigua, "assertNotNull failed at PanelTareasAccionesTest.java:233");
+        assertNotNull(reciente, "assertNotNull failed at PanelTareasAccionesTest.java:234");
+        assertEquals(100, modelo.obtenerNumeroTareas(), "assertEquals failed at PanelTareasAccionesTest.java:235");
+        assertNull(gestor.obtenerTarea(antigua.obtenerId()), "assertNull failed at PanelTareasAccionesTest.java:236");
+        assertNotNull(gestor.obtenerTarea(reciente.obtenerId()), "assertNotNull failed at PanelTareasAccionesTest.java:237");
     }
 
     private JButton obtenerBotonPrincipal() throws Exception {

@@ -44,6 +44,9 @@ public class GestorTareas {
         this.manejadorPausa = null;
         this.manejadorReanudar = null;
         this.maxTareasFinalizadasRetenidas = Math.max(1, maxTareasFinalizadasRetenidas);
+        if (this.modeloTabla != null) {
+            this.modeloTabla.establecerManejadorPurgado(this::eliminarTareasPurgadasDelMapa);
+        }
 
         this.monitorVerificacion = crearMonitorVerificacion();
         this.monitorVerificacion.scheduleAtFixedRate(
@@ -62,8 +65,7 @@ public class GestorTareas {
         candado.lock();
         try {
             tareas.put(id, tarea);
-            List<String> idsPurgadas = modeloTabla.agregarTareaYObtenerIdsPurgadas(tarea);
-            sincronizarTareasConPurgadoModelo(idsPurgadas, id);
+            modeloTabla.agregarTarea(tarea);
             registrar("Tarea creada: " + tipo + " - " + url);
         } finally {
             candado.unlock();
@@ -494,15 +496,20 @@ public class GestorTareas {
         });
     }
 
-    private void sincronizarTareasConPurgadoModelo(List<String> idsPurgadas, String idActual) {
+    private void eliminarTareasPurgadasDelMapa(List<String> idsPurgadas) {
         if (Normalizador.esVacia(idsPurgadas)) {
             return;
         }
-        for (String idPurgado : idsPurgadas) {
-            if (Normalizador.esVacio(idPurgado) || idPurgado.equals(idActual)) {
-                continue;
+        candado.lock();
+        try {
+            for (String idPurgado : idsPurgadas) {
+                if (Normalizador.esVacio(idPurgado)) {
+                    continue;
+                }
+                tareas.remove(idPurgado);
             }
-            tareas.remove(idPurgado);
+        } finally {
+            candado.unlock();
         }
     }
 

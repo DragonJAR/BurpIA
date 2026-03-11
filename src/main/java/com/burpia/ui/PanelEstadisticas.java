@@ -59,7 +59,7 @@ public class PanelEstadisticas extends JPanel {
         if (panelHallazgos != null) {
             ModeloTablaHallazgos modelo = panelHallazgos.obtenerModelo();
             if (modelo != null) {
-                modelo.agregarEscucha(() -> actualizar(true));
+                modelo.agregarEscucha(this::actualizarForzado);
             }
         }
 
@@ -283,6 +283,10 @@ public class PanelEstadisticas extends JPanel {
 
     public void actualizar() {
         actualizar(false);
+    }
+
+    public void actualizarForzado() {
+        actualizar(true);
     }
 
     private void actualizar(boolean forzar) {

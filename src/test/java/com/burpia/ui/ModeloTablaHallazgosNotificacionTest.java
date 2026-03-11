@@ -352,6 +352,40 @@ class ModeloTablaHallazgosNotificacionTest {
     }
 
     @Test
+    @DisplayName("Marcar como ignorado notifica una vez y evita duplicados")
+    void marcarComoIgnoradoNotificaUnaVez() throws Exception {
+        modelo.agregarHallazgo(crearHallazgoPrueba());
+        SwingUtilities.invokeAndWait(() -> {});
+
+        AtomicInteger contador = new AtomicInteger(0);
+        modelo.agregarEscucha(() -> contador.incrementAndGet());
+
+        modelo.marcarComoIgnorado(0);
+        SwingUtilities.invokeAndWait(() -> {});
+        assertEquals(1, contador.get(), "Ignorar un hallazgo debe notificar una vez");
+
+        modelo.marcarComoIgnorado(0);
+        SwingUtilities.invokeAndWait(() -> {});
+        assertEquals(1, contador.get(), "Ignorar dos veces la misma fila no debe duplicar la notificación");
+    }
+
+    @Test
+    @DisplayName("Cambiar límite notifica aunque no se recorten filas")
+    void cambiarLimiteNotificaAunqueNoRecorteFilas() throws Exception {
+        modelo.agregarHallazgo(crearHallazgoPrueba());
+        SwingUtilities.invokeAndWait(() -> {});
+
+        AtomicInteger contador = new AtomicInteger(0);
+        modelo.agregarEscucha(() -> contador.incrementAndGet());
+
+        modelo.establecerLimiteFilas(25);
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(1, contador.get(), "Cambiar el límite debe notificar para refrescar vistas dependientes");
+        assertEquals(25, modelo.obtenerLimiteFilas(), "El nuevo límite debe quedar aplicado");
+    }
+
+    @Test
     @DisplayName("Notificación con múltiples operaciones secuenciales")
     void notificacionConMultiplesOperacionesSecuenciales() throws Exception {
         AtomicInteger contador = new AtomicInteger(0);
