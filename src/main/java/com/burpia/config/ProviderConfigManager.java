@@ -606,11 +606,11 @@ public final class ProviderConfigManager {
         if (!habilitado) {
             lblEstadoMultiProveedor.setText(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_DESHABILITADO());
         } else if (cantidad == 0) {
-            lblEstadoMultiProveedor.setText("⚠️ Multi-proveedor habilitado pero sin proveedores seleccionados");
+            lblEstadoMultiProveedor.setText(I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_SIN_PROVEEDORES());
         } else if (cantidad == 1) {
-            lblEstadoMultiProveedor.setText("⚠️ Se necesitan al menos 2 proveedores");
+            lblEstadoMultiProveedor.setText(I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_MENOS_DOS());
         } else {
-            lblEstadoMultiProveedor.setText("✅ Multi-proveedor habilitado (" + cantidad + " proveedores)");
+            lblEstadoMultiProveedor.setText(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_HABILITADO(String.valueOf(cantidad)));
         }
     }
 

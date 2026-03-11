@@ -15,9 +15,10 @@ import com.pty4j.PtyProcessBuilder;
 
 import javax.swing.*;
 import java.awt.*;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
@@ -213,7 +215,16 @@ public class PanelAgente extends JPanel {
         ejecutarEnInyectorPty(() -> escribirComandoCrudoSeguro(comando, sesionObjetivo));
     }
 
+    private static final long SESION_IGNORAR_VALIDACION = -1L;
+
     private boolean escribirComandoCrudoSeguro(String comando) {
+        return escribirComandoCrudoSeguro(comando, SESION_IGNORAR_VALIDACION);
+    }
+
+    private boolean escribirComandoCrudoSeguro(String comando, long sesionObjetivo) {
+        if (!esSesionVigenteONIgnorada(sesionObjetivo)) {
+            return false;
+        }
         try {
             if (escribirTextoViaTtyConnector(comando)) {
                 return true;
@@ -223,13 +234,6 @@ public class PanelAgente extends JPanel {
             gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error escribiendo comando crudo PTY"));
             return false;
         }
-    }
-
-    private boolean escribirComandoCrudoSeguro(String comando, long sesionObjetivo) {
-        if (!esSesionVigente(sesionObjetivo)) {
-            return false;
-        }
-        return escribirComandoCrudoSeguro(comando);
     }
 
     private boolean escribirTextoViaTtyConnector(String texto) {
@@ -261,6 +265,13 @@ public class PanelAgente extends JPanel {
     }
 
     private boolean escribirDirectoAlPTY(byte[] bytes) {
+        return escribirDirectoAlPTY(bytes, SESION_IGNORAR_VALIDACION);
+    }
+
+    private boolean escribirDirectoAlPTY(byte[] bytes, long sesionObjetivo) {
+        if (!esSesionVigenteONIgnorada(sesionObjetivo)) {
+            return false;
+        }
         if (bytes == null || bytes.length == 0 || process == null || !process.isAlive()) {
             return false;
         }
@@ -274,13 +285,6 @@ public class PanelAgente extends JPanel {
             gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Error escritura raw PTY"));
             return false;
         }
-    }
-
-    private boolean escribirDirectoAlPTYSeguro(byte[] bytes, long sesionObjetivo) {
-        if (!esSesionVigente(sesionObjetivo)) {
-            return false;
-        }
-        return escribirDirectoAlPTY(bytes);
     }
 
     private boolean escribirTextoDirectoPTY(String texto) {
@@ -679,46 +683,50 @@ public class PanelAgente extends JPanel {
         );
     }
 
+    /**
+     * DRY: Helper para ejecutar acción en botón solo si no es null.
+     */
+    private static void siBotonPresente(JButton boton, Consumer<JButton> accion) {
+        if (boton != null) {
+            accion.accept(boton);
+        }
+    }
+
+    /**
+     * DRY: Lista de todos los botones de control del agente.
+     */
+    private List<JButton> obtenerBotonesControl() {
+        return Arrays.asList(btnReiniciar, btnCtrlC, btnInyectarPayload, btnCambiarAgente, btnAyudaAgente);
+    }
+
     private void actualizarEstadoBotones() {
-        if (btnReiniciar != null) {
-            btnReiniciar.setEnabled(true);
-        }
-        if (btnCtrlC != null) {
-            btnCtrlC.setEnabled(true);
-        }
-        if (btnInyectarPayload != null) {
-            btnInyectarPayload.setEnabled(true);
-        }
-        if (btnCambiarAgente != null) {
-            btnCambiarAgente.setEnabled(true);
-        }
-        if (btnAyudaAgente != null) {
-            btnAyudaAgente.setEnabled(true);
+        for (JButton boton : obtenerBotonesControl()) {
+            siBotonPresente(boton, b -> b.setEnabled(true));
         }
         refrescarTextosBotones();
     }
 
     private void refrescarTextosBotones() {
-        if (btnReiniciar != null) {
-            btnReiniciar.setText("🔄 " + I18nUI.Consola.BOTON_REINICIAR());
-            btnReiniciar.setToolTipText(I18nUI.Tooltips.Agente.REINICIAR());
-        }
-        if (btnCtrlC != null) {
-            btnCtrlC.setText("⚡ " + I18nUI.Consola.BOTON_CTRL_C());
-            btnCtrlC.setToolTipText(I18nUI.Tooltips.Agente.CTRL_C());
-        }
-        if (btnInyectarPayload != null) {
-            btnInyectarPayload.setText("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD());
-            btnInyectarPayload.setToolTipText(I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD());
-        }
-        if (btnCambiarAgente != null) {
-            btnCambiarAgente.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
-            btnCambiarAgente.setToolTipText(I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO());
-        }
-        if (btnAyudaAgente != null) {
-            btnAyudaAgente.setText("❓");
-            btnAyudaAgente.setToolTipText(resolverTooltipAyudaAgente());
-        }
+        siBotonPresente(btnReiniciar, b -> {
+            b.setText("🔄 " + I18nUI.Consola.BOTON_REINICIAR());
+            b.setToolTipText(I18nUI.Tooltips.Agente.REINICIAR());
+        });
+        siBotonPresente(btnCtrlC, b -> {
+            b.setText("⚡ " + I18nUI.Consola.BOTON_CTRL_C());
+            b.setToolTipText(I18nUI.Tooltips.Agente.CTRL_C());
+        });
+        siBotonPresente(btnInyectarPayload, b -> {
+            b.setText("💉 " + I18nUI.Consola.BOTON_INYECTAR_PAYLOAD());
+            b.setToolTipText(I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD());
+        });
+        siBotonPresente(btnCambiarAgente, b -> {
+            b.setText("🔀 " + I18nUI.Consola.BOTON_CAMBIAR_AGENTE_GENERICO());
+            b.setToolTipText(I18nUI.Tooltips.Agente.CAMBIAR_AGENTE_RAPIDO());
+        });
+        siBotonPresente(btnAyudaAgente, b -> {
+            b.setText("❓");
+            b.setToolTipText(resolverTooltipAyudaAgente());
+        });
     }
 
     private JPanel crearPanelResultados() {
@@ -749,6 +757,14 @@ public class PanelAgente extends JPanel {
         return sesionObjetivo > 0 && sesionObjetivo == sesionActivaId;
     }
 
+    /**
+     * DRY: Verifica sesión vigente o si se debe ignorar la validación.
+     * Útil para métodos que tienen versiones con y sin validación de sesión.
+     */
+    private boolean esSesionVigenteONIgnorada(long sesionObjetivo) {
+        return sesionObjetivo == SESION_IGNORAR_VALIDACION || esSesionVigente(sesionObjetivo);
+    }
+
     private void recrearTerminalWidget() {
         cerrarTerminalWidget();
         terminalWidget = crearTerminalWidget();
@@ -758,20 +774,23 @@ public class PanelAgente extends JPanel {
         panelResultadosWrapper.repaint();
     }
 
+    /**
+     * DRY: Ejecuta una operación que puede lanzar excepciones, manejándolas silenciosamente.
+     */
+    private void ejecutarSilencioso(Runnable operacion, String mensajeError) {
+        try {
+            operacion.run();
+        } catch (Exception e) {
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr(mensajeError));
+        }
+    }
+
     private void cerrarTerminalWidget() {
         if (terminalWidget == null) {
             return;
         }
-        try {
-            terminalWidget.stop();
-        } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error deteniendo terminalWidget"));
-        }
-        try {
-            terminalWidget.close();
-        } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error cerrando terminalWidget"));
-        }
+        ejecutarSilencioso(() -> terminalWidget.stop(), "Error deteniendo terminalWidget");
+        ejecutarSilencioso(() -> terminalWidget.close(), "Error cerrando terminalWidget");
     }
 
     private void cerrarSesionActiva() {
@@ -779,11 +798,7 @@ public class PanelAgente extends JPanel {
         TtyConnector connectorActual = ttyConnector;
         ttyConnector = null;
         if (connectorActual != null) {
-            try {
-                connectorActual.close();
-            } catch (Exception e) {
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error cerrando ttyConnector"));
-            }
+            ejecutarSilencioso(connectorActual::close, "Error cerrando ttyConnector");
         }
 
         PtyProcess procesoActual = process;
@@ -961,7 +976,7 @@ public class PanelAgente extends JPanel {
 
         String rutaShell = OSUtils.expandirRuta(shell);
         if (!OSUtils.existeBinario(rutaShell)) {
-            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Shell no encontrado: " + rutaShell + ", usando fallback a " + SHELL_POR_DEFECTO));
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Shell no encontrado") + ": " + I18nLogs.trTecnico(rutaShell) + ", " + I18nLogs.tr("usando fallback a") + " " + I18nLogs.trTecnico(SHELL_POR_DEFECTO));
             shell = SHELL_POR_DEFECTO;
         }
 
@@ -973,7 +988,7 @@ public class PanelAgente extends JPanel {
         String prompt = obtenerPromptPreflightFijo();
         int usuarioDelay = config.obtenerAgenteDelay();
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
-        String comandoArranque = resolverComandoArranque(tipoActual);
+        String comandoArranque = resolverRutaBinario(tipoActual);
 
         gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Iniciando secuencia de inyeccion automatica de agente..."));
 
@@ -1042,10 +1057,6 @@ public class PanelAgente extends JPanel {
         return false;
     }
 
-    private String resolverComandoArranque(AgenteTipo tipoActual) {
-        return resolverRutaBinario(tipoActual);
-    }
-
     private String resolverRutaBinario(AgenteTipo tipo) {
         String binarioConfig = config.obtenerRutaBinarioAgente(tipo != null ? tipo.name() : config.obtenerTipoAgente());
         
@@ -1098,7 +1109,7 @@ public class PanelAgente extends JPanel {
             }
             OSUtils.cerrarVentanaAjustes();
             if (delayMs > 0) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando el delay establecido por el usuario (" + delayMs + " ms) antes de la inyeccion..."));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando el delay establecido por el usuario") + " (" + delayMs + " ms) " + I18nLogs.tr("antes de la inyeccion") + "...");
                 new Timer(delayMs, ev -> {
                     ((Timer) ev.getSource()).stop();
                     if (esSesionVigente(sesionObjetivo)) {
@@ -1162,7 +1173,7 @@ public class PanelAgente extends JPanel {
                 return;
             }
             if (OSUtils.esMac() && "\r".equals(secuencia.payload()) && i == 0) {
-                if (!escribirDirectoAlPTYSeguro(new byte[]{13}, sesionObjetivo)) {
+                if (!escribirDirectoAlPTY(new byte[]{13}, sesionObjetivo)) {
                     if (!escribirComandoCrudoSeguro(secuencia.payload(), sesionObjetivo)) {
                         envioExitoso = false;
                         break;
@@ -1246,22 +1257,22 @@ public class PanelAgente extends JPanel {
             .toLowerCase(java.util.Locale.ROOT);
     }
 
+    private static final Map<Class<? extends Exception>, String> MENSAJES_ERROR_PTY = Map.of(
+        java.io.IOException.class, "Error de E/S iniciando proceso PTY",
+        SecurityException.class, "Error de seguridad iniciando proceso PTY",
+        InterruptedException.class, "Operación interrumpida al iniciar PTY"
+    );
+
     private void manejarErrorPty(Exception e) {
-        if (e instanceof java.io.IOException) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error de E/S iniciando proceso PTY"), e);
-        } else if (e instanceof SecurityException) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error de seguridad iniciando proceso PTY"), e);
-        } else if (e instanceof InterruptedException) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Operación interrumpida al iniciar PTY"), e);
+        String mensajeLog = MENSAJES_ERROR_PTY.getOrDefault(e.getClass(), "Error inesperado iniciando Consola PTY");
+        gestorLogging.error(ORIGEN_LOG, I18nLogs.tr(mensajeLog), e);
+
+        if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
-        } else {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error inesperado iniciando Consola PTY"), e);
         }
 
         String mensaje = e.getMessage() != null ? e.getMessage() : I18nLogs.tr("Error desconocido PTY");
-        ejecutarEnEdt(() -> {
-            UIUtils.mostrarError(PanelAgente.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje);
-        });
+        ejecutarEnEdt(() -> UIUtils.mostrarError(PanelAgente.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje));
     }
 
     private void solicitarFocoPestaniaAgente() {

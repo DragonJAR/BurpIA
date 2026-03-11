@@ -1,6 +1,7 @@
 package com.burpia.ui;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
+import com.burpia.util.ContadorEstadosTareas;
 import com.burpia.util.Normalizador;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -381,6 +382,24 @@ public class ModeloTablaTareas extends DefaultTableModel {
         }
         if (!idsPurgadas.isEmpty()) {
             programarSincronizacionTabla();
+        }
+    }
+
+    /**
+     * Cuenta las tareas por estado usando el contador centralizado.
+     * <p>
+     * Este método usa {@link ContadorEstadosTareas} para evitar duplicar
+     * la lógica de conteo en múltiples lugares.
+     * </p>
+     *
+     * @return ContadorEstadosTareas con los conteos de cada estado
+     */
+    public ContadorEstadosTareas contarEstados() {
+        lock.lock();
+        try {
+            return ContadorEstadosTareas.contar(datos);
+        } finally {
+            lock.unlock();
         }
     }
 }

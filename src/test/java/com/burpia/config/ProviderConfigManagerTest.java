@@ -218,7 +218,7 @@ class ProviderConfigManagerTest {
         });
 
         verify(lblEstadoMultiProveedor).setText(
-                "⚠️ Multi-proveedor habilitado pero sin proveedores seleccionados");
+                I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_SIN_PROVEEDORES());
     }
 
     @Test
@@ -233,7 +233,7 @@ class ProviderConfigManagerTest {
             method.invoke(providerConfigManager);
         });
 
-        verify(lblEstadoMultiProveedor).setText("⚠️ Se necesitan al menos 2 proveedores");
+        verify(lblEstadoMultiProveedor).setText(I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_MENOS_DOS());
     }
 
     @Test
@@ -250,7 +250,7 @@ class ProviderConfigManagerTest {
             method.invoke(providerConfigManager);
         });
 
-        verify(lblEstadoMultiProveedor).setText("✅ Multi-proveedor habilitado (3 proveedores)");
+        verify(lblEstadoMultiProveedor).setText(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_HABILITADO("3"));
     }
 
     @Test

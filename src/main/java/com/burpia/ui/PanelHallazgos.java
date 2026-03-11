@@ -145,7 +145,7 @@ public class PanelHallazgos extends JPanel {
         panelTodosControles.add(botonLimpiarFiltro);
 
         // CONFIABILIDAD: Separador visual entre filtrado y exportación
-        panelTodosControles.add(new JLabel("  "));
+        panelTodosControles.add(Box.createHorizontalStrut(20));
 
         // EFICIENCIA: EXPORTACIÓN agrupada - después de filtrar, usuario exporta
         botonExportarCSV = new JButton(I18nUI.Hallazgos.BOTON_EXPORTAR_CSV());
@@ -159,7 +159,7 @@ public class PanelHallazgos extends JPanel {
         panelTodosControles.add(botonExportarJSON);
 
         // CONFIABILIDAD: Separador visual antes de acción destructiva
-        panelTodosControles.add(new JLabel("  "));
+        panelTodosControles.add(Box.createHorizontalStrut(20));
 
         // CONFIABILIDAD: Acción destructiva AISLADA al final
         botonLimpiarTodo = new JButton(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
@@ -254,7 +254,7 @@ public class PanelHallazgos extends JPanel {
 
         if (!textoBusqueda.equals(textoBusquedaCacheado)) {
             textoBusquedaCacheado = textoBusqueda;
-            textoBusquedaQuotado = textoBusqueda.isEmpty() ? "" : java.util.regex.Pattern.quote(textoBusqueda);
+            textoBusquedaQuotado = Normalizador.esVacio(textoBusqueda) ? "" : java.util.regex.Pattern.quote(textoBusqueda);
         }
 
         if (severidadSeleccionada != null && !severidadSeleccionada.equals(severidadCacheada)) {
@@ -272,7 +272,7 @@ public class PanelHallazgos extends JPanel {
             filtros.add(RowFilter.regexFilter("^" + severidadQuotada + "$", 3));
         }
 
-        if (!filtros.isEmpty()) {
+        if (Normalizador.noEsVacia(filtros)) {
             sorter.setRowFilter(RowFilter.andFilter(filtros));
         } else {
             sorter.setRowFilter(null);
@@ -487,7 +487,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private String escapeCsv(String texto) {
-        if (texto == null) {
+        if (Normalizador.esVacio(texto)) {
             return "";
         }
         boolean requiereComillas = texto.contains(",")
@@ -501,7 +501,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private String escapeJson(String texto) {
-        if (texto == null) {
+        if (Normalizador.esVacio(texto)) {
             return "";
         }
         return texto.replace("\\", "\\\\")
@@ -859,7 +859,7 @@ public class PanelHallazgos extends JPanel {
                                     AccionSobreSolicitud accion) {
         ResultadoCapturaAccion captura = capturarEntradasAccion(filas);
         List<EntradaAccion> entradas = captura.entradas;
-        if (entradas.isEmpty()) {
+        if (Normalizador.esVacia(entradas)) {
             if (captura.totalIgnorados > 0) {
                 mostrarInfoEnviarA(I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ACCION_SOLO_IGNORADOS(captura.totalIgnorados));
             }

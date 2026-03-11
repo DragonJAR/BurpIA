@@ -191,6 +191,7 @@ public class GestorMultiProveedor {
         String respuestaOriginal = respuestaJson != null ? respuestaJson : "";
 
         try {
+            // Intentar reparar JSON malformado primero
             String jsonReparado = ReparadorJson.repararJson(respuestaOriginal);
             String respuestaProcesada = respuestaOriginal;
             if (jsonReparado != null && !jsonReparado.equals(respuestaOriginal)) {
@@ -203,6 +204,7 @@ public class GestorMultiProveedor {
                 contenido = respuestaProcesada;
             }
 
+            // Usar GsonProvider para parseo consistente
             JsonElement raiz = gson.fromJson(contenido, JsonElement.class);
             List<JsonObject> objetosHallazgos = JsonParserUtil.extraerObjetosHallazgos(raiz, ConstantesJsonAI.CAMPOS_HALLAZGOS);
 
@@ -216,9 +218,14 @@ public class GestorMultiProveedor {
 
                     agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
                 }
+            } else {
+                // Fallback: usar ParserRespuestasAI para extracción extrema
+                hallazgos.addAll(parsearRespuestaExtrema(contenido, respuestaOriginal));
             }
         } catch (Exception e) {
             registrarError("Error al parsear respuesta: " + e.getMessage());
+            // Último recurso: usar extracción extrema
+            hallazgos.addAll(parsearRespuestaExtrema(respuestaOriginal, respuestaOriginal));
         }
 
         return new ResultadoAnalisisMultiple(
@@ -226,6 +233,121 @@ public class GestorMultiProveedor {
                 hallazgos,
                 solicitud.obtenerSolicitudHttp(),
                 Collections.emptyList());
+    }
+
+    /**
+     * Extracción extrema usando ParserRespuestasAI cuando todo lo demás falla.
+     * Aplica las estrategias de fallback ya existentes en ParserRespuestasAI.
+     */
+    private List<Hallazgo> parsearRespuestaExtrema(String contenido, String respuestaOriginal) {
+        List<Hallazgo> hallazgos = new ArrayList<>();
+        if (Normalizador.esVacio(contenido)) {
+            return hallazgos;
+        }
+
+        // Intentar extracción de array JSON inteligente (método existente en ParserRespuestasAI)
+        try {
+            com.google.gson.JsonArray arrayHallazgos = ParserRespuestasAI.extraerArrayJsonInteligente(contenido, gson);
+            if (arrayHallazgos != null && arrayHallazgos.size() > 0) {
+                for (com.google.gson.JsonElement item : arrayHallazgos) {
+                    if (item.isJsonObject()) {
+                        JsonObject obj = item.getAsJsonObject();
+                        String titulo = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO);
+                        String descripcion = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION);
+                        String severidad = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD);
+                        String confianza = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA);
+                        String evidencia = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA);
+                        agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
+                    }
+                }
+                return hallazgos;
+            }
+        } catch (Exception e) {
+            // Continuar con siguiente fallback
+        }
+
+        // Intentar extracción por delimitadores (método existente en ParserRespuestasAI)
+        try {
+            com.google.gson.JsonArray arrayDelimitadores = ParserRespuestasAI.extraerHallazgosPorDelimitadores(contenido, gson);
+            if (arrayDelimitadores != null && arrayDelimitadores.size() > 0) {
+                for (com.google.gson.JsonElement item : arrayDelimitadores) {
+                    if (item.isJsonObject()) {
+                        JsonObject obj = item.getAsJsonObject();
+                        String titulo = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO);
+                        String descripcion = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION);
+                        String severidad = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD);
+                        String confianza = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA);
+                        String evidencia = JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA);
+                        agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia);
+                    }
+                }
+                return hallazgos;
+            }
+        } catch (Exception e) {
+            // Continuar con texto plano
+        }
+
+        // Último recurso: extracción de texto plano usando ParserRespuestasAI
+        return extraerHallazgosTextoPlano(contenido);
+    }
+
+    /**
+     * Extracción de hallazgos de texto plano cuando JSON falla completamente.
+     */
+    private List<Hallazgo> extraerHallazgosTextoPlano(String contenido) {
+        List<Hallazgo> hallazgos = new ArrayList<>();
+        if (Normalizador.esVacio(contenido)) {
+            return hallazgos;
+        }
+
+        // Buscar patrones de campos conocidos en texto plano
+        String[] patronesTitulo = {"titulo:", "title:", "vulnerabilidad:", "vulnerability:"};
+        String[] patronesDescripcion = {"descripcion:", "description:", "detalle:", "details:", "hallazgo:", "finding:"};
+
+        // Intentar extraer al menos un título si existe
+        String titulo = extraerPrimerCoincidencia(contenido, patronesTitulo);
+        String descripcion = extraerPrimerCoincidencia(contenido, patronesDescripcion);
+
+        if (Normalizador.noEsVacio(titulo)) {
+            hallazgos.add(new Hallazgo(
+                    solicitud.obtenerUrl(),
+                    titulo,
+                    Normalizador.noEsVacio(descripcion) ? descripcion : "Hallazgo detectado en análisis",
+                    Hallazgo.SEVERIDAD_INFO,
+                    Hallazgo.CONFIANZA_BAJA,
+                    solicitud.obtenerSolicitudHttp()
+            ));
+        }
+
+        return hallazgos;
+    }
+
+    /**
+     * Extrae el valor después del primer patrón encontrado.
+     */
+    private String extraerPrimerCoincidencia(String texto, String[] patrones) {
+        if (Normalizador.esVacio(texto) || patrones == null) {
+            return "";
+        }
+        String textoLower = texto.toLowerCase();
+        for (String patron : patrones) {
+            int indice = textoLower.indexOf(patron);
+            if (indice >= 0) {
+                int inicio = indice + patron.length();
+                // Buscar hasta el final de línea o próximo campo
+                int fin = texto.indexOf('\n', inicio);
+                if (fin < 0) {
+                    fin = texto.length();
+                }
+                String valor = texto.substring(inicio, fin).trim();
+                // Limpiar comillas si existen
+                if (valor.startsWith("\"") && valor.endsWith("\"")) {
+                    valor = valor.substring(1, valor.length() - 1);
+                }
+                return Normalizador.normalizarTexto(valor);
+            }
+        }
+        return "";
     }
 
     private void agregarHallazgoNormalizado(List<Hallazgo> destino,

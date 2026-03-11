@@ -188,12 +188,17 @@ public class FlowAnalysisManager {
                 }
             };
             
+            // NOTA: Usamos un limitador dummy (siempre disponible) porque FlowAnalysisManager
+            // ya adquirió el permiso del limitador real. Si pasáramos el mismo limitador,
+            // AnalizadorAI intentaría adquirirlo nuevamente causando deadlock o permisos negativos.
+            LimitadorTasa limitadorDummy = new LimitadorTasa(Integer.MAX_VALUE);
+            
             AnalizadorAI analizador = new AnalizadorAI(
                 solicitudFlujo,
                 config,
                 new PrintWriter(System.out, true),
                 new PrintWriter(System.err, true),
-                limitador,
+                limitadorDummy,
                 analizadorCallback,
                 gestorConsola,
                 estaCancelado,

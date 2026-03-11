@@ -1,7 +1,6 @@
 package com.burpia.util;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +16,7 @@ import javax.net.ssl.X509TrustManager;
 
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ProveedorAI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.util.GsonProvider;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -51,9 +51,8 @@ public class ConnectionTester {
             t.setDaemon(true);
             return t;
         });
-        this.gestorLogging = GestorLoggingUnificado.crearMinimal(
-            new PrintWriter(System.out), 
-            new PrintWriter(System.err));
+        // Usar gestorLogging sin PrintWriter - usa Logger interno
+        this.gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
         this.gson = GsonProvider.get();
     }
     
@@ -63,7 +62,7 @@ public class ConnectionTester {
     public void probarConexionProveedor(ConfiguracionAPI config, CallbackConexion callback) {
         if (config == null || callback == null) {
             if (callback != null) {
-                callback.alError("Configuration or callback cannot be null");
+                callback.alError(I18nUI.Conexion.ERROR_CONFIG_NULL());
             }
             return;
         }
@@ -73,7 +72,7 @@ public class ConnectionTester {
         String urlBase = config.obtenerUrlBaseParaProveedor(proveedor);
         
         if (Normalizador.esVacio(proveedor) || Normalizador.esVacio(apiKey) || Normalizador.esVacio(urlBase)) {
-            callback.alError("Missing provider configuration");
+            callback.alError(I18nUI.Conexion.ERROR_MISSING_PROVIDER_CONFIG());
             return;
         }
         
@@ -96,9 +95,10 @@ public class ConnectionTester {
         .whenComplete((resultado, throwable) -> {
             if (throwable != null) {
                 if (throwable instanceof TimeoutException) {
-                    callback.alError("Connection timeout after " + DEFAULT_TIMEOUT_SECONDS + " seconds");
+                    callback.alError(I18nUI.Conexion.ERROR_CONNECTION_TIMEOUT(DEFAULT_TIMEOUT_SECONDS));
                 } else {
-                    callback.alError("Connection error: " + throwable.getMessage());
+                    String mensaje = throwable.getMessage() != null ? throwable.getMessage() : "Unknown error";
+                    callback.alError(I18nUI.Conexion.ERROR_CONNECTION_FAILED(mensaje));
                 }
             } else {
                 if (resultado.startsWith("Connection successful")) {
@@ -116,7 +116,7 @@ public class ConnectionTester {
     public void obtenerModelosDisponibles(ConfiguracionAPI config, CallbackModelos callback) {
         if (config == null || callback == null) {
             if (callback != null) {
-                callback.alError("Configuration or callback cannot be null");
+                callback.alError(I18nUI.Conexion.ERROR_CONFIG_NULL());
             }
             return;
         }
@@ -126,7 +126,7 @@ public class ConnectionTester {
         String urlBase = config.obtenerUrlBaseParaProveedor(proveedor);
         
         if (Normalizador.esVacio(proveedor) || Normalizador.esVacio(apiKey) || Normalizador.esVacio(urlBase)) {
-            callback.alError("Missing provider configuration");
+            callback.alError(I18nUI.Conexion.ERROR_MISSING_PROVIDER_CONFIG());
             return;
         }
         
@@ -140,9 +140,12 @@ public class ConnectionTester {
         .whenComplete((modelos, throwable) -> {
             if (throwable != null) {
                 if (throwable instanceof TimeoutException) {
-                    callback.alError("Request timeout after " + DEFAULT_TIMEOUT_SECONDS + " seconds");
+                    callback.alError(I18nUI.Conexion.ERROR_REQUEST_TIMEOUT(DEFAULT_TIMEOUT_SECONDS));
                 } else {
-                    callback.alError("Failed to fetch models: " + throwable.getCause().getMessage());
+                    String mensaje = throwable.getCause() != null && throwable.getCause().getMessage() != null 
+                            ? throwable.getCause().getMessage() 
+                            : "Unknown error";
+                    callback.alError(I18nUI.Conexion.ERROR_MODELS_FAILED(mensaje));
                 }
             } else {
                 callback.alExito(modelos);
@@ -156,7 +159,7 @@ public class ConnectionTester {
     public void verificarActualizaciones(String versionActual, CallbackActualizacion callback) {
         if (Normalizador.esVacio(versionActual) || callback == null) {
             if (callback != null) {
-                callback.alError("Version or callback cannot be null");
+                callback.alError(I18nUI.Conexion.ERROR_VERSION_NULL());
             }
             return;
         }
@@ -209,9 +212,12 @@ public class ConnectionTester {
         .whenComplete((info, throwable) -> {
             if (throwable != null) {
                 if (throwable instanceof TimeoutException) {
-                    callback.alError("Request timeout after " + DEFAULT_TIMEOUT_SECONDS + " seconds");
+                    callback.alError(I18nUI.Conexion.ERROR_UPDATE_TIMEOUT(DEFAULT_TIMEOUT_SECONDS));
                 } else {
-                    callback.alError("Failed to check updates: " + throwable.getCause().getMessage());
+                    String mensaje = throwable.getCause() != null && throwable.getCause().getMessage() != null 
+                            ? throwable.getCause().getMessage() 
+                            : "Unknown error";
+                    callback.alError(I18nUI.Conexion.ERROR_UPDATE_FAILED(mensaje));
                 }
             } else {
                 callback.alExito(info);
@@ -225,7 +231,7 @@ public class ConnectionTester {
     public void ejecutarOperacionRed(Request request, int timeoutSegundos, CallbackRed callback) {
         if (request == null || callback == null) {
             if (callback != null) {
-                callback.alError("Request or callback cannot be null");
+                callback.alError(I18nUI.Conexion.ERROR_REQUEST_OR_CALLBACK_NULL());
             }
             return;
         }
@@ -249,9 +255,12 @@ public class ConnectionTester {
         .whenComplete((respuesta, throwable) -> {
             if (throwable != null) {
                 if (throwable instanceof TimeoutException) {
-                    callback.alError("Operation timeout after " + timeoutSegundos + " seconds");
+                    callback.alError(I18nUI.Conexion.ERROR_OPERATION_TIMEOUT(timeoutSegundos));
                 } else {
-                    callback.alError("Network error: " + throwable.getCause().getMessage());
+                    String mensaje = throwable.getCause() != null && throwable.getCause().getMessage() != null 
+                            ? throwable.getCause().getMessage() 
+                            : "Unknown error";
+                    callback.alError(I18nUI.Conexion.ERROR_NETWORK_ERROR(mensaje));
                 }
             } else {
                 callback.alExito(respuesta);
@@ -328,10 +337,10 @@ private List<String> parsearModelosDesdeRespuesta(String proveedor, String respo
                     }
                 }
             } else {
-                gestorLogging.info("ConnectionTester", "Unsupported provider for model listing: " + proveedor);
+                gestorLogging.info("ConnectionTester", I18nUI.Conexion.LOG_UNSUPPORTED_PROVIDER(proveedor));
             }
         } catch (Exception e) {
-            gestorLogging.error("ConnectionTester", "Error parsing models response", e);
+            gestorLogging.error("ConnectionTester", I18nUI.Conexion.LOG_ERROR_PARSING_MODELS(), e);
         }
         
         return modelos;
@@ -390,8 +399,8 @@ private List<String> parsearModelosDesdeRespuesta(String proveedor, String respo
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (Exception e) {
-            gestorLogging.error("ConnectionTester", 
-                "SSL inseguro no se pudo configurar, se usará configuración por defecto: " + e.getMessage());
+            String mensaje = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            gestorLogging.error("ConnectionTester", I18nUI.Conexion.LOG_SSL_INSECURE_ERROR(mensaje));
         }
     }
     

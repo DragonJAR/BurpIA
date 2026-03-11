@@ -3,6 +3,7 @@ package com.burpia.ui;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
+import com.burpia.util.ContadorEstadosTareas;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.Normalizador;
 import javax.swing.*;
@@ -89,7 +90,7 @@ public class PanelTareas extends JPanel {
         etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
         panelTodosControles.add(etiquetaEstadisticas);
 
-        panelTodosControles.add(new JLabel("  "));
+        panelTodosControles.add(Box.createHorizontalStrut(20));
 
         botonPausarReanudar = new JButton(I18nUI.Tareas.BOTON_PAUSAR_TODO());
         botonPausarReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -124,10 +125,10 @@ public class PanelTareas extends JPanel {
         panelTablaWrapper.add(panelDesplazable, BorderLayout.CENTER);
 
         botonPausarReanudar.addActionListener(e -> {
-            EstadisticasTareas estadisticas = calcularEstadisticasTareas();
-            if (estadisticas.pausadas > 0) {
+            ContadorEstadosTareas estadisticas = modelo.contarEstados();
+            if (estadisticas.getPausadas() > 0) {
                 gestorTareas.reanudarTodasPausadas();
-            } else if (estadisticas.activasSinPausadas > 0) {
+            } else if (estadisticas.getActivasSinPausadas() > 0) {
                 gestorTareas.pausarTodasActivas();
             } else {
                 UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(),
@@ -137,8 +138,8 @@ public class PanelTareas extends JPanel {
         });
 
         botonCancelar.addActionListener(e -> {
-            EstadisticasTareas estadisticas = calcularEstadisticasTareas();
-            int activas = estadisticas.activas;
+            ContadorEstadosTareas estadisticas = modelo.contarEstados();
+            int activas = estadisticas.getActivas();
 
             if (activas == 0) {
                 UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
@@ -156,8 +157,8 @@ public class PanelTareas extends JPanel {
         });
 
         botonLimpiarCompletadas.addActionListener(e -> {
-            EstadisticasTareas estadisticas = calcularEstadisticasTareas();
-            int completadas = estadisticas.finalizadas;
+            ContadorEstadosTareas estadisticas = modelo.contarEstados();
+            int completadas = estadisticas.getFinalizadas();
 
             if (completadas == 0) {
                 UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
@@ -583,20 +584,21 @@ public class PanelTareas extends JPanel {
     }
 
     private void actualizarEstadisticas(boolean forzar) {
-        int versionActual = modelo.obtenerVersion();
-        if (!forzar && versionActual == ultimaVersionTareas) {
-            return;
-        }
-        ultimaVersionTareas = versionActual;
-        Runnable actualizarUi = () -> {
-            EstadisticasTareas estadisticas = calcularEstadisticasTareas();
+        ContadorEstadosTareas estadisticas = modelo != null ? modelo.contarEstados() : ContadorEstadosTareas.vacio();
+        etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
+                estadisticas.getActivas(),
+                estadisticas.getCompletadas(),
+                estadisticas.getErrores()));
+
+        actualizarBotonPausarReanudar(estadisticas.getPausadas());
+    }
 
             etiquetaEstadisticas.setText(I18nUI.Tareas.ESTADISTICAS(
-                    estadisticas.activas,
-                    estadisticas.completadas,
-                    estadisticas.errores));
+                    estadisticas.getActivas(),
+                    estadisticas.getCompletadas(),
+                    estadisticas.getErrores()));
 
-            actualizarBotonPausarReanudar(estadisticas.pausadas);
+            actualizarBotonPausarReanudar(estadisticas.getPausadas());
         };
         ejecutarEnEdt(actualizarUi);
     }
@@ -671,48 +673,6 @@ public class PanelTareas extends JPanel {
 
     public void destruir() {
         timerActualizacion.stop();
-    }
-
-    private EstadisticasTareas calcularEstadisticasTareas() {
-        int enCola = modelo.contarPorEstado(Tarea.ESTADO_EN_COLA);
-        int analizando = modelo.contarPorEstado(Tarea.ESTADO_ANALIZANDO);
-        int pausadas = modelo.contarPorEstado(Tarea.ESTADO_PAUSADO);
-        int completadas = modelo.contarPorEstado(Tarea.ESTADO_COMPLETADO);
-        int errores = modelo.contarPorEstado(Tarea.ESTADO_ERROR);
-        int canceladas = modelo.contarPorEstado(Tarea.ESTADO_CANCELADO);
-        int activasSinPausadas = enCola + analizando;
-        int activas = activasSinPausadas + pausadas;
-        int finalizadas = completadas + errores + canceladas;
-        return new EstadisticasTareas(
-                activas,
-                activasSinPausadas,
-                pausadas,
-                completadas,
-                errores,
-                finalizadas);
-    }
-
-    private static final class EstadisticasTareas {
-        private final int activas;
-        private final int activasSinPausadas;
-        private final int pausadas;
-        private final int completadas;
-        private final int errores;
-        private final int finalizadas;
-
-        private EstadisticasTareas(int activas,
-                int activasSinPausadas,
-                int pausadas,
-                int completadas,
-                int errores,
-                int finalizadas) {
-            this.activas = activas;
-            this.activasSinPausadas = activasSinPausadas;
-            this.pausadas = pausadas;
-            this.completadas = completadas;
-            this.errores = errores;
-            this.finalizadas = finalizadas;
-        }
     }
 
     public void establecerConfiguracion(ConfiguracionAPI config) {

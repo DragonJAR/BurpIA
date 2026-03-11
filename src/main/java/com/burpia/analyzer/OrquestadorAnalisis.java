@@ -102,7 +102,6 @@ public class OrquestadorAnalisis {
     public ResultadoAnalisisMultiple ejecutarAnalisisCompleto() throws IOException, InterruptedException {
         String nombreHilo = Thread.currentThread().getName();
         long tiempoInicio = System.currentTimeMillis();
-        boolean permisoAdquirido = false;
 
         if (solicitud == null) {
             String error = mensajeErrorSolicitudNoDisponible();
@@ -124,11 +123,8 @@ public class OrquestadorAnalisis {
                 throw new IOException(alertaConfiguracion);
             }
 
-            gestorLogging.verbose(ORIGEN_LOG, "[" + nombreHilo + "] Adquiriendo permiso del limitador (disponibles: " +
-                    limitador.permisosDisponibles() + ")");
-            limitador.adquirir();
-            permisoAdquirido = true;
-            gestorLogging.verbose(ORIGEN_LOG, "[" + nombreHilo + "] Permiso de limitador adquirido");
+            // NOTA: El limitador YA fue adquirido por el llamador (AnalizadorAI o FlowAnalysisManager)
+            // No adquirimos aquí para evitar doble adquisición que causa permisos negativos
 
             int retrasoSegundos = config.obtenerRetrasoSegundos();
             gestorLogging.verbose(ORIGEN_LOG, "[" + nombreHilo + "] Durmiendo por " + retrasoSegundos + " segundos antes de llamar a la API");
@@ -164,11 +160,8 @@ public class OrquestadorAnalisis {
             return resultadoMultiple;
 
         } finally {
-            if (permisoAdquirido) {
-                limitador.liberar();
-                gestorLogging.verbose(ORIGEN_LOG, "[" + nombreHilo + "] Permiso de limitador liberado (disponibles: " +
-                        limitador.permisosDisponibles() + ")");
-            }
+            // NOTA: El limitador es liberado por el llamador (AnalizadorAI o FlowAnalysisManager)
+            // No liberamos aquí para evitar doble liberación que causaría permisos negativos
         }
     }
 

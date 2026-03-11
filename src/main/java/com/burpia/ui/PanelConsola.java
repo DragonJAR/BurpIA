@@ -261,7 +261,7 @@ public class PanelConsola extends JPanel {
 
             UIUtils.mostrarError(this,
                 I18nUI.Consola.TITULO_INFORMACION(),
-                I18nUI.Consola.MSG_BUSQUENA_REGEX_INVALIDA(textoBusqueda, e.getMessage()));
+                I18nUI.Consola.MSG_BUSQUEDA_REGEX_INVALIDA(textoBusqueda, e.getMessage()));
         }
     }
 

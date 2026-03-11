@@ -1050,7 +1050,7 @@ public final class I18nUI {
             return trf("%d coincidencia(s) para \"%s\"", "%d match(es) for \"%s\"", coincidencias, texto);
         }
 
-        public static String MSG_BUSQUENA_REGEX_INVALIDA(String regex, String error) {
+        public static String MSG_BUSQUEDA_REGEX_INVALIDA(String regex, String error) {
             return trf("Expresión regular inválida: \"%s\"\nError: %s",
                     "Invalid regular expression: \"%s\"\nError: %s", regex, error);
         }
@@ -1118,6 +1118,10 @@ public final class I18nUI {
 
         public static String TAG_RASTREO() {
             return tr(" [RASTREO]", " [TRACE]");
+        }
+
+        public static String TAG_ERROR() {
+            return tr(" [ERROR]", " [ERROR]");
         }
     }
 
@@ -1219,6 +1223,74 @@ public final class I18nUI {
 
         public static String RESPUESTA_CRUDA() {
             return tr("   Respuesta cruda (primeros 200 caracteres):\n", "   Raw response (first 200 characters):\n");
+        }
+
+        // === Mensajes para ConnectionTester ===
+
+        public static String ERROR_CONFIG_NULL() {
+            return tr("Configuración o callback no puede ser nulo", "Configuration or callback cannot be null");
+        }
+
+        public static String ERROR_MISSING_PROVIDER_CONFIG() {
+            return tr("Falta configuración del proveedor", "Missing provider configuration");
+        }
+
+        public static String ERROR_CONNECTION_TIMEOUT(int segundos) {
+            return trf("Tiempo de espera de conexión agotado después de %d segundos",
+                    "Connection timeout after %d seconds", segundos);
+        }
+
+        public static String ERROR_CONNECTION_FAILED(String mensaje) {
+            return trf("Error de conexión: %s", "Connection error: %s", mensaje);
+        }
+
+        public static String ERROR_REQUEST_TIMEOUT(int segundos) {
+            return trf("Tiempo de espera de solicitud agotado después de %d segundos",
+                    "Request timeout after %d seconds", segundos);
+        }
+
+        public static String ERROR_MODELS_FAILED(String mensaje) {
+            return trf("Error al obtener modelos: %s", "Failed to fetch models: %s", mensaje);
+        }
+
+        public static String ERROR_VERSION_NULL() {
+            return tr("Versión o callback no puede ser nulo", "Version or callback cannot be null");
+        }
+
+        public static String ERROR_UPDATE_TIMEOUT(int segundos) {
+            return trf("Tiempo de espera de actualización agotado después de %d segundos",
+                    "Update check timeout after %d seconds", segundos);
+        }
+
+        public static String ERROR_UPDATE_FAILED(String mensaje) {
+            return trf("Error al verificar actualizaciones: %s", "Failed to check updates: %s", mensaje);
+        }
+
+        public static String ERROR_REQUEST_OR_CALLBACK_NULL() {
+            return tr("Solicitud o callback no puede ser nulo", "Request or callback cannot be null");
+        }
+
+        public static String ERROR_OPERATION_TIMEOUT(int segundos) {
+            return trf("Tiempo de espera de operación agotado después de %d segundos",
+                    "Operation timeout after %d seconds", segundos);
+        }
+
+        public static String ERROR_NETWORK_ERROR(String mensaje) {
+            return trf("Error de red: %s", "Network error: %s", mensaje);
+        }
+
+        public static String LOG_UNSUPPORTED_PROVIDER(String proveedor) {
+            return trf("Proveedor no soportado para listar modelos: %s",
+                    "Unsupported provider for model listing: %s", proveedor);
+        }
+
+        public static String LOG_ERROR_PARSING_MODELS() {
+            return tr("Error al parsear respuesta de modelos", "Error parsing models response");
+        }
+
+        public static String LOG_SSL_INSECURE_ERROR(String mensaje) {
+            return trf("SSL inseguro no se pudo configurar, se usará configuración por defecto: %s",
+                    "Insecure SSL could not be configured, using default configuration: %s", mensaje);
         }
     }
 
@@ -1733,6 +1805,10 @@ public final class I18nUI {
         public static String ADVERTENCIA_PROMPT() {
             return tr("⚠️ Importante: {REQUEST} y el JSON son obligatorios, el {RESPONSE} es recomendado para mejorar contexto.",
                     "⚠️ Important: {REQUEST} and JSON are required, {RESPONSE} is recommended for better context.");
+        }
+
+        public static String ICONO_INFO_TOKENS() {
+            return "ℹ️";
         }
 
         public static String TITULO_APP() {

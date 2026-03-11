@@ -560,10 +560,10 @@ public class GestorConsolaGUI {
 
     private String etiquetaNivel(TipoLog tipo) {
         if (tipo == TipoLog.ERROR) {
-            return " [ERROR]";
+            return I18nUI.Consola.TAG_ERROR();
         }
         if (tipo == TipoLog.VERBOSE) {
-            return com.burpia.i18n.I18nUI.Consola.TAG_RASTREO();
+            return I18nUI.Consola.TAG_RASTREO();
         }
         return "";
     }
@@ -589,13 +589,14 @@ public class GestorConsolaGUI {
     }
 
     private void registrarErrorInterno(String mensaje) {
-        String texto = "[BurpIA] [ERROR] " + (mensaje != null ? mensaje : "Error interno de consola");
+        String mensajeFinal = mensaje != null ? mensaje : I18nLogs.tr("Error interno de consola");
+        String texto = "[BurpIA] [ERROR] " + mensajeFinal;
         if (stderrOriginal != null) {
             stderrOriginal.println(texto);
             stderrOriginal.flush();
             return;
         }
-        gestorLogging.error(ORIGEN_LOG, mensaje != null ? mensaje : "Error interno de consola");
+        gestorLogging.error(ORIGEN_LOG, mensajeFinal);
     }
 
     private static final class EntradaLog {

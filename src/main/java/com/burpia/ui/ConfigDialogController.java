@@ -65,10 +65,8 @@ public class ConfigDialogController {
         this.dialogo = dialogo;
         this.config = config;
         this.gestorConfig = gestorConfig;
-        this.gestorLogging = GestorLoggingUnificado.crearMinimal(
-            new java.io.PrintWriter(System.out, true), 
-            new java.io.PrintWriter(System.err, true)
-        );
+        // Usar gestorLogging sin PrintWriter - usa Logger interno en lugar de System.out/System.err
+        this.gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
         this.persistenceManager = new ConfigPersistenceManager(gestorConfig, gestorLogging);
         this.providerManager = new ProviderConfigManager(config, gestorLogging);
         this.rutasBinarioAgenteTemporal = new HashMap<>();
@@ -638,7 +636,8 @@ public class ConfigDialogController {
         }
 
         JTextArea txtPrompt = dialogo.obtenerTxtPrompt();
-        if (txtPrompt != null && !txtPrompt.getText().contains("{REQUEST}")) {
+        String textoPrompt = txtPrompt != null ? txtPrompt.getText() : "";
+        if (Normalizador.noEsVacio(textoPrompt) && !textoPrompt.contains("{REQUEST}")) {
             UIUtils.mostrarError(dialogo, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
                 I18nUI.Configuracion.MSG_ERROR_PROMPT_SIN_REQUEST());
             return;
@@ -1034,10 +1033,11 @@ public class ConfigDialogController {
             return;
         }
 
-        int longitud = txtPrompt.getText().length();
+        String textoPrompt = txtPrompt.getText();
+        int longitud = textoPrompt.length();
         lblContadorPrompt.setText(I18nUI.Configuracion.CONTADOR_CARACTERES(longitud));
 
-        if (!txtPrompt.getText().contains("{REQUEST}")) {
+        if (Normalizador.noEsVacio(textoPrompt) && !textoPrompt.contains("{REQUEST}")) {
             lblContadorPrompt.setText(I18nUI.Configuracion.CONTADOR_FALTA_REQUEST(longitud));
             lblContadorPrompt.setForeground(EstilosUI.colorErrorAccesible(EstilosUI.obtenerFondoPanel()));
         } else {

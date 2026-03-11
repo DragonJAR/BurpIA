@@ -213,7 +213,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     public int obtenerFilasVisibles() {
         lock.lock();
         try {
-            if (filasIgnoradas.isEmpty()) {
+            if (Normalizador.esVacia(filasIgnoradas)) {
                 return datos.size();
             }
 
@@ -478,7 +478,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
      * La notificación se ejecuta en el EDT para garantizar seguridad UI.
      */
     private void notificarCambios() {
-        if (escuchas.isEmpty()) {
+        if (Normalizador.esVacia(escuchas)) {
             return;
         }
         ejecutarEnEdt(() -> {

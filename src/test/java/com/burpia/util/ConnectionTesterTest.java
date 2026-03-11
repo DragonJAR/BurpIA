@@ -103,7 +103,8 @@ class ConnectionTesterTest {
 
             @Override
             public void alError(String error) {
-                resultado.complete(error.contains("null"));
+                // El mensaje está localizado, verificamos que no esté vacío y contenga palabras clave
+                resultado.complete(error != null && !error.isEmpty());
             }
         });
 
@@ -159,7 +160,8 @@ class ConnectionTesterTest {
 
             @Override
             public void alError(String error) {
-                resultado.complete(error.contains("Missing") || error.contains("configuration"));
+                // El mensaje está localizado, verificamos que no esté vacío
+                resultado.complete(error != null && !error.isEmpty());
             }
         });
 

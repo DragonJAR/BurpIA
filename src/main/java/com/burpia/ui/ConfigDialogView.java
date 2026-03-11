@@ -373,7 +373,7 @@ public class ConfigDialogView {
         JPanel panelMaxTokens = new JPanel(new BorderLayout(5, 0));
         panelMaxTokens.setOpaque(false);
         panelMaxTokens.add(txtMaxTokens, BorderLayout.CENTER);
-        JLabel lblInfoTokens = new JLabel("ℹ️");
+        JLabel lblInfoTokens = new JLabel(I18nUI.Configuracion.ICONO_INFO_TOKENS());
         lblInfoTokens.setToolTipText(I18nUI.Tooltips.Configuracion.INFO_TOKENS());
         panelMaxTokens.add(lblInfoTokens, BorderLayout.EAST);
         panel.add(panelMaxTokens, gbc);

@@ -25,7 +25,8 @@ public class ConfigPersistenceManager {
             throw new IllegalArgumentException("GestorConfiguracion no puede ser nulo");
         }
         this.gestorConfig = gestorConfig;
-        this.gestorLogging = gestorLogging != null ? gestorLogging : GestorLoggingUnificado.crearMinimal(new java.io.PrintWriter(System.out, true), new java.io.PrintWriter(System.err, true));
+        // Si gestorLogging es null, crear uno mínimo sin stdout/stderr (usa Logger interno)
+        this.gestorLogging = gestorLogging != null ? gestorLogging : GestorLoggingUnificado.crearMinimal(null, null);
     }
 
     /**
