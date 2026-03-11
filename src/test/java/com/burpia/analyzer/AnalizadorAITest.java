@@ -114,6 +114,27 @@ class AnalizadorAITest {
     }
 
     @Test
+    @DisplayName("Fallback no estricto preserva banner HTML largo en evidencia")
+    void testParseoNoEstrictoPreservaBannerHtmlLargo() throws Exception {
+        ConfiguracionAPI config = crearConfiguracionBasica(PROVEEDOR_ZAI);
+        SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com/banner", "GET", "hash-banner");
+        AnalizadorAI analizador = crearAnalizadorParaTest(config, solicitud);
+
+        String respuesta = "{\"hallazgos\":["
+            + "{\"titulo\":\"Fingerprinting\",\"descripcion\":\"Server expuesto\",\"severidad\":\"Low\",\"confianza\":\"High\",\"evidencia\":\"Server: nginx/1.19.0\"},"
+            + "{\"titulo\":\"Headers\",\"descripcion\":\"Faltan headers\",\"severidad\":\"Low\",\"confianza\":\"High\",\"evidencia\":\"Headers observados\"},"
+            + "{\"titulo\":\"IDOR\",\"descripcion\":\"IDs secuenciales\",\"severidad\":\"Medium\",\"confianza\":\"Medium\",\"evidencia\":\"artist=1,artist=2,artist=3\"},"
+            + "{\"titulo\":\"Banner\",\"descripcion\":\"Sitio vulnerable\",\"severidad\":\"Info\",\"confianza\":\"High\",\"evidencia\":\"<div style=\"background-color:lightgray;width:100%;text-align:center;font-size:12px;padding:1px\"><p style=\"padding-left:5%;padding-right:5%\"><b>Warning</b>: This is not a real shop.</p></div>\"}"
+            + "]}";
+
+        ResultadoAnalisisMultiple resultado = invocarParsearRespuesta(analizador, respuesta);
+
+        assertEquals(4, resultado.obtenerNumeroHallazgos(), "Debe recuperar los 4 hallazgos completos");
+        assertTrue(resultado.obtenerHallazgos().get(3).obtenerHallazgo().contains("<div style=\"background-color:lightgray;width:100%;text-align:center;font-size:12px;padding:1px\">"),
+            "La evidencia del banner debe preservarse completa");
+    }
+
+    @Test
     @DisplayName("Fallback no estricto extrae el titulo correctamente")
     void testParseoNoEstrictoExtraeTitulo() throws Exception {
         ConfiguracionAPI config = crearConfiguracionBasica(PROVEEDOR_ZAI);

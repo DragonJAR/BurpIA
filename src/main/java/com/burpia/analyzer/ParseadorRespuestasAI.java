@@ -7,6 +7,7 @@ import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.ConstantesJsonAI;
+import com.burpia.util.ExtractorCamposRobusto;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GsonProvider;
 import com.burpia.util.JsonParserUtil;
@@ -46,17 +47,20 @@ public class ParseadorRespuestasAI {
         String respuestaOriginal = respuestaJson != null ? respuestaJson : "";
 
         try {
-            String jsonReparado = ReparadorJson.repararJson(respuestaOriginal);
+            String respuestaNormalizada = ParserRespuestasAI.limpiarContenidoModelo(respuestaOriginal);
+            String jsonReparado = ReparadorJson.repararJson(respuestaNormalizada);
             String respuestaProcesada = respuestaOriginal;
-            if (jsonReparado != null && !jsonReparado.equals(respuestaOriginal)) {
+            if (jsonReparado != null && !jsonReparado.equals(respuestaNormalizada)) {
                 rastrear("JSON reparado exitosamente");
                 respuestaProcesada = jsonReparado;
+            } else {
+                respuestaProcesada = respuestaNormalizada;
             }
 
             String proveedorNormalizado = proveedor != null ? proveedor : "";
             String contenido = ParserRespuestasAI.extraerContenido(respuestaProcesada, proveedorNormalizado);
             if (Normalizador.esVacio(contenido)) {
-                contenido = respuestaProcesada;
+                contenido = ParserRespuestasAI.limpiarContenidoModelo(respuestaProcesada);
             }
 
             rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
@@ -99,15 +103,14 @@ public class ParseadorRespuestasAI {
             if (!respuestaProcesada.equals(respuestaOriginal)) {
                 String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedorNormalizado);
                 if (Normalizador.esVacio(contenidoOriginal)) {
-                    contenidoOriginal = respuestaOriginal;
+                    contenidoOriginal = ParserRespuestasAI.limpiarContenidoModelo(respuestaOriginal);
                 }
 
                 List<Hallazgo> hallazgosOriginalesNoEstrictos = parsearHallazgosJsonNoEstricto(contenidoOriginal, solicitud);
-                if (hallazgosOriginalesNoEstrictos.size() > hallazgos.size()) {
+                if (debePreferirHallazgosOriginales(hallazgosOriginalesNoEstrictos, hallazgos)) {
                     rastrear(
-                            "Se detectó pérdida de hallazgos tras reparación JSON; " +
-                                    "se conserva parseo no estricto del payload original (" +
-                                    hallazgosOriginalesNoEstrictos.size() + " > " + hallazgos.size() + ")");
+                            "Se detectó pérdida de contenido tras reparación JSON; " +
+                                    "se conserva parseo no estricto del payload original");
                     hallazgos.clear();
                     hallazgos.addAll(hallazgosOriginalesNoEstrictos);
                 }
@@ -177,7 +180,14 @@ public class ParseadorRespuestasAI {
             return hallazgos;
         }
 
-        for (String objeto : extraerObjetosNoEstrictos(bloqueHallazgos)) {
+        List<String> bloques = ExtractorCamposRobusto.extraerBloquesPorCampo(
+                bloqueHallazgos,
+                ExtractorCamposRobusto.CamposHallazgo.TITULO);
+        if (bloques.isEmpty()) {
+            bloques = extraerObjetosNoEstrictos(bloqueHallazgos);
+        }
+
+        for (String objeto : bloques) {
             String bloqueHallazgo = normalizarObjetoNoEstricto(objeto);
             if (Normalizador.esVacio(bloqueHallazgo)) {
                 continue;
@@ -207,6 +217,38 @@ public class ParseadorRespuestasAI {
             }
         }
         return "";
+    }
+
+    private boolean debePreferirHallazgosOriginales(List<Hallazgo> originales, List<Hallazgo> actuales) {
+        if (originales == null || originales.isEmpty()) {
+            return false;
+        }
+        if (actuales == null || actuales.isEmpty()) {
+            return true;
+        }
+        if (originales.size() > actuales.size()) {
+            return true;
+        }
+        if (originales.size() < actuales.size()) {
+            return false;
+        }
+        return calcularHuellaContenido(originales) > calcularHuellaContenido(actuales);
+    }
+
+    private int calcularHuellaContenido(List<Hallazgo> hallazgos) {
+        int huella = 0;
+        for (Hallazgo hallazgo : hallazgos) {
+            if (hallazgo == null) {
+                continue;
+            }
+            huella += longitudSegura(hallazgo.obtenerTitulo());
+            huella += longitudSegura(hallazgo.obtenerHallazgo());
+        }
+        return huella;
+    }
+
+    private int longitudSegura(String valor) {
+        return valor != null ? valor.length() : 0;
     }
 
     private String extraerBloqueArrayHallazgos(String contenido) {

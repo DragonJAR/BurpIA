@@ -12,44 +12,21 @@ public class ParserRespuestasAI {
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
         java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
 
-    private static final java.util.regex.Pattern PATRON_CAMPO_TITULO_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:titulo|title|name|nombre)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
-        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
-    );
-    private static final java.util.regex.Pattern PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:descripcion|description|hallazgo|finding|details|detalle)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
-        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
-    );
-    private static final java.util.regex.Pattern PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:severidad|severity|risk|impacto)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
-        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
-    );
-    private static final java.util.regex.Pattern PATRON_CAMPO_CONFIANZA_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:confianza|confidence|certainty|certeza)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
-        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
-    );
-    private static final java.util.regex.Pattern PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO = java.util.regex.Pattern.compile(
-        "\"(?:evidencia|evidence|proof|indicator)\"\\s*:\\s*\"(.*?)(?=\"\\s*(?:,\\s*\"[a-zA-Z0-9_]+\"\\s*:|\\}))",
-        java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE
-    );
-
     public static String extraerCampoNoEstricto(String campo, String contenido) {
         if (Normalizador.esVacio(contenido)) {
             return "";
         }
-        java.util.regex.Pattern patron;
-        switch (normalizarClaveCampoNoEstricto(campo)) {
-            case "titulo": patron = PATRON_CAMPO_TITULO_NO_ESTRICTO; break;
-            case "descripcion": patron = PATRON_CAMPO_DESCRIPCION_NO_ESTRICTO; break;
-            case "severidad": patron = PATRON_CAMPO_SEVERIDAD_NO_ESTRICTO; break;
-            case "confianza": patron = PATRON_CAMPO_CONFIANZA_NO_ESTRICTO; break;
-            case "evidencia": patron = PATRON_CAMPO_EVIDENCIA_NO_ESTRICTO; break;
-            default: return "";
+
+        ExtractorCamposRobusto.Campo campoRobusto = resolverCampoRobusto(campo);
+        if (campoRobusto == null) {
+            return "";
         }
-        java.util.regex.Matcher matcher = patron.matcher(contenido);
-        if (matcher.find()) {
-            return normalizarCampoNoEstricto(matcher.group(1));
+
+        String valor = extraerCampoPorEscaneo(campoRobusto, contenido);
+        if (Normalizador.noEsVacio(valor)) {
+            return normalizarCampoNoEstricto(valor);
         }
+
         return "";
     }
 
@@ -95,6 +72,10 @@ public class ParserRespuestasAI {
         return Normalizador.normalizarTexto(valor);
     }
 
+    public static String limpiarContenidoModelo(String texto) {
+        return limpiarBloquesPensamiento(texto);
+    }
+
     public static String extraerContenido(String respuestaJson, String proveedor) {
         if (Normalizador.esVacio(respuestaJson)) {
             return "";
@@ -130,11 +111,11 @@ public class ParserRespuestasAI {
                 contenido = normalizarContenidoExtraido(contenido);
             }
 
-            return limpiarBloquesPensamiento(contenido != null ? contenido : "");
+            return limpiarContenidoModelo(contenido != null ? contenido : "");
 
         } catch (Exception e) {
             // Error de parseo no crítico, se intenta con texto plano
-            return limpiarBloquesPensamiento(respuestaJson.trim());
+            return limpiarContenidoModelo(respuestaJson.trim());
         }
     }
 
@@ -329,6 +310,125 @@ public class ParserRespuestasAI {
         }
         String limpio = PATRON_BLOQUES_PENSAMIENTO.matcher(texto).replaceAll(" ");
         return limpio.replaceAll("\\s+", " ").trim();
+    }
+
+    private static ExtractorCamposRobusto.Campo resolverCampoRobusto(String campo) {
+        switch (normalizarClaveCampoNoEstricto(campo)) {
+            case "titulo":
+                return ExtractorCamposRobusto.CamposHallazgo.TITULO;
+            case "descripcion":
+                return ExtractorCamposRobusto.CamposHallazgo.DESCRIPCION;
+            case "severidad":
+                return ExtractorCamposRobusto.CamposHallazgo.SEVERIDAD;
+            case "confianza":
+                return ExtractorCamposRobusto.CamposHallazgo.CONFIANZA;
+            case "evidencia":
+                return ExtractorCamposRobusto.CamposHallazgo.EVIDENCIA;
+            default:
+                return null;
+        }
+    }
+
+    private static String extraerCampoPorEscaneo(ExtractorCamposRobusto.Campo campo, String contenido) {
+        if (campo == null || Normalizador.esVacio(contenido)) {
+            return "";
+        }
+
+        int inicio = encontrarInicioCampo(campo, contenido);
+        if (inicio < 0 || inicio >= contenido.length()) {
+            return "";
+        }
+
+        int fin = encontrarFinCampo(campo, contenido, inicio);
+        if (fin <= inicio) {
+            return "";
+        }
+
+        return contenido.substring(inicio, fin).trim();
+    }
+
+    private static int encontrarInicioCampo(ExtractorCamposRobusto.Campo campo, String contenido) {
+        java.util.regex.Matcher matcher = campo.obtenerPatron().matcher(contenido);
+        if (!matcher.find()) {
+            return -1;
+        }
+        return matcher.end();
+    }
+
+    private static int encontrarFinCampo(ExtractorCamposRobusto.Campo campoActual, String contenido, int inicio) {
+        boolean escapado = false;
+
+        for (int i = inicio; i < contenido.length(); i++) {
+            char actual = contenido.charAt(i);
+
+            if (escapado) {
+                escapado = false;
+                continue;
+            }
+
+            if (actual == '\\') {
+                escapado = true;
+                continue;
+            }
+
+            if (actual != '"') {
+                continue;
+            }
+
+            int siguiente = omitirEspacios(contenido, i + 1);
+            if (siguiente >= contenido.length()) {
+                return i;
+            }
+
+            char delimitador = contenido.charAt(siguiente);
+            if (delimitador == ',' || delimitador == '}' || delimitador == ']') {
+                return i;
+            }
+
+            if (delimitador == ':') {
+                int posibleInicioCampo = encontrarInicioNombreCampo(contenido, i);
+                if (posibleInicioCampo >= 0 && esCampoConocidoDiferente(campoActual, contenido, posibleInicioCampo)) {
+                    return i;
+                }
+            }
+        }
+
+        return contenido.length();
+    }
+
+    private static int omitirEspacios(String contenido, int indice) {
+        int actual = indice;
+        while (actual < contenido.length() && Character.isWhitespace(contenido.charAt(actual))) {
+            actual++;
+        }
+        return actual;
+    }
+
+    private static int encontrarInicioNombreCampo(String contenido, int cierreComillas) {
+        for (int i = cierreComillas - 1; i >= 0; i--) {
+            char actual = contenido.charAt(i);
+            if (actual == '"') {
+                return i;
+            }
+            if (actual == '{' || actual == ',' || actual == '[') {
+                break;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean esCampoConocidoDiferente(ExtractorCamposRobusto.Campo campoActual, String contenido, int inicioNombreCampo) {
+        String segmento = contenido.substring(inicioNombreCampo);
+        for (ExtractorCamposRobusto.Campo candidato : ExtractorCamposRobusto.CamposHallazgo.TODOS) {
+            if (candidato == campoActual) {
+                continue;
+            }
+            java.util.regex.Matcher matcher = candidato.obtenerPatron().matcher(segmento);
+            if (matcher.lookingAt()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static JsonElement obtenerElemento(JsonObject objeto, String campo) {

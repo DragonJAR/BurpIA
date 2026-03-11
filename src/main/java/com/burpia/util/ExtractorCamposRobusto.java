@@ -243,15 +243,13 @@ public final class ExtractorCamposRobusto {
      */
     private static String extraerCampoEstricto(Campo campo, String bloque) {
         String ultimoValor = "";
-        String[] variaciones = campo.obtenerVariaciones();
+        Matcher matcher = campo.obtenerPatron().matcher(bloque);
 
-        for (String variacion : variaciones) {
-            String patronStr = "\"" + Pattern.quote(variacion) + "\"\\s*:\\s*\"([^\"]*)";
-            Pattern patron = Pattern.compile(patronStr, Pattern.CASE_INSENSITIVE);
-            Matcher matcher = patron.matcher(bloque);
-
-            while (matcher.find()) {
-                String valor = matcher.group(1);
+        while (matcher.find()) {
+            int inicioValor = matcher.end();
+            int finValor = encontrarFinDeValorEstricto(bloque, inicioValor, campo);
+            if (finValor > inicioValor) {
+                String valor = bloque.substring(inicioValor, finValor).trim();
                 if (Normalizador.noEsVacio(valor)) {
                     ultimoValor = valor;
                 }
@@ -332,6 +330,50 @@ public final class ExtractorCamposRobusto {
         return encontrarProximoCampo(texto, inicio);
     }
 
+    private static int encontrarFinDeValorEstricto(String texto, int inicio, Campo campoActual) {
+        if (Normalizador.esVacio(texto) || inicio < 0 || inicio >= texto.length()) {
+            return texto != null ? texto.length() : 0;
+        }
+
+        boolean escapado = false;
+        for (int i = inicio; i < texto.length(); i++) {
+            char actual = texto.charAt(i);
+
+            if (escapado) {
+                escapado = false;
+                continue;
+            }
+
+            if (actual == '\\') {
+                escapado = true;
+                continue;
+            }
+
+            if (actual != '"') {
+                continue;
+            }
+
+            int siguiente = omitirEspacios(texto, i + 1);
+            if (siguiente >= texto.length()) {
+                return i;
+            }
+
+            char delimitador = texto.charAt(siguiente);
+            if (delimitador == ',' || delimitador == '}' || delimitador == ']') {
+                return i;
+            }
+
+            if (delimitador == ':') {
+                int posibleInicioCampo = encontrarInicioNombreCampo(texto, i);
+                if (posibleInicioCampo >= 0 && esCampoConocidoDiferente(campoActual, texto, posibleInicioCampo)) {
+                    return i;
+                }
+            }
+        }
+
+        return texto.length();
+    }
+
     /**
      * Encuentra la posición del siguiente campo conocido.
      *
@@ -360,6 +402,41 @@ public final class ExtractorCamposRobusto {
         }
 
         return posicionMasCercana;
+    }
+
+    private static int omitirEspacios(String texto, int inicio) {
+        int actual = inicio;
+        while (actual < texto.length() && Character.isWhitespace(texto.charAt(actual))) {
+            actual++;
+        }
+        return actual;
+    }
+
+    private static int encontrarInicioNombreCampo(String texto, int cierreComillas) {
+        for (int i = cierreComillas - 1; i >= 0; i--) {
+            char actual = texto.charAt(i);
+            if (actual == '"') {
+                return i;
+            }
+            if (actual == '{' || actual == ',' || actual == '[') {
+                break;
+            }
+        }
+        return -1;
+    }
+
+    private static boolean esCampoConocidoDiferente(Campo campoActual, String texto, int inicioNombreCampo) {
+        String segmento = texto.substring(inicioNombreCampo);
+        for (Campo campo : CamposHallazgo.TODOS) {
+            if (campo == campoActual) {
+                continue;
+            }
+            Matcher matcher = campo.obtenerPatron().matcher(segmento);
+            if (matcher.lookingAt()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ExtractorCamposRobusto() {

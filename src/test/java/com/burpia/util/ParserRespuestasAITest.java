@@ -134,6 +134,14 @@ class ParserRespuestasAITest {
     }
 
     @Test
+    @DisplayName("Elimina bloques think aunque exista texto válido antes y después")
+    void testEliminaThinkConTextoAlrededor() {
+        String json = "{\"choices\":[{\"message\":{\"content\":\"prefijo <think>interno</think> {\\\"hallazgos\\\":[]} sufijo\"}}]}";
+        assertEquals("prefijo {\"hallazgos\":[]} sufijo",
+            ParserRespuestasAI.extraerContenido(json, "OpenAI"), "assertEquals failed at ParserRespuestasAITest.java:140");
+    }
+
+    @Test
     @DisplayName("Extractor no estricto acepta alias en inglés")
     void testExtraerCampoNoEstrictoAliasIngles() {
         String contenido = "{\"title\":\"SQLi\",\"description\":\"detalle\",\"severity\":\"High\",\"confidence\":\"Low\",\"evidence\":\"id=1\"}";
@@ -158,6 +166,16 @@ class ParserRespuestasAITest {
         assertEquals("SQL Injection 'or 1=1--", ParserRespuestasAI.extraerCampoNoEstricto("title", contenidoEstructurado), "assertEquals failed at ParserRespuestasAITest.java:158");
         assertEquals("Encontramos un error: \"syntax error\" o \"Error 500\". Esto es grave.", ParserRespuestasAI.extraerCampoNoEstricto("description", contenidoEstructurado), "assertEquals failed at ParserRespuestasAITest.java:159");
         assertEquals("High", ParserRespuestasAI.extraerCampoNoEstricto("severity", contenidoEstructurado), "assertEquals failed at ParserRespuestasAITest.java:160");
+    }
+
+    @Test
+    @DisplayName("Extractor no estricto preserva evidencia HTML con atributos entre comillas")
+    void testExtraerCampoNoEstrictoEvidenciaHtmlCompleja() {
+        String contenido = "{\"hallazgos\":[{\"titulo\":\"Banner\",\"severidad\":\"Info\",\"confianza\":\"High\","
+            + "\"evidencia\":\"<div style=\"background-color:lightgray;width:100%\"><p style=\"padding-left:5%\"><b>Warning</b>: demo</p></div>\"}]}";
+
+        assertEquals("<div style=\"background-color:lightgray;width:100%\"><p style=\"padding-left:5%\"><b>Warning</b>: demo</p></div>",
+            ParserRespuestasAI.extraerCampoNoEstricto("evidencia", contenido), "assertEquals failed at ParserRespuestasAITest.java:169");
     }
 
     @Test

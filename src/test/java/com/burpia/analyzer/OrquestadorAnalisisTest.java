@@ -83,6 +83,31 @@ class OrquestadorAnalisisTest {
     }
 
     @Test
+    @DisplayName("Orquestador preserva evidencia de banner HTML largo")
+    void testParsearRespuestaRecuperaBannerHtmlLargo() throws Exception {
+        ConfiguracionAPI config = crearConfiguracionValida(PROVEEDOR_OPENAI, MODELO_OPENAI);
+        SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com/banner", "GET", "hash-orq-banner");
+        OrquestadorAnalisis orquestador = crearOrquestador(config, solicitud);
+
+        String respuesta = "{\"hallazgos\":["
+            + "{\"titulo\":\"Uno\",\"descripcion\":\"Detalle 1\",\"severidad\":\"Low\",\"confianza\":\"High\",\"evidencia\":\"a\"},"
+            + "{\"titulo\":\"Dos\",\"descripcion\":\"Detalle 2\",\"severidad\":\"Low\",\"confianza\":\"High\",\"evidencia\":\"b\"},"
+            + "{\"titulo\":\"Tres\",\"descripcion\":\"Detalle 3\",\"severidad\":\"Medium\",\"confianza\":\"Medium\",\"evidencia\":\"c\"},"
+            + "{\"titulo\":\"Banner\",\"descripcion\":\"Detalle 4\",\"severidad\":\"Info\",\"confianza\":\"High\",\"evidencia\":\"<div style=\"background-color:lightgray;width:100%;text-align:center\"><p style=\"padding-left:5%\"><b>Warning</b>: demo</p></div>\"}"
+            + "]}";
+
+        ResultadoAnalisisMultiple resultado = invocarParsearRespuesta(orquestador, respuesta);
+
+        assertEquals(4, resultado.obtenerNumeroHallazgos(),
+            "El orquestador debe recuperar 4 hallazgos aunque la evidencia HTML rompa el JSON");
+        assertTrue(
+            resultado.obtenerHallazgos().get(3).obtenerHallazgo()
+                .contains("Evidencia: <div style=\"background-color:lightgray;width:100%;text-align:center\"><p style=\"padding-left:5%\"><b>Warning</b>: demo</p></div>"),
+            "La evidencia del banner debe conservarse íntegra"
+        );
+    }
+
+    @Test
     @DisplayName("Orquestador no aplica retraso adicional antes de llamar a la API")
     void testEjecutarAnalisisCompletoNoAplicaRetrasoPropio() throws Exception {
         ConfiguracionAPI config = crearConfiguracionValida(PROVEEDOR_OPENAI, MODELO_OPENAI);

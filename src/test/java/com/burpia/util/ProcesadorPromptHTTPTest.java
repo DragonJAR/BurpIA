@@ -470,6 +470,42 @@ class ProcesadorPromptHTTPTest {
             assertTrue(prompt.contains("example.com"),
                 "Debe contener datos HTTP del request");
         }
+
+        @Test
+        @DisplayName("ConstructorPrompts preserva headers HTTP literales en el request")
+        void constructorPromptsPreservaHeadersHttpLiterales() {
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerIdiomaUi("es");
+            config.establecerPromptConfigurable("{REQUEST}");
+
+            ConstructorPrompts constructor = new ConstructorPrompts(config);
+            SolicitudAnalisis solicitud = new SolicitudAnalisis(
+                URL_EJEMPLO,
+                METODO_GET,
+                "Host: example.com\nAccept-Language: es-419,es;q=0.9\nUser-Agent: Mozilla/5.0",
+                null,
+                HASH_TEST,
+                null,
+                200,
+                "Content-Type: text/html",
+                "<html></html>"
+            );
+
+            String prompt = constructor.construirPromptAnalisis(solicitud);
+
+            assertTrue(prompt.contains("Accept-Language: es-419,es;q=0.9"),
+                "Debe mantener Accept-Language literal en el prompt");
+            assertTrue(prompt.contains("User-Agent: Mozilla/5.0"),
+                "Debe mantener User-Agent literal en el prompt");
+            assertTrue(prompt.contains("Content-Type: text/html"),
+                "Debe mantener Content-Type literal en el prompt");
+            assertFalse(prompt.contains("Accept-Idioma"),
+                "No debe traducir nombres de headers en el prompt");
+            assertFalse(prompt.contains("User-Agente"),
+                "No debe traducir nombres de headers en el prompt");
+            assertFalse(prompt.contains("Content-Tipo"),
+                "No debe traducir nombres de headers en el prompt");
+        }
     }
 
     // ============ METODOS AUXILIARES ============
