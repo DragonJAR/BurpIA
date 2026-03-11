@@ -37,3 +37,7 @@ BurpIA.zip
 docs/
 *.sh
 *.md
+!README.md
+!README.en.md
+!AGENT-*.md
+!AGENTE-*.md

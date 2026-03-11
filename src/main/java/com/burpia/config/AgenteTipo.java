@@ -30,8 +30,8 @@ public enum AgenteTipo {
             "Open Code",
             "~/.opencode/bin/opencode",
             "%USERPROFILE%\\.opencode\\bin\\opencode.exe",
-            "https://github.com/anomalyco/opencode/blob/main/AGENTE-OPENCODE-ES.md",
-            "https://github.com/anomalyco/opencode/blob/main/AGENT-OPENCODE-EN.md"
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-OPENCODE-ES.md",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-OPENCODE-EN.md"
     );
 
     private final String nombreVisible;

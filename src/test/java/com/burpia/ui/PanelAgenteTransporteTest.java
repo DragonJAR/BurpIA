@@ -537,13 +537,13 @@ class PanelAgenteTransporteTest {
             config.establecerTipoAgente(AgenteTipo.OPEN_CODE.name());
             config.establecerIdiomaUi("es");
             assertEquals(
-                "https://github.com/anomalyco/opencode/blob/main/AGENTE-OPENCODE-ES.md",
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-OPENCODE-ES.md",
                 invocarResolverUrlGuia(panel)
             , "assertEquals failed at PanelAgenteTransporteTest.java:371");
 
             config.establecerIdiomaUi("en");
             assertEquals(
-                "https://github.com/anomalyco/opencode/blob/main/AGENT-OPENCODE-EN.md",
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-OPENCODE-EN.md",
                 invocarResolverUrlGuia(panel)
             , "assertEquals failed at PanelAgenteTransporteTest.java:376");
 

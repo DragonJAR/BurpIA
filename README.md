@@ -50,6 +50,13 @@ English version: [README.en.md](README.en.md)
 - **Exportación Flexible:** Soporte para volcado de datos en formatos CSV y JSON para informes externos.
 - **Experiencia de Usuario:** Interfaz bilingüe (Español/Inglés) con persistencia de ajustes entre reinicios del plugin.
 
+## Guías de agentes
+
+- Factory Droid: [ES](AGENTE-DROID-ES.md) | [EN](AGENT-DROID-EN.md)
+- Claude Code: [ES](AGENTE-CLAUDE-ES.md) | [EN](AGENT-CLAUDE-EN.md)
+- Gemini CLI: [ES](AGENTE-GEMINI-ES.md) | [EN](AGENT-GEMINI-EN.md)
+- OpenCode: [ES](AGENTE-OPENCODE-ES.md) | [EN](AGENT-OPENCODE-EN.md)
+
 
 ---
 

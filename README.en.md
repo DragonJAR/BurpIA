@@ -50,6 +50,13 @@ Spanish version: [README.md](README.md)
 - **Flexible Export:** Support for data export in CSV and JSON formats for external reports.
 - **User Experience:** Bilingual interface (Spanish/English) with settings persistence across plugin restarts.
 
+## Agent guides
+
+- Factory Droid: [ES](AGENTE-DROID-ES.md) | [EN](AGENT-DROID-EN.md)
+- Claude Code: [ES](AGENTE-CLAUDE-ES.md) | [EN](AGENT-CLAUDE-EN.md)
+- Gemini CLI: [ES](AGENTE-GEMINI-ES.md) | [EN](AGENT-GEMINI-EN.md)
+- OpenCode: [ES](AGENTE-OPENCODE-ES.md) | [EN](AGENT-OPENCODE-EN.md)
+
 
 ---
 
