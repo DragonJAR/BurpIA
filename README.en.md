@@ -44,11 +44,13 @@ Spanish version: [README.md](README.md)
 ## What you get with BurpIA
 
 - **Hybrid AI Analysis:** Automatic passive scanning or manual (via context menu) over real HTTP evidence (`request` + `response`).
+- **Flow Analysis:** Capability to analyze multiple related requests as a single contextual flow.
 - **High-Speed Triage:** Direct sending of findings to Repeater, Intruder, or Scanner from the centralized results table.
 - **Smart Findings Management:** Prioritization by severity/confidence with the option to send directly to the Burp Suite project.
+- **Adaptive Interface:** Native support for Burp's **Dark/Light** modes, responsive window, and font customization.
 - **Deduplication and Load Control:** Queue system with concurrency limits and SHA-256 hashes to avoid redundant re-analysis.
 - **Flexible Export:** Support for data export in CSV and JSON formats for external reports.
-- **User Experience:** Bilingual interface (Spanish/English) with settings persistence across plugin restarts.
+- **User Experience:** Bilingual interface (Spanish/English) with repetitive alert suppression and settings persistence.
 
 ## Agent guides
 
@@ -72,10 +74,14 @@ See the change summary in **Version history**.
 
 ### v1.5.0 (current)
 
-- Contextual flow analysis: analyzes multiple HTTP requests as a complete flow in a single LLM query.
-- Flow analysis with responses: now includes both requests and responses in the analysis.
-- Improved context menu: new options "🔍 Analyze this flow" and "🤖 Send this flow to agent" in proxy history menu.
-- Send flow to agent: sends the complete flow (requests + responses) to the CLI agent with specialized prompt.
+- **Contextual flow analysis:** analyzes multiple HTTP requests as a complete flow in a single LLM query, now including both requests and responses.
+- **Improved context menu:** new options "🔍 Analyze this flow" and "🤖 Send this flow to agent" in proxy history menu.
+- **Send flow to agent:** sends the complete flow (requests + responses) to the CLI agent with specialized prompt for deep validation.
+- **Visual and UI improvements:** native support for Burp Suite Dark and Light themes, responsive settings window, and font customization (standard and mono).
+- **Alert management:** new option to suppress confirmation messages ("Do not show this message again") to streamline workflow.
+- **New Agents:** official integration with **Gemini CLI** and **Open Code**, along with stability improvements for **Claude Code** and **Factory Droid**.
+- **New Providers:** optimized support for **Gemini** (Google) and **DeepSeek** models (via Ollama/Custom).
+- **I18n Improvements:** complete refinement of Spanish and English translations and technical documentation enhancements.
 
 
 ### v1.0.2
@@ -119,13 +125,14 @@ See the change summary in **Version history**.
 
 ## Supported LLM Providers
 
-- **Ollama** (Ideal for locally fine-tuned models).
-- **OpenAI** (GPT-4o, GPT-3.5, etc.).
-- **Claude** (Anthropic).
-- **Gemini** (Google).
-- **Moonshot (Kimi)**.
+- **Ollama** (Local models: Gemma 3, DeepSeek v3, Phi-4, Llama 3.3, etc.).
+- **OpenAI** (o1 models, GPT-4o, etc.).
+- **Claude** (Anthropic: Sonnet 3.5/3.6, Opus).
+- **Gemini** (Google: 1.5 Pro/Flash with native support).
+- **DeepSeek** (Via Ollama or OpenAI-compatible providers).
+- **Moonshot (Kimi)** (k2.5 and previous models).
 - **Z.ai** / **Minimax**.
-- **Custom** (Any API compatible with the OpenAI format).
+- **Custom** (Up to 3 custom profiles for any OpenAI-compatible API).
 
 
 > [!TIP]

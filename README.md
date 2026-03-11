@@ -44,11 +44,13 @@ English version: [README.en.md](README.en.md)
 ## Qué obtienes con BurpIA
 
 - **Análisis Híbrido con IA:** Escaneo pasivo automático o manual (vía menú contextual) sobre evidencia HTTP real (`request` + `response`).
+- **Análisis de Flujos:** Capacidad para analizar múltiples peticiones relacionadas como un único flujo contextual.
 - **Triage de Alta Velocidad:** Envío directo de hallazgos a Repeater, Intruder o Scanner desde la tabla centralizada de resultados.
 - **Gestión Inteligente de Hallazgos:** Priorización por severidad/confianza con opción de envío directo al proyecto de Burp Suite.
+- **Interfaz Adaptativa:** Soporte nativo para modo **Dark/Light** de Burp, ventana responsive y personalización de tipografías.
 - **Deduplicación y Control de Carga:** Sistema de colas con límite de concurrencia y hashes SHA-256 para evitar re-análisis redundantes.
 - **Exportación Flexible:** Soporte para volcado de datos en formatos CSV y JSON para informes externos.
-- **Experiencia de Usuario:** Interfaz bilingüe (Español/Inglés) con persistencia de ajustes entre reinicios del plugin.
+- **Experiencia de Usuario:** Interfaz bilingüe (Español/Inglés) con supresión de alertas repetitivas y persistencia de ajustes.
 
 ## Guías de agentes
 
@@ -72,10 +74,14 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ### v1.5.0 (actual)
 
-- Análisis de flujo contextual: analiza múltiples peticiones HTTP como un flujo completo en una sola consulta al LLM.
-- Análisis de flujo con respuestas: ahora incluye tanto peticiones como respuestas en el análisis.
-- Menú contextual mejorado: nuevas opciones "🔍 Analizar este flujo" y "🤖 Enviar este flujo al agente" en el menú del proxy history.
-- Envío de flujo al agente: envía el flujo completo (peticiones + respuestas) al agente CLI con prompt especializado.
+- **Análisis de flujo contextual:** analiza múltiples peticiones HTTP como un flujo completo en una sola consulta al LLM, incluyendo ahora tanto peticiones como respuestas.
+- **Menú contextual mejorado:** nuevas opciones "🔍 Analizar este flujo" y "🤖 Enviar este flujo al agente" en el menú del proxy history.
+- **Envío de flujo al agente:** envía el flujo completo (peticiones + respuestas) al agente CLI con prompt especializado para validación profunda.
+- **Mejoras visuales y UI:** soporte nativo para los temas Dark y Light de Burp Suite, ventana de ajustes responsive y personalización de fuentes (estándar y mono).
+- **Gestión de alertas:** nueva opción para omitir mensajes de confirmación ("No volver a mostrar") para agilizar el flujo de trabajo.
+- **Nuevos Agentes:** integración oficial con **Gemini CLI** y **Open Code**, junto a mejoras de estabilidad en **Claude Code** y **Factory Droid**.
+- **Nuevos Proveedores:** soporte optimizado para **Gemini** (Google) y modelos **DeepSeek** (vía Ollama/Custom).
+- **Mejoras de I18n:** refinamiento completo de las traducciones en español e inglés y mejoras en la documentación técnica.
 
 
 ### v1.0.2
@@ -119,13 +125,14 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ## Proveedores LLM soportados
 
-- **Ollama** (Ideal para modelos locales fine-tuneados).
-- **OpenAI** (GPT-4o, GPT-3.5, etc.).
-- **Claude** (Anthropic).
-- **Gemini** (Google).
-- **Moonshot (Kimi)**.
+- **Ollama** (Modelos locales: Gemma 3, DeepSeek v3, Phi-4, Llama 3.3, etc.).
+- **OpenAI** (Modelos o1, GPT-4o, etc.).
+- **Claude** (Anthropic: Sonnet 3.5/3.6, Opus).
+- **Gemini** (Google: 1.5 Pro/Flash con soporte nativo).
+- **DeepSeek** (A través de Ollama o proveedores compatibles con OpenAI).
+- **Moonshot (Kimi)** (Modelos k2.5 y anteriores).
 - **Z.ai** / **Minimax**.
-- **Custom** (Cualquier API compatible con el formato de OpenAI).
+- **Custom** (Hasta 3 perfiles personalizados para cualquier API compatible con OpenAI).
 
 
 > [!TIP]
