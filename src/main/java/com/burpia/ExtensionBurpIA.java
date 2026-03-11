@@ -984,7 +984,6 @@ public class ExtensionBurpIA implements BurpExtension {
                 }
             }
         } catch (Exception ignored) {
-            // La version de Burp no es critica; si falla, devolvemos null
         }
         return null;
     }

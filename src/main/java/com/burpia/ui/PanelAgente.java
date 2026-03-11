@@ -47,26 +47,15 @@ public class PanelAgente extends JPanel {
     private static final int DELAY_REINTENTO_FOCO_TERMINAL_MS = 120;
     private static final int DELAY_ENTRE_INYECCIONES_PENDIENTES_MS = 25;
 
-    // Constantes para terminal
     private static final int TERMINAL_ANCHO_CARACTERES = 120;
     private static final int TERMINAL_ALTO_LINEAS = 24;
     private static final int TERMINAL_MARGEN = 4;
 
-    // Constantes para bordes de títulos
     private static final int MARGEN_BORDE_TITULO_GRANDE = 12;
     private static final int MARGEN_BORDE_TITULO_PEQUEÑO = 3;
 
-    // Constantes para shell
     private static final String SHELL_POR_DEFECTO = "/bin/bash";
     private static final String PARAMETRO_SHELL_LOGIN = "--login";
-
-    // Constantes de tiempo - explicación de valores:
-    // - DELAY_INICIO_BINARIO_MS (800ms): Tiempo para que el shell PTY esté listo antes de enviar comandos.
-    //   Menos de 500ms causa pérdida de comandos; más de 1500ms es innecesario.
-    // - DELAY_DIFERIDA_POST_ARRANQUE_MS (180ms): Margen adicional para inyecciones diferidas tras el arranque.
-    // - DELAY_ENTRE_CHUNKS_PTY_MS (10ms): Evita sobrecargar el buffer PTY con escrituras masivas.
-    // - DELAY_REINTENTO_ARRANQUE_MS (200ms): Tiempo entre reintentos de envío del comando de arranque.
-    // - DELAY_REINTENTO_FOCO_TERMINAL_MS (120ms): Espera antes de reintentar foco en terminal.
 
     private final Object lockInyectorPty = new Object();
     private ExecutorService inyectorPty;

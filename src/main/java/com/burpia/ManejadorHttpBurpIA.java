@@ -64,8 +64,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final Object logLock;
     private final boolean esBurpProfessional;
     private volatile boolean capturaActiva;
-    private volatile boolean avisoIssuesNoDisponiblesEmitido;
-
     private final Estadisticas estadisticas;
     private final GestorTareas gestorTareas;
     private final GestorConsolaGUI gestorConsola;
@@ -99,8 +97,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         Hallazgo.establecerResolutorEvidencia(evidenceManager::obtenerEvidencia);
         this.esBurpProfessional = ExtensionBurpIA.esBurpProfessional(api);
         this.capturaActiva = configSegura.escaneoPasivoHabilitado();
-        this.avisoIssuesNoDisponiblesEmitido = false;
-
         int maxThreads = configSegura.obtenerMaximoConcurrente() > 0 ? configSegura.obtenerMaximoConcurrente() : 10;
         this.limitador = limitador != null ? limitador : new LimitadorTasa(maxThreads);
         this.logLock = new Object();
@@ -363,45 +359,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
 
-
-
-
-    private void guardarHallazgoEnIssuesSiAplica(Hallazgo hallazgo, String evidenciaId) {
-        if (hallazgo == null) {
-            return;
-        }
-        
-        boolean enviarIssues = pestaniaPrincipal != null
-                && pestaniaPrincipal.obtenerPanelHallazgos() != null
-                && pestaniaPrincipal.obtenerPanelHallazgos().isGuardadoAutomaticoIssuesActivo();
-        if (!enviarIssues) {
-            rastrear("Hallazgo omitido en Issues (Autoguardado deshabilitado): " + hallazgo.obtenerHallazgo());
-            return;
-        }
-        
-        evidenceManager.guardarHallazgoComoIssue(api, hallazgo, evidenciaId);
-    }
-
-    private void registrarIssuesNoDisponiblesPorEdicionUnaVez() {
-        if (avisoIssuesNoDisponiblesEmitido) {
-            return;
-        }
-        avisoIssuesNoDisponiblesEmitido = true;
-        registrar("Integracion con Issues deshabilitada: solo disponible en Burp Professional");
-    }
-
-    private Hallazgo adjuntarEvidenciaSiDisponible(Hallazgo hallazgo, String evidenciaId) {
-        if (hallazgo == null) {
-            return null;
-        }
-        if (hallazgo.obtenerEvidenciaId() != null || hallazgo.obtenerEvidenciaHttp() != null) {
-            return hallazgo;
-        }
-        if (Normalizador.esVacio(evidenciaId)) {
-            return hallazgo;
-        }
-        return hallazgo.conEvidenciaId(evidenciaId);
-    }
 
 
 

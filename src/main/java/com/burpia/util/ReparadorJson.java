@@ -358,43 +358,6 @@ public final class ReparadorJson {
         return resultado.toString();
     }
 
-    private static String escaparComillasEnHtml(String html) {
-        if (Normalizador.esVacio(html)) {
-            return html;
-        }
-
-        if (!html.contains("<") || !html.contains(">")) {
-            return html;
-        }
-
-        StringBuilder resultado = new StringBuilder(html.length() + 32);
-        boolean dentroDeTag = false;
-
-        int indice = 0;
-        while (indice < html.length()) {
-            char c = html.charAt(indice);
-
-            if (c == '<') {
-                dentroDeTag = true;
-                resultado.append(c);
-            } else if (c == '>') {
-                dentroDeTag = false;
-                resultado.append(c);
-            } else if (c == '"' && dentroDeTag) {
-                resultado.append("\\\"");
-            } else if (c == '\\' && indice + 1 < html.length() && html.charAt(indice + 1) == '"') {
-                resultado.append("\\\\\"");
-                indice += 2;
-                continue;
-            } else {
-                resultado.append(c);
-            }
-            indice++;
-        }
-
-        return resultado.toString();
-    }
-
     private static String eliminarContenidoExtra(String texto) {
         String textoLimpio = texto.trim();
 

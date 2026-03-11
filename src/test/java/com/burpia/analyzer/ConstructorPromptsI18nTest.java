@@ -49,8 +49,6 @@ class ConstructorPromptsI18nTest {
 
                 String prompt = constructor.construirPromptAnalisis(crearSolicitudBase());
 
-                // El template por defecto tiene "OUTPUT LANGUAGE: {OUTPUT_LANGUAGE}"
-                // por lo que el reemplazo resulta en "OUTPUT LANGUAGE: Spanish"
                 assertTrue(prompt.contains("OUTPUT LANGUAGE: Spanish"),
                                 "Debe contener instrucción de idioma con valor Spanish");
                 assertFalse(prompt.contains("{OUTPUT_LANGUAGE}"),
@@ -155,9 +153,6 @@ class ConstructorPromptsI18nTest {
                 ConstructorPrompts constructor = new ConstructorPrompts(config);
                 String prompt = constructor.construirPromptAnalisis(crearSolicitudBase());
 
-                // establecerPromptConfigurable("") resetea al prompt por defecto que SÍ tiene
-                // los tokens
-                // por lo que el prompt contiene las secciones del template, no bloques fallback
                 assertTrue(prompt.contains("<http_request>"),
                                 "Debe usar template por defecto con tags XML");
                 assertTrue(prompt.contains("<http_response>"),
