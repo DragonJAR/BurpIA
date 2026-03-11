@@ -123,7 +123,10 @@ public final class OSUtils {
      * Ejemplos válidos: "claude --dangerously-skip-permissions" o "\"/path/claude\" --flag".
      */
     public static String resolverEjecutableComando(String comando) {
-        String ejecutable = extraerEjecutableComando(comando);
+        if (Normalizador.esVacio(comando)) {
+            return comando;
+        }
+        String ejecutable = descomponerComando(comando).ejecutable();
         if (Normalizador.esVacio(ejecutable)) {
             return ejecutable;
         }
@@ -134,22 +137,32 @@ public final class OSUtils {
         if (Normalizador.esVacio(comando)) {
             return comando;
         }
-        String limpio = comando.trim();
+        return descomponerComando(comando).ejecutable();
+    }
 
-        char primero = limpio.charAt(0);
-        if (primero == '"' || primero == '\'') {
-            int cierre = limpio.indexOf(primero, 1);
-            if (cierre > 1) {
-                return limpio.substring(1, cierre).trim();
-            }
-            return limpio.substring(1).trim();
+    /**
+     * Normaliza un comando para enviarlo a un shell interactivo.
+     * Expande la ruta del ejecutable principal y preserva los argumentos.
+     */
+    public static String normalizarComandoParaShell(String comando) {
+        if (Normalizador.esVacio(comando)) {
+            return comando;
         }
 
-        int i = 0;
-        while (i < limpio.length() && !Character.isWhitespace(limpio.charAt(i))) {
-            i++;
+        PartesComando partes = descomponerComando(comando);
+        if (Normalizador.esVacio(partes.ejecutable())) {
+            return comando.trim();
         }
-        return limpio.substring(0, i).trim();
+
+        String ejecutable = expandirRuta(partes.ejecutable().trim());
+        String ejecutableNormalizado = requiereComillas(ejecutable) || partes.ejecutableEntreComillas()
+            ? "\"" + ejecutable.replace("\"", "\\\"") + "\""
+            : ejecutable;
+
+        if (Normalizador.esVacio(partes.argumentos())) {
+            return ejecutableNormalizado;
+        }
+        return ejecutableNormalizado + " " + partes.argumentos();
     }
 
     private static boolean tieneSeparadorRuta(String ejecutable) {
@@ -225,5 +238,47 @@ public final class OSUtils {
             candidatos.add(ejecutable + extension);
         }
         return candidatos;
+    }
+
+    private static boolean requiereComillas(String texto) {
+        if (Normalizador.esVacio(texto)) {
+            return false;
+        }
+        for (int i = 0; i < texto.length(); i++) {
+            if (Character.isWhitespace(texto.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static PartesComando descomponerComando(String comando) {
+        String limpio = comando.trim();
+        char primero = limpio.charAt(0);
+
+        if (primero == '"' || primero == '\'') {
+            int cierre = limpio.indexOf(primero, 1);
+            if (cierre > 1) {
+                return new PartesComando(
+                    limpio.substring(1, cierre).trim(),
+                    limpio.substring(cierre + 1).trim(),
+                    true
+                );
+            }
+            return new PartesComando(limpio.substring(1).trim(), "", true);
+        }
+
+        int i = 0;
+        while (i < limpio.length() && !Character.isWhitespace(limpio.charAt(i))) {
+            i++;
+        }
+        return new PartesComando(
+            limpio.substring(0, i).trim(),
+            limpio.substring(i).trim(),
+            false
+        );
+    }
+
+    private record PartesComando(String ejecutable, String argumentos, boolean ejecutableEntreComillas) {
     }
 }

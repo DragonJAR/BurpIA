@@ -247,6 +247,36 @@ class OSUtilsTest {
     }
 
     @Nested
+    @DisplayName("normalizarComandoParaShell")
+    class NormalizarComandoParaShell {
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @DisplayName("Retorna null/vacío sin modificar para entrada null o vacía")
+        void retornaNullOVacioSinModificar(String entrada) {
+            assertEquals(entrada, OSUtils.normalizarComandoParaShell(entrada),
+                "assertEquals failed at OSUtilsTest.java:256");
+        }
+
+        @Test
+        @DisplayName("Expande tilde dentro de ejecutable entre comillas y preserva argumentos")
+        void expandeTildeEntreComillasYPreservaArgumentos() {
+            String comando = "\"~/bin/claude\" --dangerously-skip-permissions";
+            String esperado = "\"" + System.getProperty("user.home") + "/bin/claude\" --dangerously-skip-permissions";
+            assertEquals(esperado, OSUtils.normalizarComandoParaShell(comando),
+                "assertEquals failed at OSUtilsTest.java:264");
+        }
+
+        @Test
+        @DisplayName("Mantiene comandos simples sin ruta ni comillas")
+        void mantieneComandoSimpleSinCambios() {
+            String comando = "claude --dangerously-skip-permissions";
+            assertEquals(comando, OSUtils.normalizarComandoParaShell(comando),
+                "assertEquals failed at OSUtilsTest.java:272");
+        }
+    }
+
+    @Nested
     @DisplayName("debeCerrarVentanaAjustes")
     class DebeCerrarVentanaAjustes {
 

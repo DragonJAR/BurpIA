@@ -16,6 +16,7 @@ import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -130,10 +131,12 @@ class PanelAgenteTransporteTest {
 
             panel.forzarInyeccionPromptInicial();
 
-            String promptPendiente = obtenerCampoString(panel, "promptPendiente");
-            int delayPendiente = obtenerCampoInt(panel, "delayPendienteMs");
+            int totalPendientes = contarInyeccionesPendientes(panel);
+            String promptPendiente = obtenerTextoInyeccionPendiente(panel, 0);
+            int delayPendiente = obtenerDelayInyeccionPendiente(panel, 0);
             String esperado = "PROMPT_PREFLIGHT_CUSTOM";
 
+            assertEquals(1, totalPendientes, "assertEquals failed at PanelAgenteTransporteTest.java:136");
             assertEquals(esperado, promptPendiente, "assertEquals failed at PanelAgenteTransporteTest.java:136");
             assertNotEquals("PROMPT_VALIDACION_CUSTOM", promptPendiente);
             assertEquals(4000, delayPendiente, "assertEquals failed at PanelAgenteTransporteTest.java:138");
@@ -155,9 +158,11 @@ class PanelAgenteTransporteTest {
 
             panel.inyectarPayloadInicialManual();
 
-            String promptPendiente = obtenerCampoString(panel, "promptPendiente");
-            int delayPendiente = obtenerCampoInt(panel, "delayPendienteMs");
+            int totalPendientes = contarInyeccionesPendientes(panel);
+            String promptPendiente = obtenerTextoInyeccionPendiente(panel, 0);
+            int delayPendiente = obtenerDelayInyeccionPendiente(panel, 0);
 
+            assertEquals(1, totalPendientes, "assertEquals failed at PanelAgenteTransporteTest.java:163");
             assertEquals("PROMPT_PREFLIGHT_CUSTOM", promptPendiente, "assertEquals failed at PanelAgenteTransporteTest.java:160");
             assertEquals(0, delayPendiente, "assertEquals failed at PanelAgenteTransporteTest.java:161");
         } finally {
@@ -214,8 +219,7 @@ class PanelAgenteTransporteTest {
             inyectarTtyConnector(panel, connector);
 
             establecerCampoLong(panel, "sesionActivaId", 88L);
-            establecerCampoString(panel, "promptPendiente", "PAYLOAD_DIFERIDO");
-            establecerCampoInt(panel, "delayPendienteMs", 0);
+            encolarInyeccionPendiente(panel, "PAYLOAD_DIFERIDO", 0);
             establecerBandera(panel, "inicializacionPendiente", true);
 
             Method method = PanelAgente.class.getDeclaredMethod("programarInyeccionInicial", long.class);
@@ -242,6 +246,117 @@ class PanelAgenteTransporteTest {
             assertTrue(indicePayload >= 0, "Debe enviarse el payload diferido");
             assertTrue(indiceArranque < indicePayload,
                 "El payload diferido debe salir despues del arranque. Escrituras: " + escrituras);
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Multiples payloads pendientes se preservan y se despachan en orden")
+    void testMultiplesPayloadsPendientesSePreservanEnOrden() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+        config.establecerAgentePreflightPrompt("");
+        config.establecerAgenteDelay(0);
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), "droid-test");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            TtyConnector connector = mock(TtyConnector.class);
+            when(connector.isConnected()).thenReturn(true);
+            inyectarTtyConnector(panel, connector);
+            marcarConsolaArrancando(panel, true);
+
+            panel.inyectarComando("PAYLOAD_1", 0);
+            panel.inyectarComando("PAYLOAD_2", 0);
+
+            assertEquals(2, contarInyeccionesPendientes(panel), "assertEquals failed at PanelAgenteTransporteTest.java:259");
+
+            establecerCampoLong(panel, "sesionActivaId", 144L);
+
+            Method method = PanelAgente.class.getDeclaredMethod("programarInyeccionInicial", long.class);
+            method.setAccessible(true);
+            method.invoke(panel, 144L);
+
+            verify(connector, timeout(3500).atLeastOnce())
+                .write(org.mockito.ArgumentMatchers.<String>argThat(
+                    cmd -> cmd != null && cmd.contains("droid-test")
+                ));
+            verify(connector, timeout(3500).atLeastOnce())
+                .write(org.mockito.ArgumentMatchers.<String>argThat(
+                    cmd -> cmd != null && cmd.contains("PAYLOAD_1")
+                ));
+            verify(connector, timeout(3500).atLeastOnce())
+                .write(org.mockito.ArgumentMatchers.<String>argThat(
+                    cmd -> cmd != null && cmd.contains("PAYLOAD_2")
+                ));
+
+            ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+            verify(connector, atLeast(1)).write(captor.capture());
+            List<String> escrituras = captor.getAllValues();
+
+            int indiceArranque = buscarPrimeraCoincidencia(escrituras, "droid-test");
+            int indicePayload1 = buscarPrimeraCoincidencia(escrituras, "PAYLOAD_1");
+            int indicePayload2 = buscarPrimeraCoincidencia(escrituras, "PAYLOAD_2");
+
+            assertTrue(indiceArranque >= 0, "Debe enviarse el comando de arranque");
+            assertTrue(indicePayload1 >= 0, "Debe enviarse el primer payload pendiente");
+            assertTrue(indicePayload2 >= 0, "Debe enviarse el segundo payload pendiente");
+            assertTrue(indiceArranque < indicePayload1,
+                "El primer payload debe salir despues del arranque. Escrituras: " + escrituras);
+            assertTrue(indicePayload1 < indicePayload2,
+                "Los payloads pendientes deben conservar el orden original. Escrituras: " + escrituras);
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Arranque normaliza rutas de binario con tilde y comillas")
+    void testArranqueNormalizaRutaBinarioConTildeYComillas() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        config.establecerAgentePreflightPrompt("");
+        config.establecerAgenteDelay(0);
+        config.establecerRutaBinarioAgente(
+            AgenteTipo.CLAUDE_CODE.name(),
+            "\"~/bin/claude\" --dangerously-skip-permissions"
+        );
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            TtyConnector connector = mock(TtyConnector.class);
+            when(connector.isConnected()).thenReturn(true);
+            inyectarTtyConnector(panel, connector);
+            establecerCampoLong(panel, "sesionActivaId", 145L);
+
+            Method method = PanelAgente.class.getDeclaredMethod("programarInyeccionInicial", long.class);
+            method.setAccessible(true);
+            method.invoke(panel, 145L);
+
+            String rutaEsperada = "\"" + System.getProperty("user.home") + "/bin/claude\" --dangerously-skip-permissions";
+            verify(connector, timeout(2500).atLeastOnce())
+                .write(org.mockito.ArgumentMatchers.<String>argThat(
+                    cmd -> cmd != null && cmd.contains(rutaEsperada)
+                ));
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Shell configurado con comillas se normaliza antes de iniciar PTY")
+    void testResolverShellEjecutableNormalizaComillas() throws Exception {
+        PanelAgente panel = crearPanelSinConsola();
+        try {
+            String shellConfigurado = OSUtils.esWindows() ? "\"cmd.exe\"" : "\"/bin/sh\"";
+            String esperado = OSUtils.esWindows() ? "cmd.exe" : "/bin/sh";
+
+            Method method = PanelAgente.class.getDeclaredMethod("resolverShellEjecutable", String.class);
+            method.setAccessible(true);
+            String resultado = (String) method.invoke(panel, shellConfigurado);
+
+            assertEquals(esperado, resultado, "assertEquals failed at PanelAgenteTransporteTest.java:344");
         } finally {
             panel.destruir();
         }
@@ -560,35 +675,62 @@ class PanelAgenteTransporteTest {
         bandera.set(valor);
     }
 
-    private String obtenerCampoString(PanelAgente panel, String nombre) throws Exception {
-        Field field = PanelAgente.class.getDeclaredField(nombre);
+    private int contarInyeccionesPendientes(PanelAgente panel) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("inyeccionesPendientes");
         field.setAccessible(true);
-        Object valor = field.get(panel);
-        return valor != null ? valor.toString() : null;
+        Queue<?> pendientes = (Queue<?>) field.get(panel);
+        return pendientes != null ? pendientes.size() : 0;
     }
 
-    private int obtenerCampoInt(PanelAgente panel, String nombre) throws Exception {
-        Field field = PanelAgente.class.getDeclaredField(nombre);
+    private String obtenerTextoInyeccionPendiente(PanelAgente panel, int indice) throws Exception {
+        Object pendiente = obtenerInyeccionPendiente(panel, indice);
+        Field field = pendiente.getClass().getDeclaredField("texto");
         field.setAccessible(true);
-        return field.getInt(panel);
+        return (String) field.get(pendiente);
+    }
+
+    private int obtenerDelayInyeccionPendiente(PanelAgente panel, int indice) throws Exception {
+        Object pendiente = obtenerInyeccionPendiente(panel, indice);
+        Field field = pendiente.getClass().getDeclaredField("delayMs");
+        field.setAccessible(true);
+        return field.getInt(pendiente);
+    }
+
+    private void encolarInyeccionPendiente(PanelAgente panel, String texto, int delayMs) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("inyeccionesPendientes");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        Queue<Object> pendientes = (Queue<Object>) field.get(panel);
+        if (pendientes == null) {
+            throw new IllegalStateException("La cola de inyecciones pendientes no debe ser null");
+        }
+        Class<?> clasePendiente = Class.forName("com.burpia.ui.PanelAgente$InyeccionPendiente");
+        java.lang.reflect.Constructor<?> constructor = clasePendiente.getDeclaredConstructor(String.class, int.class);
+        constructor.setAccessible(true);
+        pendientes.add(constructor.newInstance(texto, delayMs));
+    }
+
+    private Object obtenerInyeccionPendiente(PanelAgente panel, int indice) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("inyeccionesPendientes");
+        field.setAccessible(true);
+        Queue<?> pendientes = (Queue<?>) field.get(panel);
+        if (pendientes == null || indice < 0 || indice >= pendientes.size()) {
+            throw new IllegalArgumentException("Indice de inyeccion pendiente invalido: " + indice);
+        }
+        int actual = 0;
+        for (Object pendiente : pendientes) {
+            if (actual == indice) {
+                return pendiente;
+            }
+            actual++;
+        }
+        throw new IllegalArgumentException("No existe inyeccion pendiente en el indice: " + indice);
     }
 
     private void establecerCampoLong(PanelAgente panel, String nombre, long valor) throws Exception {
         Field field = PanelAgente.class.getDeclaredField(nombre);
         field.setAccessible(true);
         field.setLong(panel, valor);
-    }
-
-    private void establecerCampoString(PanelAgente panel, String nombre, String valor) throws Exception {
-        Field field = PanelAgente.class.getDeclaredField(nombre);
-        field.setAccessible(true);
-        field.set(panel, valor);
-    }
-
-    private void establecerCampoInt(PanelAgente panel, String nombre, int valor) throws Exception {
-        Field field = PanelAgente.class.getDeclaredField(nombre);
-        field.setAccessible(true);
-        field.setInt(panel, valor);
     }
 
     private void establecerBandera(PanelAgente panel, String nombre, boolean valor) throws Exception {

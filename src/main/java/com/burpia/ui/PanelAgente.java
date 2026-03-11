@@ -20,6 +20,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -43,6 +45,7 @@ public class PanelAgente extends JPanel {
     private static final int INTENTOS_ENVIO_ARRANQUE = 6;
     private static final int DELAY_REINTENTO_ARRANQUE_MS = 200;
     private static final int DELAY_REINTENTO_FOCO_TERMINAL_MS = 120;
+    private static final int DELAY_ENTRE_INYECCIONES_PENDIENTES_MS = 25;
 
     // Constantes para terminal
     private static final int TERMINAL_ANCHO_CARACTERES = 120;
@@ -91,9 +94,8 @@ public class PanelAgente extends JPanel {
     private final AtomicBoolean consolaArrancando;
     private final AtomicLong contadorInyeccion;
     private final AtomicLong contadorSesiones;
+    private final Queue<InyeccionPendiente> inyeccionesPendientes;
     private volatile long sesionActivaId;
-    private volatile String promptPendiente = null;
-    private volatile int delayPendienteMs = 0;
     private volatile String ultimoAgenteIniciado = null;
     private Timer reintentoFocoTimer;
 
@@ -112,6 +114,7 @@ public class PanelAgente extends JPanel {
         this.consolaArrancando = new AtomicBoolean(false);
         this.contadorInyeccion = new AtomicLong(0);
         this.contadorSesiones = new AtomicLong(0);
+        this.inyeccionesPendientes = new ConcurrentLinkedQueue<>();
         this.sesionActivaId = 0L;
         this.manejadorFocoPestania = new AtomicReference<>();
         this.manejadorCambioConfiguracion = new AtomicReference<>();
@@ -396,8 +399,7 @@ public class PanelAgente extends JPanel {
 
         asegurarConsolaIniciada();
         if (!estaPanelListoParaInyeccion()) {
-            promptPendiente = texto;
-            this.delayPendienteMs = delayMs;
+            encolarInyeccionPendiente(texto, delayMs);
             inicializacionPendiente.set(true);
             return;
         }
@@ -772,8 +774,7 @@ public class PanelAgente extends JPanel {
         terminarProcesoSilencioso(procesoActual);
 
         promptInicialEnviado.set(false);
-        promptPendiente = null;
-        delayPendienteMs = 0;
+        inyeccionesPendientes.clear();
         inicializacionPendiente.set(false);
     }
 
@@ -936,18 +937,7 @@ public class PanelAgente extends JPanel {
             return new String[]{"cmd.exe"};
         }
 
-        String shell = System.getenv("SHELL");
-        if (Normalizador.esVacio(shell)) {
-            shell = SHELL_POR_DEFECTO;
-        }
-
-        String rutaShell = OSUtils.expandirRuta(shell);
-        if (!OSUtils.existeBinario(rutaShell)) {
-            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Shell no encontrado") + ": " + I18nLogs.trTecnico(rutaShell) + ", " + I18nLogs.tr("usando fallback a") + " " + I18nLogs.trTecnico(SHELL_POR_DEFECTO));
-            shell = SHELL_POR_DEFECTO;
-        }
-
-        return new String[]{shell, PARAMETRO_SHELL_LOGIN};
+        return new String[]{resolverShellEjecutable(System.getenv("SHELL")), PARAMETRO_SHELL_LOGIN};
     }
 
     private void programarInyeccionInicial(long sesionObjetivo) {
@@ -1028,10 +1018,12 @@ public class PanelAgente extends JPanel {
         String binarioConfig = config.obtenerRutaBinarioAgente(tipo != null ? tipo.name() : config.obtenerTipoAgente());
         
         if (Normalizador.esVacio(binarioConfig)) {
-            return tipo != null ? tipo.getRutaPorDefecto() : AgenteTipo.porDefecto().getRutaPorDefecto();
+            return OSUtils.normalizarComandoParaShell(
+                tipo != null ? tipo.getRutaPorDefecto() : AgenteTipo.porDefecto().getRutaPorDefecto()
+            );
         }
 
-        return OSUtils.expandirRuta(binarioConfig.trim());
+        return OSUtils.normalizarComandoParaShell(binarioConfig.trim());
     }
 
     private boolean estaPanelListoParaInyeccion() {
@@ -1047,14 +1039,13 @@ public class PanelAgente extends JPanel {
         if (!arranqueAgenteDespachado.get() || !esSesionVigente(sesionObjetivo)) {
             return;
         }
-        if (promptPendiente != null) {
-            String prompt = promptPendiente;
-            int delay = Math.max(this.delayPendienteMs, Math.max(0, delayMinimoMs));
-
-            promptPendiente = null;
-            this.delayPendienteMs = 0;
-
-            inyectarComandoConRetraso(prompt, delay, AgentRuntimeOptions.cargar(config.obtenerTipoAgente()), "API_OR_UI", sesionObjetivo);
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(config.obtenerTipoAgente());
+        List<InyeccionPendiente> pendientes = extraerInyeccionesPendientes();
+        for (int i = 0; i < pendientes.size(); i++) {
+            InyeccionPendiente pendiente = pendientes.get(i);
+            int delay = Math.max(pendiente.delayMs(), Math.max(0, delayMinimoMs))
+                + (i * DELAY_ENTRE_INYECCIONES_PENDIENTES_MS);
+            inyectarComandoConRetraso(pendiente.texto(), delay, opciones, "API_OR_UI", sesionObjetivo);
         }
     }
 
@@ -1266,5 +1257,55 @@ public class PanelAgente extends JPanel {
 
     private String obtenerPromptPreflightFijo() {
         return config.obtenerAgentePreflightPrompt();
+    }
+
+    private void encolarInyeccionPendiente(String texto, int delayMs) {
+        inyeccionesPendientes.add(new InyeccionPendiente(texto, Math.max(0, delayMs)));
+    }
+
+    private List<InyeccionPendiente> extraerInyeccionesPendientes() {
+        List<InyeccionPendiente> pendientes = new java.util.ArrayList<>();
+        InyeccionPendiente pendiente;
+        while ((pendiente = inyeccionesPendientes.poll()) != null) {
+            pendientes.add(pendiente);
+        }
+        return pendientes;
+    }
+
+    private String resolverShellEjecutable(String shellConfigurado) {
+        String shell = Normalizador.noEsVacio(shellConfigurado) ? shellConfigurado : SHELL_POR_DEFECTO;
+        String shellEjecutable = OSUtils.resolverEjecutableComando(shell);
+        if (Normalizador.noEsVacio(shellEjecutable) && OSUtils.existeBinario(shellEjecutable)) {
+            return shellEjecutable;
+        }
+
+        gestorLogging.warning(
+            ORIGEN_LOG,
+            I18nLogs.tr("Shell no encontrado") + ": "
+                + I18nLogs.trTecnico(shell)
+                + ", "
+                + I18nLogs.tr("usando fallback a")
+                + " "
+                + I18nLogs.trTecnico(SHELL_POR_DEFECTO)
+        );
+        return SHELL_POR_DEFECTO;
+    }
+
+    private static final class InyeccionPendiente {
+        private final String texto;
+        private final int delayMs;
+
+        private InyeccionPendiente(String texto, int delayMs) {
+            this.texto = texto;
+            this.delayMs = delayMs;
+        }
+
+        private String texto() {
+            return texto;
+        }
+
+        private int delayMs() {
+            return delayMs;
+        }
     }
 }
