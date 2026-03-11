@@ -76,7 +76,7 @@ See the change summary in **Version history**.
 - Flow analysis with responses: now includes both requests and responses in the analysis.
 - Improved context menu: new options "🔍 Analyze this flow" and "🤖 Send this flow to agent" in proxy history menu.
 - Send flow to agent: sends the complete flow (requests + responses) to the CLI agent with specialized prompt.
-- Bulk analysis removal: functionality removed to simplify the project.
+
 
 ### v1.0.2
 

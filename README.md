@@ -76,7 +76,7 @@ Consulta el resumen de cambios en **Historial de versiones**.
 - Análisis de flujo con respuestas: ahora incluye tanto peticiones como respuestas en el análisis.
 - Menú contextual mejorado: nuevas opciones "🔍 Analizar este flujo" y "🤖 Enviar este flujo al agente" en el menú del proxy history.
 - Envío de flujo al agente: envía el flujo completo (peticiones + respuestas) al agente CLI con prompt especializado.
-- Eliminación de análisis bulk: funcionalidad removida para simplificar el proyecto.
+
 
 ### v1.0.2
 
