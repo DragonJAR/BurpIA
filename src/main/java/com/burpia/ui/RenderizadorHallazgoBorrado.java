@@ -1,12 +1,16 @@
 package com.burpia.ui;
 
-import javax.swing.*;
-import javax.swing.table.TableCellRenderer;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Font;
 import java.awt.font.TextAttribute;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
+import javax.swing.JLabel;
+import javax.swing.JTable;
+import javax.swing.table.TableCellRenderer;
 
 /**
  * Renderizador de celdas que aplica estilo visual de "ignorado/borrado" a hallazgos.

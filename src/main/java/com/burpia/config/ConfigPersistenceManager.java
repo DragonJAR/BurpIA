@@ -1,5 +1,6 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
@@ -35,17 +36,17 @@ public class ConfigPersistenceManager {
      * @return La configuración cargada, o una configuración por defecto si hay errores
      */
     public ConfiguracionAPI cargarConfiguracion() {
-        gestorLogging.info("ConfigPersistenceManager", "Cargando configuración desde GestorConfiguracion");
+        gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.CARGANDO_DESDE_GESTOR());
         
         this.configuracionCargada = gestorConfig.cargarConfiguracion();
         
         if (configuracionCargada == null) {
-            gestorLogging.error("ConfigPersistenceManager", "La configuración cargada es nula, usando configuración por defecto");
+            gestorLogging.error("ConfigPersistenceManager", I18nLogs.Configuracion.CONFIGURACION_NULA());
             this.configuracionCargada = new ConfiguracionAPI();
         }
         
         this.estadoInicial = crearEstadoSnapshot(configuracionCargada);
-        gestorLogging.info("ConfigPersistenceManager", "Configuración cargada exitosamente");
+        gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.CARGADA_OK());
         
         return configuracionCargada;
     }
@@ -69,34 +70,34 @@ public class ConfigPersistenceManager {
      */
     public boolean guardarConfiguracion(ConfiguracionAPI configuracion, StringBuilder mensajeError) {
         if (configuracion == null) {
-            gestorLogging.error("ConfigPersistenceManager", "No se puede guardar configuración nula");
+            gestorLogging.error("ConfigPersistenceManager", I18nLogs.Configuracion.NO_GUARDAR_NULA());
             if (mensajeError != null) {
                 mensajeError.append(I18nUI.Configuracion.MSG_CONFIGURACION_NULA());
             }
             return false;
         }
 
-        gestorLogging.info("ConfigPersistenceManager", "Validando configuración antes de guardar");
+        gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.VALIDANDO_ANTES_GUARDAR());
         
         Map<String, String> errores = configuracion.validar();
         if (!errores.isEmpty()) {
-            gestorLogging.error("ConfigPersistenceManager", "Errores de validación encontrados: " + errores.size());
+            gestorLogging.error("ConfigPersistenceManager", I18nLogs.Configuracion.ERRORES_VALIDACION(errores.size()));
             if (mensajeError != null) {
                 mensajeError.append(construirMensajeErroresValidacion(errores));
             }
             return false;
         }
 
-        gestorLogging.info("ConfigPersistenceManager", "Guardando configuración en GestorConfiguracion");
+        gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.GUARDANDO_EN_GESTOR());
         
         boolean guardado = gestorConfig.guardarConfiguracion(configuracion, mensajeError);
         
         if (guardado) {
             this.configuracionCargada = configuracion;
             this.estadoInicial = crearEstadoSnapshot(configuracion);
-            gestorLogging.info("ConfigPersistenceManager", "Configuración guardada exitosamente");
+            gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.GUARDADA_OK());
         } else {
-            gestorLogging.error("ConfigPersistenceManager", "Error al guardar configuración");
+            gestorLogging.error("ConfigPersistenceManager", I18nLogs.Configuracion.ERROR_GUARDAR());
         }
         
         return guardado;
@@ -110,17 +111,17 @@ public class ConfigPersistenceManager {
      */
     public boolean validarConfiguracion(ConfiguracionAPI configuracion) {
         if (configuracion == null) {
-            gestorLogging.error("ConfigPersistenceManager", "Configuración nula no puede ser validada");
+            gestorLogging.error("ConfigPersistenceManager", I18nLogs.Configuracion.NULA_NO_VALIDA());
             return false;
         }
 
         Map<String, String> errores = configuracion.validar();
         if (!errores.isEmpty()) {
-            gestorLogging.info("ConfigPersistenceManager", "Se encontraron " + errores.size() + " errores de validación");
+            gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.VALIDACION_FALLIDA(errores.size()));
             return false;
         }
 
-        gestorLogging.info("ConfigPersistenceManager", "Configuración validada exitosamente");
+        gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.VALIDADA_OK());
         return true;
     }
 
@@ -179,7 +180,7 @@ public class ConfigPersistenceManager {
     public void actualizarEstadoReferencia() {
         if (configuracionCargada != null) {
             this.estadoInicial = crearEstadoSnapshot(configuracionCargada);
-            gestorLogging.info("ConfigPersistenceManager", "Estado de referencia actualizado");
+            gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.ESTADO_REFERENCIA_ACTUALIZADO());
         }
     }
 

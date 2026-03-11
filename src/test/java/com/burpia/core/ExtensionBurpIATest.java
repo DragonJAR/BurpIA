@@ -25,6 +25,7 @@ import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -587,6 +588,120 @@ class ExtensionBurpIATest {
             String payload = payloadCaptor.getValue();
 
             assertTrue(payload.contains("URL=https://example.com/test"), "assertTrue failed at ExtensionBurpIATest.java:589");
+        }
+
+        @Test
+        @DisplayName("Enviar flujo al Agente retorna false cuando config es null")
+        void testEnviarFlujoAAgenteSinConfigRetornaFalse() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
+            enviarFlujoAAgente.setAccessible(true);
+            Object resultado = enviarFlujoAAgente.invoke(extension, List.of());
+            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:597");
+        }
+
+        @Test
+        @DisplayName("Enviar flujo al Agente retorna false cuando agente deshabilitado")
+        void testEnviarFlujoAAgenteDeshabilitadoRetornaFalse() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerAgenteHabilitado(false);
+            establecerCampo(extension, "config", config);
+
+            Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
+            enviarFlujoAAgente.setAccessible(true);
+            Object resultado = enviarFlujoAAgente.invoke(extension, List.of());
+            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:610");
+        }
+
+        @Test
+        @DisplayName("Enviar flujo al Agente retorna false con menos de dos requests validas")
+        void testEnviarFlujoAAgenteConMenosDeDosRequestsValidasRetornaFalse() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerAgenteHabilitado(true);
+            config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
+            establecerCampo(extension, "config", config);
+
+            HttpRequestResponse invalida = mock(HttpRequestResponse.class);
+            when(invalida.request()).thenReturn(null);
+
+            Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
+            enviarFlujoAAgente.setAccessible(true);
+            Object resultado = enviarFlujoAAgente.invoke(extension, List.of(invalida));
+            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:626");
+        }
+
+        @Test
+        @DisplayName("Enviar flujo al Agente concatena requests y omite responses faltantes")
+        void testEnviarFlujoAAgenteConcatenaRequestsYOmiteResponsesFaltantes() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerAgenteHabilitado(true);
+            config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}\\nLANG={OUTPUT_LANGUAGE}");
+            establecerCampo(extension, "config", config);
+
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+            PanelAgente panelAgente = mock(PanelAgente.class);
+            when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+            HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
+            HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
+            HttpRequest request1 = crearProxyContadorToString(HttpRequest.class, new AtomicInteger(0), "GET /one HTTP/1.1");
+            HttpRequest request2 = crearProxyContadorToString(HttpRequest.class, new AtomicInteger(0), "GET /two HTTP/1.1");
+            HttpResponse response1 = crearProxyContadorToString(HttpResponse.class, new AtomicInteger(0), "HTTP/1.1 200 OK");
+            when(rr1.request()).thenReturn(request1);
+            when(rr1.response()).thenReturn(response1);
+            when(rr2.request()).thenReturn(request2);
+            when(rr2.response()).thenReturn(null);
+
+            Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
+            enviarFlujoAAgente.setAccessible(true);
+            assertDoesNotThrow(() -> enviarFlujoAAgente.invoke(extension, List.of(rr1, rr2)));
+
+            ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+            verify(panelAgente).inyectarComando(payloadCaptor.capture(), eq(0));
+            String payload = payloadCaptor.getValue();
+            assertTrue(payload.contains("=== REQUEST 1 ==="), payload);
+            assertTrue(payload.contains("=== REQUEST 2 ==="), payload);
+            assertTrue(payload.contains("GET /one HTTP/1.1"), payload);
+            assertTrue(payload.contains("GET /two HTTP/1.1"), payload);
+            assertTrue(payload.contains("=== RESPONSE 1 ==="), payload);
+            assertFalse(payload.contains("=== RESPONSE 2 ==="), payload);
+            assertTrue(payload.contains("LANG=es"), payload);
+        }
+
+        @Test
+        @DisplayName("Enviar flujo al Agente evita serializar si prompt no usa tokens HTTP")
+        void testEnviarFlujoAAgenteEvitaSerializacionSinTokensHttp() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerAgenteHabilitado(true);
+            config.establecerAgentePrompt("Analiza el flujo y responde en {OUTPUT_LANGUAGE}");
+            establecerCampo(extension, "config", config);
+
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+            PanelAgente panelAgente = mock(PanelAgente.class);
+            when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+            AtomicInteger contadorRequest = new AtomicInteger(0);
+            AtomicInteger contadorResponse = new AtomicInteger(0);
+            HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
+            HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
+            when(rr1.request()).thenReturn(crearProxyContadorToString(HttpRequest.class, contadorRequest, "GET /one HTTP/1.1"));
+            when(rr2.request()).thenReturn(crearProxyContadorToString(HttpRequest.class, contadorRequest, "GET /two HTTP/1.1"));
+            when(rr1.response()).thenReturn(crearProxyContadorToString(HttpResponse.class, contadorResponse, "HTTP/1.1 200 OK"));
+            when(rr2.response()).thenReturn(crearProxyContadorToString(HttpResponse.class, contadorResponse, "HTTP/1.1 404 Not Found"));
+
+            Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
+            enviarFlujoAAgente.setAccessible(true);
+            assertDoesNotThrow(() -> enviarFlujoAAgente.invoke(extension, List.of(rr1, rr2)));
+
+            assertEquals(0, contadorRequest.get(), "assertEquals failed at ExtensionBurpIATest.java:700");
+            assertEquals(0, contadorResponse.get(), "assertEquals failed at ExtensionBurpIATest.java:701");
+            verify(panelAgente).inyectarComando(anyString(), eq(0));
         }
     }
 

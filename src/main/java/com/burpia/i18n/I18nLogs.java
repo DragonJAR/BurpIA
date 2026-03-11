@@ -564,6 +564,66 @@ public final class I18nLogs {
     }
 
     /**
+     * Mensajes de logging relacionados con la persistencia y estado de configuración.
+     */
+    public static final class Configuracion {
+        private Configuracion() {
+        }
+
+        public static String CARGANDO_DESDE_GESTOR() {
+            return tr("Cargando configuración desde GestorConfiguracion");
+        }
+
+        public static String CONFIGURACION_NULA() {
+            return tr("La configuración cargada es nula, usando configuración por defecto");
+        }
+
+        public static String CARGADA_OK() {
+            return tr("Configuración cargada exitosamente");
+        }
+
+        public static String NO_GUARDAR_NULA() {
+            return tr("No se puede guardar configuración nula");
+        }
+
+        public static String VALIDANDO_ANTES_GUARDAR() {
+            return tr("Validando configuración antes de guardar");
+        }
+
+        public static String ERRORES_VALIDACION(int cantidad) {
+            return tr("Errores de validación encontrados: " + cantidad);
+        }
+
+        public static String GUARDANDO_EN_GESTOR() {
+            return tr("Guardando configuración en GestorConfiguracion");
+        }
+
+        public static String GUARDADA_OK() {
+            return tr("Configuración guardada exitosamente");
+        }
+
+        public static String ERROR_GUARDAR() {
+            return tr("Error al guardar configuración");
+        }
+
+        public static String NULA_NO_VALIDA() {
+            return tr("Configuración nula no puede ser validada");
+        }
+
+        public static String VALIDACION_FALLIDA(int cantidad) {
+            return tr("Se encontraron " + cantidad + " errores de validación");
+        }
+
+        public static String VALIDADA_OK() {
+            return tr("Configuración validada exitosamente");
+        }
+
+        public static String ESTADO_REFERENCIA_ACTUALIZADO() {
+            return tr("Estado de referencia actualizado");
+        }
+    }
+
+    /**
      * Mensajes de logging relacionados con la gestión de evidencias.
      */
     public static final class Evidence {

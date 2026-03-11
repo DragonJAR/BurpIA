@@ -3,9 +3,12 @@ package com.burpia.ui;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
 
-import javax.swing.*;
+import java.awt.Color;
+import java.awt.Component;
+
+import javax.swing.JTable;
+import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
-import java.awt.*;
 
 /**
  * Renderizador de celdas para mostrar estados de tareas con estilo visual (color de fondo).

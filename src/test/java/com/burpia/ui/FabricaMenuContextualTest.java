@@ -105,17 +105,46 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = new FabricaMenuContextual(
                 api,
                 (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                null,
                 config,
                 rr -> {
                     enviados.incrementAndGet();
                     return true;
                 },
+                null,
                 () -> {},
                 null);
 
             List<Component> items = fabrica.provideMenuItems(evento);
 
             assertEquals(2, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:118");
+        }
+
+        @Test
+        @DisplayName("seleccion multiple muestra solo acciones de flujo")
+        void seleccionMultipleMuestraSoloFlujo() {
+            when(config.agenteHabilitado()).thenReturn(true);
+            when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+
+            HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
+            HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
+            when(rr1.request()).thenReturn(mock(HttpRequest.class));
+            when(rr2.request()).thenReturn(mock(HttpRequest.class));
+
+            ContextMenuEvent evento = mock(ContextMenuEvent.class);
+            when(evento.selectedRequestResponses()).thenReturn(List.of(rr1, rr2));
+
+            FabricaMenuContextual fabrica = crearFabricaCompleta(
+                (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                rr -> true,
+                seleccion -> {},
+                seleccion -> true
+            );
+
+            List<Component> items = fabrica.provideMenuItems(evento);
+            assertEquals(2, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:143");
+            assertTrue(((JMenuItem) items.get(0)).getText().contains("Flujo"), "assertTrue failed at FabricaMenuContextualTest.java:144");
+            assertTrue(((JMenuItem) items.get(1)).getText().contains("Flujo"), "assertTrue failed at FabricaMenuContextualTest.java:145");
         }
     }
 
@@ -138,8 +167,10 @@ class FabricaMenuContextualTest {
                         evidencia.set(solicitudRespuestaOriginal);
                     }
                 },
+                null,
                 config,
                 rr -> true,
+                null,
                 () -> {},
                 null);
 
@@ -163,8 +194,10 @@ class FabricaMenuContextualTest {
                         analisis.incrementAndGet();
                     }
                 },
+                null,
                 config,
                 rr -> true,
+                null,
                 () -> {},
                 null);
 
@@ -193,8 +226,10 @@ class FabricaMenuContextualTest {
                         llamadas.incrementAndGet();
                     }
                 },
+                null,
                 config,
                 rr -> true,
+                null,
                 () -> {},
                 null);
 
@@ -216,8 +251,10 @@ class FabricaMenuContextualTest {
                         llamadas.incrementAndGet();
                     }
                 },
+                null,
                 config,
                 rr -> true,
+                null,
                 () -> {},
                 null);
 
@@ -251,11 +288,13 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = new FabricaMenuContextual(
                 api,
                 (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                null,
                 config,
                 rr -> {
                     enviados.incrementAndGet();
                     return true;
                 },
+                null,
                 () -> {},
                 null);
 
@@ -266,7 +305,7 @@ class FabricaMenuContextualTest {
         }
 
         @Test
-        @DisplayName("procesa multiples solicitudes en seleccion multiple")
+        @DisplayName("procesa flujo con agente en seleccion multiple")
         void procesaSeleccionMultiple() {
             when(config.agenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
@@ -287,9 +326,11 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = new FabricaMenuContextual(
                 api,
                 (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                null,
                 config,
-                rr -> {
-                    enviados.incrementAndGet();
+                rr -> false,
+                seleccion -> {
+                    enviados.addAndGet(seleccion.size());
                     return true;
                 },
                 () -> {},
@@ -325,30 +366,24 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = new FabricaMenuContextual(
                 api,
                 (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                null,
                 config,
                 rr -> {
                     throw new RuntimeException("Error simulado");
                 },
+                null,
                 () -> {},
                 null);
 
-            // Buscar el item de análisis por texto (primer item que contenga "Analizar")
             List<Component> items2 = fabrica.provideMenuItems(evento);
-            JMenuItem itemAnalizar2 = null;
-            for (Component c : items2) {
-                if (c instanceof JMenuItem && ((JMenuItem) c).getText().contains("Analizar")) {
-                    itemAnalizar2 = (JMenuItem) c;
-                    break;
-                }
-            }
-            assertNotNull(itemAnalizar2, "Debe encontrar item de menú con texto 'Analizar'");
+            JMenuItem itemAnalizar2 = (JMenuItem) items2.get(1);
 
             // No debe lanzar excepcion
             itemAnalizar2.doClick();
         }
 
         @Test
-        @DisplayName("omite elementos null en seleccion multiple")
+        @DisplayName("omite elementos null en flujo de agente")
         void omiteElementosNull() {
             when(config.agenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
@@ -366,9 +401,11 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = new FabricaMenuContextual(
                 api,
                 (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                null,
                 config,
-                rr -> {
-                    enviados.incrementAndGet();
+                rr -> false,
+                seleccion -> {
+                    enviados.addAndGet(seleccion.size());
                     return true;
                 },
                 () -> {},
@@ -389,8 +426,36 @@ class FabricaMenuContextualTest {
             assertNotNull(itemAgente3, "Debe encontrar item de menú del agente");
             itemAgente3.doClick();
 
-            // Solo el elemento valido debe ser procesado
-            assertEquals(1, enviados.get(), "Se debe haber enviado 1 solicitud válida");
+            assertEquals(2, enviados.get(), "Se debe haber enviado la selección original al callback de flujo");
+        }
+
+        @Test
+        @DisplayName("ejecuta callback de flujo al hacer click")
+        void clickEjecutaCallbackFlujo() {
+            when(config.agenteHabilitado()).thenReturn(true);
+            when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+
+            HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
+            HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
+            when(rr1.request()).thenReturn(mock(HttpRequest.class));
+            when(rr2.request()).thenReturn(mock(HttpRequest.class));
+            ContextMenuEvent evento = mock(ContextMenuEvent.class);
+            when(evento.selectedRequestResponses()).thenReturn(List.of(rr1, rr2));
+
+            AtomicInteger recibidas = new AtomicInteger(0);
+            FabricaMenuContextual fabrica = crearFabricaCompleta(
+                (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                rr -> true,
+                seleccion -> {},
+                seleccion -> {
+                    recibidas.set(seleccion.size());
+                    return true;
+                }
+            );
+
+            JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
+            itemAgente.doClick();
+            assertEquals(2, recibidas.get(), "assertEquals failed at FabricaMenuContextualTest.java:420");
         }
     }
 
@@ -408,7 +473,9 @@ class FabricaMenuContextualTest {
                 api,
                 (solicitud, forzar, solicitudRespuestaOriginal) -> analisis.incrementAndGet(),
                 null,
+                null,
                 rr -> true,
+                null,
                 () -> {},
                 null);
 
@@ -435,8 +502,10 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = new FabricaMenuContextual(
                 api,
                 (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                null,
                 config,
                 rr -> true,
+                null,
                 () -> cambios.incrementAndGet(),
                 null);
 
@@ -466,8 +535,26 @@ class FabricaMenuContextualTest {
         return new FabricaMenuContextual(
             api,
             (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+            null,
             config,
             rr -> true,
+            null,
+            () -> {},
+            null);
+    }
+
+    private FabricaMenuContextual crearFabricaCompleta(
+            FabricaMenuContextual.ConsumerSolicitud manejadorSolicitud,
+            java.util.function.Predicate<HttpRequestResponse> manejadorAgenteSolicitud,
+            java.util.function.Consumer<List<HttpRequestResponse>> manejadorFlujo,
+            java.util.function.Predicate<List<HttpRequestResponse>> manejadorAgenteFlujo) {
+        return new FabricaMenuContextual(
+            api,
+            manejadorSolicitud,
+            manejadorFlujo,
+            config,
+            manejadorAgenteSolicitud,
+            manejadorAgenteFlujo,
             () -> {},
             null);
     }

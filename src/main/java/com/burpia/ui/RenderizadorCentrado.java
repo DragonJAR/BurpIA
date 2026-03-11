@@ -1,8 +1,10 @@
 package com.burpia.ui;
 
-import javax.swing.*;
+import java.awt.Component;
+
+import javax.swing.JTable;
+import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
-import java.awt.*;
 
 /**
  * Renderizador de celdas que centra horizontalmente el contenido.

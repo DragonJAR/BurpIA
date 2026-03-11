@@ -2174,12 +2174,12 @@ public final class I18nUI {
             return tr("⚡️ Analizar Solicitud con BurpIA", "⚡️ Analyze Request with BurpIA");
         }
 
-        public static String MENU_ENVIAR_AGENTE() {
-            return tr("🤖 Enviar al Agente", "🤖 Send to Agent");
+        public static String ITEM_ANALIZAR_SOLICITUD_CON_AGENTE(String agente) {
+            return trf("🤖 Analizar Solicitud con %s", "🤖 Analyze Request with %s", agente);
         }
 
-        public static String MENU_ENVIAR_AGENTE(String agente) {
-            return trf("🤖 Enviar a %s", "🤖 Send to %s", agente);
+        public static String ITEM_ANALIZAR_FLUJO_CON_AGENTE(String agente) {
+            return trf("🤖 Analizar Flujo con %s", "🤖 Analyze Flow with %s", agente);
         }
 
         public static String LOG_DEBOUNCE_IGNORADO() {
@@ -2231,6 +2231,18 @@ public final class I18nUI {
                     agente);
         }
 
+        public static String MSG_ENVIO_AGENTE_FLUJO(String agente, int total) {
+            return trf("Flujo enviado a %s con %d peticiones seleccionadas.",
+                    "Flow sent to %s with %d selected requests.",
+                    agente, total);
+        }
+
+        public static String MSG_ENVIO_AGENTE_FLUJO_ERROR(String agente, int total) {
+            return trf("No se pudo enviar el flujo a %s. Seleccionadas: %d.",
+                    "Could not send the flow to %s. Selected: %d.",
+                    agente, total);
+        }
+
         public static String MSG_ENVIO_AGENTE_RESULTADO(String agente, int exitosas, int total, int fallidas) {
             if (total <= 1 && exitosas > 0 && fallidas == 0) {
                 return MSG_ENVIO_AGENTE(agente);
@@ -2268,6 +2280,11 @@ public final class I18nUI {
         public static String MSG_FLUJO_REQUIERE_MULTIPLES() {
             return tr("Selecciona al menos 2 peticiones para análisis de flujo.",
                     "Select at least 2 requests for flow analysis.");
+        }
+
+        public static String MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS() {
+            return tr("Selecciona al menos 2 peticiones válidas con request para analizar el flujo.",
+                    "Select at least 2 valid requests with request data to analyze the flow.");
         }
         
         public static String TITULO_FLUJO_REQUIERE_MULTIPLES() {
@@ -2959,14 +2976,21 @@ public final class I18nUI {
                         "Launch immediate analysis for selected request.");
             }
 
-            public static String ENVIAR_A_AGENTE(String agente) {
-                return I18nUI.trf("Envía la solicitud seleccionada a %s.",
-                        "Send selected request to %s.",
+            public static String ANALIZAR_SOLICITUD_CON_AGENTE(String agente) {
+                return I18nUI.trf("Envía la solicitud seleccionada a %s respetando el prompt configurado del agente.",
+                        "Send the selected request to %s while preserving the configured agent prompt.",
                         agente);
             }
+
             public static String ANALIZAR_FLUJO() {
                 return I18nUI.tr("Analiza todas las peticiones seleccionadas como una secuencia lógica en una sola consulta al LLM.",
                         "Analyze all selected requests as a logical sequence in a single LLM query.");
+            }
+
+            public static String ANALIZAR_FLUJO_CON_AGENTE(String agente) {
+                return I18nUI.trf("Envía el flujo seleccionado a %s preservando el prompt configurado y agregando las requests/responses válidas.",
+                        "Send the selected flow to %s while preserving the configured prompt and aggregating valid requests/responses.",
+                        agente);
             }
         }
     }

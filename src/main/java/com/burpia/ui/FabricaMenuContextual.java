@@ -21,14 +21,17 @@ import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final burp.api.montoya.MontoyaApi api;
-    private final ConsumerSolicitud manejadorAnalisis;
+    private final ConsumerSolicitud manejadorAnalisisSolicitud;
+    private final Consumer<List<HttpRequestResponse>> manejadorAnalisisFlujo;
     private final ConfiguracionAPI config;
-    private final Predicate<HttpRequestResponse> manejadorAgente;
+    private final Predicate<HttpRequestResponse> manejadorAgenteSolicitud;
+    private final Predicate<List<HttpRequestResponse>> manejadorAgenteFlujo;
     private final Runnable manejadorCambioAlertasEnviarA;
     private final Frame parentFrame;
     private final AtomicReference<RegistroClic> ultimoClic;
@@ -43,15 +46,19 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
 
     public FabricaMenuContextual(MontoyaApi api,
-                                 ConsumerSolicitud manejadorAnalisis,
+                                 ConsumerSolicitud manejadorAnalisisSolicitud,
+                                 Consumer<List<HttpRequestResponse>> manejadorAnalisisFlujo,
                                  ConfiguracionAPI config,
-                                 Predicate<HttpRequestResponse> manejadorAgente,
+                                 Predicate<HttpRequestResponse> manejadorAgenteSolicitud,
+                                 Predicate<List<HttpRequestResponse>> manejadorAgenteFlujo,
                                  Runnable manejadorCambioAlertasEnviarA,
                                  Frame parentFrame) {
         this.api = api;
-        this.manejadorAnalisis = manejadorAnalisis;
+        this.manejadorAnalisisSolicitud = manejadorAnalisisSolicitud;
+        this.manejadorAnalisisFlujo = manejadorAnalisisFlujo;
         this.config = config;
-        this.manejadorAgente = manejadorAgente;
+        this.manejadorAgenteSolicitud = manejadorAgenteSolicitud;
+        this.manejadorAgenteFlujo = manejadorAgenteFlujo;
         this.manejadorCambioAlertasEnviarA = manejadorCambioAlertasEnviarA;
         this.parentFrame = parentFrame;
         this.ultimoClic = new AtomicReference<>();
@@ -61,18 +68,22 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
     
     public FabricaMenuContextual(MontoyaApi api,
-                                 ConsumerSolicitud manejadorAnalisis,
+                                 ConsumerSolicitud manejadorAnalisisSolicitud,
+                                 Consumer<List<HttpRequestResponse>> manejadorAnalisisFlujo,
                                  ConfiguracionAPI config,
-                                 Predicate<HttpRequestResponse> manejadorAgente,
+                                 Predicate<HttpRequestResponse> manejadorAgenteSolicitud,
+                                 Predicate<List<HttpRequestResponse>> manejadorAgenteFlujo,
                                  Runnable manejadorCambioAlertasEnviarA,
                                  Frame parentFrame,
                                  GestorLoggingUnificado gestorLogging,
                                  LimitadorTasa limitador,
                                  ModeloTablaHallazgos modeloTablaHallazgos) {
         this.api = api;
-        this.manejadorAnalisis = manejadorAnalisis;
+        this.manejadorAnalisisSolicitud = manejadorAnalisisSolicitud;
+        this.manejadorAnalisisFlujo = manejadorAnalisisFlujo;
         this.config = config;
-        this.manejadorAgente = manejadorAgente;
+        this.manejadorAgenteSolicitud = manejadorAgenteSolicitud;
+        this.manejadorAgenteFlujo = manejadorAgenteFlujo;
         this.manejadorCambioAlertasEnviarA = manejadorCambioAlertasEnviarA;
         this.parentFrame = parentFrame;
         this.ultimoClic = new AtomicReference<>();
@@ -88,15 +99,15 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             return itemsMenu;
         }
         final List<HttpRequestResponse> seleccion = new ArrayList<>(evento.selectedRequestResponses());
+        int cantidadSeleccionada = seleccion.size();
 
-        JMenuItem itemAnalizar = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD());
-        itemAnalizar.setFont(EstilosUI.FUENTE_ESTANDAR);
-        itemAnalizar.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD());
-        itemAnalizar.addActionListener(e -> manejarAnalisisSeleccion(seleccion));
-
-        itemsMenu.add(itemAnalizar);
-
-        if (seleccion.size() >= 2) {
+        if (cantidadSeleccionada == 1) {
+            JMenuItem itemAnalizar = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD());
+            itemAnalizar.setFont(EstilosUI.FUENTE_ESTANDAR);
+            itemAnalizar.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD());
+            itemAnalizar.addActionListener(e -> manejarAnalisisSeleccion(seleccion));
+            itemsMenu.add(itemAnalizar);
+        } else if (cantidadSeleccionada >= 2) {
             JMenuItem itemFlujo = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_FLUJO());
             itemFlujo.setFont(EstilosUI.FUENTE_ESTANDAR);
             itemFlujo.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO());
@@ -104,16 +115,24 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             itemsMenu.add(itemFlujo);
         }
 
-        if (config != null && config.agenteHabilitado() && manejadorAgente != null) {
+        if (config != null && config.agenteHabilitado()) {
             String nombreAgente = AgenteTipo.obtenerNombreVisible(
                 config.obtenerTipoAgente(),
                 I18nUI.General.AGENTE_GENERICO()
             );
-            JMenuItem itemAgente = new JMenuItem(I18nUI.Contexto.MENU_ENVIAR_AGENTE(nombreAgente));
-            itemAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
-            itemAgente.setToolTipText(I18nUI.Tooltips.Contexto.ENVIAR_A_AGENTE(nombreAgente));
-            itemAgente.addActionListener(e -> manejarEnvioAgente(seleccion, nombreAgente));
-            itemsMenu.add(itemAgente);
+            if (cantidadSeleccionada == 1 && manejadorAgenteSolicitud != null) {
+                JMenuItem itemAgente = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente));
+                itemAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
+                itemAgente.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente));
+                itemAgente.addActionListener(e -> manejarEnvioAgenteSolicitud(seleccion, nombreAgente));
+                itemsMenu.add(itemAgente);
+            } else if (cantidadSeleccionada >= 2 && manejadorAgenteFlujo != null) {
+                JMenuItem itemAgenteFlujo = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_FLUJO_CON_AGENTE(nombreAgente));
+                itemAgenteFlujo.setFont(EstilosUI.FUENTE_ESTANDAR);
+                itemAgenteFlujo.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO_CON_AGENTE(nombreAgente));
+                itemAgenteFlujo.addActionListener(e -> manejarEnvioAgenteFlujo(seleccion, nombreAgente));
+                itemsMenu.add(itemAgenteFlujo);
+            }
         }
 
         return itemsMenu;
@@ -135,7 +154,10 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
 
         ultimoClic.set(new RegistroClic(hash, ahora));
 
-        manejadorAnalisis.analizarSolicitud(solicitud, true, solicitudRespuestaOriginal);
+        if (manejadorAnalisisSolicitud == null) {
+            return false;
+        }
+        manejadorAnalisisSolicitud.analizarSolicitud(solicitud, true, solicitudRespuestaOriginal);
 
         api.logging().logToOutput(I18nUI.Contexto.LOG_ANALISIS_FORZADO());
         return true;
@@ -183,8 +205,8 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
     }
 
-    private void manejarEnvioAgente(List<HttpRequestResponse> seleccion, String nombreAgente) {
-        if (Normalizador.esVacia(seleccion) || manejadorAgente == null) {
+    private void manejarEnvioAgenteSolicitud(List<HttpRequestResponse> seleccion, String nombreAgente) {
+        if (Normalizador.esVacia(seleccion) || manejadorAgenteSolicitud == null) {
             return;
         }
         int exitosas = 0;
@@ -195,7 +217,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 continue;
             }
             try {
-                boolean enviada = manejadorAgente.test(rr);
+                boolean enviada = manejadorAgenteSolicitud.test(rr);
                 if (enviada) {
                     exitosas++;
                 } else {
@@ -229,6 +251,43 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             );
         }
     }
+
+    private void manejarEnvioAgenteFlujo(List<HttpRequestResponse> seleccion, String nombreAgente) {
+        if (Normalizador.esVacia(seleccion) || manejadorAgenteFlujo == null) {
+            return;
+        }
+        boolean enviada;
+        try {
+            enviada = manejadorAgenteFlujo.test(new ArrayList<>(seleccion));
+        } catch (Exception ex) {
+            api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()));
+            enviada = false;
+        }
+
+        if (GraphicsEnvironment.isHeadless()) {
+            return;
+        }
+        String mensaje = enviada
+            ? I18nUI.Contexto.MSG_ENVIO_AGENTE_FLUJO(nombreAgente, seleccion.size())
+            : I18nUI.Contexto.MSG_ENVIO_AGENTE_FLUJO_ERROR(nombreAgente, seleccion.size());
+        if (enviada) {
+            UIUtils.mostrarInfoConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
+                mensaje,
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+        } else {
+            UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
+                mensaje,
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+        }
+    }
     
     private void manejarAnalisisFlujo(List<HttpRequestResponse> seleccion) {
         if (seleccion == null || seleccion.size() < 2) {
@@ -245,6 +304,26 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             return;
         }
         
+        List<HttpRequestResponse> solicitudesValidas = filtrarSolicitudesValidas(seleccion);
+        if (solicitudesValidas.size() < 2) {
+            if (GraphicsEnvironment.isHeadless()) {
+                return;
+            }
+            UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
+                null,
+                I18nUI.Contexto.TITULO_FLUJO_REQUIERE_MULTIPLES(),
+                I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS(),
+                alertasEnviarAHabilitadas(),
+                this::deshabilitarAlertasEnviarA
+            );
+            return;
+        }
+
+        if (manejadorAnalisisFlujo != null) {
+            manejadorAnalisisFlujo.accept(solicitudesValidas);
+            return;
+        }
+
         if (flowAnalysisManager == null) {
             flowAnalysisManager = new FlowAnalysisManager(
                 api,
@@ -256,13 +335,13 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             );
         }
         
-        api.logging().logToOutput(I18nUI.Contexto.LOG_FLUJO_INICIADO(seleccion.size()));
+        api.logging().logToOutput(I18nUI.Contexto.LOG_FLUJO_INICIADO(solicitudesValidas.size()));
         
         if (!GraphicsEnvironment.isHeadless()) {
             UIUtils.mostrarInfoConOptOutMenuContextual(
                 null,
                 I18nUI.Contexto.TITULO_FLUJO_INICIADO(),
-                I18nUI.Contexto.MSG_FLUJO_INICIADO(seleccion.size()),
+                I18nUI.Contexto.MSG_FLUJO_INICIADO(solicitudesValidas.size()),
                 alertasEnviarAHabilitadas(),
                 this::deshabilitarAlertasEnviarA
             );
@@ -275,7 +354,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 
                 if (!GraphicsEnvironment.isHeadless()) {
                     int cantidadHallazgos = hallazgos != null ? hallazgos.size() : 0;
-                    int cantidadPeticiones = urlsFlujo != null ? urlsFlujo.size() : seleccion.size();
+                    int cantidadPeticiones = urlsFlujo != null ? urlsFlujo.size() : solicitudesValidas.size();
                     UIUtils.mostrarInfoConOptOutMenuContextual(
                         null,
                         I18nUI.Contexto.TITULO_FLUJO_COMPLETADO(),
@@ -307,7 +386,20 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             }
         };
         
-        flowAnalysisManager.ejecutarAnalisisFlujo(seleccion, callback);
+        flowAnalysisManager.ejecutarAnalisisFlujo(solicitudesValidas, callback);
+    }
+
+    private List<HttpRequestResponse> filtrarSolicitudesValidas(List<HttpRequestResponse> seleccion) {
+        List<HttpRequestResponse> solicitudesValidas = new ArrayList<>();
+        if (Normalizador.esVacia(seleccion)) {
+            return solicitudesValidas;
+        }
+        for (HttpRequestResponse rr : seleccion) {
+            if (rr != null && rr.request() != null) {
+                solicitudesValidas.add(rr);
+            }
+        }
+        return solicitudesValidas;
     }
 
     private boolean alertasEnviarAHabilitadas() {

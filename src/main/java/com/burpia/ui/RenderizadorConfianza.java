@@ -3,12 +3,20 @@ package com.burpia.ui;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.Normalizador;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
+import javax.swing.JTable;
+import javax.swing.SwingConstants;
+import javax.swing.table.DefaultTableCellRenderer;
 
 /**
  * Renderizador de celdas para mostrar niveles de confianza con estilo visual (texto + barra de segmentos).

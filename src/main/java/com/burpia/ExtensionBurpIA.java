@@ -32,6 +32,7 @@ import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -192,8 +193,10 @@ public class ExtensionBurpIA implements BurpExtension {
             fabricaMenuContextual = new FabricaMenuContextual(
                     api,
                     this::analizarSolicitudManual,
+                    null,
                     config,
                     this::enviarAAgente,
+                    this::enviarFlujoAAgente,
                     () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto"),
                     obtenerFramePadre());
             api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
@@ -206,31 +209,44 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta) {
-        if (config == null) {
-            registrarError("No se puede usar el Agente: configuracion no inicializada");
-            return false;
-        }
-        if (!config.agenteHabilitado()) {
-            registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
-            return false;
-        }
         if (solicitudRespuesta == null) {
             registrarError("No se puede enviar al Agente: solicitud/respuesta nula");
             return false;
         }
         try {
-            String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
+            String prompt = obtenerPromptAgenteDisponible();
+            if (prompt == null) {
+                return false;
+            }
             String request = serializarSolicitudSiNecesario(prompt, solicitudRespuesta);
             String response = serializarRespuestaSiNecesario(prompt, solicitudRespuesta);
             String inputFinal = aplicarTokensPromptAgente(prompt, request, response, config.obtenerIdiomaUi());
-
-            PanelAgente panelAgente = obtenerPanelAgenteDisponible();
-            if (panelAgente == null) {
-                return false;
-            }
-            return enfocarEInyectarEnAgente(panelAgente, inputFinal);
+            return enviarPayloadAgente(inputFinal);
         } catch (Exception e) {
             registrarError("No se pudo enviar al Agente: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta) {
+        try {
+            String prompt = obtenerPromptAgenteDisponible();
+            if (prompt == null) {
+                return false;
+            }
+
+            List<HttpRequestResponse> solicitudesValidas = filtrarSolicitudesConRequest(solicitudesRespuesta);
+            if (solicitudesValidas.size() < 2) {
+                registrarError(I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS());
+                return false;
+            }
+
+            String requests = serializarSolicitudesFlujoSiNecesario(prompt, solicitudesValidas);
+            String responses = serializarRespuestasFlujoSiNecesario(prompt, solicitudesValidas);
+            String inputFinal = aplicarTokensPromptAgente(prompt, requests, responses, config.obtenerIdiomaUi());
+            return enviarPayloadAgente(inputFinal);
+        } catch (Exception e) {
+            registrarError("No se pudo enviar flujo al Agente: " + e.getMessage());
             return false;
         }
     }
@@ -249,7 +265,10 @@ public class ExtensionBurpIA implements BurpExtension {
             return false;
         }
         try {
-            String prompt = normalizarPromptAgente(config.obtenerAgentePrompt());
+            String prompt = obtenerPromptAgenteDisponible();
+            if (prompt == null) {
+                return false;
+            }
 
             HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
             String request = serializarSolicitudSiNecesario(prompt, evidencia, hallazgo.obtenerUrl());
@@ -276,11 +295,7 @@ public class ExtensionBurpIA implements BurpExtension {
             String inputFinal = inputBuilder.toString()
                     + aplicarTokensPromptAgente(prompt, request, response, lang, titulo, resumen, urlContext);
 
-            PanelAgente panelAgente = obtenerPanelAgenteDisponible();
-            if (panelAgente == null) {
-                return false;
-            }
-            return enfocarEInyectarEnAgente(panelAgente, inputFinal);
+            return enviarPayloadAgente(inputFinal);
         } catch (Exception e) {
             registrarError("No se pudo enviar hallazgo al Agente: " + e.getMessage());
             return false;
@@ -341,6 +356,18 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private String normalizarPromptAgente(String prompt) {
         return prompt != null ? prompt : "";
+    }
+
+    private String obtenerPromptAgenteDisponible() {
+        if (config == null) {
+            registrarError("No se puede usar el Agente: configuracion no inicializada");
+            return null;
+        }
+        if (!config.agenteHabilitado()) {
+            registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
+            return null;
+        }
+        return normalizarPromptAgente(config.obtenerAgentePrompt());
     }
 
     private String serializarSolicitudSiNecesario(String prompt, HttpRequestResponse evidencia) {
@@ -404,6 +431,69 @@ public class ExtensionBurpIA implements BurpExtension {
             return "";
         }
         return evidencia.response().toString();
+    }
+
+    private String serializarSolicitudesFlujoSiNecesario(String prompt, List<HttpRequestResponse> evidencias) {
+        if (!contieneToken(prompt, TOKEN_REQUEST) || Normalizador.esVacia(evidencias)) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        int indice = 1;
+        for (HttpRequestResponse evidencia : evidencias) {
+            if (evidencia == null || evidencia.request() == null) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append("\n\n");
+            }
+            builder.append("=== REQUEST ").append(indice).append(" ===\n");
+            builder.append(evidencia.request());
+            indice++;
+        }
+        return builder.toString();
+    }
+
+    private String serializarRespuestasFlujoSiNecesario(String prompt, List<HttpRequestResponse> evidencias) {
+        if (!contieneToken(prompt, TOKEN_RESPONSE) || Normalizador.esVacia(evidencias)) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        int indice = 1;
+        for (HttpRequestResponse evidencia : evidencias) {
+            if (evidencia == null || evidencia.request() == null) {
+                continue;
+            }
+            if (evidencia.response() != null) {
+                if (builder.length() > 0) {
+                    builder.append("\n\n");
+                }
+                builder.append("=== RESPONSE ").append(indice).append(" ===\n");
+                builder.append(evidencia.response());
+            }
+            indice++;
+        }
+        return builder.toString();
+    }
+
+    private List<HttpRequestResponse> filtrarSolicitudesConRequest(List<HttpRequestResponse> solicitudesRespuesta) {
+        List<HttpRequestResponse> solicitudesValidas = new ArrayList<>();
+        if (Normalizador.esVacia(solicitudesRespuesta)) {
+            return solicitudesValidas;
+        }
+        for (HttpRequestResponse solicitudRespuesta : solicitudesRespuesta) {
+            if (solicitudRespuesta != null && solicitudRespuesta.request() != null) {
+                solicitudesValidas.add(solicitudRespuesta);
+            }
+        }
+        return solicitudesValidas;
+    }
+
+    private boolean enviarPayloadAgente(String inputFinal) {
+        PanelAgente panelAgente = obtenerPanelAgenteDisponible();
+        if (panelAgente == null) {
+            return false;
+        }
+        return enfocarEInyectarEnAgente(panelAgente, inputFinal);
     }
 
     private void agregarLineaSiHayContenido(StringBuilder builder, boolean habilitado, String etiqueta, String valor) {
