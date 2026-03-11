@@ -553,6 +553,8 @@ public class ConfiguracionAPI {
                 ## Step 2: Mandatory Baseline
                 Execute the original request via `send_http1_request`. This is your control group.
 
+                If this step fails, trigger ABORT CONDITIONS above.
+
                 ## Step 3: Active Probing & "Manual" Fuzzing
                 Send 2-3 targeted payloads. Do not just "check" the bug—try to trigger edge cases.
                 - If the primary bug is blocked, move to **Step 4 (WAF Bypass)**.
@@ -570,14 +572,22 @@ public class ConfiguracionAPI {
                 2. Re-send that exact payload via `send_http1_request` and record the
                     final response — this becomes the **canonical proof-of-concept**.
                 3. You MUST call `create_repeater_tab` using that best payload as the
-                    tab's pre-loaded request.
+                    tab's pre-loaded request, Never use HTTP/2.
                 - **Tab Name Format**: `[VALIDATED] {VULN_CLASS} - {PATH}`
                 - **Example**: `[VALIDATED] Stored XSS - /guestbook.php`
+
+                # ABORT CONDITIONS
+                Stop immediately and report the error if any of the following occur:
+                - `send_http1_request` is unavailable or returns a connection error before Step 2.
+                - Target host is unreachable after the first tool call.
+                - Required variables `{REQUEST}`, are empty or unpopulated.
+
+                Do not attempt to infer results or continue the workflow under these conditions.
 
                 # OUTPUT FORMAT ({OUTPUT_LANGUAGE})
                 ## Vulnerability Validation Report
 
-                **Target**: https://www.merriam-webster.com/dictionary/parameter
+                **Target**: https://www.vulnweb.com/dictionary/parameter
                 **Primary Vulnerability**: [e.g., SQL Injection]
                 **Verdict**: CONFIRMED | NEEDS INVESTIGATION | FALSE POSITIVE
 
@@ -878,8 +888,7 @@ public class ConfiguracionAPI {
                     I18nUI.Configuracion.ERROR_PROMPT_REQUERIDO());
         }
 
-        ConfigValidator.ValidationResult validacionDelayAgente =
-                ConfigValidator.validarAgenteDelay(agenteDelay);
+        ConfigValidator.ValidationResult validacionDelayAgente = ConfigValidator.validarAgenteDelay(agenteDelay);
         if (!validacionDelayAgente.esValido()) {
             errores.put("agenteDelay", validacionDelayAgente.obtenerMensajeError());
         }
@@ -1329,8 +1338,8 @@ public class ConfiguracionAPI {
     private ConfigValidator.ValidationResult validarAgenteHabilitado() {
         String tipoAgenteActual = obtenerTipoAgente();
         String rutaBinario = obtenerRutaBinarioAgente(tipoAgenteActual);
-        ConfigValidator.ValidationResult validacionRuta =
-                ConfigValidator.validarRutaBinarioAgente(rutaBinario, tipoAgenteActual);
+        ConfigValidator.ValidationResult validacionRuta = ConfigValidator.validarRutaBinarioAgente(rutaBinario,
+                tipoAgenteActual);
         if (!validacionRuta.esValido()) {
             return validacionRuta;
         }
