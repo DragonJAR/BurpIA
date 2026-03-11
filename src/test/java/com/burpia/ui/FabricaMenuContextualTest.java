@@ -2,9 +2,11 @@ package com.burpia.ui;
 
 import com.burpia.config.ConfiguracionAPI;
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
+import burp.api.montoya.ui.contextmenu.InvocationType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -133,6 +135,8 @@ class FabricaMenuContextualTest {
 
             ContextMenuEvent evento = mock(ContextMenuEvent.class);
             when(evento.selectedRequestResponses()).thenReturn(List.of(rr1, rr2));
+            when(evento.invocationType()).thenReturn(InvocationType.PROXY_HISTORY);
+            when(evento.toolType()).thenReturn(ToolType.PROXY);
 
             FabricaMenuContextual fabrica = crearFabricaCompleta(
                 (solicitud, forzar, solicitudRespuestaOriginal) -> {},
@@ -179,6 +183,36 @@ class FabricaMenuContextualTest {
 
             assertEquals(1, llamadas.get(), "assertEquals failed at FabricaMenuContextualTest.java:149");
             assertNotNull(evidencia.get(), "assertNotNull failed at FabricaMenuContextualTest.java:150");
+        }
+
+        @Test
+        @DisplayName("propaga contexto real de invocacion al callback")
+        void propagaContextoInvocacion() {
+            ContextMenuEvent evento = crearEventoConSolicitud("GET /ctx HTTP/1.1");
+            when(evento.invocationType()).thenReturn(InvocationType.SEARCH_RESULTS);
+            when(evento.toolType()).thenReturn(ToolType.LOGGER);
+
+            AtomicReference<FabricaMenuContextual.ContextoInvocacion> contexto = new AtomicReference<>();
+            FabricaMenuContextual fabrica = new FabricaMenuContextual(
+                api,
+                (solicitud, forzar, solicitudRespuestaOriginal, contextoInvocacion) -> contexto.set(contextoInvocacion),
+                null,
+                config,
+                (FabricaMenuContextual.PredicateAgenteSolicitud) null,
+                null,
+                () -> {},
+                null);
+
+            JMenuItem item = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
+            item.doClick();
+
+            assertNotNull(contexto.get(), "Debe propagar contexto de invocación");
+            assertEquals(InvocationType.SEARCH_RESULTS, contexto.get().obtenerTipoInvocacion(),
+                "Debe preservar InvocationType real");
+            assertEquals(ToolType.LOGGER, contexto.get().obtenerTipoHerramienta(),
+                "Debe preservar ToolType real");
+            assertEquals(1, contexto.get().obtenerCantidadSeleccionada(),
+                "Debe preservar cantidad seleccionada");
         }
 
         @Test
@@ -321,6 +355,8 @@ class FabricaMenuContextualTest {
 
             ContextMenuEvent evento = mock(ContextMenuEvent.class);
             when(evento.selectedRequestResponses()).thenReturn(List.of(rr1, rr2));
+            when(evento.invocationType()).thenReturn(InvocationType.PROXY_HISTORY);
+            when(evento.toolType()).thenReturn(ToolType.PROXY);
 
             AtomicInteger enviados = new AtomicInteger(0);
             FabricaMenuContextual fabrica = new FabricaMenuContextual(
@@ -396,6 +432,8 @@ class FabricaMenuContextualTest {
             ContextMenuEvent evento = mock(ContextMenuEvent.class);
             // Lista con elemento null en el medio
             when(evento.selectedRequestResponses()).thenReturn(Arrays.asList(rr1, null));
+            when(evento.invocationType()).thenReturn(InvocationType.PROXY_HISTORY);
+            when(evento.toolType()).thenReturn(ToolType.PROXY);
 
             AtomicInteger enviados = new AtomicInteger(0);
             FabricaMenuContextual fabrica = new FabricaMenuContextual(
@@ -441,6 +479,8 @@ class FabricaMenuContextualTest {
             when(rr2.request()).thenReturn(mock(HttpRequest.class));
             ContextMenuEvent evento = mock(ContextMenuEvent.class);
             when(evento.selectedRequestResponses()).thenReturn(List.of(rr1, rr2));
+            when(evento.invocationType()).thenReturn(InvocationType.PROXY_HISTORY);
+            when(evento.toolType()).thenReturn(ToolType.PROXY);
 
             AtomicInteger recibidas = new AtomicInteger(0);
             FabricaMenuContextual fabrica = crearFabricaCompleta(
@@ -468,6 +508,8 @@ class FabricaMenuContextualTest {
                 crearSolicitudValida(), crearSolicitudValida(), crearSolicitudValida());
             ContextMenuEvent evento = mock(ContextMenuEvent.class);
             when(evento.selectedRequestResponses()).thenReturn(seleccion);
+            when(evento.invocationType()).thenReturn(InvocationType.PROXY_HISTORY);
+            when(evento.toolType()).thenReturn(ToolType.PROXY);
 
             AtomicInteger recibidas = new AtomicInteger(0);
             FabricaMenuContextual fabrica = crearFabricaCompleta(
@@ -571,7 +613,7 @@ class FabricaMenuContextualTest {
     }
 
     private FabricaMenuContextual crearFabricaCompleta(
-            FabricaMenuContextual.ConsumerSolicitud manejadorSolicitud,
+            FabricaMenuContextual.ConsumerSolicitudSinContexto manejadorSolicitud,
             java.util.function.Predicate<HttpRequestResponse> manejadorAgenteSolicitud,
             java.util.function.Consumer<List<HttpRequestResponse>> manejadorFlujo,
             java.util.function.Predicate<List<HttpRequestResponse>> manejadorAgenteFlujo) {
@@ -593,6 +635,8 @@ class FabricaMenuContextualTest {
         when(request.toString()).thenReturn(solicitudHttp);
         when(rr.request()).thenReturn(request);
         when(evento.selectedRequestResponses()).thenReturn(List.of(rr));
+        when(evento.invocationType()).thenReturn(InvocationType.PROXY_HISTORY);
+        when(evento.toolType()).thenReturn(ToolType.PROXY);
         return evento;
     }
 

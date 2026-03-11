@@ -101,8 +101,8 @@ public class ConfiguracionAPI {
     private Map<String, String> estadoUI;
 
     public ConfiguracionAPI() {
-        this.proveedorAI = "Z.ai";
-        this.retrasoSegundos = normalizarRetrasoSegundos(5);
+        this.proveedorAI = "Ollama";
+        this.retrasoSegundos = normalizarRetrasoSegundos(1);
         this.maximoConcurrente = normalizarMaximoConcurrente(1);
         this.maximoHallazgosTabla = MAXIMO_HALLAZGOS_TABLA_DEFECTO;
         this.maximoTareasTabla = MAXIMO_TAREAS_TABLA_DEFECTO;

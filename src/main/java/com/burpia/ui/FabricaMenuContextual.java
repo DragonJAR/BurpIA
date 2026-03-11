@@ -1,10 +1,12 @@
 package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.ContextMenuItemsProvider;
+import burp.api.montoya.ui.contextmenu.InvocationType;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.flow.FlowAnalysisConstraints;
@@ -17,32 +19,47 @@ import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final burp.api.montoya.MontoyaApi api;
     private final ConsumerSolicitud manejadorAnalisisSolicitud;
-    private final Consumer<List<HttpRequestResponse>> manejadorAnalisisFlujo;
+    private final ConsumerFlujo manejadorAnalisisFlujo;
     private final ConfiguracionAPI config;
-    private final Predicate<HttpRequestResponse> manejadorAgenteSolicitud;
-    private final Predicate<List<HttpRequestResponse>> manejadorAgenteFlujo;
+    private final PredicateAgenteSolicitud manejadorAgenteSolicitud;
+    private final PredicateAgenteFlujo manejadorAgenteFlujo;
     private final Runnable manejadorCambioAlertasEnviarA;
     private final Frame parentFrame;
     private final AtomicReference<RegistroClic> ultimoClic;
     private static final long VENTANA_DEBOUNCE_MS = 500L;
 
-    public interface ConsumerSolicitud {
+    public interface ConsumerSolicitudSinContexto {
         void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal);
+    }
+
+    public interface ConsumerSolicitud {
+        void analizarSolicitud(HttpRequest solicitud, boolean forzarAnalisis, HttpRequestResponse solicitudRespuestaOriginal,
+                ContextoInvocacion contextoInvocacion);
+    }
+
+    public interface ConsumerFlujo {
+        void analizarFlujo(List<HttpRequestResponse> solicitudesRespuestaOriginales, ContextoInvocacion contextoInvocacion);
+    }
+
+    public interface PredicateAgenteSolicitud {
+        boolean enviar(HttpRequestResponse solicitudRespuesta, ContextoInvocacion contextoInvocacion);
+    }
+
+    public interface PredicateAgenteFlujo {
+        boolean enviar(List<HttpRequestResponse> solicitudesRespuesta, ContextoInvocacion contextoInvocacion);
     }
 
     public FabricaMenuContextual(MontoyaApi api,
                                  ConsumerSolicitud manejadorAnalisisSolicitud,
-                                 Consumer<List<HttpRequestResponse>> manejadorAnalisisFlujo,
+                                 ConsumerFlujo manejadorAnalisisFlujo,
                                  ConfiguracionAPI config,
-                                 Predicate<HttpRequestResponse> manejadorAgenteSolicitud,
-                                 Predicate<List<HttpRequestResponse>> manejadorAgenteFlujo,
+                                 PredicateAgenteSolicitud manejadorAgenteSolicitud,
+                                 PredicateAgenteFlujo manejadorAgenteFlujo,
                                  Runnable manejadorCambioAlertasEnviarA,
                                  Frame parentFrame) {
         this.api = api;
@@ -55,6 +72,36 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         this.parentFrame = parentFrame;
         this.ultimoClic = new AtomicReference<>();
     }
+
+    public FabricaMenuContextual(MontoyaApi api,
+                                 ConsumerSolicitudSinContexto manejadorAnalisisSolicitud,
+                                 java.util.function.Consumer<List<HttpRequestResponse>> manejadorAnalisisFlujo,
+                                 ConfiguracionAPI config,
+                                 java.util.function.Predicate<HttpRequestResponse> manejadorAgenteSolicitud,
+                                 java.util.function.Predicate<List<HttpRequestResponse>> manejadorAgenteFlujo,
+                                 Runnable manejadorCambioAlertasEnviarA,
+                                 Frame parentFrame) {
+        this(
+            api,
+            manejadorAnalisisSolicitud != null
+                ? (solicitud, forzarAnalisis, solicitudRespuestaOriginal, contextoInvocacion) ->
+                    manejadorAnalisisSolicitud.analizarSolicitud(solicitud, forzarAnalisis, solicitudRespuestaOriginal)
+                : null,
+            manejadorAnalisisFlujo != null
+                ? (solicitudesRespuestaOriginales, contextoInvocacion) ->
+                    manejadorAnalisisFlujo.accept(solicitudesRespuestaOriginales)
+                : null,
+            config,
+            manejadorAgenteSolicitud != null
+                ? (solicitudRespuesta, contextoInvocacion) -> manejadorAgenteSolicitud.test(solicitudRespuesta)
+                : null,
+            manejadorAgenteFlujo != null
+                ? (solicitudesRespuesta, contextoInvocacion) -> manejadorAgenteFlujo.test(solicitudesRespuesta)
+                : null,
+            manejadorCambioAlertasEnviarA,
+            parentFrame
+        );
+    }
     @Override
     public List<Component> provideMenuItems(ContextMenuEvent evento) {
         List<Component> itemsMenu = new ArrayList<>();
@@ -63,18 +110,19 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
         final List<HttpRequestResponse> seleccion = new ArrayList<>(evento.selectedRequestResponses());
         int cantidadSeleccionada = seleccion.size();
+        final ContextoInvocacion contextoInvocacion = construirContextoInvocacion(evento, cantidadSeleccionada);
 
         if (cantidadSeleccionada == 1) {
             JMenuItem itemAnalizar = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD());
             itemAnalizar.setFont(EstilosUI.FUENTE_ESTANDAR);
             itemAnalizar.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD());
-            itemAnalizar.addActionListener(e -> manejarAnalisisSeleccion(seleccion));
+            itemAnalizar.addActionListener(e -> manejarAnalisisSeleccion(seleccion, contextoInvocacion));
             itemsMenu.add(itemAnalizar);
         } else if (cantidadSeleccionada >= 2) {
             JMenuItem itemFlujo = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_FLUJO());
             itemFlujo.setFont(EstilosUI.FUENTE_ESTANDAR);
             itemFlujo.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO());
-            itemFlujo.addActionListener(e -> manejarAnalisisFlujo(seleccion));
+            itemFlujo.addActionListener(e -> manejarAnalisisFlujo(seleccion, contextoInvocacion));
             itemsMenu.add(itemFlujo);
         }
 
@@ -87,13 +135,13 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 JMenuItem itemAgente = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente));
                 itemAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
                 itemAgente.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente));
-                itemAgente.addActionListener(e -> manejarEnvioAgenteSolicitud(seleccion, nombreAgente));
+                itemAgente.addActionListener(e -> manejarEnvioAgenteSolicitud(seleccion, nombreAgente, contextoInvocacion));
                 itemsMenu.add(itemAgente);
             } else if (cantidadSeleccionada >= 2 && manejadorAgenteFlujo != null) {
                 JMenuItem itemAgenteFlujo = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_FLUJO_CON_AGENTE(nombreAgente));
                 itemAgenteFlujo.setFont(EstilosUI.FUENTE_ESTANDAR);
                 itemAgenteFlujo.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO_CON_AGENTE(nombreAgente));
-                itemAgenteFlujo.addActionListener(e -> manejarEnvioAgenteFlujo(seleccion, nombreAgente));
+                itemAgenteFlujo.addActionListener(e -> manejarEnvioAgenteFlujo(seleccion, nombreAgente, contextoInvocacion));
                 itemsMenu.add(itemAgenteFlujo);
             }
         }
@@ -101,7 +149,8 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         return itemsMenu;
     }
 
-    private boolean manejarClicConDebounce(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
+    private boolean manejarClicConDebounce(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal,
+            ContextoInvocacion contextoInvocacion) {
         if (solicitud == null || solicitudRespuestaOriginal == null) {
             return false;
         }
@@ -120,13 +169,11 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         if (manejadorAnalisisSolicitud == null) {
             return false;
         }
-        manejadorAnalisisSolicitud.analizarSolicitud(solicitud, true, solicitudRespuestaOriginal);
-
-        api.logging().logToOutput(I18nUI.Contexto.LOG_ANALISIS_FORZADO());
+        manejadorAnalisisSolicitud.analizarSolicitud(solicitud, true, solicitudRespuestaOriginal, contextoInvocacion);
         return true;
     }
 
-    private void manejarAnalisisSeleccion(List<HttpRequestResponse> seleccion) {
+    private void manejarAnalisisSeleccion(List<HttpRequestResponse> seleccion, ContextoInvocacion contextoInvocacion) {
         if (Normalizador.esVacia(seleccion)) {
             return;
         }
@@ -138,7 +185,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 continue;
             }
             HttpRequest solicitud = rr.request();
-            if (manejarClicConDebounce(solicitud, rr)) {
+            if (manejarClicConDebounce(solicitud, rr, contextoInvocacion)) {
                 iniciadas++;
             } else {
                 omitidas++;
@@ -168,7 +215,8 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
     }
 
-    private void manejarEnvioAgenteSolicitud(List<HttpRequestResponse> seleccion, String nombreAgente) {
+    private void manejarEnvioAgenteSolicitud(List<HttpRequestResponse> seleccion, String nombreAgente,
+            ContextoInvocacion contextoInvocacion) {
         if (Normalizador.esVacia(seleccion) || manejadorAgenteSolicitud == null) {
             return;
         }
@@ -180,7 +228,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 continue;
             }
             try {
-                boolean enviada = manejadorAgenteSolicitud.test(rr);
+                boolean enviada = manejadorAgenteSolicitud.enviar(rr, contextoInvocacion);
                 if (enviada) {
                     exitosas++;
                 } else {
@@ -215,7 +263,8 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
     }
 
-    private void manejarEnvioAgenteFlujo(List<HttpRequestResponse> seleccion, String nombreAgente) {
+    private void manejarEnvioAgenteFlujo(List<HttpRequestResponse> seleccion, String nombreAgente,
+            ContextoInvocacion contextoInvocacion) {
         if (Normalizador.esVacia(seleccion) || manejadorAgenteFlujo == null) {
             return;
         }
@@ -245,7 +294,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
         boolean enviada;
         try {
-            enviada = manejadorAgenteFlujo.test(new ArrayList<>(seleccion));
+            enviada = manejadorAgenteFlujo.enviar(new ArrayList<>(seleccion), contextoInvocacion);
         } catch (Exception ex) {
             api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()));
             enviada = false;
@@ -276,7 +325,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
     }
     
-    private void manejarAnalisisFlujo(List<HttpRequestResponse> seleccion) {
+    private void manejarAnalisisFlujo(List<HttpRequestResponse> seleccion, ContextoInvocacion contextoInvocacion) {
         if (seleccion == null || seleccion.size() < 2) {
             if (GraphicsEnvironment.isHeadless()) {
                 return;
@@ -322,9 +371,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         if (manejadorAnalisisFlujo == null) {
             return;
         }
-        
-        api.logging().logToOutput(I18nUI.Contexto.LOG_FLUJO_INICIADO(solicitudesValidas.size()));
-        
+
         if (!GraphicsEnvironment.isHeadless()) {
             UIUtils.mostrarInfoConOptOutMenuContextual(
                 null,
@@ -334,8 +381,28 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 this::deshabilitarAlertasEnviarA
             );
         }
-        
-        manejadorAnalisisFlujo.accept(solicitudesValidas);
+
+        manejadorAnalisisFlujo.analizarFlujo(solicitudesValidas, contextoInvocacion);
+    }
+
+    private ContextoInvocacion construirContextoInvocacion(ContextMenuEvent evento, int cantidadSeleccionada) {
+        InvocationType tipoInvocacion = InvocationType.PROXY_HISTORY;
+        ToolType tipoHerramienta = ToolType.PROXY;
+        if (evento != null) {
+            try {
+                if (evento.invocationType() != null) {
+                    tipoInvocacion = evento.invocationType();
+                }
+            } catch (Exception ignored) {
+            }
+            try {
+                if (evento.toolType() != null) {
+                    tipoHerramienta = evento.toolType();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return new ContextoInvocacion(tipoInvocacion, tipoHerramienta, cantidadSeleccionada);
     }
 
     private boolean alertasEnviarAHabilitadas() {
@@ -360,6 +427,30 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         private RegistroClic(String hashSolicitud, long timestampMs) {
             this.hashSolicitud = hashSolicitud;
             this.timestampMs = timestampMs;
+        }
+    }
+
+    public static final class ContextoInvocacion {
+        private final InvocationType tipoInvocacion;
+        private final ToolType tipoHerramienta;
+        private final int cantidadSeleccionada;
+
+        private ContextoInvocacion(InvocationType tipoInvocacion, ToolType tipoHerramienta, int cantidadSeleccionada) {
+            this.tipoInvocacion = tipoInvocacion;
+            this.tipoHerramienta = tipoHerramienta;
+            this.cantidadSeleccionada = cantidadSeleccionada;
+        }
+
+        public InvocationType obtenerTipoInvocacion() {
+            return tipoInvocacion;
+        }
+
+        public ToolType obtenerTipoHerramienta() {
+            return tipoHerramienta;
+        }
+
+        public int obtenerCantidadSeleccionada() {
+            return cantidadSeleccionada;
         }
     }
 

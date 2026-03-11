@@ -22,7 +22,9 @@ import com.burpia.model.SolicitudAnalisis;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.PestaniaPrincipal;
+import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.util.GestorConsolaGUI;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.HttpUtils;
@@ -91,7 +93,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.modeloTablaHallazgos = modeloTablaHallazgos;
         this.controlBackpressure = new ControlBackpressureGlobal();
         this.evidenceManager = new EvidenceManager(api);
-        this.httpRequestProcessor = new HttpRequestProcessor(api, configSegura);
+        GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, api, null);
+        this.httpRequestProcessor = new HttpRequestProcessor(api, configSegura, gestorLogging);
         this.taskExecutionManager = new TaskExecutionManager(configSegura, gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador, controlBackpressure);
         this.alertasConfiguracionEmitidas = new ConcurrentHashMap<>();
         Hallazgo.establecerResolutorEvidencia(evidenceManager::obtenerEvidencia);
@@ -257,10 +260,15 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void analizarSolicitudForzada(HttpRequest solicitud) {
-        analizarSolicitudForzada(solicitud, null);
+        analizarSolicitudForzada(solicitud, null, null);
     }
 
     public void analizarSolicitudForzada(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
+        analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal, null);
+    }
+
+    public void analizarSolicitudForzada(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal,
+            FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         if (solicitud == null) {
             registrarError("No se pudo analizar solicitud forzada: request null");
             return;
@@ -268,6 +276,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         String url = solicitud.url() != null ? solicitud.url() : "[URL NULL]";
         String metodo = solicitud.method() != null ? solicitud.method() : "[METHOD NULL]";
+        registrarInicioContextualDetallado(
+            I18nLogs.ContextoMenu.ACCION_ANALIZAR_SOLICITUD(),
+            contextoInvocacion
+        );
+        if (solicitudRespuestaOriginal != null) {
+            registrarSolicitudContextualDetallada(solicitudRespuestaOriginal);
+            registrarBypassContextualDetallado(I18nLogs.ContextoMenu.BYPASS_ANALISIS_FORZADO());
+        }
         if (!puedeIniciarAnalisis("Analisis Manual", url)) {
             return;
         }
@@ -288,7 +304,21 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void analizarFlujoForzado(List<HttpRequestResponse> solicitudesRespuestaOriginales) {
+        analizarFlujoForzado(solicitudesRespuestaOriginales, null);
+    }
+
+    public void analizarFlujoForzado(List<HttpRequestResponse> solicitudesRespuestaOriginales,
+            FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
+        registrarInicioContextualDetallado(
+            I18nLogs.ContextoMenu.ACCION_ANALIZAR_FLUJO(),
+            contextoInvocacion
+        );
+        registrarResumenSeleccionContextualDetallado(solicitudesRespuestaOriginales);
         List<HttpRequestResponse> solicitudesValidas = FlowAnalysisConstraints.filtrarSolicitudesValidas(solicitudesRespuestaOriginales);
+        registrarSolicitudesContextualesDetalladas(solicitudesValidas);
+        if (Normalizador.noEsVacia(solicitudesValidas)) {
+            registrarBypassContextualDetallado(I18nLogs.ContextoMenu.BYPASS_ANALISIS_FORZADO());
+        }
         if (!FlowAnalysisConstraints.tieneMinimoValido(solicitudesRespuestaOriginales)) {
             registrarError(I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS());
             return;
@@ -325,6 +355,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return;
         }
 
+        rastrearContextual(I18nLogs.ContextoMenu.CONSOLIDANDO_FLUJO(solicitudesFlujo.size()));
         registrar(I18nUI.Contexto.LOG_FLUJO_INICIADO(solicitudesFlujo.size()));
         programarAnalisis(solicitudFlujo, solicitudesValidas.get(0), "Analisis Flujo");
     }
@@ -465,6 +496,10 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         registrarInterno(mensaje, GestorConsolaGUI.TipoLog.INFO, false, "[BurpIA] ");
     }
 
+    private void rastrearContextual(String mensaje) {
+        rastrear(mensaje);
+    }
+
     private void rastrear(String mensaje) {
         if (config.esDetallado()) {
             registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
@@ -528,6 +563,63 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             e.printStackTrace(pw);
             rastrear(mensaje + "\n" + sw.toString());
         }
+    }
+
+    private void registrarInicioContextualDetallado(String accion,
+            FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
+        if (!debeRegistrarContextoDetallado(contextoInvocacion)) {
+            return;
+        }
+        rastrearContextual(I18nLogs.ContextoMenu.ACCION_INICIADA(
+            accion,
+            contextoInvocacion.obtenerTipoInvocacion(),
+            contextoInvocacion.obtenerTipoHerramienta(),
+            contextoInvocacion.obtenerCantidadSeleccionada()
+        ));
+    }
+
+    private void registrarResumenSeleccionContextualDetallado(List<HttpRequestResponse> solicitudes) {
+        if (config == null || !config.esDetallado()) {
+            return;
+        }
+        int total = solicitudes != null ? solicitudes.size() : 0;
+        int sinRequest = httpRequestProcessor.contarSolicitudesSinRequest(solicitudes);
+        int validas = Math.max(0, total - sinRequest);
+        int sinResponse = httpRequestProcessor.contarSolicitudesSinResponse(solicitudes);
+        rastrearContextual(I18nLogs.ContextoMenu.RESUMEN_SELECCION(total, validas, sinRequest, sinResponse));
+    }
+
+    private void registrarSolicitudesContextualesDetalladas(List<HttpRequestResponse> solicitudes) {
+        if (config == null || !config.esDetallado() || Normalizador.esVacia(solicitudes)) {
+            return;
+        }
+        for (HttpRequestResponse solicitud : solicitudes) {
+            registrarSolicitudContextualDetallada(solicitud);
+        }
+    }
+
+    private void registrarSolicitudContextualDetallada(HttpRequestResponse solicitud) {
+        if (config == null || !config.esDetallado() || solicitud == null) {
+            return;
+        }
+        HttpRequestProcessor.ResumenSolicitudContextual resumen =
+            httpRequestProcessor.inspeccionarSolicitudContextual(solicitud);
+        if (!resumen.esValida()) {
+            return;
+        }
+        for (String traza : httpRequestProcessor.construirTrazasDetalleContextual(resumen)) {
+            rastrearContextual(traza);
+        }
+    }
+
+    private void registrarBypassContextualDetallado(String mensaje) {
+        if (config != null && config.esDetallado() && Normalizador.noEsVacio(mensaje)) {
+            rastrearContextual(mensaje);
+        }
+    }
+
+    private boolean debeRegistrarContextoDetallado(FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
+        return config != null && config.esDetallado() && contextoInvocacion != null;
     }
 
 

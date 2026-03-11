@@ -2,12 +2,15 @@ package com.burpia.core;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.ByteArray;
+import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.HttpHeader;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.ui.contextmenu.InvocationType;
 import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
+import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
 import com.burpia.util.GestorTareas;
@@ -293,6 +296,51 @@ class ManejadorHttpBurpIATest {
     }
 
     @Test
+    @DisplayName("Analisis manual contextual tolera response ausente y lo registra en detallado")
+    @SuppressWarnings("unchecked")
+    void testAnalisisManualContextualToleraResponseAusente() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerDetallado(true);
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "test-key");
+        SalidaManejador salida = crearManejadorConSalida(null, config);
+
+        HttpRequest solicitud = mock(HttpRequest.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        HttpRequestResponse solicitudRespuesta = mock(HttpRequestResponse.class);
+        ByteArray body = mock(ByteArray.class);
+        when(solicitud.url()).thenReturn("https://example.com/manual");
+        when(solicitud.method()).thenReturn("GET");
+        when(solicitud.headers()).thenReturn(List.of());
+        when(body.length()).thenReturn(0);
+        when(body.toString()).thenReturn("");
+        when(solicitud.body()).thenReturn(body);
+        when(solicitudRespuesta.request()).thenReturn(solicitud);
+        when(solicitudRespuesta.hasResponse()).thenReturn(false);
+        when(solicitudRespuesta.response()).thenReturn(null);
+
+        salida.manejador.analizarSolicitudForzada(
+            solicitud,
+            solicitudRespuesta,
+            crearContextoInvocacion(InvocationType.PROXY_HISTORY, ToolType.PROXY, 1)
+        );
+
+        Field campoGestorTareas = ManejadorHttpBurpIA.class.getDeclaredField("gestorTareas");
+        campoGestorTareas.setAccessible(true);
+        Object gestorTareas = campoGestorTareas.get(salida.manejador);
+        Field campoTareas = gestorTareas.getClass().getDeclaredField("tareas");
+        campoTareas.setAccessible(true);
+        Map<String, Object> tareas = (Map<String, Object>) campoTareas.get(gestorTareas);
+
+        assertFalse(tareas.isEmpty(), "Debe crear tarea aun sin response");
+        String info = salida.stdout.toString();
+        assertTrue(info.contains("PROXY_HISTORY"), info);
+        assertTrue(info.contains("sin respuesta asociada"), info);
+        assertTrue(info.contains("Analisis forzado contextual"), info);
+    }
+
+    @Test
     @DisplayName("Analizar flujo forzado exige al menos dos requests validas")
     @SuppressWarnings("unchecked")
     void testAnalizarFlujoForzadoExigeDosRequestsValidas() throws Exception {
@@ -356,6 +404,36 @@ class ManejadorHttpBurpIATest {
     }
 
     @Test
+    @DisplayName("Analisis de flujo contextual registra inicio una sola vez y resume responses ausentes")
+    void testAnalizarFlujoContextualLogueaResumenSinDuplicarInicio() {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerDetallado(true);
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "test-key");
+        SalidaManejador salida = crearManejadorConSalida(null, config);
+
+        HttpRequestResponse rr1 = crearSolicitudRespuestaValida("https://example.com/1", "GET", "");
+        HttpRequestResponse rr2 = crearSolicitudRespuestaValida("https://example.com/2", "POST", "{\"ok\":true}");
+        when(rr1.hasResponse()).thenReturn(false);
+        when(rr1.response()).thenReturn(null);
+        when(rr2.hasResponse()).thenReturn(false);
+        when(rr2.response()).thenReturn(null);
+
+        salida.manejador.analizarFlujoForzado(
+            List.of(rr1, rr2),
+            crearContextoInvocacion(InvocationType.PROXY_HISTORY, ToolType.PROXY, 2)
+        );
+
+        String info = salida.stdout.toString();
+        assertEquals(1, contarCoincidencias(info, I18nUI.Contexto.LOG_FLUJO_INICIADO(2)),
+            "El inicio del flujo no debe duplicarse");
+        assertTrue(info.contains("sin respuesta=2"), info);
+        assertTrue(info.contains("Consolidando análisis de flujo"), info);
+    }
+
+    @Test
     @DisplayName("Nota de scope incluye guia de Target > Scope")
     void testNotaScopeIncluyeGuia() {
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -366,15 +444,17 @@ class ManejadorHttpBurpIATest {
     }
 
     @Test
-    @DisplayName("Desde configuración limpia informa que LLM no esta listo al iniciar")
-    void testEstadoInicialLlMNoListoConConfiguracionLimpia() {
+    @DisplayName("Desde configuración limpia informa que LLM esta listo al iniciar con defaults vigentes")
+    void testEstadoInicialLlMListoConConfiguracionLimpia() {
         SalidaManejador salida = crearManejadorConSalida(null, new ConfiguracionAPI());
-        String error = salida.stderr.toString();
         String info = salida.stdout.toString();
 
-        assertTrue(error.contains("Estado LLM al inicio") || error.contains("LLM startup status"), "assertTrue failed at ManejadorHttpBurpIATest.java:248");
-        assertTrue(info.contains("Probar Conexión") || info.contains("Probar Conexion")
-            || info.contains("Test Connection"), "assertTrue failed at ManejadorHttpBurpIATest.java:249");
+        assertTrue(info.contains("Estado LLM al inicio: listo para analizar")
+                || info.contains("LLM startup status: ready to analyze"),
+            "assertTrue failed at ManejadorHttpBurpIATest.java:248");
+        assertFalse(info.contains("Probar Conexión") || info.contains("Probar Conexion")
+                || info.contains("Test Connection"),
+            "assertFalse failed at ManejadorHttpBurpIATest.java:249");
     }
 
     private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {
@@ -493,5 +573,21 @@ class ManejadorHttpBurpIATest {
         when(body.toString()).thenReturn(cuerpo);
         when(rr.request().body()).thenReturn(body);
         return rr;
+    }
+
+    private FabricaMenuContextual.ContextoInvocacion crearContextoInvocacion(
+            InvocationType invocationType, ToolType toolType, int cantidadSeleccionada) {
+        try {
+            Class<?> clase = FabricaMenuContextual.ContextoInvocacion.class;
+            var constructor = clase.getDeclaredConstructor(InvocationType.class, ToolType.class, int.class);
+            constructor.setAccessible(true);
+            return (FabricaMenuContextual.ContextoInvocacion) constructor.newInstance(
+                invocationType,
+                toolType,
+                cantidadSeleccionada
+            );
+        } catch (Exception e) {
+            throw new AssertionError("No se pudo crear ContextoInvocacion para el test", e);
+        }
     }
 }

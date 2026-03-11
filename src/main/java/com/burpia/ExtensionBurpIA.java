@@ -12,6 +12,7 @@ import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
+import com.burpia.processor.HttpRequestProcessor;
 import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
 import com.burpia.ui.PanelAgente;
@@ -64,6 +65,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private ModeloTablaHallazgos modeloTablaHallazgos;
     private ModeloTablaTareas modeloTablaTareas;
     private FabricaMenuContextual fabricaMenuContextual;
+    private HttpRequestProcessor httpRequestProcessor;
     private boolean esProfessional = false;
 
     public ExtensionBurpIA() {
@@ -90,6 +92,7 @@ public class ExtensionBurpIA implements BurpExtension {
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
 
         gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, api, null);
+        httpRequestProcessor = new HttpRequestProcessor(api, config, gestorLogging);
 
         registrarResumenInicio();
 
@@ -184,15 +187,16 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void analizarSolicitudManual(HttpRequest solicitud, boolean forzarAnalisis,
-            HttpRequestResponse solicitudRespuestaOriginal) {
+            HttpRequestResponse solicitudRespuestaOriginal, FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         if (forzarAnalisis && manejadorHttp != null) {
-            manejadorHttp.analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal);
+            manejadorHttp.analizarSolicitudForzada(solicitud, solicitudRespuestaOriginal, contextoInvocacion);
         }
     }
 
-    private void analizarFlujoManual(List<HttpRequestResponse> solicitudesRespuestaOriginales) {
+    private void analizarFlujoManual(List<HttpRequestResponse> solicitudesRespuestaOriginales,
+            FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         if (manejadorHttp != null) {
-            manejadorHttp.analizarFlujoForzado(solicitudesRespuestaOriginales);
+            manejadorHttp.analizarFlujoForzado(solicitudesRespuestaOriginales, contextoInvocacion);
         }
     }
 
@@ -216,29 +220,59 @@ public class ExtensionBurpIA implements BurpExtension {
             (Frame) SwingUtilities.getWindowAncestor(pestaniaPrincipal) : null;
     }
 
-    private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta) {
+    private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta,
+            FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         if (solicitudRespuesta == null) {
             registrarError("No se puede enviar al Agente: solicitud/respuesta nula");
             return false;
         }
         try {
+            registrarInicioContextualDetallado(
+                I18nLogs.ContextoMenu.ACCION_ENVIAR_SOLICITUD_AGENTE(),
+                contextoInvocacion
+            );
+            registrarSolicitudContextualDetallada(solicitudRespuesta);
+            registrarBypassContextualDetallado(I18nLogs.ContextoMenu.BYPASS_ENVIO_AGENTE());
+
             String prompt = obtenerPromptAgenteDisponible();
+            registrarPromptAgenteDetallado(prompt);
             if (prompt == null) {
                 return false;
             }
+            boolean usaTokensHttp = contieneAlgunToken(prompt, TOKEN_REQUEST, TOKEN_RESPONSE);
+            rastrearContextual(I18nLogs.ContextoMenu.PROMPT_USA_TOKENS_HTTP(usaTokensHttp));
+            registrarOmisionesResponseDetalladas(prompt, solicitudRespuesta);
             String request = serializarSolicitudSiNecesario(prompt, solicitudRespuesta);
             String response = serializarRespuestaSiNecesario(prompt, solicitudRespuesta);
             String inputFinal = aplicarTokensPromptAgente(prompt, request, response, config.obtenerIdiomaUi());
-            return enviarPayloadAgente(inputFinal);
+            registrarSerializacionAgenteDetallada(
+                Normalizador.noEsVacio(request) ? 1 : 0,
+                Normalizador.noEsVacio(response) ? 1 : 0,
+                contieneToken(prompt, TOKEN_RESPONSE) && !tieneResponseDisponible(solicitudRespuesta) ? 1 : 0
+            );
+            rastrearContextual(I18nLogs.ContextoMenu.LONGITUD_PAYLOAD_AGENTE(inputFinal.length()));
+            boolean enviado = enviarPayloadAgente(inputFinal);
+            rastrearContextual(I18nLogs.ContextoMenu.RESULTADO_INYECCION_AGENTE(enviado));
+            return enviado;
         } catch (Exception e) {
             registrarError("No se pudo enviar al Agente: " + e.getMessage());
             return false;
         }
     }
 
-    private boolean enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta) {
+    private boolean enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta,
+            FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         try {
+            registrarInicioContextualDetallado(
+                I18nLogs.ContextoMenu.ACCION_ENVIAR_FLUJO_AGENTE(),
+                contextoInvocacion
+            );
+            registrarResumenSeleccionContextualDetallado(solicitudesRespuesta);
+            registrarSolicitudesContextualesDetalladas(FlowAnalysisConstraints.filtrarSolicitudesValidas(solicitudesRespuesta));
+            registrarBypassContextualDetallado(I18nLogs.ContextoMenu.BYPASS_ENVIO_AGENTE());
+
             String prompt = obtenerPromptAgenteDisponible();
+            registrarPromptAgenteDetallado(prompt);
             if (prompt == null) {
                 return false;
             }
@@ -253,12 +287,31 @@ public class ExtensionBurpIA implements BurpExtension {
                 return false;
             }
 
+            boolean usaTokensHttp = ProcesadorPromptHTTP.contieneMarcadoresHttp(prompt);
+            rastrearContextual(I18nLogs.ContextoMenu.PROMPT_USA_TOKENS_HTTP(usaTokensHttp));
+            registrarOmisionesResponseFlujoDetalladas(prompt, solicitudesValidas);
             String inputFinal = construirPromptFlujoAgente(prompt, solicitudesValidas);
-            return enviarPayloadAgente(inputFinal);
+            registrarSerializacionAgenteDetallada(
+                contarRequestsSerializadasFlujo(prompt, solicitudesValidas),
+                contarResponsesSerializadasFlujo(prompt, solicitudesValidas),
+                contarResponsesOmitidasFlujo(prompt, solicitudesValidas)
+            );
+            rastrearContextual(I18nLogs.ContextoMenu.LONGITUD_PAYLOAD_AGENTE(inputFinal.length()));
+            boolean enviado = enviarPayloadAgente(inputFinal);
+            rastrearContextual(I18nLogs.ContextoMenu.RESULTADO_INYECCION_AGENTE(enviado));
+            return enviado;
         } catch (Exception e) {
             registrarError("No se pudo enviar flujo al Agente: " + e.getMessage());
             return false;
         }
+    }
+
+    private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta) {
+        return enviarAAgente(solicitudRespuesta, null);
+    }
+
+    private boolean enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta) {
+        return enviarFlujoAAgente(solicitudesRespuesta, null);
     }
 
     private boolean enviarHallazgoAAgente(Hallazgo hallazgo) {
@@ -437,7 +490,7 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private String serializarRespuestaSiNecesario(String prompt, HttpRequestResponse evidencia) {
-        if (!contieneToken(prompt, TOKEN_RESPONSE) || evidencia == null || evidencia.response() == null) {
+        if (!contieneToken(prompt, TOKEN_RESPONSE) || !tieneResponseDisponible(evidencia)) {
             return "";
         }
         return evidencia.response().toString();
@@ -472,7 +525,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private List<String> serializarRespuestasFlujo(List<HttpRequestResponse> evidencias) {
         List<String> serializadas = new ArrayList<>();
         for (HttpRequestResponse evidencia : evidencias) {
-            serializadas.add(evidencia != null && evidencia.response() != null
+            serializadas.add(tieneResponseDisponible(evidencia)
                 ? evidencia.response().toString()
                 : "");
         }
@@ -512,6 +565,10 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private boolean tieneContenido(String texto) {
         return Normalizador.noEsVacio(texto);
+    }
+
+    private boolean tieneResponseDisponible(HttpRequestResponse evidencia) {
+        return obtenerProcesadorSolicitudes().tieneResponseDisponible(evidencia);
     }
 
     private String valorSeguro(String texto) {
@@ -741,6 +798,135 @@ public class ExtensionBurpIA implements BurpExtension {
         }
     }
 
+    private void rastrearContextual(String mensaje) {
+        if (config == null || !config.esDetallado() || Normalizador.esVacio(mensaje)) {
+            return;
+        }
+        if (gestorLogging != null) {
+            gestorLogging.verbose(mensaje);
+        } else if (stdout != null) {
+            stdout.println("[BurpIA] [VERBOSE] " + mensaje);
+            stdout.flush();
+        }
+    }
+
+    private void registrarInicioContextualDetallado(String accion,
+            FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
+        if (!debeRegistrarContextoDetallado(contextoInvocacion)) {
+            return;
+        }
+        rastrearContextual(I18nLogs.ContextoMenu.ACCION_INICIADA(
+            accion,
+            contextoInvocacion.obtenerTipoInvocacion(),
+            contextoInvocacion.obtenerTipoHerramienta(),
+            contextoInvocacion.obtenerCantidadSeleccionada()
+        ));
+    }
+
+    private void registrarResumenSeleccionContextualDetallado(List<HttpRequestResponse> solicitudes) {
+        if (config == null || !config.esDetallado()) {
+            return;
+        }
+        HttpRequestProcessor procesador = obtenerProcesadorSolicitudes();
+        int total = solicitudes != null ? solicitudes.size() : 0;
+        int sinRequest = procesador.contarSolicitudesSinRequest(solicitudes);
+        int validas = Math.max(0, total - sinRequest);
+        int sinResponse = procesador.contarSolicitudesSinResponse(solicitudes);
+        rastrearContextual(I18nLogs.ContextoMenu.RESUMEN_SELECCION(total, validas, sinRequest, sinResponse));
+    }
+
+    private void registrarSolicitudesContextualesDetalladas(List<HttpRequestResponse> solicitudes) {
+        if (config == null || !config.esDetallado() || Normalizador.esVacia(solicitudes)) {
+            return;
+        }
+        for (HttpRequestResponse solicitud : solicitudes) {
+            registrarSolicitudContextualDetallada(solicitud);
+        }
+    }
+
+    private void registrarSolicitudContextualDetallada(HttpRequestResponse solicitud) {
+        if (config == null || !config.esDetallado() || solicitud == null) {
+            return;
+        }
+        HttpRequestProcessor.ResumenSolicitudContextual resumen =
+            obtenerProcesadorSolicitudes().inspeccionarSolicitudContextual(solicitud);
+        if (!resumen.esValida()) {
+            return;
+        }
+        for (String traza : obtenerProcesadorSolicitudes().construirTrazasDetalleContextual(resumen)) {
+            rastrearContextual(traza);
+        }
+    }
+
+    private void registrarBypassContextualDetallado(String mensaje) {
+        if (debeRegistrarContextoDetallado(null)) {
+            rastrearContextual(mensaje);
+        }
+    }
+
+    private void registrarPromptAgenteDetallado(String prompt) {
+        if (config == null || !config.esDetallado()) {
+            return;
+        }
+        rastrearContextual(I18nLogs.ContextoMenu.PROMPT_AGENTE_DISPONIBLE(Normalizador.noEsVacio(prompt)));
+    }
+
+    private void registrarSerializacionAgenteDetallada(int requestsSerializadas, int responsesSerializadas,
+            int responsesOmitidas) {
+        if (config == null || !config.esDetallado()) {
+            return;
+        }
+        rastrearContextual(I18nLogs.ContextoMenu.SERIALIZACION_AGENTE(
+            requestsSerializadas,
+            responsesSerializadas,
+            responsesOmitidas
+        ));
+    }
+
+    private int contarRequestsSerializadasFlujo(String prompt, List<HttpRequestResponse> solicitudesValidas) {
+        if (!ProcesadorPromptHTTP.contieneMarcadoresRequest(prompt)) {
+            return 0;
+        }
+        return solicitudesValidas != null ? solicitudesValidas.size() : 0;
+    }
+
+    private int contarResponsesSerializadasFlujo(String prompt, List<HttpRequestResponse> solicitudesValidas) {
+        if (!ProcesadorPromptHTTP.contieneMarcadoresResponse(prompt) || Normalizador.esVacia(solicitudesValidas)) {
+            return 0;
+        }
+        int total = 0;
+        for (HttpRequestResponse solicitud : solicitudesValidas) {
+            if (tieneResponseDisponible(solicitud)) {
+                total++;
+            }
+        }
+        return total;
+    }
+
+    private int contarResponsesOmitidasFlujo(String prompt, List<HttpRequestResponse> solicitudesValidas) {
+        if (!ProcesadorPromptHTTP.contieneMarcadoresResponse(prompt) || Normalizador.esVacia(solicitudesValidas)) {
+            return 0;
+        }
+        int total = 0;
+        for (HttpRequestResponse solicitud : solicitudesValidas) {
+            if (!tieneResponseDisponible(solicitud)) {
+                total++;
+            }
+        }
+        return total;
+    }
+
+    private boolean debeRegistrarContextoDetallado(FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
+        return config != null && config.esDetallado();
+    }
+
+    private HttpRequestProcessor obtenerProcesadorSolicitudes() {
+        if (httpRequestProcessor == null) {
+            httpRequestProcessor = new HttpRequestProcessor(api, config, gestorLogging);
+        }
+        return httpRequestProcessor;
+    }
+
     private void alternarCapturaDesdeUI() {
         if (manejadorHttp == null || pestaniaPrincipal == null) {
             return;
@@ -791,6 +977,39 @@ public class ExtensionBurpIA implements BurpExtension {
         if (panelAgente != null) {
             panelAgente.establecerManejadorCambioConfiguracion(() -> guardarConfiguracionSilenciosa("agente-delay"));
         }
+    }
+
+    private void registrarOmisionesResponseDetalladas(String prompt, HttpRequestResponse solicitudRespuesta) {
+        if (config == null || !config.esDetallado() || !contieneToken(prompt, TOKEN_RESPONSE)) {
+            return;
+        }
+        if (!tieneResponseDisponible(solicitudRespuesta)) {
+            String url = resolverUrlContextual(solicitudRespuesta);
+            rastrearContextual(I18nLogs.ContextoMenu.RESPONSE_OMITIDA_SERIALIZACION(url));
+        }
+    }
+
+    private void registrarOmisionesResponseFlujoDetalladas(String prompt, List<HttpRequestResponse> solicitudesValidas) {
+        if (config == null || !config.esDetallado()
+                || !ProcesadorPromptHTTP.contieneMarcadoresResponse(prompt)
+                || Normalizador.esVacia(solicitudesValidas)) {
+            return;
+        }
+        for (HttpRequestResponse solicitud : solicitudesValidas) {
+            if (!tieneResponseDisponible(solicitud)) {
+                rastrearContextual(I18nLogs.ContextoMenu.RESPONSE_OMITIDA_SERIALIZACION(
+                    resolverUrlContextual(solicitud)
+                ));
+            }
+        }
+    }
+
+    private String resolverUrlContextual(HttpRequestResponse solicitudRespuesta) {
+        if (solicitudRespuesta == null || solicitudRespuesta.request() == null
+                || Normalizador.esVacio(solicitudRespuesta.request().url())) {
+            return "[URL NULL]";
+        }
+        return solicitudRespuesta.request().url();
     }
 
     private void inicializarAgenteSiHabilitado() {

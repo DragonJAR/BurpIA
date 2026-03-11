@@ -1,5 +1,7 @@
 package com.burpia.i18n;
 
+import burp.api.montoya.core.ToolType;
+import burp.api.montoya.ui.contextmenu.InvocationType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -320,6 +322,50 @@ class I18nLogsTest {
             assertEquals("Sí", I18nLogs.Inicializacion.SI(), "assertEquals failed at I18nLogsTest.java:320");
             assertEquals("No", I18nLogs.Inicializacion.NO(), "assertEquals failed at I18nLogsTest.java:321");
             assertEquals("Inicialización completada exitosamente", I18nLogs.Inicializacion.INICIALIZACION_COMPLETA(), "assertEquals failed at I18nLogsTest.java:322");
+        }
+    }
+
+    @Nested
+    @DisplayName("Clase interna ContextoMenu")
+    class ContextoMenuTests {
+
+        @Test
+        @DisplayName("mensaje contextual incluye origen real en inglés")
+        void accionIniciadaIncluyeOrigenRealEnIngles() {
+            I18nUI.establecerIdioma(IdiomaUI.EN);
+
+            String mensaje = I18nLogs.ContextoMenu.ACCION_INICIADA(
+                I18nLogs.ContextoMenu.ACCION_ANALIZAR_FLUJO(),
+                InvocationType.PROXY_HISTORY,
+                ToolType.PROXY,
+                2
+            );
+
+            assertTrue(mensaje.contains("PROXY_HISTORY"), mensaje);
+            assertTrue(mensaje.contains("Proxy History"), mensaje);
+            assertTrue(mensaje.contains("selected=2"), mensaje);
+        }
+
+        @Test
+        @DisplayName("mensaje contextual de response ausente se localiza en español")
+        void responseAusenteSeLocalizaEnEspanol() {
+            I18nUI.establecerIdioma(IdiomaUI.ES);
+
+            String mensaje = I18nLogs.ContextoMenu.RESPONSE_AUSENTE("GET", "https://example.com");
+
+            assertTrue(mensaje.contains("sin response asociada"), mensaje);
+            assertTrue(mensaje.contains("GET"), mensaje);
+        }
+
+        @Test
+        @DisplayName("serialización de agente resume responses omitidas")
+        void serializacionAgenteResumeResponsesOmitidas() {
+            I18nUI.establecerIdioma(IdiomaUI.ES);
+
+            String mensaje = I18nLogs.ContextoMenu.SERIALIZACION_AGENTE(2, 1, 1);
+
+            assertTrue(mensaje.contains("requests=2"), mensaje);
+            assertTrue(mensaje.contains("responses omitidas=1"), mensaje);
         }
     }
 

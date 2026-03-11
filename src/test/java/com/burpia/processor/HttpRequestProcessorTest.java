@@ -279,10 +279,10 @@ class HttpRequestProcessorTest {
     }
 
     @Test
-    void testPuedeIniciarAnalisis_ConConfigNull_ReturnsFalse() {
+    void testPuedeIniciarAnalisis_ConConfigNull_UsaConfiguracionPorDefectoValida() {
         processor = new HttpRequestProcessor(api, null, gestorLogging);
         boolean resultado = processor.puedeIniciarAnalisis();
-        assertFalse(resultado);
+        assertTrue(resultado);
     }
 
     @Test
@@ -328,6 +328,109 @@ class HttpRequestProcessorTest {
         if (gestorLogging != null) {
             verify(gestorLogging).info(eq("HttpRequestProcessor"), eq("Analisis manual sin solicitud/respuesta original: se registraran hallazgos, pero no Issue."));
         }
+    }
+
+    @Test
+    void testInspeccionarSolicitudContextual_ConRequestYResponse_RetornaResumenValido() {
+        HttpRequestResponse solicitudRespuesta = mock(HttpRequestResponse.class);
+        ByteArray cuerpoRequest = mock(ByteArray.class);
+
+        when(request.url()).thenReturn("https://example.com/api/login");
+        when(request.method()).thenReturn("POST");
+        when(request.headers()).thenReturn(List.of(header));
+        when(request.body()).thenReturn(cuerpoRequest);
+        when(cuerpoRequest.length()).thenReturn(0);
+        when(api.scope()).thenReturn(scope);
+        when(scope.isInScope("https://example.com/api/login")).thenReturn(true);
+
+        HttpHeader contentType = mock(HttpHeader.class);
+        when(contentType.name()).thenReturn("Content-Type");
+        when(contentType.value()).thenReturn("application/json");
+        when(response.statusCode()).thenReturn((short) 200);
+        when(response.headers()).thenReturn(List.of(contentType));
+
+        when(solicitudRespuesta.request()).thenReturn(request);
+        when(solicitudRespuesta.hasResponse()).thenReturn(true);
+        when(solicitudRespuesta.response()).thenReturn(response);
+
+        HttpRequestProcessor.ResumenSolicitudContextual resumen =
+            processor.inspeccionarSolicitudContextual(solicitudRespuesta);
+
+        assertTrue(resumen.esValida());
+        assertTrue(resumen.tieneRequest());
+        assertTrue(resumen.tieneResponse());
+        assertEquals("POST", resumen.obtenerMetodo());
+        assertEquals("https://example.com/api/login", resumen.obtenerUrl());
+        assertEquals(200, resumen.obtenerCodigoEstado());
+        assertEquals("application/json", resumen.obtenerContentType());
+        assertEquals(1, resumen.obtenerCantidadEncabezados());
+        assertTrue(resumen.estaEnScope());
+        assertFalse(resumen.esRecursoEstatico());
+        assertEquals(Boolean.TRUE, resumen.obtenerContenidoAnalizable());
+        assertFalse(processor.construirTrazasDetalleContextual(resumen).isEmpty());
+    }
+
+    @Test
+    void testInspeccionarSolicitudContextual_ConRequestSinResponse_ToleraAusencia() {
+        HttpRequestResponse solicitudRespuesta = mock(HttpRequestResponse.class);
+        ByteArray cuerpoRequest = mock(ByteArray.class);
+
+        when(request.url()).thenReturn("https://example.com/api/ping");
+        when(request.method()).thenReturn("GET");
+        when(request.headers()).thenReturn(List.of());
+        when(request.body()).thenReturn(cuerpoRequest);
+        when(cuerpoRequest.length()).thenReturn(0);
+        when(api.scope()).thenReturn(scope);
+        when(scope.isInScope("https://example.com/api/ping")).thenReturn(false);
+
+        when(solicitudRespuesta.request()).thenReturn(request);
+        when(solicitudRespuesta.hasResponse()).thenReturn(false);
+        when(solicitudRespuesta.response()).thenReturn(null);
+
+        HttpRequestProcessor.ResumenSolicitudContextual resumen =
+            processor.inspeccionarSolicitudContextual(solicitudRespuesta);
+
+        assertTrue(resumen.esValida());
+        assertTrue(resumen.tieneRequest());
+        assertFalse(resumen.tieneResponse());
+        assertEquals(-1, resumen.obtenerCodigoEstado());
+        assertEquals("", resumen.obtenerContentType());
+        assertNull(resumen.obtenerContenidoAnalizable());
+        List<String> trazas = processor.construirTrazasDetalleContextual(resumen);
+        assertTrue(trazas.stream().anyMatch(traza -> traza.contains("sin response asociada")));
+    }
+
+    @Test
+    void testInspeccionarSolicitudContextual_SinRequest_RetornaResumenInvalido() {
+        HttpRequestResponse solicitudRespuesta = mock(HttpRequestResponse.class);
+        when(solicitudRespuesta.request()).thenReturn(null);
+
+        HttpRequestProcessor.ResumenSolicitudContextual resumen =
+            processor.inspeccionarSolicitudContextual(solicitudRespuesta);
+
+        assertFalse(resumen.esValida());
+        assertFalse(resumen.tieneRequest());
+        assertTrue(processor.construirTrazasDetalleContextual(resumen).isEmpty());
+    }
+
+    @Test
+    void testContarSolicitudesSinRequestYSinResponse_Contextual() {
+        HttpRequestResponse conTodo = mock(HttpRequestResponse.class);
+        HttpRequestResponse sinResponse = mock(HttpRequestResponse.class);
+        HttpRequestResponse sinRequest = mock(HttpRequestResponse.class);
+
+        when(conTodo.request()).thenReturn(request);
+        when(conTodo.hasResponse()).thenReturn(true);
+        when(conTodo.response()).thenReturn(response);
+        when(sinResponse.request()).thenReturn(request);
+        when(sinResponse.hasResponse()).thenReturn(false);
+        when(sinResponse.response()).thenReturn(null);
+        when(sinRequest.request()).thenReturn(null);
+
+        List<HttpRequestResponse> solicitudes = List.of(conTodo, sinResponse, sinRequest);
+
+        assertEquals(1, processor.contarSolicitudesSinRequest(solicitudes));
+        assertEquals(1, processor.contarSolicitudesSinResponse(solicitudes));
     }
 
 

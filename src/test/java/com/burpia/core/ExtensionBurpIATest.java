@@ -2,14 +2,17 @@ package com.burpia.core;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
+import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import burp.api.montoya.ui.contextmenu.InvocationType;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
+import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.ui.PanelAgente;
 import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.util.GestorConsolaGUI;
@@ -792,6 +795,107 @@ class ExtensionBurpIATest {
             Object resultado = enviarFlujoAAgente.invoke(extension, solicitudes);
             assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:726");
         }
+
+        @Test
+        @DisplayName("Enviar al Agente en detallado registra contexto y response omitida")
+        void testEnviarAAgenteDetalladoRegistraResponseOmitida() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerAgenteHabilitado(true);
+            config.establecerDetallado(true);
+            config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
+            establecerCampo(extension, "config", config);
+
+            StringWriter stdoutBuffer = new StringWriter();
+            establecerCampo(extension, "stdout", new PrintWriter(stdoutBuffer, true));
+
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+            PanelAgente panelAgente = mock(PanelAgente.class);
+            when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+            HttpRequestResponse solicitudRespuesta = mock(HttpRequestResponse.class);
+            HttpRequest request = mock(HttpRequest.class);
+            when(request.url()).thenReturn("https://example.com/agent");
+            when(request.toString()).thenReturn("GET /agent HTTP/1.1");
+            when(solicitudRespuesta.request()).thenReturn(request);
+            when(solicitudRespuesta.hasResponse()).thenReturn(false);
+            when(solicitudRespuesta.response()).thenReturn(null);
+
+            Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod(
+                "enviarAAgente",
+                HttpRequestResponse.class,
+                FabricaMenuContextual.ContextoInvocacion.class
+            );
+            enviarAAgente.setAccessible(true);
+            Object resultado = enviarAAgente.invoke(
+                extension,
+                solicitudRespuesta,
+                crearContextoInvocacion(InvocationType.PROXY_HISTORY, ToolType.PROXY, 1)
+            );
+
+            assertTrue((Boolean) resultado, "Debe inyectar el payload al panel");
+            String logs = stdoutBuffer.toString();
+            assertTrue(logs.contains("PROXY_HISTORY"), logs);
+            assertTrue(logs.contains("Response omitida en serialización de agente"), logs);
+            assertTrue(logs.contains("Longitud de payload a agente"), logs);
+            assertTrue(logs.contains("Resultado de inyección a agente"), logs);
+        }
+
+        @Test
+        @DisplayName("Enviar flujo al Agente en detallado resume responses omitidas")
+        void testEnviarFlujoAAgenteDetalladoResumeResponsesOmitidas() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerAgenteHabilitado(true);
+            config.establecerDetallado(true);
+            config.establecerAgentePrompt("PROMPT\\nREQ={REQUEST}\\nRES={RESPONSE}");
+            establecerCampo(extension, "config", config);
+
+            StringWriter stdoutBuffer = new StringWriter();
+            establecerCampo(extension, "stdout", new PrintWriter(stdoutBuffer, true));
+
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+            PanelAgente panelAgente = mock(PanelAgente.class);
+            when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+            HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
+            HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
+            HttpRequest request1 = mock(HttpRequest.class);
+            HttpRequest request2 = mock(HttpRequest.class);
+            HttpResponse response1 = mock(HttpResponse.class);
+            when(request1.url()).thenReturn("https://example.com/one");
+            when(request1.toString()).thenReturn("GET /one HTTP/1.1");
+            when(request2.url()).thenReturn("https://example.com/two");
+            when(request2.toString()).thenReturn("POST /two HTTP/1.1");
+            when(response1.toString()).thenReturn("HTTP/1.1 200 OK");
+            when(rr1.request()).thenReturn(request1);
+            when(rr1.hasResponse()).thenReturn(true);
+            when(rr1.response()).thenReturn(response1);
+            when(rr2.request()).thenReturn(request2);
+            when(rr2.hasResponse()).thenReturn(false);
+            when(rr2.response()).thenReturn(null);
+
+            Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod(
+                "enviarFlujoAAgente",
+                List.class,
+                FabricaMenuContextual.ContextoInvocacion.class
+            );
+            enviarFlujoAAgente.setAccessible(true);
+            Object resultado = enviarFlujoAAgente.invoke(
+                extension,
+                List.of(rr1, rr2),
+                crearContextoInvocacion(InvocationType.SEARCH_RESULTS, ToolType.LOGGER, 2)
+            );
+
+            assertTrue((Boolean) resultado, "Debe inyectar el flujo al panel");
+            String logs = stdoutBuffer.toString();
+            assertTrue(logs.contains("SEARCH_RESULTS"), logs);
+            assertTrue(logs.contains("responses omitidas=1"), logs);
+            assertTrue(logs.contains("Response omitida en serialización de agente"), logs);
+            assertTrue(logs.contains("Longitud de payload a agente"), logs);
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -827,6 +931,21 @@ class ExtensionBurpIATest {
         when(request.toString()).thenReturn(contenidoRequest);
         when(solicitudRespuesta.request()).thenReturn(request);
         return solicitudRespuesta;
+    }
+
+    private static FabricaMenuContextual.ContextoInvocacion crearContextoInvocacion(
+            InvocationType invocationType, ToolType toolType, int cantidadSeleccionada) {
+        try {
+            var constructor = FabricaMenuContextual.ContextoInvocacion.class.getDeclaredConstructor(
+                InvocationType.class,
+                ToolType.class,
+                int.class
+            );
+            constructor.setAccessible(true);
+            return constructor.newInstance(invocationType, toolType, cantidadSeleccionada);
+        } catch (Exception e) {
+            throw new AssertionError("No se pudo crear ContextoInvocacion para el test", e);
+        }
     }
 
     private static void establecerCampo(Object objetivo, String nombre, Object valor) throws Exception {

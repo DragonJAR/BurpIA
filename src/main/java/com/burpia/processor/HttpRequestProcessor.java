@@ -16,6 +16,9 @@ import com.burpia.util.HttpUtils;
 import com.burpia.util.Normalizador;
 import com.burpia.util.PoliticaMemoria;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public final class HttpRequestProcessor {
     
     private static final String ORIGEN_LOG = "HttpRequestProcessor";
@@ -86,18 +89,11 @@ public final class HttpRequestProcessor {
     }
     
     public String obtenerContentTypeRespuesta(HttpResponseReceived respuestaRecibida) {
-        if (respuestaRecibida == null || respuestaRecibida.headers() == null) {
+        if (respuestaRecibida == null) {
             return "";
         }
         try {
-            for (HttpHeader header : respuestaRecibida.headers()) {
-                if (header == null || header.name() == null) {
-                    continue;
-                }
-                if ("Content-Type".equalsIgnoreCase(header.name())) {
-                    return header.value() != null ? header.value() : "";
-                }
-            }
+            return obtenerContentTypeDesdeHeaders(respuestaRecibida.headers());
         } catch (Exception e) {
             if (gestorLogging != null) {
                 gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo extraer Content-Type de respuesta"), e);
@@ -277,5 +273,280 @@ public final class HttpRequestProcessor {
             return "";
         }
         return hashSolicitud.substring(0, Math.min(8, hashSolicitud.length()));
+    }
+
+    public ResumenSolicitudContextual inspeccionarSolicitudContextual(HttpRequestResponse solicitudRespuesta) {
+        if (solicitudRespuesta == null) {
+            return ResumenSolicitudContextual.invalido();
+        }
+
+        HttpRequest solicitud = solicitudRespuesta.request();
+        if (solicitud == null) {
+            return ResumenSolicitudContextual.invalido();
+        }
+
+        String url = obtenerUrlSegura(solicitud);
+        String metodo = obtenerMetodoSeguro(solicitud);
+        int cantidadEncabezados = 0;
+        try {
+            if (solicitud.headers() != null) {
+                cantidadEncabezados = solicitud.headers().size();
+            }
+        } catch (Exception e) {
+            registrarErrorInspeccionContextual("No se pudo contar encabezados de solicitud", e);
+        }
+
+        boolean enScope = estaEnScope(solicitud);
+        boolean recursoEstatico = esRecursoEstatico(url);
+
+        HttpResponse respuesta = obtenerResponseSegura(solicitudRespuesta);
+        boolean tieneResponse = respuesta != null;
+        int codigoEstado = -1;
+        String contentType = "";
+        Boolean contenidoAnalizable = null;
+        if (tieneResponse) {
+            try {
+                codigoEstado = respuesta.statusCode();
+            } catch (Exception e) {
+                registrarErrorInspeccionContextual("No se pudo obtener codigo de estado de respuesta", e);
+            }
+            try {
+                contentType = obtenerContentTypeDesdeHeaders(respuesta.headers());
+            } catch (Exception e) {
+                registrarErrorInspeccionContextual("No se pudo extraer Content-Type de respuesta", e);
+            }
+            contenidoAnalizable = esContenidoAnalizable(contentType, metodo, codigoEstado);
+        }
+
+        String hashAbreviado;
+        try {
+            String hashCompleto = tieneResponse
+                ? HttpUtils.generarHashRapido(solicitud, respuesta)
+                : HttpUtils.generarHashPartes(
+                    metodo,
+                    url,
+                    HttpUtils.extraerEncabezados(solicitud),
+                    HttpUtils.extraerCuerpo(solicitud, PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES)
+                );
+            hashAbreviado = abreviarHash(hashCompleto);
+        } catch (Exception e) {
+            registrarErrorInspeccionContextual("No se pudo calcular hash contextual", e);
+            hashAbreviado = "";
+        }
+
+        return new ResumenSolicitudContextual(
+            true,
+            url,
+            metodo,
+            true,
+            tieneResponse,
+            codigoEstado,
+            contentType,
+            cantidadEncabezados,
+            hashAbreviado,
+            enScope,
+            recursoEstatico,
+            contenidoAnalizable
+        );
+    }
+
+    public List<String> construirTrazasDetalleContextual(ResumenSolicitudContextual resumen) {
+        List<String> trazas = new ArrayList<>();
+        if (resumen == null || !resumen.tieneRequest()) {
+            return trazas;
+        }
+
+        trazas.add(I18nLogs.ContextoMenu.RESPUESTA_OBSERVADA(
+            resumen.obtenerMetodo(),
+            resumen.obtenerUrl(),
+            resumen.obtenerCodigoEstado(),
+            resumen.tieneResponse()
+        ));
+        if (!resumen.tieneResponse()) {
+            trazas.add(I18nLogs.ContextoMenu.RESPONSE_AUSENTE(resumen.obtenerMetodo(), resumen.obtenerUrl()));
+        }
+
+        trazas.add(resumen.estaEnScope()
+            ? I18nLogs.ContextoMenu.SCOPE_DENTRO(resumen.obtenerMetodo(), resumen.obtenerUrl())
+            : I18nLogs.ContextoMenu.SCOPE_FUERA(resumen.obtenerMetodo(), resumen.obtenerUrl()));
+
+        if (resumen.esRecursoEstatico()) {
+            trazas.add(I18nLogs.ContextoMenu.RECURSO_ESTATICO_OBSERVADO(resumen.obtenerUrl()));
+        }
+        if (resumen.obtenerContenidoAnalizable() != null && !resumen.obtenerContenidoAnalizable()) {
+            trazas.add(I18nLogs.ContextoMenu.CONTENIDO_NO_ANALIZABLE_OBSERVADO(
+                resumen.obtenerUrl(),
+                Normalizador.noEsVacio(resumen.obtenerContentType()) ? resumen.obtenerContentType() : "desconocido"
+            ));
+        }
+
+        trazas.add(I18nLogs.ContextoMenu.HASH_SOLICITUD(resumen.obtenerHashAbreviado()));
+        trazas.add(I18nLogs.ContextoMenu.DETALLES_SOLICITUD(
+            resumen.obtenerMetodo(),
+            resumen.obtenerUrl(),
+            resumen.obtenerCantidadEncabezados(),
+            resumen.obtenerCodigoEstado()
+        ));
+        return trazas;
+    }
+
+    public int contarSolicitudesSinRequest(List<HttpRequestResponse> solicitudes) {
+        if (Normalizador.esVacia(solicitudes)) {
+            return 0;
+        }
+        int cantidad = 0;
+        for (HttpRequestResponse solicitud : solicitudes) {
+            if (solicitud == null || solicitud.request() == null) {
+                cantidad++;
+            }
+        }
+        return cantidad;
+    }
+
+    public int contarSolicitudesSinResponse(List<HttpRequestResponse> solicitudes) {
+        if (Normalizador.esVacia(solicitudes)) {
+            return 0;
+        }
+        int cantidad = 0;
+        for (HttpRequestResponse solicitud : solicitudes) {
+            if (solicitud == null || solicitud.request() == null) {
+                continue;
+            }
+            if (!tieneResponseDisponible(solicitud)) {
+                cantidad++;
+            }
+        }
+        return cantidad;
+    }
+
+    public boolean tieneResponseDisponible(HttpRequestResponse solicitudRespuesta) {
+        return obtenerResponseSegura(solicitudRespuesta) != null;
+    }
+
+    private HttpResponse obtenerResponseSegura(HttpRequestResponse solicitudRespuesta) {
+        if (solicitudRespuesta == null) {
+            return null;
+        }
+        try {
+            if (solicitudRespuesta.hasResponse()) {
+                HttpResponse respuesta = solicitudRespuesta.response();
+                if (respuesta != null) {
+                    return respuesta;
+                }
+            }
+        } catch (Exception e) {
+            registrarErrorInspeccionContextual("No se pudo inspeccionar response contextual", e);
+        }
+        try {
+            return solicitudRespuesta.response();
+        } catch (Exception e) {
+            registrarErrorInspeccionContextual("No se pudo obtener response contextual", e);
+            return null;
+        }
+    }
+
+    private String obtenerContentTypeDesdeHeaders(List<HttpHeader> headers) {
+        if (headers == null) {
+            return "";
+        }
+        for (HttpHeader header : headers) {
+            if (header == null || header.name() == null) {
+                continue;
+            }
+            if ("Content-Type".equalsIgnoreCase(header.name())) {
+                return header.value() != null ? header.value() : "";
+            }
+        }
+        return "";
+    }
+
+    private void registrarErrorInspeccionContextual(String mensaje, Exception e) {
+        if (gestorLogging != null) {
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr(mensaje), e);
+        }
+    }
+
+    public static final class ResumenSolicitudContextual {
+        private final boolean valida;
+        private final String url;
+        private final String metodo;
+        private final boolean tieneRequest;
+        private final boolean tieneResponse;
+        private final int codigoEstado;
+        private final String contentType;
+        private final int cantidadEncabezados;
+        private final String hashAbreviado;
+        private final boolean enScope;
+        private final boolean recursoEstatico;
+        private final Boolean contenidoAnalizable;
+
+        private ResumenSolicitudContextual(boolean valida, String url, String metodo, boolean tieneRequest,
+                boolean tieneResponse, int codigoEstado, String contentType, int cantidadEncabezados,
+                String hashAbreviado, boolean enScope, boolean recursoEstatico, Boolean contenidoAnalizable) {
+            this.valida = valida;
+            this.url = url != null ? url : "";
+            this.metodo = metodo != null ? metodo : "";
+            this.tieneRequest = tieneRequest;
+            this.tieneResponse = tieneResponse;
+            this.codigoEstado = codigoEstado;
+            this.contentType = contentType != null ? contentType : "";
+            this.cantidadEncabezados = cantidadEncabezados;
+            this.hashAbreviado = hashAbreviado != null ? hashAbreviado : "";
+            this.enScope = enScope;
+            this.recursoEstatico = recursoEstatico;
+            this.contenidoAnalizable = contenidoAnalizable;
+        }
+
+        private static ResumenSolicitudContextual invalido() {
+            return new ResumenSolicitudContextual(false, "", "", false, false, -1, "", 0, "", false, false, null);
+        }
+
+        public boolean esValida() {
+            return valida;
+        }
+
+        public String obtenerUrl() {
+            return url;
+        }
+
+        public String obtenerMetodo() {
+            return metodo;
+        }
+
+        public boolean tieneRequest() {
+            return tieneRequest;
+        }
+
+        public boolean tieneResponse() {
+            return tieneResponse;
+        }
+
+        public int obtenerCodigoEstado() {
+            return codigoEstado;
+        }
+
+        public String obtenerContentType() {
+            return contentType;
+        }
+
+        public int obtenerCantidadEncabezados() {
+            return cantidadEncabezados;
+        }
+
+        public String obtenerHashAbreviado() {
+            return hashAbreviado;
+        }
+
+        public boolean estaEnScope() {
+            return enScope;
+        }
+
+        public boolean esRecursoEstatico() {
+            return recursoEstatico;
+        }
+
+        public Boolean obtenerContenidoAnalizable() {
+            return contenidoAnalizable;
+        }
     }
 }

@@ -1,5 +1,7 @@
 package com.burpia.i18n;
 
+import burp.api.montoya.core.ToolType;
+import burp.api.montoya.ui.contextmenu.InvocationType;
 import com.burpia.util.Normalizador;
 
 import java.util.Arrays;
@@ -410,6 +412,248 @@ public final class I18nLogs {
 
         public static String ERROR_DESHABILITADO() {
             return tr("Agente Factory Droid deshabilitado en ajustes.");
+        }
+    }
+
+    /**
+     * Mensajes de logging para acciones contextuales disparadas desde el menú derecho.
+     */
+    public static final class ContextoMenu {
+        private ContextoMenu() {
+        }
+
+        public static String ACCION_ANALIZAR_SOLICITUD() {
+            return I18nUI.tr("Analizar solicitud", "Analyze request");
+        }
+
+        public static String ACCION_ANALIZAR_FLUJO() {
+            return I18nUI.tr("Analizar flujo", "Analyze flow");
+        }
+
+        public static String ACCION_ENVIAR_SOLICITUD_AGENTE() {
+            return I18nUI.tr("Enviar solicitud a agente", "Send request to agent");
+        }
+
+        public static String ACCION_ENVIAR_FLUJO_AGENTE() {
+            return I18nUI.tr("Enviar flujo a agente", "Send flow to agent");
+        }
+
+        public static String ACCION_INICIADA(String accion, InvocationType tipoInvocacion,
+                ToolType tipoHerramienta, int cantidadSeleccionada) {
+            String codigoInvocacion = tipoInvocacion != null ? tipoInvocacion.name() : "UNKNOWN";
+            String codigoHerramienta = tipoHerramienta != null ? tipoHerramienta.name() : "UNKNOWN";
+            return I18nUI.trf(
+                "Acción contextual iniciada: %s | origen=%s (%s) | herramienta=%s (%s) | seleccionadas=%d",
+                "Context action started: %s | origin=%s (%s) | tool=%s (%s) | selected=%d",
+                accion,
+                codigoInvocacion,
+                nombreInvocacion(tipoInvocacion),
+                codigoHerramienta,
+                nombreHerramienta(tipoHerramienta),
+                cantidadSeleccionada
+            );
+        }
+
+        public static String RESPUESTA_OBSERVADA(String metodo, String url, int codigoEstado, boolean tieneResponse) {
+            return I18nUI.trf(
+                "Respuesta observada: %s %s (estado: %d, response=%s)",
+                "Observed response: %s %s (status: %d, response=%s)",
+                valorSeguro(metodo),
+                valorSeguro(url),
+                codigoEstado,
+                valorBooleano(tieneResponse)
+            );
+        }
+
+        public static String RESPONSE_AUSENTE(String metodo, String url) {
+            return I18nUI.trf(
+                "Solicitud contextual sin response asociada: %s %s",
+                "Context request without associated response: %s %s",
+                valorSeguro(metodo),
+                valorSeguro(url)
+            );
+        }
+
+        public static String SCOPE_DENTRO(String metodo, String url) {
+            return I18nUI.trf(
+                "DENTRO DE SCOPE - Procesando: %s %s",
+                "IN SCOPE - Processing: %s %s",
+                valorSeguro(metodo),
+                valorSeguro(url)
+            );
+        }
+
+        public static String SCOPE_FUERA(String metodo, String url) {
+            return I18nUI.trf(
+                "FUERA DE SCOPE - Observado: %s %s",
+                "OUT OF SCOPE - Observed: %s %s",
+                valorSeguro(metodo),
+                valorSeguro(url)
+            );
+        }
+
+        public static String RECURSO_ESTATICO_OBSERVADO(String url) {
+            return I18nUI.trf(
+                "Omitiendo recurso estatico: %s",
+                "Skipping static resource: %s",
+                valorSeguro(url)
+            );
+        }
+
+        public static String CONTENIDO_NO_ANALIZABLE_OBSERVADO(String url, String contentType) {
+            return I18nUI.trf(
+                "Omitiendo contenido no analizable: %s (Content-Type: %s)",
+                "Skipping non-analyzable content: %s (Content-Type: %s)",
+                valorSeguro(url),
+                valorSeguro(contentType)
+            );
+        }
+
+        public static String HASH_SOLICITUD(String hashAbreviado) {
+            return I18nUI.trf(
+                "Hash de solicitud: %s...",
+                "Request hash: %s...",
+                valorSeguro(hashAbreviado)
+            );
+        }
+
+        public static String DETALLES_SOLICITUD(String metodo, String url, int encabezados, int codigoEstado) {
+            return I18nUI.trf(
+                "Detalles de solicitud: Metodo=%s, URL=%s, Encabezados=%d, Codigo respuesta=%d",
+                "Request details: Method=%s, URL=%s, Headers=%d, Response code=%d",
+                valorSeguro(metodo),
+                valorSeguro(url),
+                encabezados,
+                codigoEstado
+            );
+        }
+
+        public static String BYPASS_ANALISIS_FORZADO() {
+            return I18nUI.tr(
+                "Analisis forzado contextual: observaciones de scope, estáticos y contenido no bloquean la acción",
+                "Forced contextual analysis: scope, static, and content observations do not block the action"
+            );
+        }
+
+        public static String BYPASS_ENVIO_AGENTE() {
+            return I18nUI.tr(
+                "Envio contextual a agente: observaciones de scope, estáticos y contenido no bloquean la acción",
+                "Context send to agent: scope, static, and content observations do not block the action"
+            );
+        }
+
+        public static String RESUMEN_SELECCION(int total, int validas, int sinRequest, int sinResponse) {
+            return I18nUI.trf(
+                "Resumen de selección contextual: total=%d, validas=%d, sin request=%d, sin response=%d",
+                "Context selection summary: total=%d, valid=%d, without request=%d, without response=%d",
+                total,
+                validas,
+                sinRequest,
+                sinResponse
+            );
+        }
+
+        public static String CONSOLIDANDO_FLUJO(int solicitudesValidas) {
+            return I18nUI.trf(
+                "Consolidando análisis de flujo con %d requests válidas",
+                "Consolidating flow analysis with %d valid requests",
+                solicitudesValidas
+            );
+        }
+
+        public static String PROMPT_AGENTE_DISPONIBLE(boolean disponible) {
+            return I18nUI.trf(
+                "Prompt de agente disponible: %s",
+                "Agent prompt available: %s",
+                valorBooleano(disponible)
+            );
+        }
+
+        public static String PROMPT_USA_TOKENS_HTTP(boolean usaTokens) {
+            return I18nUI.trf(
+                "Prompt de agente usa tokens HTTP: %s",
+                "Agent prompt uses HTTP tokens: %s",
+                valorBooleano(usaTokens)
+            );
+        }
+
+        public static String SERIALIZACION_AGENTE(int requests, int responses, int responsesOmitidas) {
+            return I18nUI.trf(
+                "Serialización de agente: requests=%d, responses=%d, responses omitidas=%d",
+                "Agent serialization: requests=%d, responses=%d, omitted responses=%d",
+                requests,
+                responses,
+                responsesOmitidas
+            );
+        }
+
+        public static String RESPONSE_OMITIDA_SERIALIZACION(String url) {
+            return I18nUI.trf(
+                "Response omitida en serialización de agente: %s",
+                "Response omitted during agent serialization: %s",
+                valorSeguro(url)
+            );
+        }
+
+        public static String LONGITUD_PAYLOAD_AGENTE(int longitud) {
+            return I18nUI.trf(
+                "Longitud de payload a agente: %d",
+                "Agent payload length: %d",
+                longitud
+            );
+        }
+
+        public static String RESULTADO_INYECCION_AGENTE(boolean encolado) {
+            return I18nUI.trf(
+                "Resultado de inyección a agente: %s",
+                "Agent injection result: %s",
+                encolado ? I18nUI.tr("encolado", "queued") : I18nUI.tr("fallido", "failed")
+            );
+        }
+
+        private static String nombreInvocacion(InvocationType tipoInvocacion) {
+            if (tipoInvocacion == null) {
+                return I18nUI.tr("Desconocido", "Unknown");
+            }
+            return switch (tipoInvocacion) {
+                case MESSAGE_EDITOR_REQUEST -> I18nUI.tr("Editor HTTP (request)", "HTTP editor (request)");
+                case MESSAGE_EDITOR_RESPONSE -> I18nUI.tr("Editor HTTP (response)", "HTTP editor (response)");
+                case MESSAGE_VIEWER_REQUEST -> I18nUI.tr("Viewer HTTP (request)", "HTTP viewer (request)");
+                case MESSAGE_VIEWER_RESPONSE -> I18nUI.tr("Viewer HTTP (response)", "HTTP viewer (response)");
+                case PROXY_HISTORY -> I18nUI.tr("Historial Proxy", "Proxy History");
+                case PROXY_INTERCEPT -> I18nUI.tr("Intercept Proxy", "Proxy Intercept");
+                case SITE_MAP_TREE -> I18nUI.tr("Árbol Site Map", "Site Map Tree");
+                case SITE_MAP_TABLE -> I18nUI.tr("Tabla Site Map", "Site Map Table");
+                case SEARCH_RESULTS -> I18nUI.tr("Resultados de búsqueda", "Search Results");
+                case SCANNER_RESULTS -> I18nUI.tr("Resultados de scanner", "Scanner Results");
+                case INTRUDER_PAYLOAD_POSITIONS -> I18nUI.tr("Payload positions", "Payload positions");
+                case INTRUDER_ATTACK_RESULTS -> I18nUI.tr("Resultados de Intruder", "Intruder attack results");
+                default -> tipoInvocacion.name();
+            };
+        }
+
+        private static String nombreHerramienta(ToolType tipoHerramienta) {
+            if (tipoHerramienta == null) {
+                return I18nUI.tr("Desconocida", "Unknown");
+            }
+            return switch (tipoHerramienta) {
+                case PROXY -> I18nUI.tr("Proxy", "Proxy");
+                case TARGET -> I18nUI.tr("Target", "Target");
+                case LOGGER -> I18nUI.tr("Logger", "Logger");
+                case REPEATER -> I18nUI.tr("Repeater", "Repeater");
+                case INTRUDER -> I18nUI.tr("Intruder", "Intruder");
+                case SCANNER -> I18nUI.tr("Scanner", "Scanner");
+                case EXTENSIONS -> I18nUI.tr("Extensions", "Extensions");
+                default -> tipoHerramienta.name();
+            };
+        }
+
+        private static String valorBooleano(boolean valor) {
+            return valor ? I18nUI.tr("sí", "yes") : I18nUI.tr("no", "no");
+        }
+
+        private static String valorSeguro(String valor) {
+            return valor != null ? valor : "";
         }
     }
 

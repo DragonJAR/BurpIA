@@ -341,7 +341,7 @@ class GestorConfiguracionTest {
     }
 
     @Test
-    @DisplayName("Carga configuración con proveedor desconocido y descarta valores inválidos")
+    @DisplayName("Carga configuración con proveedor desconocido, conserva defaults vigentes y descarta valores inválidos")
     void testCargaProveedorDesconocidoDescartaValoresInvalidos() throws Exception {
         configurarDirectorioTemporalComoHome();
 
@@ -360,7 +360,7 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
 
-        assertEquals("Z.ai", cargada.obtenerProveedorAI(), "assertEquals failed at GestorConfiguracionTest.java:352");
+        assertEquals("Ollama", cargada.obtenerProveedorAI(), "assertEquals failed at GestorConfiguracionTest.java:352");
         assertEquals("", cargada.obtenerApiKeyParaProveedor("-- Custom --"), "assertEquals failed at GestorConfiguracionTest.java:353");
         assertNull(cargada.obtenerUrlBaseGuardadaParaProveedor("-- Custom --"), "assertNull failed at GestorConfiguracionTest.java:354");
         assertEquals("", cargada.obtenerModeloParaProveedor("-- Custom --"), "assertEquals failed at GestorConfiguracionTest.java:355");
