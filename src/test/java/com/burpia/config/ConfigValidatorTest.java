@@ -79,4 +79,60 @@ class ConfigValidatorTest {
 
         assertFalse(resultado.esValido(), "assertFalse failed at ConfigValidatorTest.java:74");
     }
+
+    @Test
+    @DisplayName("Ruta de agente acepta tilde con argumentos")
+    void testValidarRutaBinarioAgenteAceptaTildeConArgumentos() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarRutaBinarioAgente(
+            "~/.local/bin/claude --dangerously-skip-permissions",
+            "CLAUDE_CODE"
+        );
+
+        assertTrue(resultado.esValido(), "assertTrue failed at ConfigValidatorTest.java:84");
+    }
+
+    @Test
+    @DisplayName("Ruta de agente acepta ejecutable entre comillas con tilde")
+    void testValidarRutaBinarioAgenteAceptaEjecutableEntreComillasConTilde() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarRutaBinarioAgente(
+            "\"~/bin/claude\" --dangerously-skip-permissions",
+            "CLAUDE_CODE"
+        );
+
+        assertTrue(resultado.esValido(), "assertTrue failed at ConfigValidatorTest.java:94");
+    }
+
+    @Test
+    @DisplayName("Ruta de agente acepta comando resoluble por PATH")
+    void testValidarRutaBinarioAgenteAceptaComandoResolublePorPath() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarRutaBinarioAgente(
+            "claude --dangerously-skip-permissions",
+            "CLAUDE_CODE"
+        );
+
+        assertTrue(resultado.esValido(), "assertTrue failed at ConfigValidatorTest.java:104");
+    }
+
+    @Test
+    @DisplayName("Ruta de agente rechaza traversal en ejecutable")
+    void testValidarRutaBinarioAgenteRechazaTraversalEnEjecutable() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarRutaBinarioAgente(
+            "../bin/claude --dangerously-skip-permissions",
+            "CLAUDE_CODE"
+        );
+
+        assertFalse(resultado.esValido(), "assertFalse failed at ConfigValidatorTest.java:114");
+        assertEquals("rutaBinario", resultado.obtenerCampo(), "assertEquals failed at ConfigValidatorTest.java:115");
+    }
+
+    @Test
+    @DisplayName("Ruta de agente permite traversal solo en argumentos")
+    void testValidarRutaBinarioAgentePermiteTraversalSoloEnArgumentos() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarRutaBinarioAgente(
+            "claude --config ../perfil/test.json",
+            "CLAUDE_CODE"
+        );
+
+        assertTrue(resultado.esValido(), "assertTrue failed at ConfigValidatorTest.java:125");
+    }
 }

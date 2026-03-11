@@ -253,7 +253,44 @@ class ConfigDialogControllerAgentesTest {
     }
 
     @Test
-    @DisplayName("Guardar bloquea agente habilitado cuando la ruta del binario no existe")
+    @DisplayName("Guardar acepta agente habilitado con ruta expandible por tilde")
+    void testGuardarAceptaBinarioAgenteConTildeYArgumentos() throws Exception {
+        Path binarioClaude = tempDir.resolve(".local").resolve("bin").resolve("claude");
+        Files.createDirectories(binarioClaude.getParent());
+        Files.writeString(binarioClaude, "#!/bin/bash\necho 'claude'");
+        binarioClaude.toFile().setExecutable(true);
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("Z.ai");
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(null, config, gestor, () -> guardadoCallback.set(true));
+
+        try {
+            completarFormularioMinimoGuardado(
+                dialogo,
+                "~/.local/bin/claude --dangerously-skip-permissions"
+            );
+
+            ejecutarGuardado(dialogo);
+
+            assertTrue(guardadoCallback.get(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:270");
+            assertFalse(dialogo.isDisplayable(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:271");
+            assertTrue(config.agenteHabilitado(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:272");
+            assertEquals(
+                "~/.local/bin/claude --dangerously-skip-permissions",
+                config.obtenerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name()),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:273"
+            );
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
+    @Test
+    @DisplayName("Guardar bloquea agente habilitado cuando la ruta expandida del binario no existe")
     void testGuardarBloqueaBinarioAgenteInexistente() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("Z.ai");
@@ -264,39 +301,12 @@ class ConfigDialogControllerAgentesTest {
         DialogoConfiguracion dialogo = new DialogoConfiguracion(null, config, gestor, () -> guardadoCallback.set(true));
 
         try {
-            JComboBox<String> comboProveedor = dialogo.obtenerComboProveedor();
-            JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
-            JTextField txtTimeoutModelo = dialogo.obtenerTxtTimeoutModelo();
-            JPasswordField txtClave = dialogo.obtenerTxtClave();
-            JTextField txtRetraso = dialogo.obtenerTxtRetraso();
-            JTextField txtMaximoConcurrente = dialogo.obtenerTxtMaximoConcurrente();
-            JTextField txtMaximoHallazgosTabla = dialogo.obtenerTxtMaximoHallazgosTabla();
-            JTextField txtMaximoTareas = dialogo.obtenerTxtMaximoTareas();
-            JTextField txtMaxTokens = dialogo.obtenerTxtMaxTokens();
-            JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
-            JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
-            JTextField txtAgenteBinario = dialogo.obtenerTxtAgenteBinario();
+            completarFormularioMinimoGuardado(
+                dialogo,
+                "~/.local/bin/binario-claude-no-existe --dangerously-skip-permissions"
+            );
 
-            SwingUtilities.invokeAndWait(() -> {
-                comboProveedor.setSelectedItem("Z.ai");
-                comboModelo.setSelectedItem("glm-5");
-                comboModelo.getEditor().setItem("glm-5");
-                txtClave.setText("test-key");
-                txtRetraso.setText("5");
-                txtMaximoConcurrente.setText("3");
-                txtMaximoHallazgosTabla.setText("1000");
-                txtMaximoTareas.setText("500");
-                txtMaxTokens.setText("4096");
-                txtTimeoutModelo.setText("180");
-                comboAgente.setSelectedItem(AgenteTipo.CLAUDE_CODE.name());
-                chkAgenteHabilitado.setSelected(true);
-                txtAgenteBinario.setText(tempDir.resolve("binario-claude-no-existe").toString());
-            });
-            flushEdt();
-
-            SwingUtilities.invokeAndWait(dialogo::guardarConfiguracion);
-            Thread.sleep(250);
-            flushEdt();
+            ejecutarGuardado(dialogo);
 
             assertFalse(guardadoCallback.get(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:293");
             assertTrue(dialogo.isDisplayable(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:294");
@@ -328,6 +338,44 @@ class ConfigDialogControllerAgentesTest {
         json.append("}");
         
         Files.writeString(configFile, json.toString(), StandardCharsets.UTF_8);
+    }
+
+    private void completarFormularioMinimoGuardado(DialogoConfiguracion dialogo, String comandoBinario) throws Exception {
+        JComboBox<String> comboProveedor = dialogo.obtenerComboProveedor();
+        JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
+        JTextField txtTimeoutModelo = dialogo.obtenerTxtTimeoutModelo();
+        JPasswordField txtClave = dialogo.obtenerTxtClave();
+        JTextField txtRetraso = dialogo.obtenerTxtRetraso();
+        JTextField txtMaximoConcurrente = dialogo.obtenerTxtMaximoConcurrente();
+        JTextField txtMaximoHallazgosTabla = dialogo.obtenerTxtMaximoHallazgosTabla();
+        JTextField txtMaximoTareas = dialogo.obtenerTxtMaximoTareas();
+        JTextField txtMaxTokens = dialogo.obtenerTxtMaxTokens();
+        JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
+        JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
+        JTextField txtAgenteBinario = dialogo.obtenerTxtAgenteBinario();
+
+        SwingUtilities.invokeAndWait(() -> {
+            comboProveedor.setSelectedItem("Z.ai");
+            comboModelo.setSelectedItem("glm-5");
+            comboModelo.getEditor().setItem("glm-5");
+            txtClave.setText("test-key");
+            txtRetraso.setText("5");
+            txtMaximoConcurrente.setText("3");
+            txtMaximoHallazgosTabla.setText("1000");
+            txtMaximoTareas.setText("500");
+            txtMaxTokens.setText("4096");
+            txtTimeoutModelo.setText("180");
+            comboAgente.setSelectedItem(AgenteTipo.CLAUDE_CODE.name());
+            chkAgenteHabilitado.setSelected(true);
+            txtAgenteBinario.setText(comandoBinario);
+        });
+        flushEdt();
+    }
+
+    private void ejecutarGuardado(DialogoConfiguracion dialogo) throws Exception {
+        SwingUtilities.invokeAndWait(dialogo::guardarConfiguracion);
+        Thread.sleep(250);
+        flushEdt();
     }
 
     private void flushEdt() throws Exception {

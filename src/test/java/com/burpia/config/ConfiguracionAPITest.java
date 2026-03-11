@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -59,7 +58,7 @@ class ConfiguracionAPITest {
         config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
         config.establecerRutaBinarioAgente(
             AgenteTipo.CLAUDE_CODE.name(),
-            Path.of("ruta-que-no-existe-claude").toAbsolutePath().toString()
+            "~/.local/bin/claude --dangerously-skip-permissions"
         );
         config.establecerModelo("modelo-valido");
         config.establecerClaveApi("valid-key");
@@ -67,6 +66,9 @@ class ConfiguracionAPITest {
         Map<String, String> errores = config.validar();
 
         assertTrue(errores.containsKey("agente"), "assertTrue failed at ConfiguracionAPITest.java:64");
+        assertTrue(errores.get("agente").contains("no existe"), "assertTrue failed at ConfiguracionAPITest.java:65");
+        assertFalse(errores.get("agente").contains("segmentos inválidos"), "assertFalse failed at ConfiguracionAPITest.java:66");
+        assertFalse(errores.get("agente").contains("caracteres inválidos"), "assertFalse failed at ConfiguracionAPITest.java:67");
     }
 
     @Test

@@ -3,11 +3,9 @@ package com.burpia.config;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
+import com.burpia.util.OSUtils;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 import static com.burpia.util.Normalizador.esVacio;
@@ -35,11 +33,6 @@ public final class ConfigValidator {
     // Patrones de validación de URLs
     private static final Pattern HTTP_URL_PATTERN = Pattern.compile("^https?://[\\w\\-._~:/?#\\[\\]@!$&'()*+,;=%]+$");
     
-    // Extensiones de binarios válidas para agentes
-    private static final Set<String> EXTENSIONES_BINARIO_VALIDAS = new HashSet<>(Arrays.asList(
-        ".exe", ".sh", ".bat", ".cmd", ".ps1", ""
-    ));
-
     private ConfigValidator() {
         // Clase de utilidad, no instanciable
     }
@@ -416,12 +409,12 @@ public final class ConfigValidator {
         return ValidationResult.valido();
     }
 
-    // ============ VALIDACIÓN DE RUTAS DE BINARIOS ============
+    // ============ VALIDACIÓN DE COMANDOS/RUTAS DE BINARIOS ============
 
     /**
-     * Valida la ruta al binario de un agente.
+     * Valida el comando o la ruta al binario de un agente.
      *
-     * @param rutaBinario la ruta al binario
+     * @param rutaBinario la ruta o comando del binario
      * @param tipoAgente el tipo de agente
      * @return resultado de la validación
      */
@@ -435,35 +428,47 @@ public final class ConfigValidator {
 
         if (esVacio(rutaBinario)) {
             return ValidationResult.invalido(
-                I18nUI.tr("Ruta del binario no puede estar vacía", "Binary path cannot be empty"), 
+                I18nUI.tr("Ruta o comando del binario no puede estar vacío", "Binary path or command cannot be empty"),
                 "rutaBinario"
             );
         }
 
-        String rutaNormalizada = rutaBinario.trim();
-        
-        // Validar extensión del archivo
-        boolean extensionValida = EXTENSIONES_BINARIO_VALIDAS.stream()
-            .anyMatch(ext -> rutaNormalizada.toLowerCase().endsWith(ext));
-            
-        if (!extensionValida) {
+        String comandoNormalizado = rutaBinario.trim();
+        String ejecutable = OSUtils.extraerEjecutableComando(comandoNormalizado);
+        String ejecutableResuelto = OSUtils.resolverEjecutableComando(comandoNormalizado);
+
+        if (esVacio(ejecutable) || esVacio(ejecutableResuelto)) {
             return ValidationResult.invalido(
-                I18nUI.trf("Extensión de binario inválida. Extensiones válidas: %s", 
-                            "Invalid binary extension. Valid extensions: %s", 
-                            String.join(", ", EXTENSIONES_BINARIO_VALIDAS)), 
+                I18nUI.tr("Ruta o comando del binario no puede estar vacío", "Binary path or command cannot be empty"),
                 "rutaBinario"
             );
         }
 
-        // Validar caracteres inválidos en ruta
-        if (rutaNormalizada.contains("..") || rutaNormalizada.contains("~")) {
+        if (contieneSegmentoTraversal(ejecutable) || contieneSegmentoTraversal(ejecutableResuelto)) {
             return ValidationResult.invalido(
-                I18nUI.tr("La ruta contiene caracteres inválidos (.. o ~)", "Path contains invalid characters (.. or ~)"), 
+                I18nUI.tr(
+                    "El ejecutable contiene segmentos inválidos (..)",
+                    "Executable contains invalid segments (..)"
+                ),
                 "rutaBinario"
             );
         }
 
         return ValidationResult.valido();
+    }
+
+    private static boolean contieneSegmentoTraversal(String ejecutable) {
+        if (esVacio(ejecutable)) {
+            return false;
+        }
+
+        String[] segmentos = ejecutable.trim().split("[/\\\\]+");
+        for (String segmento : segmentos) {
+            if ("..".equals(segmento)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // ============ VALIDACIÓN DE CONFIGURACIÓN COMPLETA ============

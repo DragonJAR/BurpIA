@@ -2118,7 +2118,7 @@ public final class I18nUI {
             }
 
             public static String LABEL_RUTA_BINARIO() {
-                return tr("Ruta del Binario:", "Binary Path:");
+                return tr("Ruta o Comando del Binario:", "Binary Path or Command:");
             }
 
             public static String TITULO_PROMPT_AGENTE() {
@@ -2142,8 +2142,8 @@ public final class I18nUI {
             }
 
             public static String MSG_CONFIGURACION_REQUERIDA() {
-                return tr("Configura la ruta del binario en los ajustes de agentes.",
-                        "Configure the binary path in the agents settings.");
+                return tr("Configura la ruta o comando del binario en los ajustes de agentes.",
+                        "Configure the binary path or command in the agents settings.");
             }
 
             public static String TITULO_VALIDACION_AGENTE() {
