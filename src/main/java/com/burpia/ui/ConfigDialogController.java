@@ -8,10 +8,6 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +45,7 @@ public class ConfigDialogController {
     private final ConfigPersistenceManager persistenceManager;
     private final ProviderConfigManager providerManager;
     private final GestorLoggingUnificado gestorLogging;
+    private final DialogStateManager dialogStateManager;
     private final Map<String, String> rutasBinarioAgenteTemporal;
     private final AtomicLong secuenciaRefrescoModelos;
 
@@ -69,6 +66,7 @@ public class ConfigDialogController {
         this.gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
         this.persistenceManager = new ConfigPersistenceManager(gestorConfig, gestorLogging);
         this.providerManager = new ProviderConfigManager(config, gestorLogging);
+        this.dialogStateManager = new DialogStateManager(gestorLogging);
         this.rutasBinarioAgenteTemporal = new HashMap<>();
         this.secuenciaRefrescoModelos = new AtomicLong(0);
 
@@ -109,14 +107,12 @@ public class ConfigDialogController {
         inicializarEventHandlersProvider();
         inicializarEventHandlersAgent();
         inicializarEventHandlersAcciones();
-        inicializarEventHandlersDialog();
         inicializarEventHandlersDocumentos();
         
         gestorLogging.info(ORIGEN_LOG, "Manejadores de eventos inicializados");
     }
 
     private void inicializarEventHandlersProvider() {
-        agregarListenerSiPresente(dialogo.obtenerComboProveedor(), e -> manejarCambioProveedor());
         agregarListenerSiPresente(dialogo.obtenerComboModelo(), e -> manejarCambioModelo());
         agregarListenerSiPresente(dialogo.obtenerBtnRefrescarModelos(), e -> manejarRefrescarModelos());
         agregarListenerSiPresente(dialogo.obtenerBtnProbarConexion(), e -> manejarProbarConexion());
@@ -135,15 +131,6 @@ public class ConfigDialogController {
         agregarListenerSiPresente(dialogo.obtenerBtnSitioWeb(), e -> manejarAbrirSitioWeb());
         agregarListenerSiPresente(dialogo.obtenerBtnRestaurarPrompt(), e -> manejarRestaurarPromptPorDefecto());
         agregarListenerSiPresente(dialogo.obtenerBtnRestaurarFuentes(), e -> manejarRestaurarFuentesPorDefecto());
-    }
-
-    private void inicializarEventHandlersDialog() {
-        dialogo.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                manejarCerrarDialogo();
-            }
-        });
     }
 
     private void inicializarEventHandlersDocumentos() {
@@ -246,6 +233,7 @@ public class ConfigDialogController {
         cargarConfiguracionGeneral();
         cargarConfiguracionAgente();
         cargarConfiguracionFuentes();
+        dialogStateManager.capturarEstadoInicial(new DialogoEstadoUIProvider());
 
         gestorLogging.info(ORIGEN_LOG, "Configuración inicial cargada");
     }
@@ -320,7 +308,7 @@ public class ConfigDialogController {
     private void cargarConfiguracionAgente() {
         JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
         if (comboAgente != null) {
-            filtrarAgentesDisponibles(comboAgente);
+            cargarAgentesConfigurables(comboAgente);
             
             String tipoAgente = config.obtenerTipoAgente();
             if (Normalizador.noEsVacio(tipoAgente)) {
@@ -359,14 +347,21 @@ public class ConfigDialogController {
         manejarCambioAgente();
     }
     
-    private void filtrarAgentesDisponibles(JComboBox<String> comboAgente) {
+    private void cargarAgentesConfigurables(JComboBox<String> comboAgente) {
         comboAgente.removeAllItems();
-        
+
+        List<String> agentesDisponibles = new ArrayList<>();
+        List<String> agentesPendientesConfig = new ArrayList<>();
         for (String codigoAgente : AgenteTipo.codigosDisponibles()) {
             if (esAgenteDisponible(codigoAgente)) {
-                comboAgente.addItem(codigoAgente);
+                agentesDisponibles.add(codigoAgente);
+            } else {
+                agentesPendientesConfig.add(codigoAgente);
             }
         }
+
+        agentesDisponibles.forEach(comboAgente::addItem);
+        agentesPendientesConfig.forEach(comboAgente::addItem);
     }
     
     private boolean esAgenteDisponible(String codigoAgente) {
@@ -407,12 +402,6 @@ public class ConfigDialogController {
         if (spinnerTamanioMono != null) {
             spinnerTamanioMono.setValue(config.obtenerTamanioFuenteMono());
         }
-    }
-
-    private void manejarCambioProveedor() {
-        gestorLogging.info(ORIGEN_LOG, "Manejando cambio de proveedor");
-        String nuevoProveedor = (String) dialogo.obtenerComboProveedor().getSelectedItem();
-        providerManager.cambiarProveedor(nuevoProveedor);
     }
 
     private void manejarCambioModelo() {
@@ -686,6 +675,7 @@ public class ConfigDialogController {
                         config.aplicarDesde(snapshot);
                         EstilosUI.actualizarFuentes(config);
                         persistenceManager.actualizarEstadoReferencia();
+                        dialogStateManager.capturarEstadoInicial(new DialogoEstadoUIProvider());
                         
                         java.lang.Runnable alGuardar = dialogo.obtenerAlGuardar();
                         if (alGuardar != null) {
@@ -1238,13 +1228,225 @@ public class ConfigDialogController {
     }
 
     public boolean tieneCambiosSinGuardar() {
-        return persistenceManager.hayCambiosPendientes();
+        return dialogStateManager.hayCambiosNoGuardados(new DialogoEstadoUIProvider());
     }
 
     private String construirMensajeErroresValidacion(java.util.Map<String, String> errores) {
         StringBuilder mensaje = new StringBuilder(I18nUI.Configuracion.MSG_CORRIGE_CAMPOS());
         errores.values().forEach(valor -> mensaje.append(" - ").append(valor).append("\n"));
         return mensaje.toString().trim();
+    }
+
+    private final class DialogoEstadoUIProvider implements DialogStateManager.EstadoUIProvider {
+        @Override
+        public String obtenerProveedorSeleccionado() {
+            return obtenerTextoSeleccionado(dialogo.obtenerComboProveedor());
+        }
+
+        @Override
+        public String obtenerAgenteSeleccionado() {
+            return obtenerTextoSeleccionado(dialogo.obtenerComboAgente());
+        }
+
+        @Override
+        public String obtenerRutaBinarioAgente() {
+            JTextField txtAgenteBinario = dialogo.obtenerTxtAgenteBinario();
+            return txtAgenteBinario != null ? txtAgenteBinario.getText() : "";
+        }
+
+        @Override
+        public EstadoProveedorUI obtenerEstadoProveedorActual() {
+            return providerManager.extraerEstadoActualRapido();
+        }
+
+        @Override
+        public Map<String, String> obtenerRutasBinarioAgenteTemporales() {
+            return new HashMap<>(rutasBinarioAgenteTemporal);
+        }
+
+        @Override
+        public Map<String, EstadoProveedorUI> obtenerEstadosProveedorTemporales() {
+            return providerManager.obtenerEstadosProveedorTemporales();
+        }
+
+        @Override
+        public List<String> obtenerProveedoresMultiSeleccionados() {
+            List<String> proveedores = new ArrayList<>();
+            DefaultListModel<String> modeloListaSeleccionados = dialogo.obtenerModeloListaSeleccionados();
+            if (modeloListaSeleccionados == null) {
+                return proveedores;
+            }
+            for (int i = 0; i < modeloListaSeleccionados.size(); i++) {
+                proveedores.add(modeloListaSeleccionados.getElementAt(i));
+            }
+            return proveedores;
+        }
+
+        @Override
+        public String obtenerCodigoIdiomaSeleccionado() {
+            IdiomaUI idioma = obtenerValorSeleccionado(dialogo.obtenerComboIdioma(), IdiomaUI.class);
+            return idioma != null ? idioma.codigo() : config.obtenerIdiomaUi();
+        }
+
+        @Override
+        public String obtenerModeloSeleccionado() {
+            return ConfigDialogController.this.obtenerModeloSeleccionado();
+        }
+
+        @Override
+        public String obtenerUrlActual() {
+            return obtenerTexto(dialogo.obtenerTxtUrl());
+        }
+
+        @Override
+        public String obtenerApiKeyActual() {
+            JPasswordField txtClave = dialogo.obtenerTxtClave();
+            return txtClave != null ? new String(txtClave.getPassword()) : "";
+        }
+
+        @Override
+        public String obtenerMaxTokensTexto() {
+            return obtenerTexto(dialogo.obtenerTxtMaxTokens());
+        }
+
+        @Override
+        public String obtenerTimeoutTexto() {
+            return obtenerTexto(dialogo.obtenerTxtTimeoutModelo());
+        }
+
+        @Override
+        public String obtenerRetrasoTexto() {
+            return obtenerTexto(dialogo.obtenerTxtRetraso());
+        }
+
+        @Override
+        public String obtenerMaximoConcurrenteTexto() {
+            return obtenerTexto(dialogo.obtenerTxtMaximoConcurrente());
+        }
+
+        @Override
+        public String obtenerMaximoHallazgosTexto() {
+            return obtenerTexto(dialogo.obtenerTxtMaximoHallazgosTabla());
+        }
+
+        @Override
+        public String obtenerMaximoTareasTexto() {
+            return obtenerTexto(dialogo.obtenerTxtMaximoTareas());
+        }
+
+        @Override
+        public boolean esDetalladoSeleccionado() {
+            return estaSeleccionado(dialogo.obtenerChkDetallado());
+        }
+
+        @Override
+        public boolean esIgnorarSslSeleccionado() {
+            return estaSeleccionado(dialogo.obtenerChkIgnorarSSL());
+        }
+
+        @Override
+        public boolean esSoloProxySeleccionado() {
+            return estaSeleccionado(dialogo.obtenerChkSoloProxy());
+        }
+
+        @Override
+        public boolean esAlertasHabilitadasSeleccionado() {
+            return estaSeleccionado(dialogo.obtenerChkAlertasHabilitadas());
+        }
+
+        @Override
+        public boolean esPersistirBusquedaSeleccionado() {
+            return estaSeleccionado(dialogo.obtenerChkPersistirBusqueda());
+        }
+
+        @Override
+        public boolean esPersistirSeveridadSeleccionado() {
+            return estaSeleccionado(dialogo.obtenerChkPersistirSeveridad());
+        }
+
+        @Override
+        public String obtenerPromptActual() {
+            JTextArea txtPrompt = dialogo.obtenerTxtPrompt();
+            return txtPrompt != null ? txtPrompt.getText() : "";
+        }
+
+        @Override
+        public boolean esAgenteHabilitadoSeleccionado() {
+            return estaSeleccionado(dialogo.obtenerChkAgenteHabilitado());
+        }
+
+        @Override
+        public String obtenerAgentePromptInicial() {
+            JTextArea txtAgentePromptInicial = dialogo.obtenerTxtAgentePromptInicial();
+            return txtAgentePromptInicial != null ? txtAgentePromptInicial.getText() : "";
+        }
+
+        @Override
+        public String obtenerAgentePrompt() {
+            JTextArea txtAgentePrompt = dialogo.obtenerTxtAgentePrompt();
+            return txtAgentePrompt != null ? txtAgentePrompt.getText() : "";
+        }
+
+        @Override
+        public String obtenerFuenteEstandar() {
+            return obtenerTextoSeleccionado(dialogo.obtenerComboFuenteEstandar());
+        }
+
+        @Override
+        public int obtenerTamanioFuenteEstandar() {
+            return obtenerValorSpinner(dialogo.obtenerSpinnerTamanioEstandar(), config.obtenerTamanioFuenteEstandar());
+        }
+
+        @Override
+        public String obtenerFuenteMono() {
+            return obtenerTextoSeleccionado(dialogo.obtenerComboFuenteMono());
+        }
+
+        @Override
+        public int obtenerTamanioFuenteMono() {
+            return obtenerValorSpinner(dialogo.obtenerSpinnerTamanioMono(), config.obtenerTamanioFuenteMono());
+        }
+
+        @Override
+        public boolean esMultiProveedorHabilitado() {
+            return estaSeleccionado(dialogo.obtenerChkHabilitarMultiProveedor());
+        }
+
+        @Override
+        public ConfiguracionAPI obtenerConfiguracion() {
+            return config;
+        }
+
+        @Override
+        public void actualizarProveedorEnUI(String nuevoProveedor) {
+            providerManager.cambiarProveedor(nuevoProveedor);
+        }
+    }
+
+    private String obtenerTexto(JTextField campo) {
+        return campo != null ? campo.getText() : "";
+    }
+
+    private boolean estaSeleccionado(JCheckBox checkBox) {
+        return checkBox != null && checkBox.isSelected();
+    }
+
+    private int obtenerValorSpinner(JSpinner spinner, int valorPorDefecto) {
+        if (spinner == null) {
+            return valorPorDefecto;
+        }
+        Object valor = spinner.getValue();
+        return valor instanceof Number ? ((Number) valor).intValue() : valorPorDefecto;
+    }
+
+    private String obtenerTextoSeleccionado(JComboBox<?> comboBox) {
+        Object valor = comboBox != null ? comboBox.getSelectedItem() : null;
+        return valor != null ? valor.toString() : "";
+    }
+
+    private <T> T obtenerValorSeleccionado(JComboBox<?> comboBox, Class<T> tipo) {
+        Object valor = comboBox != null ? comboBox.getSelectedItem() : null;
+        return tipo.isInstance(valor) ? tipo.cast(valor) : null;
     }
 
     private Map<String, String> validarMultiProveedor(ConfiguracionAPI snapshot) {

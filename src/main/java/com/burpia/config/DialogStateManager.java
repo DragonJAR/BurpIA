@@ -59,6 +59,10 @@ public final class DialogStateManager {
         String agenteSeleccionado = uiProvider.obtenerAgenteSeleccionado();
 
         Map<String, String> rutasAgente = new HashMap<>(rutasBinarioAgenteTemporal);
+        Map<String, String> rutasTemporalesExternas = uiProvider.obtenerRutasBinarioAgenteTemporales();
+        if (rutasTemporalesExternas != null) {
+            rutasAgente.putAll(rutasTemporalesExternas);
+        }
         if (Normalizador.noEsVacio(agenteSeleccionado)) {
             String rutaBinario = uiProvider.obtenerRutaBinarioAgente();
             if (rutaBinario != null) {
@@ -67,6 +71,10 @@ public final class DialogStateManager {
         }
 
         Map<String, EstadoProveedorUI> borradores = new HashMap<>(estadoProveedorTemporal);
+        Map<String, EstadoProveedorUI> estadosTemporalesExternos = uiProvider.obtenerEstadosProveedorTemporales();
+        if (estadosTemporalesExternos != null) {
+            borradores.putAll(estadosTemporalesExternos);
+        }
         if (Normalizador.noEsVacio(proveedorSeleccionado)) {
             EstadoProveedorUI estadoActual = uiProvider.obtenerEstadoProveedorActual();
             if (estadoActual != null) {
@@ -122,8 +130,11 @@ public final class DialogStateManager {
         if (estadoInicial == null) {
             return false;
         }
-        
+
         EstadoEdicionDialogo estadoActual = capturarEstadoActual(uiProvider);
+        if (estadoActual == null) {
+            return false;
+        }
         return !estadoInicial.equals(estadoActual);
     }
 
@@ -138,6 +149,9 @@ public final class DialogStateManager {
         }
 
         EstadoEdicionDialogo estadoActual = capturarEstadoActual(uiProvider);
+        if (estadoActual == null) {
+            return cambios;
+        }
         
         if (!Objects.equals(estadoInicial.proveedorSeleccionado(), estadoActual.proveedorSeleccionado())) {
             cambios.add("Proveedor AI");
@@ -317,6 +331,12 @@ public final class DialogStateManager {
         String obtenerAgenteSeleccionado();
         String obtenerRutaBinarioAgente();
         EstadoProveedorUI obtenerEstadoProveedorActual();
+        default Map<String, String> obtenerRutasBinarioAgenteTemporales() {
+            return Collections.emptyMap();
+        }
+        default Map<String, EstadoProveedorUI> obtenerEstadosProveedorTemporales() {
+            return Collections.emptyMap();
+        }
         List<String> obtenerProveedoresMultiSeleccionados();
         String obtenerCodigoIdiomaSeleccionado();
         String obtenerModeloSeleccionado();

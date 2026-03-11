@@ -136,7 +136,7 @@ build {
 def docsDir = file('docs')
 
 // Funciones auxiliares definidas como closures en ext
-ext.generarSeccion = { StringBuilder sb, FileCollection archivos ->
+ext.generarSeccion = { StringBuilder sb, def archivos ->
     archivos.sort { it.name }.each { archivo ->
         def nombreClase = archivo.name.replace('.java', '')
         def metodos = extraerMetodosPublicos(archivo)
@@ -243,19 +243,19 @@ tasks.register('generarDocsFunciones') {
         sb.append("| I18n | src/main/java/com/burpia/i18n/ |\n\n")
         sb.append("---\n\n")
         sb.append("## Configuracion\n\n")
-        generarSeccion(sb, archivosConfig)
+        project.ext.generarSeccion.call(sb, archivosConfig)
         sb.append("## Modelos\n\n")
-        generarSeccion(sb, archivosModel)
+        project.ext.generarSeccion.call(sb, archivosModel)
         sb.append("## Utilidades\n\n")
-        generarSeccion(sb, archivosUtil)
+        project.ext.generarSeccion.call(sb, archivosUtil)
         sb.append("## UI - Paneles\n\n")
-        generarSeccion(sb, archivosUI.findAll { it.name.startsWith('Panel') || it.name.startsWith('Pestania') })
+        project.ext.generarSeccion.call(sb, archivosUI.findAll { it.name.startsWith('Panel') || it.name.startsWith('Pestania') })
         sb.append("## UI - Componentes\n\n")
-        generarSeccion(sb, archivosUI.findAll { it.name.startsWith('Modelo') || it.name.startsWith('Dialogo') })
+        project.ext.generarSeccion.call(sb, archivosUI.findAll { it.name.startsWith('Modelo') || it.name.startsWith('Dialogo') })
         sb.append("## Analizador\n\n")
-        generarSeccion(sb, archivosAnalyzer)
+        project.ext.generarSeccion.call(sb, archivosAnalyzer)
         sb.append("## I18n\n\n")
-        generarSeccion(sb, archivosI18n)
+        project.ext.generarSeccion.call(sb, archivosI18n)
         def archivo = file("$docsDir/FUNCIONES.md")
         archivo.text = sb.toString()
         println "Generado: ${archivo}"
@@ -288,13 +288,13 @@ tasks.register('generarDocsUI') {
         def dialogoConfig = archivosUI.find { it.name == 'DialogoConfiguracion.java' }
         if (dialogoConfig) {
             sb.append("## DialogoConfiguracion\n\n")
-            sb.append(extraerComponentesUI(dialogoConfig))
+            sb.append(project.ext.extraerComponentesUI.call(dialogoConfig))
         }
         ['PanelEstadisticas', 'PanelHallazgos', 'PanelTareas', 'PanelAgente', 'PanelConsola', 'PestaniaPrincipal'].each { nombre ->
             def archivo = archivosUI.find { it.name == "${nombre}.java" }
             if (archivo) {
                 sb.append("## ${nombre}\n\n")
-                sb.append(extraerComponentesUI(archivo))
+                sb.append(project.ext.extraerComponentesUI.call(archivo))
             }
         }
         def archivo = file("$docsDir/COMPONENTES_UI.md")
@@ -324,7 +324,7 @@ tasks.register('generarDocsI18n') {
         def i18nUI = archivosI18n.find { it.name == 'I18nUI.java' }
         if (i18nUI) {
             sb.append("## Claves I18nUI\n\n")
-            sb.append(extraerClavesI18n(i18nUI))
+            sb.append(project.ext.extraerClavesI18n.call(i18nUI))
         }
         def archivo = file("$docsDir/I18N.md")
         archivo.text = sb.toString()

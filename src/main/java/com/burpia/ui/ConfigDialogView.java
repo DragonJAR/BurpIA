@@ -983,9 +983,6 @@ public class ConfigDialogView {
         return panelPrincipal;
     }
 
-    public void aplicarTooltips() {
-    }
-
     public JTabbedPane getTabbedPane() {
         return tabbedPane;
     }

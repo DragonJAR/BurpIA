@@ -603,16 +603,20 @@ class DialogoConfiguracionTimeoutPorModeloTest {
 
             SwingUtilities.invokeAndWait(() -> txtRetraso.setText("9"));
             flushEdt();
+            assertTrue(dialogo.tieneCambiosSinGuardar(),
+                    "Modificar ajustes debe marcar cambios pendientes antes de cerrar");
 
-            SwingUtilities.invokeAndWait(btnCerrar::doClick);
+            TestDialogUtils.ejecutarConDialogoAutoCerrado(() -> {
+                try {
+                    SwingUtilities.invokeAndWait(btnCerrar::doClick);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
             flushEdt();
 
-            // Nota: El comportamiento de detección de cambios puede variar según la implementación
-            // Este test verifica que el diálogo puede cerrarse con el botón Cerrar
-            // Si hay cambios pendientes, debería mostrar confirmación pero el test
-            // no puede interactuar con diálogos modales fácilmente
-            // Por ahora, simplemente verificamos que el flujo básico funciona
-            assertTrue(true, "Test simplificado - verificación de cierre funciona");
+            assertTrue(dialogo.isDisplayable(),
+                    "Si no se confirma el descarte, el diálogo debe permanecer abierto");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -633,17 +637,21 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
             SwingUtilities.invokeAndWait(() -> txtRetraso.setText("11"));
             flushEdt();
+            assertTrue(dialogo.tieneCambiosSinGuardar(),
+                    "El cierre por X debe ver el mismo estado de cambios pendientes");
 
-            SwingUtilities.invokeAndWait(() ->
-                    dialogo.dispatchEvent(new WindowEvent(dialogo, WindowEvent.WINDOW_CLOSING)));
+            TestDialogUtils.ejecutarConDialogoAutoCerrado(() -> {
+                try {
+                    SwingUtilities.invokeAndWait(() ->
+                            dialogo.dispatchEvent(new WindowEvent(dialogo, WindowEvent.WINDOW_CLOSING)));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
             flushEdt();
 
-            // Nota: El comportamiento de detección de cambios puede variar según la implementación
-            // Este test verifica que el evento de cierre X funciona
-            // Si hay cambios pendientes, debería mostrar confirmación pero el test
-            // no puede interactuar con diálogos modales fácilmente
-            // Por ahora, simplemente verificamos que el flujo básico funciona
-            assertTrue(true, "Test simplificado - verificación de cierre X funciona");
+            assertTrue(dialogo.isDisplayable(),
+                    "El cierre por X debe respetar la confirmación de descarte y mantener el diálogo abierto");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -697,6 +705,8 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             // 2. Cambiar a Gemini (debería disparar el guardado del borrador de OpenAI)
             SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("Gemini"));
             flushEdt();
+            assertTrue(dialogo.tieneCambiosSinGuardar(),
+                    "Los cambios del proveedor anterior deben seguir contándose como pendientes");
 
             // 3. Volver a OpenAI
             SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("OpenAI"));
@@ -705,6 +715,25 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             // 4. Verificar que se mantuvo el cambio
             assertEquals("https://mi-proxy.com", txtUrl.getText(), "El URL modificado de OpenAI debería persistir como borrador");
 
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Solo se registra un listener de cierre en el diálogo")
+    void testDialogoSoloRegistraUnListenerDeCierre() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-window-listeners");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            assertEquals(1, dialogo.getWindowListeners().length,
+                    "La política de cierre debe centralizarse en un solo WindowListener");
         } finally {
             destruirDialogo(dialogo);
         }

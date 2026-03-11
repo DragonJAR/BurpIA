@@ -286,14 +286,14 @@ class ProviderConfigManagerTest {
         when(chkHabilitarMultiProveedor.isSelected()).thenReturn(true);
         modeloListaDisponibles.addElement("OpenAI");
 
-        JList<String> listaDisponiblesMock = mock(JList.class);
-        when(listaDisponiblesMock.getSelectedValue()).thenReturn("OpenAI");
+        JList<String> listaDisponiblesReal = new JList<>(modeloListaDisponibles);
+        listaDisponiblesReal.setSelectedIndex(0);
 
         java.lang.reflect.Field field = null;
         try {
             field = ProviderConfigManager.class.getDeclaredField("listaProveedoresDisponibles");
             field.setAccessible(true);
-            field.set(providerConfigManager, listaDisponiblesMock);
+            field.set(providerConfigManager, listaDisponiblesReal);
         } catch (Exception e) {
             fail("No se pudo inyectar mock de listaProveedoresDisponibles: " + e.getMessage());
         }
@@ -305,5 +305,61 @@ class ProviderConfigManagerTest {
         });
 
         verify(btnAgregarProveedor).setEnabled(true);
+    }
+
+    @Test
+    void testSeleccionEnListasActualizaBotonesMultiProveedor() throws Exception {
+        ProviderConfigManager manager = new ProviderConfigManager(config, gestorLogging);
+        JComboBox<String> comboProveedorReal = new JComboBox<>(new String[] {"OpenAI", "Claude"});
+        JComboBox<String> comboModeloReal = new JComboBox<>();
+        JTextField txtUrlReal = new JTextField();
+        JPasswordField txtClaveReal = new JPasswordField();
+        JTextField txtMaxTokensReal = new JTextField();
+        JTextField txtTimeoutReal = new JTextField();
+        JButton btnAgregarReal = new JButton();
+        JButton btnQuitarReal = new JButton();
+        JButton btnSubirReal = new JButton();
+        JButton btnBajarReal = new JButton();
+        JCheckBox chkMultiReal = new JCheckBox();
+        chkMultiReal.setSelected(true);
+        JLabel lblEstadoReal = new JLabel();
+        DefaultListModel<String> disponibles = new DefaultListModel<>();
+        disponibles.addElement("OpenAI");
+        DefaultListModel<String> seleccionados = new DefaultListModel<>();
+        seleccionados.addElement("Claude");
+        JList<String> listaDisponiblesReal = new JList<>(disponibles);
+        JList<String> listaSeleccionadosReal = new JList<>(seleccionados);
+
+        manager.inicializarComponentesUI(
+            comboProveedorReal,
+            comboModeloReal,
+            txtUrlReal,
+            txtClaveReal,
+            txtMaxTokensReal,
+            txtTimeoutReal,
+            btnAgregarReal,
+            btnQuitarReal,
+            btnSubirReal,
+            btnBajarReal,
+            chkMultiReal,
+            lblEstadoReal,
+            disponibles,
+            seleccionados,
+            listaDisponiblesReal,
+            listaSeleccionadosReal
+        );
+
+        java.lang.reflect.Method method = ProviderConfigManager.class.getDeclaredMethod("actualizarBotonesMultiProveedor");
+        method.setAccessible(true);
+        method.invoke(manager);
+
+        assertFalse(btnAgregarReal.isEnabled(), "Sin selección disponible el botón Agregar debe iniciar deshabilitado");
+        assertFalse(btnQuitarReal.isEnabled(), "Sin selección en seleccionados el botón Quitar debe iniciar deshabilitado");
+
+        listaDisponiblesReal.setSelectedIndex(0);
+        assertTrue(btnAgregarReal.isEnabled(), "Seleccionar un proveedor disponible debe habilitar Agregar");
+
+        listaSeleccionadosReal.setSelectedIndex(0);
+        assertTrue(btnQuitarReal.isEnabled(), "Seleccionar un proveedor ya agregado debe habilitar Quitar");
     }
 }

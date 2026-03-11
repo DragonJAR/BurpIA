@@ -6,6 +6,7 @@ import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -166,6 +167,17 @@ public final class ProviderConfigManager {
         if (btnBajarProveedor != null) {
             btnBajarProveedor.addActionListener(e -> bajarProveedorSeleccionado());
         }
+        ListSelectionListener listenerSeleccionMultiProveedor = e -> {
+            if (!e.getValueIsAdjusting()) {
+                actualizarBotonesMultiProveedor();
+            }
+        };
+        if (listaProveedoresDisponibles != null) {
+            listaProveedoresDisponibles.addListSelectionListener(listenerSeleccionMultiProveedor);
+        }
+        if (listaProveedoresSeleccionados != null) {
+            listaProveedoresSeleccionados.addListSelectionListener(listenerSeleccionMultiProveedor);
+        }
         if (chkHabilitarMultiProveedor != null) {
             chkHabilitarMultiProveedor.addActionListener(e -> {
                 actualizarEstadoMultiProveedor();
@@ -324,6 +336,13 @@ public final class ProviderConfigManager {
         }
 
         return configGuardar;
+    }
+
+    /**
+     * Expone una copia del estado temporal de proveedores para detección de cambios no guardados.
+     */
+    public Map<String, EstadoProveedorUI> obtenerEstadosProveedorTemporales() {
+        return new HashMap<>(estadoProveedorTemporal);
     }
 
     /**

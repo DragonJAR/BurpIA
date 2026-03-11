@@ -51,8 +51,8 @@ class ConfigDialogControllerAgentesTest {
     }
 
     @Test
-    @DisplayName("Solo muestra agentes con binario existente")
-    void testSoloMuestraAgentesConBinarioExistente() throws IOException {
+    @DisplayName("Muestra todos los agentes para permitir configuración y reparación")
+    void testMuestraTodosLosAgentesParaConfiguracion() throws IOException {
         Path binarioValido = burpiaDir.resolve("droid");
         Files.writeString(binarioValido, "#!/bin/bash\necho 'test'");
         binarioValido.toFile().setExecutable(true);
@@ -72,29 +72,33 @@ class ConfigDialogControllerAgentesTest {
             JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
             assertNotNull(comboAgente);
             
-            int itemCount = comboAgente.getItemCount();
-            assertTrue(itemCount > 0, "El combo debería tener al menos un agente disponible");
-            
-            boolean tieneFactoryDroid = false;
-            for (int i = 0; i < itemCount; i++) {
+            assertEquals(AgenteTipo.values().length, comboAgente.getItemCount(),
+                "El combo debe exponer todos los agentes para permitir su configuración");
+            assertEquals("FACTORY_DROID", comboAgente.getItemAt(0),
+                "Los agentes disponibles deben priorizarse al inicio");
+
+            boolean tieneClaudeCode = false;
+            boolean tieneGeminiCli = false;
+            for (int i = 0; i < comboAgente.getItemCount(); i++) {
                 String item = comboAgente.getItemAt(i);
-                if ("FACTORY_DROID".equals(item)) {
-                    tieneFactoryDroid = true;
+                if ("CLAUDE_CODE".equals(item)) {
+                    tieneClaudeCode = true;
                 }
-                if ("CLAUDE_CODE".equals(item) || "GEMINI_CLI".equals(item)) {
-                    fail("No debería mostrar agentes sin binario válido: " + item);
+                if ("GEMINI_CLI".equals(item)) {
+                    tieneGeminiCli = true;
                 }
             }
-            
-            assertTrue(tieneFactoryDroid, "Debería mostrar FACTORY_DROID que tiene binario válido");
+
+            assertTrue(tieneClaudeCode, "Debe mostrar CLAUDE_CODE aunque requiera reparación de ruta");
+            assertTrue(tieneGeminiCli, "Debe mostrar GEMINI_CLI aunque aún no tenga binario configurado");
         } finally {
             dialogo.dispose();
         }
     }
 
     @Test
-    @DisplayName("Combo vacío si ningún agente tiene binario válido")
-    void testComboVacioSiNingunAgenteTieneBinario() throws IOException {
+    @DisplayName("Combo no queda vacío si ningún agente tiene binario válido")
+    void testComboMantieneOpcionesSiNingunAgenteTieneBinario() throws IOException {
         ConfiguracionAPI config = new ConfiguracionAPI();
         for (AgenteTipo tipo : AgenteTipo.values()) {
             config.establecerRutaBinarioAgente(tipo.name(), "/ruta/falsa/que/no/existe");
@@ -110,16 +114,16 @@ class ConfigDialogControllerAgentesTest {
             JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
             assertNotNull(comboAgente);
             
-            assertEquals(0, comboAgente.getItemCount(), 
-                "El combo debería estar vacío si ningún agente tiene binario válido");
+            assertEquals(AgenteTipo.values().length, comboAgente.getItemCount(),
+                "El combo debe seguir mostrando agentes para poder configurar rutas desde cero");
         } finally {
             dialogo.dispose();
         }
     }
 
     @Test
-    @DisplayName("Selecciona primer agente disponible si el configurado no existe")
-    void testSeleccionaPrimerAgenteDisponible() throws IOException {
+    @DisplayName("Mantiene seleccionado el agente configurado aunque su binario requiera corrección")
+    void testMantieneAgenteConfiguradoParaPermitirReparacion() throws IOException {
         Path binarioClaude = burpiaDir.resolve("claude");
         Files.writeString(binarioClaude, "#!/bin/bash\necho 'claude'");
         binarioClaude.toFile().setExecutable(true);
@@ -143,8 +147,8 @@ class ConfigDialogControllerAgentesTest {
             
             String seleccionado = (String) comboAgente.getSelectedItem();
             assertNotNull(seleccionado, "Debería haber un agente seleccionado");
-            assertNotEquals("FACTORY_DROID", seleccionado, 
-                "No debería seleccionar FACTORY_DROID que no tiene binario válido");
+            assertEquals("FACTORY_DROID", seleccionado,
+                "Debe conservar FACTORY_DROID seleccionado para permitir reparar su ruta");
         } finally {
             dialogo.dispose();
         }
@@ -180,8 +184,8 @@ class ConfigDialogControllerAgentesTest {
     }
 
     @Test
-    @DisplayName("Valida binarios con rutas que incluyen argumentos")
-    void testValidaBinariosConArgumentos() throws IOException {
+    @DisplayName("Conserva rutas de agentes con argumentos en la UI")
+    void testConservaRutasConArgumentosEnLaUI() throws IOException {
         Path binarioClaude = burpiaDir.resolve("claude");
         Files.writeString(binarioClaude, "#!/bin/bash\necho 'claude'");
         binarioClaude.toFile().setExecutable(true);
@@ -189,6 +193,7 @@ class ConfigDialogControllerAgentesTest {
         String rutaConArgumentos = binarioClaude.toString() + " --dangerously-skip-permissions";
         
         ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente("CLAUDE_CODE");
         config.establecerRutaBinarioAgente("CLAUDE_CODE", rutaConArgumentos);
 
         crearArchivoConfiguracion(config);
@@ -199,18 +204,14 @@ class ConfigDialogControllerAgentesTest {
         
         try {
             JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
+            javax.swing.JTextField txtAgenteBinario = dialogo.obtenerTxtAgenteBinario();
             assertNotNull(comboAgente);
+            assertNotNull(txtAgenteBinario);
             
-            boolean tieneClaudeCode = false;
-            for (int i = 0; i < comboAgente.getItemCount(); i++) {
-                if ("CLAUDE_CODE".equals(comboAgente.getItemAt(i))) {
-                    tieneClaudeCode = true;
-                    break;
-                }
-            }
-            
-            assertTrue(tieneClaudeCode, 
-                "Debería mostrar CLAUDE_CODE ya que el binario existe aunque tenga argumentos");
+            assertEquals("CLAUDE_CODE", comboAgente.getSelectedItem(),
+                "Debe conservar seleccionado el agente configurado");
+            assertEquals(rutaConArgumentos, txtAgenteBinario.getText(),
+                "La ruta con argumentos debe mostrarse íntegra para poder editarla");
         } finally {
             dialogo.dispose();
         }

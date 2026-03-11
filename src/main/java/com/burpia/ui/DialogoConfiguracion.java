@@ -148,9 +148,6 @@ public class DialogoConfiguracion extends JDialog {
         // Configurar cierre del diálogo
         configurarManejadorCierre();
         
-        // Aplicar tooltips
-        view.aplicarTooltips();
-        
         pack();
         setSize(ANCHO_DIALOGO, ALTO_DIALOGO);
         setLocationRelativeTo(getParent());
