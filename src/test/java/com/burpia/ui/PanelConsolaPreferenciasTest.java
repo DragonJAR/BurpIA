@@ -192,6 +192,52 @@ class PanelConsolaPreferenciasTest {
     }
 
     @Test
+    @DisplayName("Busqueda activa se refresca cuando cambian los logs")
+    void testBusquedaActivaSeRefrescaConNuevosLogs() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            GestorConsolaGUI gestor = panel.obtenerGestorConsola();
+            JTextField campoBusqueda = obtenerCampoBusqueda(panel);
+            JLabel etiquetaResultados = obtenerEtiquetaResultadosBusqueda(panel);
+            JButton botonBuscar = obtenerBotonBuscar(panel);
+
+            SwingUtilities.invokeAndWait(gestor::limpiarConsola);
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> gestor.registrarInfo("alpha inicial"));
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> {
+                campoBusqueda.setText("alpha");
+                botonBuscar.doClick();
+            });
+            flushEdt();
+
+            assertEquals(
+                I18nUI.Consola.MSG_BUSQUEDA_ENCONTRADA(1, "alpha"),
+                etiquetaResultados.getText(),
+                "assertEquals failed at PanelConsolaPreferenciasTest.java:214"
+            );
+
+            SwingUtilities.invokeAndWait(() -> {
+                gestor.registrarInfo("alpha nuevo");
+                gestor.registrarVerbose("sin coincidencia");
+            });
+            flushEdt();
+            invocarActualizacionResumen(panel);
+            flushEdt();
+
+            assertEquals(
+                I18nUI.Consola.MSG_BUSQUEDA_ENCONTRADA(2, "alpha"),
+                etiquetaResultados.getText(),
+                "assertEquals failed at PanelConsolaPreferenciasTest.java:229"
+            );
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
     @DisplayName("Modo angosto agrupa controles de consola en filas lógicas")
     void testModoAngostoAgrupaControlesEnFilasLogicas() throws Exception {
         PanelConsola panel = crearPanel();
@@ -272,6 +318,18 @@ class PanelConsolaPreferenciasTest {
         Field field = PanelConsola.class.getDeclaredField("consola");
         field.setAccessible(true);
         return (JTextPane) field.get(panel);
+    }
+
+    private void invocarActualizacionResumen(PanelConsola panel) throws Exception {
+        java.lang.reflect.Method method = PanelConsola.class.getDeclaredMethod("actualizarResumen", boolean.class);
+        method.setAccessible(true);
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                method.invoke(panel, false);
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException(e);
+            }
+        });
     }
 
     private void flushEdt() throws Exception {

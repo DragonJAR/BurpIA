@@ -171,6 +171,46 @@ class PanelAgenteTransporteTest {
     }
 
     @Test
+    @DisplayName("Forzar prompt inicial no marca envio si el preflight esta vacio")
+    void testForzarPromptInicialIgnoraPreflightVacioSinConsumirBandera() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        establecerCampoString(config, "agentePreflightPrompt", "   ");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            panel.forzarInyeccionPromptInicial();
+
+            assertEquals(0, contarInyeccionesPendientes(panel), "assertEquals failed at PanelAgenteTransporteTest.java:182");
+            assertFalse(obtenerBandera(panel, "promptInicialEnviado"), "assertFalse failed at PanelAgenteTransporteTest.java:183");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Prompt inicial puede inyectarse despues de configurar preflight tras intento vacio")
+    void testPromptInicialPuedeReintentarseTrasConfigurarPreflight() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        establecerCampoString(config, "agentePreflightPrompt", "");
+        config.establecerAgenteDelay(1500);
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            panel.forzarInyeccionPromptInicial();
+            config.establecerAgentePreflightPrompt("PROMPT_POSTERIOR");
+
+            marcarConsolaArrancando(panel, true);
+            panel.forzarInyeccionPromptInicial();
+
+            assertEquals(1, contarInyeccionesPendientes(panel), "assertEquals failed at PanelAgenteTransporteTest.java:201");
+            assertEquals("PROMPT_POSTERIOR", obtenerTextoInyeccionPendiente(panel, 0), "assertEquals failed at PanelAgenteTransporteTest.java:202");
+            assertTrue(obtenerBandera(panel, "promptInicialEnviado"), "assertTrue failed at PanelAgenteTransporteTest.java:203");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
     @DisplayName("Arranque automatico siempre ejecuta binario aunque prompt inicial ya este marcado")
     void testArranqueAutomaticoEjecutaBinarioConPromptInicialYaMarcado() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -738,6 +778,19 @@ class PanelAgenteTransporteTest {
         field.setAccessible(true);
         AtomicBoolean bandera = (AtomicBoolean) field.get(panel);
         bandera.set(valor);
+    }
+
+    private boolean obtenerBandera(PanelAgente panel, String nombre) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField(nombre);
+        field.setAccessible(true);
+        AtomicBoolean bandera = (AtomicBoolean) field.get(panel);
+        return bandera.get();
+    }
+
+    private void establecerCampoString(Object objetivo, String nombre, String valor) throws Exception {
+        Field field = objetivo.getClass().getDeclaredField(nombre);
+        field.setAccessible(true);
+        field.set(objetivo, valor);
     }
 
     private int buscarPrimeraCoincidencia(List<String> valores, String fragmento) {

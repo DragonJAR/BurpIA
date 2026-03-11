@@ -18,9 +18,10 @@ import static org.mockito.Mockito.when;
 class FlowAnalysisRequestBuilderTest {
 
     @Test
-    @DisplayName("crea solicitud de flujo con prompt preconstruido y requests agregadas")
-    void testCreaSolicitudFlujoConPromptPreconstruidoYRequestsAgregadas() {
+    @DisplayName("crea solicitud de flujo usando el prompt configurable del usuario")
+    void testCreaSolicitudFlujoUsandoPromptConfigurableUsuario() {
         ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerPromptConfigurable("PROMPT USUARIO\nREQ={REQUEST}\nRES={RESPONSE}\nLANG={OUTPUT_LANGUAGE}");
         SolicitudAnalisis primera = crearSolicitud(
             "https://example.com/one",
             "GET",
@@ -44,12 +45,22 @@ class FlowAnalysisRequestBuilderTest {
 
         assertNotNull(solicitudFlujo, "La solicitud de flujo no debe ser null");
         assertNotNull(solicitudFlujo.obtenerPromptPreconstruido(), "El prompt preconstruido no debe ser null");
-        assertTrue(solicitudFlujo.obtenerPromptPreconstruido().contains("SECUENCIA DE PETICIONES HTTP"),
+        assertTrue(solicitudFlujo.obtenerPromptPreconstruido().startsWith("PROMPT USUARIO"),
+            solicitudFlujo.obtenerPromptPreconstruido());
+        assertTrue(solicitudFlujo.obtenerPromptPreconstruido().contains("=== REQUEST 1 ==="),
+            solicitudFlujo.obtenerPromptPreconstruido());
+        assertTrue(solicitudFlujo.obtenerPromptPreconstruido().contains("=== REQUEST 2 ==="),
+            solicitudFlujo.obtenerPromptPreconstruido());
+        assertTrue(solicitudFlujo.obtenerPromptPreconstruido().contains("=== RESPONSE 1 ==="),
             solicitudFlujo.obtenerPromptPreconstruido());
         assertTrue(solicitudFlujo.obtenerEncabezados().contains("GET https://example.com/one"), solicitudFlujo.obtenerEncabezados());
         assertTrue(solicitudFlujo.obtenerEncabezados().contains("POST https://example.com/two"), solicitudFlujo.obtenerEncabezados());
+        assertFalse(solicitudFlujo.obtenerPromptPreconstruido().contains("SECUENCIA DE PETICIONES HTTP"),
+            "No debe reconstruir un prompt de flujo separado");
         assertFalse(solicitudFlujo.obtenerPromptPreconstruido().contains("RESPONSE:\nSTATUS: N/A\n[RESPONSE NOT AVAILABLE]"),
             "El prompt de flujo no debe forzar respuestas inexistentes");
+        assertFalse(solicitudFlujo.obtenerPromptPreconstruido().contains("=== RESPONSE 2 ==="),
+            "El prompt de flujo no debe inventar respuestas faltantes");
     }
 
     private SolicitudAnalisis crearSolicitud(String url,

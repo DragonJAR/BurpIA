@@ -384,12 +384,15 @@ public class PanelConsola extends JPanel {
             return;
         }
         ultimaVersionConsola = versionActual;
-        UIUtils.ejecutarEnEdt(() -> etiquetaResumen.setText(I18nUI.Consola.RESUMEN(
-            gestorConsola.obtenerTotalLogs(),
-            gestorConsola.obtenerContadorInfo(),
-            gestorConsola.obtenerContadorVerbose(),
-            gestorConsola.obtenerContadorError()
-        )));
+        UIUtils.ejecutarEnEdt(() -> {
+            etiquetaResumen.setText(I18nUI.Consola.RESUMEN(
+                gestorConsola.obtenerTotalLogs(),
+                gestorConsola.obtenerContadorInfo(),
+                gestorConsola.obtenerContadorVerbose(),
+                gestorConsola.obtenerContadorError()
+            ));
+            refrescarResultadoBusqueda();
+        });
     }
 
     /**
@@ -412,7 +415,6 @@ public class PanelConsola extends JPanel {
         etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
         consola.setToolTipText(I18nUI.Tooltips.Consola.AREA_LOGS());
         aplicarTema();
-        refrescarResultadoBusqueda();
         actualizarResumen(true);
         revalidate();
         repaint();

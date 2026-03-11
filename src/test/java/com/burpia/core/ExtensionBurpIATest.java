@@ -656,12 +656,12 @@ class ExtensionBurpIATest {
         }
 
         @Test
-        @DisplayName("Enviar flujo al Agente concatena requests y omite responses faltantes")
-        void testEnviarFlujoAAgenteConcatenaRequestsYOmiteResponsesFaltantes() throws Exception {
+        @DisplayName("Enviar flujo al Agente preserva prompt del usuario y omite responses faltantes")
+        void testEnviarFlujoAAgentePreservaPromptUsuarioYOmiteResponsesFaltantes() throws Exception {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
-            config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}\\nLANG={OUTPUT_LANGUAGE}");
+            config.establecerAgentePrompt("PROMPT USUARIO\\nREQ={REQUEST}\\nRES={RESPONSE}\\nLANG={OUTPUT_LANGUAGE}");
             establecerCampo(extension, "config", config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
@@ -686,6 +686,7 @@ class ExtensionBurpIATest {
             ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
             verify(panelAgente).inyectarComando(payloadCaptor.capture(), eq(0));
             String payload = payloadCaptor.getValue();
+            assertTrue(payload.startsWith("PROMPT USUARIO"), payload);
             assertTrue(payload.contains("=== REQUEST 1 ==="), payload);
             assertTrue(payload.contains("=== REQUEST 2 ==="), payload);
             assertTrue(payload.contains("GET /one HTTP/1.1"), payload);
@@ -693,6 +694,47 @@ class ExtensionBurpIATest {
             assertTrue(payload.contains("=== RESPONSE 1 ==="), payload);
             assertFalse(payload.contains("=== RESPONSE 2 ==="), payload);
             assertTrue(payload.contains("LANG=es"), payload);
+            assertFalse(payload.contains("<http_transaction"), payload);
+        }
+
+        @Test
+        @DisplayName("Enviar flujo al Agente respeta marcadores numerados del usuario")
+        void testEnviarFlujoAAgenteRespetaMarcadoresNumerados() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerAgenteHabilitado(true);
+            config.establecerAgentePrompt("UNO={REQUEST_1}\\nDOS={REQUEST_2}\\nR1={RESPONSE_1}\\nR2={RESPONSE_2}");
+            establecerCampo(extension, "config", config);
+
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+            PanelAgente panelAgente = mock(PanelAgente.class);
+            when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+            HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
+            HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
+            HttpRequest request1 = crearProxyContadorToString(HttpRequest.class, new AtomicInteger(0), "GET /one HTTP/1.1");
+            HttpRequest request2 = crearProxyContadorToString(HttpRequest.class, new AtomicInteger(0), "POST /two HTTP/1.1");
+            HttpResponse response1 = crearProxyContadorToString(HttpResponse.class, new AtomicInteger(0), "HTTP/1.1 200 OK");
+            when(rr1.request()).thenReturn(request1);
+            when(rr1.response()).thenReturn(response1);
+            when(rr2.request()).thenReturn(request2);
+            when(rr2.response()).thenReturn(null);
+
+            Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
+            enviarFlujoAAgente.setAccessible(true);
+            assertDoesNotThrow(() -> enviarFlujoAAgente.invoke(extension, List.of(rr1, rr2)));
+
+            ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+            verify(panelAgente).inyectarComando(payloadCaptor.capture(), eq(0));
+            String payload = payloadCaptor.getValue();
+
+            assertTrue(payload.contains("UNO=GET /one HTTP/1.1"), payload);
+            assertTrue(payload.contains("DOS=POST /two HTTP/1.1"), payload);
+            assertTrue(payload.contains("R1=HTTP/1.1 200 OK"), payload);
+            assertTrue(payload.contains("R2="), payload);
+            assertFalse(payload.contains("{REQUEST_1}"), payload);
+            assertFalse(payload.contains("{RESPONSE_2}"), payload);
         }
 
         @Test

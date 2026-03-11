@@ -2,6 +2,7 @@ package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
@@ -18,6 +19,8 @@ import org.mockito.quality.Strictness;
 
 import javax.swing.*;
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -45,13 +48,23 @@ class PestaniaPrincipalTest {
 
     private PestaniaPrincipal pestaniaPrincipal;
     private final AtomicBoolean agenteHabilitado = new AtomicBoolean(true);
+    private Map<String, String> estadoUIPersistido;
 
     @BeforeEach
     void setUp() throws Exception {
         agenteHabilitado.set(true);
+        estadoUIPersistido = new HashMap<>();
+        I18nUI.establecerIdioma("es");
 
         when(configuracionAPI.agenteHabilitado()).thenAnswer(invocation -> agenteHabilitado.get());
         when(configuracionAPI.obtenerAgenteDelay()).thenReturn(1500);
+        when(configuracionAPI.obtenerEstadoUI()).thenAnswer(invocation -> new HashMap<>(estadoUIPersistido));
+        doAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            Map<String, String> nuevoEstado = (Map<String, String>) invocation.getArgument(0);
+            estadoUIPersistido = new HashMap<>(nuevoEstado);
+            return null;
+        }).when(configuracionAPI).establecerEstadoUI(anyMap());
 
         when(modeloTablaHallazgos.getColumnCount()).thenReturn(5);
         doReturn(String.class).when(modeloTablaHallazgos).getColumnClass(anyInt());
@@ -62,12 +75,7 @@ class PestaniaPrincipalTest {
         doReturn(String.class).when(modeloTablaTareas).getColumnClass(anyInt());
         when(modeloTablaTareas.getColumnName(anyInt())).thenReturn("MockCol");
 
-        final PestaniaPrincipal[] holder = new PestaniaPrincipal[1];
-        SwingUtilities.invokeAndWait(() -> holder[0] = new PestaniaPrincipal(
-            montoyaApi, estadisticas, gestorTareas, gestorConsolaGUI,
-            modeloTablaTareas, modeloTablaHallazgos, true, configuracionAPI, gestorLogging
-        ));
-        pestaniaPrincipal = holder[0];
+        pestaniaPrincipal = crearPestaniaPrincipal();
     }
 
     @AfterEach
@@ -75,6 +83,7 @@ class PestaniaPrincipalTest {
         if (pestaniaPrincipal != null) {
             SwingUtilities.invokeAndWait(() -> pestaniaPrincipal.destruir());
         }
+        I18nUI.establecerIdioma("es");
     }
 
     @Test
@@ -143,8 +152,41 @@ class PestaniaPrincipalTest {
         });
     }
 
+    @Test
+    @DisplayName("Persistencia de pestaña resiste cambio de idioma usando identificador estable")
+    void testPersistenciaPestaniaResisteCambioDeIdioma() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            JTabbedPane tabs = obtenerTabbedPane(pestaniaPrincipal);
+            tabs.setSelectedComponent(pestaniaPrincipal.obtenerPanelHallazgos());
+        });
+
+        SwingUtilities.invokeAndWait(() -> pestaniaPrincipal.destruir());
+        pestaniaPrincipal = null;
+
+        I18nUI.establecerIdioma("en");
+        pestaniaPrincipal = crearPestaniaPrincipal();
+
+        SwingUtilities.invokeAndWait(() -> {
+            JTabbedPane tabs = obtenerTabbedPane(pestaniaPrincipal);
+            assertSame(
+                pestaniaPrincipal.obtenerPanelHallazgos(),
+                tabs.getSelectedComponent(),
+                "La pestaña de hallazgos debe restaurarse aunque el idioma cambie"
+            );
+        });
+    }
+
     private void esperarTimerFocoAgente() throws InterruptedException {
         Thread.sleep(TIMER_FOCO_AGENTE_MS + 100);
+    }
+
+    private PestaniaPrincipal crearPestaniaPrincipal() throws Exception {
+        final PestaniaPrincipal[] holder = new PestaniaPrincipal[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PestaniaPrincipal(
+            montoyaApi, estadisticas, gestorTareas, gestorConsolaGUI,
+            modeloTablaTareas, modeloTablaHallazgos, true, configuracionAPI, gestorLogging
+        ));
+        return holder[0];
     }
 
     private JTabbedPane obtenerTabbedPane(PestaniaPrincipal pestania) {

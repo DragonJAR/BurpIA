@@ -4,6 +4,7 @@ import com.burpia.config.ConfiguracionAPI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 
+import java.awt.Component;
 import javax.swing.JTable;
 import javax.swing.JTabbedPane;
 import javax.swing.table.TableColumn;
@@ -175,7 +176,10 @@ public final class UIStateManager {
                 // Buscar la pestaña por identificador
                 for (int i = 0; i < tabbedPane.getTabCount(); i++) {
                     String tituloPestania = tabbedPane.getTitleAt(i);
-                    if (identificadorPestania.equals(tituloPestania)) {
+                    Component componente = tabbedPane.getComponentAt(i);
+                    String nombreComponente = componente != null ? componente.getName() : null;
+                    if (identificadorPestania.equals(nombreComponente)
+                            || identificadorPestania.equals(tituloPestania)) {
                         tabbedPane.setSelectedIndex(i);
                         if (config.esDetallado()) {
                             gestorLogging.info(ORIGEN_LOG, "Pestaña restaurada: " + identificadorPestania + " (índice: " + i + ")");

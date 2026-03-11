@@ -2742,6 +2742,11 @@ public final class I18nUI {
                         "Fetch and refresh available model list.");
             }
 
+            public static String CARGAR_MODELOS_NO_DISPONIBLE_MINIMAX() {
+                return I18nUI.tr("MiniMax no permite cargar modelos desde este botón. Selecciona otro proveedor para habilitar esta opción.",
+                        "MiniMax does not allow loading models from this button. Select another provider to enable this option.");
+            }
+
             public static String MAX_TOKENS() {
                 return I18nUI.tr("Máximo de tokens solicitados en respuestas del modelo.",
                         "Maximum tokens requested from model responses.");

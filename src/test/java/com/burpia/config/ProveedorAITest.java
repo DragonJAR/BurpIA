@@ -164,6 +164,17 @@ class ProveedorAITest {
             assertNull(ProveedorAI.obtenerModeloPorDefecto("NoExiste"),
                 "Proveedor inexistente deberia retornar null para modelo por defecto");
         }
+
+        @Test
+        @DisplayName("MiniMax no permite carga remota de modelos y otros proveedores si")
+        void minimaxNoPermiteCargaRemotaModelos() {
+            assertFalse(ProveedorAI.permiteCargaRemotaModelos("minimax"),
+                "minimax no deberia permitir carga remota de modelos");
+            assertTrue(ProveedorAI.permiteCargaRemotaModelos("OpenAI"),
+                "OpenAI deberia permitir carga remota de modelos");
+            assertTrue(ProveedorAI.permiteCargaRemotaModelos(null),
+                "Un proveedor nulo no debe bloquear el boton por defecto");
+        }
     }
 
     @Nested

@@ -44,6 +44,8 @@ public final class I18nLogs {
         {"No se pudieron ajustar permisos privados del archivo", "Could not enforce private file permissions"},
         {"Error de E/S al guardar", "I/O error while saving"},
         {"Error inesperado al guardar", "Unexpected error while saving"},
+        {"Error al restaurar estado UI de pestaña principal", "Error restoring main tab UI state"},
+        {"Error al persistir estado UI de pestaña principal", "Error persisting main tab UI state"},
         {"Archivo eliminado", "Deleted file"},
         {"Error al eliminar", "Error deleting"},
         {"URL de API", "API URL"},

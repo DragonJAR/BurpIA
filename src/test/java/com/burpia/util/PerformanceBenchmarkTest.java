@@ -514,7 +514,7 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("ConstructorPrompts.construirPromptFlujo", () -> {
             String prompt = constructor.construirPromptFlujo(solicitudes);
-            assertTrue(prompt.contains("SECUENCIA DE PETICIONES HTTP"),
+            assertTrue(prompt.contains("=== REQUEST 1 ==="),
                 "assertTrue failed at PerformanceBenchmarkTest.java:478");
             assertTrue(prompt.contains("POST https://example.com/login"),
                 "assertTrue failed at PerformanceBenchmarkTest.java:480");

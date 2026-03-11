@@ -14,10 +14,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ConstructorPromptsTest {
 
     @Test
-    @DisplayName("Prompt de flujo conserva orden y omite respuesta inexistente")
-    void testPromptDeFlujoConservaOrdenYOmiteRespuestaInexistente() {
+    @DisplayName("Prompt de flujo usa el prompt configurable y omite respuesta inexistente")
+    void testPromptDeFlujoUsaPromptConfigurableYOmiteRespuestaInexistente() {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerIdiomaUi("es");
+        config.establecerPromptConfigurable("PROMPT FLUJO USUARIO\nREQ={REQUEST}\nRES={RESPONSE}");
         ConstructorPrompts constructor = new ConstructorPrompts(config);
 
         SolicitudAnalisis primera = new SolicitudAnalisis(
@@ -45,13 +46,18 @@ class ConstructorPromptsTest {
 
         String prompt = constructor.construirPromptFlujo(List.of(primera, segunda));
 
-        int indiceLogin = prompt.indexOf("POST https://example.com/login");
-        int indiceDashboard = prompt.indexOf("GET https://example.com/dashboard");
+        int indiceLogin = prompt.indexOf("=== REQUEST 1 ===");
+        int indiceDashboard = prompt.indexOf("=== REQUEST 2 ===");
 
+        assertTrue(prompt.startsWith("PROMPT FLUJO USUARIO"), prompt);
         assertTrue(indiceLogin >= 0, "assertTrue failed at ConstructorPromptsTest.java:47");
         assertTrue(indiceDashboard > indiceLogin, "assertTrue failed at ConstructorPromptsTest.java:48");
-        assertTrue(prompt.contains("RESPUESTA:\nSTATUS: 302"),
+        assertTrue(prompt.contains("=== RESPONSE 1 ==="),
             "assertTrue failed at ConstructorPromptsTest.java:50");
+        assertFalse(prompt.contains("Eres un experto en seguridad web"),
+            "No debe construir un prompt de flujo alterno");
+        assertFalse(prompt.contains("=== RESPONSE 2 ==="),
+            "El flujo no debe inventar respuestas faltantes");
         assertFalse(prompt.contains("RESPUESTA:\nSTATUS: N/A\n[RESPONSE NO DISPONIBLE]"),
             "El flujo no debe inventar respuestas faltantes");
     }

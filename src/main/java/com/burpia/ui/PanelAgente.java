@@ -401,8 +401,11 @@ public class PanelAgente extends JPanel {
      * Solo se ejecuta una vez por sesión de terminal.
      */
     public void forzarInyeccionPromptInicial() {
+        String prompt = obtenerPromptPreflightDisponible();
+        if (prompt == null) {
+            return;
+        }
         if (promptInicialEnviado.compareAndSet(false, true)) {
-            String prompt = obtenerPromptPreflightFijo();
             inyectarComando(prompt, config.obtenerAgenteDelay());
         }
     }
@@ -931,7 +934,7 @@ public class PanelAgente extends JPanel {
 
     private void programarInyeccionInicial(long sesionObjetivo) {
         AgenteTipo tipoActual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.porDefecto());
-        String prompt = obtenerPromptPreflightFijo();
+        String prompt = obtenerPromptPreflightDisponible();
         int usuarioDelay = config.obtenerAgenteDelay();
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
         String comandoArranque = resolverRutaBinario(tipoActual);
@@ -1234,18 +1237,26 @@ public class PanelAgente extends JPanel {
     public void inyectarPayloadInicialManual() {
         solicitarFocoPestaniaAgente();
 
-        String prompt = obtenerPromptPreflightFijo();
+        String prompt = obtenerPromptPreflightDisponible();
 
         promptInicialEnviado.set(false);
         inicializacionPendiente.set(false);
 
-        inyectarComando(prompt, 0);
+        if (prompt == null) {
+            return;
+        }
 
+        inyectarComando(prompt, 0);
         gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Payload inicial encolado para inyeccion manual por el usuario"));
     }
 
     private String obtenerPromptPreflightFijo() {
         return config.obtenerAgentePreflightPrompt();
+    }
+
+    private String obtenerPromptPreflightDisponible() {
+        String prompt = obtenerPromptPreflightFijo();
+        return Normalizador.noEsVacio(prompt) ? prompt : null;
     }
 
     private void encolarInyeccionPendiente(String texto, int delayMs) {

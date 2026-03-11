@@ -48,6 +48,7 @@ public class ConfigDialogController {
     private final DialogStateManager dialogStateManager;
     private final Map<String, String> rutasBinarioAgenteTemporal;
     private final AtomicLong secuenciaRefrescoModelos;
+    private final String tooltipCargarModelosPorDefecto;
 
     private boolean guardandoConfiguracion = false;
     private boolean actualizandoRutaFlag = false;
@@ -108,6 +109,7 @@ public class ConfigDialogController {
         this.dialogStateManager = new DialogStateManager(gestorLogging);
         this.rutasBinarioAgenteTemporal = new HashMap<>();
         this.secuenciaRefrescoModelos = new AtomicLong(0);
+        this.tooltipCargarModelosPorDefecto = I18nUI.Tooltips.Configuracion.CARGAR_MODELOS();
 
         gestorLogging.info(ORIGEN_LOG, "ConfigDialogController inicializado");
     }
@@ -152,6 +154,7 @@ public class ConfigDialogController {
     }
 
     private void inicializarEventHandlersProvider() {
+        agregarListenerSiPresente(dialogo.obtenerComboProveedor(), e -> actualizarEstadoCargaModelosSegunProveedor());
         agregarListenerSiPresente(dialogo.obtenerComboModelo(), e -> manejarCambioModelo());
         agregarListenerSiPresente(dialogo.obtenerBtnRefrescarModelos(), e -> manejarRefrescarModelos());
         agregarListenerSiPresente(dialogo.obtenerBtnProbarConexion(), e -> manejarProbarConexion());
@@ -272,6 +275,7 @@ public class ConfigDialogController {
         cargarConfiguracionGeneral();
         cargarConfiguracionAgente();
         cargarConfiguracionFuentes();
+        actualizarEstadoCargaModelosSegunProveedor();
         dialogStateManager.capturarEstadoInicial(new DialogoEstadoUIProvider());
 
         gestorLogging.info(ORIGEN_LOG, "Configuración inicial cargada");
@@ -497,7 +501,9 @@ public class ConfigDialogController {
 
     private void manejarRefrescarModelos() {
         String proveedorSeleccionado = (String) dialogo.obtenerComboProveedor().getSelectedItem();
-        if (Normalizador.esVacio(proveedorSeleccionado)) {
+        if (Normalizador.esVacio(proveedorSeleccionado)
+                || !ProveedorAI.permiteCargaRemotaModelos(proveedorSeleccionado)) {
+            actualizarEstadoCargaModelosSegunProveedor();
             return;
         }
 
@@ -539,13 +545,27 @@ public class ConfigDialogController {
                         I18nUI.Configuracion.MSG_ERROR_PROCESAR_MODELOS(extraerMensajeError(e)));
                 } finally {
                     if (btnRefrescarModelos != null) {
-                        btnRefrescarModelos.setEnabled(true);
                         btnRefrescarModelos.setText(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
                     }
+                    actualizarEstadoCargaModelosSegunProveedor();
                 }
             }
         };
         worker.execute();
+    }
+
+    private void actualizarEstadoCargaModelosSegunProveedor() {
+        JButton btnRefrescarModelos = dialogo.obtenerBtnRefrescarModelos();
+        if (btnRefrescarModelos == null) {
+            return;
+        }
+
+        String proveedorSeleccionado = (String) dialogo.obtenerComboProveedor().getSelectedItem();
+        boolean permiteCargaModelos = ProveedorAI.permiteCargaRemotaModelos(proveedorSeleccionado);
+        btnRefrescarModelos.setEnabled(permiteCargaModelos);
+        btnRefrescarModelos.setToolTipText(permiteCargaModelos
+                ? tooltipCargarModelosPorDefecto
+                : I18nUI.Tooltips.Configuracion.CARGAR_MODELOS_NO_DISPONIBLE_MINIMAX());
     }
 
     public void manejarProbarConexion() {

@@ -329,24 +329,32 @@ class ProcesadorPromptHTTPTest {
     class ProcesarFlujoTests {
 
         @Test
-        @DisplayName("Construye bloques de transaccion automaticos")
-        void construyeBloquesTransaccion() {
-            String prompt = PROMPT_VACIO;
+        @DisplayName("Reemplaza REQUEST y RESPONSE preservando el prompt del usuario")
+        void reemplazaRequestYResponsePreservandoPromptUsuario() {
+            String prompt = "Contexto del usuario\nREQ={REQUEST}\nRES={RESPONSE}\nLANG={OUTPUT_LANGUAGE}";
             List<SolicitudAnalisis> solicitudes = List.of(
                 crearSolicitud("https://example.com/api1", METODO_GET, "req1", "resp1"),
-                crearSolicitud("https://example.com/api2", METODO_POST, "req2", "resp2")
+                crearSolicitudSinRespuesta("https://example.com/api2", METODO_POST, "req2")
             );
 
             String resultado = ProcesadorPromptHTTP.procesarFlujo(prompt, solicitudes, configEn);
 
-            assertTrue(resultado.contains("<http_transaction id=\"1\">"),
-                "Debe contener bloque de transaccion 1");
-            assertTrue(resultado.contains("<http_transaction id=\"2\">"),
-                "Debe contener bloque de transaccion 2");
-            assertTrue(resultado.contains("example.com/api1"),
+            assertTrue(resultado.startsWith("Contexto del usuario"),
+                "Debe preservar intacto el texto del usuario");
+            assertTrue(resultado.contains("=== REQUEST 1 ==="),
+                "Debe insertar la primera request en el token REQUEST");
+            assertTrue(resultado.contains("=== REQUEST 2 ==="),
+                "Debe insertar la segunda request en el token REQUEST");
+            assertTrue(resultado.contains("https://example.com/api1"),
                 "Debe contener URL del primer request");
-            assertTrue(resultado.contains("example.com/api2"),
+            assertTrue(resultado.contains("https://example.com/api2"),
                 "Debe contener URL del segundo request");
+            assertTrue(resultado.contains("=== RESPONSE 1 ==="),
+                "Debe insertar respuestas existentes en el token RESPONSE");
+            assertFalse(resultado.contains("=== RESPONSE 2 ==="),
+                "No debe inventar respuestas faltantes");
+            assertFalse(resultado.contains("<http_transaction"),
+                "No debe reconstruir el prompt con bloques extra");
         }
 
         @Test
@@ -535,6 +543,20 @@ class ProcesadorPromptHTTPTest {
             200,
             "Content-Type: text/html",
             response
+        );
+    }
+
+    private SolicitudAnalisis crearSolicitudSinRespuesta(String url, String metodo, String cuerpo) {
+        return new SolicitudAnalisis(
+            url,
+            metodo,
+            "Host: example.com",
+            cuerpo,
+            HASH_TEST,
+            null,
+            -1,
+            "",
+            ""
         );
     }
 }

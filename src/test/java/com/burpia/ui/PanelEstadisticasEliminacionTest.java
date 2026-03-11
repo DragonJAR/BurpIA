@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import burp.api.montoya.MontoyaApi;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -47,9 +49,10 @@ class PanelEstadisticasEliminacionTest {
 
         panelEstadisticas = new PanelEstadisticas(
             estadisticas,
-            () -> 1000,
+            modelo::obtenerLimiteFilas,
             panelHallazgos
         );
+        panelHallazgos.establecerManejadorFiltrosAplicados(panelEstadisticas::actualizarForzado);
     }
 
     @AfterEach
@@ -173,6 +176,59 @@ class PanelEstadisticasEliminacionTest {
         }
     }
 
+    @Test
+    @DisplayName("Al ignorar un hallazgo, el resumen visible se actualiza")
+    void alIgnorarUnHallazgoResumenVisibleSeActualiza() throws Exception {
+        modelo.agregarHallazgo(crearHallazgoPrueba("Hallazgo 1", "High"));
+        modelo.agregarHallazgo(crearHallazgoPrueba("Hallazgo 2", "Low"));
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(I18nUI.Estadisticas.RESUMEN_TOTAL(2), obtenerTextoEtiqueta(panelEstadisticas, "etiquetaResumenPrincipal"),
+            "El resumen inicial debe reflejar los dos hallazgos visibles");
+
+        modelo.marcarComoIgnorado(0);
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(I18nUI.Estadisticas.RESUMEN_TOTAL(1), obtenerTextoEtiqueta(panelEstadisticas, "etiquetaResumenPrincipal"),
+            "Ignorar un hallazgo debe refrescar el total visible");
+        assertEquals(I18nUI.Estadisticas.RESUMEN_SEVERIDAD(0, 0, 0, 1, 0),
+            obtenerTextoEtiqueta(panelEstadisticas, "etiquetaResumenSeveridad"),
+            "La severidad visible debe excluir el hallazgo ignorado");
+    }
+
+    @Test
+    @DisplayName("Al filtrar hallazgos, el resumen visible se actualiza sin tocar estadísticas operativas")
+    void alFiltrarHallazgosResumenVisibleSeActualiza() throws Exception {
+        modelo.agregarHallazgo(crearHallazgoPrueba("Hallazgo 1", "High"));
+        modelo.agregarHallazgo(crearHallazgoPrueba("Hallazgo 2", "Low"));
+        SwingUtilities.invokeAndWait(() -> {});
+
+        JComboBox<?> comboSeveridad = obtenerCampoPanelHallazgos("comboSeveridad", JComboBox.class);
+        SwingUtilities.invokeAndWait(() -> comboSeveridad.setSelectedItem(I18nUI.Hallazgos.SEVERIDAD_HIGH()));
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(I18nUI.Estadisticas.RESUMEN_TOTAL(1), obtenerTextoEtiqueta(panelEstadisticas, "etiquetaResumenPrincipal"),
+            "Filtrar por severidad debe refrescar el total visible");
+        assertEquals(I18nUI.Estadisticas.RESUMEN_SEVERIDAD(0, 1, 0, 0, 0),
+            obtenerTextoEtiqueta(panelEstadisticas, "etiquetaResumenSeveridad"),
+            "El resumen por severidad debe seguir los filtros activos");
+    }
+
+    @Test
+    @DisplayName("Al cambiar el límite, la etiqueta del resumen refleja el nuevo valor")
+    void alCambiarLimiteEtiquetaReflejaNuevoValor() throws Exception {
+        assertEquals(I18nUI.Estadisticas.LIMITE_HALLAZGOS(1000),
+            obtenerTextoEtiqueta(panelEstadisticas, "etiquetaLimiteHallazgos"),
+            "La etiqueta inicial debe mostrar el límite configurado");
+
+        modelo.establecerLimiteFilas(25);
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(I18nUI.Estadisticas.LIMITE_HALLAZGOS(25),
+            obtenerTextoEtiqueta(panelEstadisticas, "etiquetaLimiteHallazgos"),
+            "Cambiar el límite debe refrescar la etiqueta del resumen");
+    }
+
     private Hallazgo crearHallazgoPrueba(String titulo) {
         return crearHallazgoPrueba(titulo, "Medium");
     }
@@ -185,5 +241,19 @@ class PanelEstadisticasEliminacionTest {
             severidad,
             "Certain"
         );
+    }
+
+    private String obtenerTextoEtiqueta(PanelEstadisticas panel, String nombreCampo) throws Exception {
+        Field field = PanelEstadisticas.class.getDeclaredField(nombreCampo);
+        field.setAccessible(true);
+        JLabel etiqueta = (JLabel) field.get(panel);
+        return etiqueta.getText();
+    }
+
+    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
+    private <T> T obtenerCampoPanelHallazgos(String nombreCampo, Class<T> tipoEsperado) throws Exception {
+        Field field = PanelHallazgos.class.getDeclaredField(nombreCampo);
+        field.setAccessible(true);
+        return (T) field.get(panelHallazgos);
     }
 }

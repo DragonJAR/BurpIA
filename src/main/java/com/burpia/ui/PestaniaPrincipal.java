@@ -2,6 +2,7 @@ package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
@@ -10,23 +11,59 @@ import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.TableColumnModelEvent;
+import javax.swing.event.TableColumnModelListener;
 import java.awt.*;
 import java.beans.PropertyChangeListener;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import javax.swing.Timer;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PestaniaPrincipal extends JPanel {
+    private static final String ORIGEN_LOG = "PestaniaPrincipal";
+    private static final int DELAY_GUARDADO_ANCHO_COLUMNAS_MS = 500;
+    private static final String ID_TABLA_HALLAZGOS = "hallazgos";
+    private static final String ID_TABLA_TAREAS = "tareas";
+
     private enum DestinoPestania {
-        TAREAS,
-        HALLAZGOS,
-        AGENTE,
-        CONSOLA
+        TAREAS("TAB_TAREAS", I18nUI.Pestanias::TAREAS, I18nUI.Tooltips.Pestanias::TAREAS),
+        HALLAZGOS("TAB_HALLAZGOS", I18nUI.Pestanias::HALLAZGOS, I18nUI.Tooltips.Pestanias::HALLAZGOS),
+        AGENTE("TAB_AGENTE", I18nUI.Pestanias::AGENTE, I18nUI.Tooltips.Pestanias::AGENTE),
+        CONSOLA("TAB_CONSOLA", I18nUI.Pestanias::CONSOLA, I18nUI.Tooltips.Pestanias::CONSOLA);
+
+        private final String identificadorPersistencia;
+        private final Supplier<String> tituloProveedor;
+        private final Supplier<String> tooltipProveedor;
+
+        DestinoPestania(String identificadorPersistencia,
+                        Supplier<String> tituloProveedor,
+                        Supplier<String> tooltipProveedor) {
+            this.identificadorPersistencia = identificadorPersistencia;
+            this.tituloProveedor = tituloProveedor;
+            this.tooltipProveedor = tooltipProveedor;
+        }
+
+        private String obtenerIdentificadorPersistencia() {
+            return identificadorPersistencia;
+        }
+
+        private String obtenerTitulo() {
+            return tituloProveedor.get();
+        }
+
+        private String obtenerTooltip() {
+            return tooltipProveedor.get();
+        }
     }
 
     private final PanelEstadisticas panelEstadisticas;
@@ -37,6 +74,8 @@ public class PestaniaPrincipal extends JPanel {
     private final JTabbedPane tabbedPane;
     private final ConfiguracionAPI config;
     private final UIStateManager uiStateManager;
+    private final GestorLoggingUnificado gestorLogging;
+    private final Map<DestinoPestania, Component> componentesPorDestino;
     private final PropertyChangeListener listenerLookAndFeel;
     private volatile Timer timerFocoAgente;
 
@@ -51,6 +90,7 @@ public class PestaniaPrincipal extends JPanel {
                             ConfiguracionAPI config,
                             GestorLoggingUnificado gestorLogging) {
         this.config = config;
+        this.gestorLogging = gestorLogging;
         this.uiStateManager = new UIStateManager(config, gestorLogging);
 
         panelTareas = new PanelTareas(gestorTareas, modeloTareas);
@@ -62,20 +102,24 @@ public class PestaniaPrincipal extends JPanel {
         this.panelConsola = new PanelConsola(gestorConsola);
         this.panelAgente = new PanelAgente(config, config.agenteHabilitado());
         this.panelAgente.establecerManejadorFocoPestania(this::enfocarPestaniaAgenteDesdeManejador);
+        this.componentesPorDestino = new EnumMap<>(DestinoPestania.class);
+        registrarComponentePestania(DestinoPestania.TAREAS, panelTareas);
+        registrarComponentePestania(DestinoPestania.HALLAZGOS, panelHallazgos);
+        registrarComponentePestania(DestinoPestania.AGENTE, panelAgente);
+        registrarComponentePestania(DestinoPestania.CONSOLA, panelConsola);
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         tabbedPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
         tabbedPane.setFont(EstilosUI.FUENTE_NEGRITA);
-        tabbedPane.addTab(I18nUI.Pestanias.TAREAS(), panelTareas);
-        tabbedPane.addTab(I18nUI.Pestanias.HALLAZGOS(), panelHallazgos);
+        agregarPestania(DestinoPestania.TAREAS);
+        agregarPestania(DestinoPestania.HALLAZGOS);
 
         if (config.agenteHabilitado()) {
-            tabbedPane.addTab(I18nUI.Pestanias.AGENTE(), panelAgente);
+            agregarPestania(DestinoPestania.AGENTE);
         }
-        tabbedPane.addTab(I18nUI.Pestanias.CONSOLA(), panelConsola);
+        agregarPestania(DestinoPestania.CONSOLA);
         tabbedPane.setSelectedComponent(panelConsola);
         tabbedPane.addChangeListener(e -> manejarCambioPestania());
-        aplicarTooltipsPestanias();
         aplicarIdioma();
 
         setLayout(new BorderLayout(10, 2));
@@ -102,18 +146,14 @@ public class PestaniaPrincipal extends JPanel {
      */
     private void restaurarEstadoUI() {
         try {
-            // Restaurar última pestaña seleccionada
-            uiStateManager.restaurarUltimaPestaniaSeleccionada(tabbedPane, 3); // Consola por defecto
-            
-            // Restaurar filtros de hallazgos
+            uiStateManager.restaurarUltimaPestaniaSeleccionada(
+                tabbedPane,
+                obtenerIndicePestania(DestinoPestania.CONSOLA)
+            );
             uiStateManager.restaurarEstadoFiltrosHallazgos(panelHallazgos);
-            
-            // Restaurar anchos de columna
-            uiStateManager.restaurarAnchosColumnasTabla(panelHallazgos.obtenerTabla(), "hallazgos");
-            uiStateManager.restaurarAnchosColumnasTabla(panelTareas.obtenerTabla(), "tareas");
-            
+            restaurarAnchosColumnasActuales();
         } catch (Exception e) {
-            // Silencioso para no interrumpir inicialización
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al restaurar estado UI de pestaña principal"), e);
         }
     }
 
@@ -121,64 +161,9 @@ public class PestaniaPrincipal extends JPanel {
      * Configura listeners para guardar cambios de estado UI.
      */
     private void configurarListenersEstadoUI() {
-        // Establecer UIStateManager en PanelHallazgos
         panelHallazgos.establecerUIStateManager(uiStateManager);
-        
-        // Listener para cambios de anchos de columna en hallazgos
-        panelHallazgos.obtenerTabla().getColumnModel().addColumnModelListener(new javax.swing.event.TableColumnModelListener() {
-            private final Timer timerAnchos = new Timer(500, e -> {
-                uiStateManager.guardarAnchosColumnasTabla(panelHallazgos.obtenerTabla(), "hallazgos");
-            });
-            
-            {
-                timerAnchos.setRepeats(false);
-            }
-            
-            @Override
-            public void columnAdded(javax.swing.event.TableColumnModelEvent e) {}
-            
-            @Override
-            public void columnRemoved(javax.swing.event.TableColumnModelEvent e) {}
-            
-            @Override
-            public void columnMoved(javax.swing.event.TableColumnModelEvent e) {}
-            
-            @Override
-            public void columnMarginChanged(javax.swing.event.ChangeEvent e) {
-                timerAnchos.restart();
-            }
-            
-            @Override
-            public void columnSelectionChanged(javax.swing.event.ListSelectionEvent e) {}
-        });
-        
-        // Listener para cambios de anchos de columna en tareas
-        panelTareas.obtenerTabla().getColumnModel().addColumnModelListener(new javax.swing.event.TableColumnModelListener() {
-            private final Timer timerAnchos = new Timer(500, e -> {
-                uiStateManager.guardarAnchosColumnasTabla(panelTareas.obtenerTabla(), "tareas");
-            });
-            
-            {
-                timerAnchos.setRepeats(false);
-            }
-            
-            @Override
-            public void columnAdded(javax.swing.event.TableColumnModelEvent e) {}
-            
-            @Override
-            public void columnRemoved(javax.swing.event.TableColumnModelEvent e) {}
-            
-            @Override
-            public void columnMoved(javax.swing.event.TableColumnModelEvent e) {}
-            
-            @Override
-            public void columnMarginChanged(javax.swing.event.ChangeEvent e) {
-                timerAnchos.restart();
-            }
-            
-            @Override
-            public void columnSelectionChanged(javax.swing.event.ListSelectionEvent e) {}
-        });
+        registrarPersistenciaAnchosColumnas(panelHallazgos.obtenerTabla(), ID_TABLA_HALLAZGOS);
+        registrarPersistenciaAnchosColumnas(panelTareas.obtenerTabla(), ID_TABLA_TAREAS);
     }
 
     /**
@@ -251,14 +236,14 @@ public class PestaniaPrincipal extends JPanel {
      */
     public void actualizarVisibilidadAgentes() {
         boolean habilitado = config.agenteHabilitado();
-        int index = tabbedPane.indexOfComponent(panelAgente);
+        int index = obtenerIndicePestania(DestinoPestania.AGENTE);
 
         if (habilitado && index == -1) {
-            int indexConsola = tabbedPane.indexOfComponent(panelConsola);
+            int indexConsola = obtenerIndicePestania(DestinoPestania.CONSOLA);
             if (indexConsola != -1) {
-                tabbedPane.insertTab(I18nUI.Pestanias.AGENTE(), null, panelAgente, null, indexConsola);
+                insertarPestania(DestinoPestania.AGENTE, indexConsola);
             } else {
-                tabbedPane.addTab(I18nUI.Pestanias.AGENTE(), panelAgente);
+                agregarPestania(DestinoPestania.AGENTE);
             }
             panelAgente.asegurarConsolaIniciada();
             panelAgente.reinyectarPromptInicial();
@@ -266,10 +251,7 @@ public class PestaniaPrincipal extends JPanel {
             tabbedPane.removeTabAt(index);
             panelAgente.destruir();
         } else if (habilitado && index != -1) {
-            DestinoPestania destinoAgente = DestinoPestania.AGENTE;
-            tabbedPane.setTitleAt(index, resolverTituloPestania(destinoAgente));
-            tabbedPane.setToolTipTextAt(index, resolverTooltipPestania(destinoAgente));
-            
+            actualizarMetadatosPestania(DestinoPestania.AGENTE);
             tabbedPane.revalidate();
             tabbedPane.repaint();
 
@@ -290,13 +272,7 @@ public class PestaniaPrincipal extends JPanel {
     }
 
     private void manejarCambioPestania() {
-        // Guardar última pestaña seleccionada
-        int indiceSeleccionado = tabbedPane.getSelectedIndex();
-        if (indiceSeleccionado >= 0) {
-            String tituloPestania = tabbedPane.getTitleAt(indiceSeleccionado);
-            uiStateManager.guardarUltimaPestaniaSeleccionada(tabbedPane, tituloPestania);
-        }
-        
+        guardarPestaniaSeleccionadaActual();
         DestinoPestania destino = obtenerDestinoSeleccionado();
         if (destino != DestinoPestania.AGENTE) {
             return;
@@ -333,70 +309,16 @@ public class PestaniaPrincipal extends JPanel {
     }
 
     private DestinoPestania resolverDestinoPestania(Component componente) {
-        if (componente == panelTareas) {
-            return DestinoPestania.TAREAS;
-        }
-        if (componente == panelHallazgos) {
-            return DestinoPestania.HALLAZGOS;
-        }
-        if (componente == panelAgente) {
-            return DestinoPestania.AGENTE;
-        }
-        if (componente == panelConsola) {
-            return DestinoPestania.CONSOLA;
+        for (Map.Entry<DestinoPestania, Component> entry : componentesPorDestino.entrySet()) {
+            if (entry.getValue() == componente) {
+                return entry.getKey();
+            }
         }
         return null;
     }
 
     private Component resolverComponentePestania(DestinoPestania destino) {
-        if (destino == null) {
-            return null;
-        }
-        switch (destino) {
-            case TAREAS:
-                return panelTareas;
-            case HALLAZGOS:
-                return panelHallazgos;
-            case AGENTE:
-                return panelAgente;
-            case CONSOLA:
-                return panelConsola;
-        }
-        return null;
-    }
-
-    private String resolverTituloPestania(DestinoPestania destino) {
-        if (destino == null) {
-            return null;
-        }
-        switch (destino) {
-            case TAREAS:
-                return I18nUI.Pestanias.TAREAS();
-            case HALLAZGOS:
-                return I18nUI.Pestanias.HALLAZGOS();
-            case AGENTE:
-                return I18nUI.Pestanias.AGENTE();
-            case CONSOLA:
-                return I18nUI.Pestanias.CONSOLA();
-        }
-        return null;
-    }
-
-    private String resolverTooltipPestania(DestinoPestania destino) {
-        if (destino == null) {
-            return null;
-        }
-        switch (destino) {
-            case TAREAS:
-                return I18nUI.Tooltips.Pestanias.TAREAS();
-            case HALLAZGOS:
-                return I18nUI.Tooltips.Pestanias.HALLAZGOS();
-            case AGENTE:
-                return I18nUI.Tooltips.Pestanias.AGENTE();
-            case CONSOLA:
-                return I18nUI.Tooltips.Pestanias.CONSOLA();
-        }
-        return null;
+        return destino != null ? componentesPorDestino.get(destino) : null;
     }
 
     private void enfocarComponenteSeleccionado(Component componente, boolean traerVentanaAlFrente) {
@@ -562,16 +484,7 @@ public class PestaniaPrincipal extends JPanel {
         panelHallazgos.aplicarIdioma();
         panelConsola.aplicarIdioma();
         panelAgente.aplicarIdioma();
-
-        int totalTabs = tabbedPane.getTabCount();
-        for (int i = 0; i < totalTabs; i++) {
-            DestinoPestania destino = resolverDestinoPestania(tabbedPane.getComponentAt(i));
-            String titulo = resolverTituloPestania(destino);
-            if (titulo != null) {
-                tabbedPane.setTitleAt(i, titulo);
-            }
-        }
-        aplicarTooltipsPestanias();
+        actualizarMetadatosPestaniasVisibles();
     }
 
     /**
@@ -587,40 +500,18 @@ public class PestaniaPrincipal extends JPanel {
         repaint();
     }
 
-    private void aplicarTooltipsPestanias() {
-        int totalTabs = tabbedPane.getTabCount();
-        for (int i = 0; i < totalTabs; i++) {
-            DestinoPestania destino = resolverDestinoPestania(tabbedPane.getComponentAt(i));
-            String tooltip = resolverTooltipPestania(destino);
-            if (tooltip != null) {
-                tabbedPane.setToolTipTextAt(i, tooltip);
-            }
-        }
-    }
-
     /**
      * Libera todos los recursos asociados a este panel.
      * Debe llamarse cuando el panel ya no se va a usar.
      */
     public void destruir() {
-        // Guardar estado final antes de destruir
         try {
-            if (uiStateManager != null) {
-                // Guardar última pestaña seleccionada
-                int indiceSeleccionado = tabbedPane.getSelectedIndex();
-                if (indiceSeleccionado >= 0) {
-                    String tituloPestania = tabbedPane.getTitleAt(indiceSeleccionado);
-                    uiStateManager.guardarUltimaPestaniaSeleccionada(tabbedPane, tituloPestania);
-                }
-                
-                // Guardar anchos de columna finales
-                uiStateManager.guardarAnchosColumnasTabla(panelHallazgos.obtenerTabla(), "hallazgos");
-                uiStateManager.guardarAnchosColumnasTabla(panelTareas.obtenerTabla(), "tareas");
-            }
+            guardarPestaniaSeleccionadaActual();
+            guardarAnchosColumnasActuales();
         } catch (Exception e) {
-            // Silencioso en el shutdown
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Error al persistir estado UI de pestaña principal"));
         }
-        
+
         UIManager.removePropertyChangeListener(listenerLookAndFeel);
         if (timerFocoAgente != null) {
             timerFocoAgente.stop();
@@ -631,5 +522,107 @@ public class PestaniaPrincipal extends JPanel {
         panelTareas.destruir();
         panelHallazgos.destruir();
         panelAgente.destruir();
+    }
+
+    private void registrarComponentePestania(DestinoPestania destino, Component componente) {
+        if (destino == null || componente == null) {
+            return;
+        }
+        componente.setName(destino.obtenerIdentificadorPersistencia());
+        componentesPorDestino.put(destino, componente);
+    }
+
+    private void agregarPestania(DestinoPestania destino) {
+        insertarPestania(destino, tabbedPane.getTabCount());
+    }
+
+    private void insertarPestania(DestinoPestania destino, int index) {
+        Component componente = resolverComponentePestania(destino);
+        if (destino == null || componente == null || tabbedPane.indexOfComponent(componente) >= 0) {
+            return;
+        }
+        int indiceSeguro = Math.max(0, Math.min(index, tabbedPane.getTabCount()));
+        tabbedPane.insertTab(destino.obtenerTitulo(), null, componente, destino.obtenerTooltip(), indiceSeguro);
+    }
+
+    private int obtenerIndicePestania(DestinoPestania destino) {
+        Component componente = resolverComponentePestania(destino);
+        return componente != null ? tabbedPane.indexOfComponent(componente) : -1;
+    }
+
+    private void actualizarMetadatosPestaniasVisibles() {
+        for (DestinoPestania destino : DestinoPestania.values()) {
+            actualizarMetadatosPestania(destino);
+        }
+    }
+
+    private void actualizarMetadatosPestania(DestinoPestania destino) {
+        if (destino == null) {
+            return;
+        }
+        int indice = obtenerIndicePestania(destino);
+        if (indice < 0) {
+            return;
+        }
+        tabbedPane.setTitleAt(indice, destino.obtenerTitulo());
+        tabbedPane.setToolTipTextAt(indice, destino.obtenerTooltip());
+    }
+
+    private void restaurarAnchosColumnasActuales() {
+        uiStateManager.restaurarAnchosColumnasTabla(panelHallazgos.obtenerTabla(), ID_TABLA_HALLAZGOS);
+        uiStateManager.restaurarAnchosColumnasTabla(panelTareas.obtenerTabla(), ID_TABLA_TAREAS);
+    }
+
+    private void guardarAnchosColumnasActuales() {
+        uiStateManager.guardarAnchosColumnasTabla(panelHallazgos.obtenerTabla(), ID_TABLA_HALLAZGOS);
+        uiStateManager.guardarAnchosColumnasTabla(panelTareas.obtenerTabla(), ID_TABLA_TAREAS);
+    }
+
+    private void guardarPestaniaSeleccionadaActual() {
+        DestinoPestania destinoSeleccionado = obtenerDestinoSeleccionado();
+        if (destinoSeleccionado == null) {
+            return;
+        }
+        uiStateManager.guardarUltimaPestaniaSeleccionada(
+            tabbedPane,
+            destinoSeleccionado.obtenerIdentificadorPersistencia()
+        );
+    }
+
+    private void registrarPersistenciaAnchosColumnas(JTable tabla, String identificadorTabla) {
+        if (tabla == null) {
+            return;
+        }
+        tabla.getColumnModel().addColumnModelListener(crearListenerPersistenciaAnchos(tabla, identificadorTabla));
+    }
+
+    private TableColumnModelListener crearListenerPersistenciaAnchos(JTable tabla, String identificadorTabla) {
+        Timer timerAnchos = new Timer(
+            DELAY_GUARDADO_ANCHO_COLUMNAS_MS,
+            e -> uiStateManager.guardarAnchosColumnasTabla(tabla, identificadorTabla)
+        );
+        timerAnchos.setRepeats(false);
+        return new TableColumnModelListener() {
+            @Override
+            public void columnAdded(TableColumnModelEvent e) {
+            }
+
+            @Override
+            public void columnRemoved(TableColumnModelEvent e) {
+            }
+
+            @Override
+            public void columnMoved(TableColumnModelEvent e) {
+            }
+
+            @Override
+            public void columnMarginChanged(ChangeEvent e) {
+                timerAnchos.restart();
+            }
+
+            @Override
+            public void columnSelectionChanged(ListSelectionEvent e) {
+            }
+        };
     }
 }

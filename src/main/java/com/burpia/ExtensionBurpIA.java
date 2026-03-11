@@ -24,6 +24,7 @@ import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
+import com.burpia.util.ProcesadorPromptHTTP;
 import com.burpia.util.VersionBurpIA;
 import javax.swing.*;
 import java.awt.Frame;
@@ -252,9 +253,7 @@ public class ExtensionBurpIA implements BurpExtension {
                 return false;
             }
 
-            String requests = serializarSolicitudesFlujoSiNecesario(prompt, solicitudesValidas);
-            String responses = serializarRespuestasFlujoSiNecesario(prompt, solicitudesValidas);
-            String inputFinal = aplicarTokensPromptAgente(prompt, requests, responses, config.obtenerIdiomaUi());
+            String inputFinal = construirPromptFlujoAgente(prompt, solicitudesValidas);
             return enviarPayloadAgente(inputFinal);
         } catch (Exception e) {
             registrarError("No se pudo enviar flujo al Agente: " + e.getMessage());
@@ -444,46 +443,40 @@ public class ExtensionBurpIA implements BurpExtension {
         return evidencia.response().toString();
     }
 
-    private String serializarSolicitudesFlujoSiNecesario(String prompt, List<HttpRequestResponse> evidencias) {
-        if (!contieneToken(prompt, TOKEN_REQUEST) || Normalizador.esVacia(evidencias)) {
-            return "";
+    private String construirPromptFlujoAgente(String prompt, List<HttpRequestResponse> evidencias) {
+        if (!ProcesadorPromptHTTP.contieneMarcadoresHttp(prompt) || Normalizador.esVacia(evidencias)) {
+            return aplicarTokensPromptAgente(prompt, "", "", config.obtenerIdiomaUi());
         }
-        StringBuilder builder = new StringBuilder();
-        int indice = 1;
-        for (HttpRequestResponse evidencia : evidencias) {
-            if (evidencia == null || evidencia.request() == null) {
-                continue;
-            }
-            if (builder.length() > 0) {
-                builder.append("\n\n");
-            }
-            builder.append("=== REQUEST ").append(indice).append(" ===\n");
-            builder.append(evidencia.request());
-            indice++;
-        }
-        return builder.toString();
+
+        List<String> requests = ProcesadorPromptHTTP.contieneMarcadoresRequest(prompt)
+            ? serializarSolicitudesFlujo(evidencias)
+            : List.of();
+        List<String> responses = ProcesadorPromptHTTP.contieneMarcadoresResponse(prompt)
+            ? serializarRespuestasFlujo(evidencias)
+            : List.of();
+
+        String promptConHttp = ProcesadorPromptHTTP.reemplazarContenidoFlujo(prompt, requests, responses);
+        return aplicarTokensPromptAgente(promptConHttp, "", "", config.obtenerIdiomaUi());
     }
 
-    private String serializarRespuestasFlujoSiNecesario(String prompt, List<HttpRequestResponse> evidencias) {
-        if (!contieneToken(prompt, TOKEN_RESPONSE) || Normalizador.esVacia(evidencias)) {
-            return "";
-        }
-        StringBuilder builder = new StringBuilder();
-        int indice = 1;
+    private List<String> serializarSolicitudesFlujo(List<HttpRequestResponse> evidencias) {
+        List<String> serializadas = new ArrayList<>();
         for (HttpRequestResponse evidencia : evidencias) {
-            if (evidencia == null || evidencia.request() == null) {
-                continue;
-            }
-            if (evidencia.response() != null) {
-                if (builder.length() > 0) {
-                    builder.append("\n\n");
-                }
-                builder.append("=== RESPONSE ").append(indice).append(" ===\n");
-                builder.append(evidencia.response());
-            }
-            indice++;
+            serializadas.add(evidencia != null && evidencia.request() != null
+                ? evidencia.request().toString()
+                : "");
         }
-        return builder.toString();
+        return serializadas;
+    }
+
+    private List<String> serializarRespuestasFlujo(List<HttpRequestResponse> evidencias) {
+        List<String> serializadas = new ArrayList<>();
+        for (HttpRequestResponse evidencia : evidencias) {
+            serializadas.add(evidencia != null && evidencia.response() != null
+                ? evidencia.response().toString()
+                : "");
+        }
+        return serializadas;
     }
 
     private boolean enviarPayloadAgente(String inputFinal) {

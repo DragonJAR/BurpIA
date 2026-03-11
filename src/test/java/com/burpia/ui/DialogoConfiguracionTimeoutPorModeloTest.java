@@ -964,6 +964,69 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         }
     }
 
+    @Test
+    @DisplayName("Cargar modelos se deshabilita temporalmente para minimax y restaura tooltip al cambiar proveedor")
+    void testBotonCargarModelosSeActualizaSegunProveedorMinimax() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JButton btnRefrescarModelos = obtenerCampo(dialogo, "btnRefrescarModelos", JButton.class);
+            String tooltipOriginal = I18nUI.Tooltips.Configuracion.CARGAR_MODELOS();
+            String tooltipMinimax = I18nUI.Tooltips.Configuracion.CARGAR_MODELOS_NO_DISPONIBLE_MINIMAX();
+
+            assertTrue(btnRefrescarModelos.isEnabled(), "El botón debe iniciar habilitado para OpenAI");
+            assertEquals(tooltipOriginal, btnRefrescarModelos.getToolTipText(),
+                    "El tooltip inicial debe ser el original");
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("minimax"));
+            flushEdt();
+
+            assertFalse(btnRefrescarModelos.isEnabled(),
+                    "El botón debe deshabilitarse cuando se selecciona minimax");
+            assertEquals(tooltipMinimax, btnRefrescarModelos.getToolTipText(),
+                    "El tooltip debe explicar por qué minimax no permite cargar modelos");
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("Gemini"));
+            flushEdt();
+
+            assertTrue(btnRefrescarModelos.isEnabled(),
+                    "El botón debe volver a habilitarse al salir de minimax");
+            assertEquals(tooltipOriginal, btnRefrescarModelos.getToolTipText(),
+                    "El tooltip original debe restaurarse al cambiar a otro proveedor");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Cargar modelos inicia deshabilitado cuando el proveedor guardado es minimax")
+    void testBotonCargarModelosIniciaDeshabilitadoParaMinimax() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-minimax-inicial");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("minimax");
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        gestor.guardarConfiguracion(config);
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JButton btnRefrescarModelos = obtenerCampo(dialogo, "btnRefrescarModelos", JButton.class);
+            assertFalse(btnRefrescarModelos.isEnabled(),
+                    "El botón debe iniciar deshabilitado cuando minimax es el proveedor activo");
+            assertEquals(I18nUI.Tooltips.Configuracion.CARGAR_MODELOS_NO_DISPONIBLE_MINIMAX(),
+                    btnRefrescarModelos.getToolTipText(),
+                    "El tooltip inicial debe explicar la restricción de minimax");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
     /**
      * Espera a que el callback de guardado se ejecute, con timeout y procesamiento del EDT.
      * Utiliza un bucle con espera activa corta para evitar condiciones de carrera.

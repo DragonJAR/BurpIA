@@ -3,8 +3,8 @@ package com.burpia.util;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.SolicitudAnalisis;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.burpia.util.Normalizador.esVacia;
@@ -30,19 +30,13 @@ import static com.burpia.util.Normalizador.noEsVacio;
  * @see PoliticaMemoria#MAXIMO_CUERPO_ANALISIS_CARACTERES
  */
 public final class ProcesadorPromptHTTP {
-    
+
+    private static final String TOKEN_REQUEST = "{REQUEST}";
+    private static final String TOKEN_RESPONSE = "{RESPONSE}";
+    private static final String TOKEN_OUTPUT_LANGUAGE = "{OUTPUT_LANGUAGE}";
     private static final Pattern PATRON_REQUEST_NUMERADO = Pattern.compile("\\{REQUEST_(\\d+)\\}");
     private static final Pattern PATRON_RESPONSE_NUMERADO = Pattern.compile("\\{RESPONSE_(\\d+)\\}");
-    
-    /**
-     * Sección de ejemplo en prompts que debe ser reemplazada por transacciones reales.
-     * Busca desde "For a single transaction" hasta el cierre de http_transaction.
-     */
-    private static final Pattern PATRON_SECCION_EJEMPLO = Pattern.compile(
-        "For a single transaction, use:.*?For a flow, use one block per step:.*?</http_transaction>",
-        Pattern.DOTALL
-    );
-    
+
     private ProcesadorPromptHTTP() {
         throw new UnsupportedOperationException(
             "ProcesadorPromptHTTP es una clase de utilidad y no puede instanciarse"
@@ -64,9 +58,9 @@ public final class ProcesadorPromptHTTP {
         String prompt = obtenerPromptEfectivo(promptBase);
         
         return prompt
-            .replace("{REQUEST}", construirRequest(solicitud))
-            .replace("{RESPONSE}", construirResponse(solicitud))
-            .replace("{OUTPUT_LANGUAGE}", obtenerIdiomaSalida(config));
+            .replace(TOKEN_REQUEST, construirRequest(solicitud))
+            .replace(TOKEN_RESPONSE, construirResponse(solicitud))
+            .replace(TOKEN_OUTPUT_LANGUAGE, obtenerIdiomaSalida(config));
     }
     
     /**
@@ -86,20 +80,52 @@ public final class ProcesadorPromptHTTP {
         
         String prompt = obtenerPromptEfectivo(promptBase);
         String resultado = prompt;
-        
-        // Si hay solicitudes, procesar bloques de transacción
+
         if (noEsVacia(solicitudes)) {
-            boolean tieneMarcadoresNumerados = PATRON_REQUEST_NUMERADO.matcher(prompt).find();
-            
-            if (tieneMarcadoresNumerados) {
-                resultado = reemplazarMarcadoresNumerados(resultado, solicitudes);
-            } else {
-                resultado = construirBloquesTransaccion(resultado, solicitudes);
-            }
+            resultado = reemplazarContenidoFlujo(
+                resultado,
+                construirRequestsFlujo(solicitudes),
+                construirResponsesFlujo(solicitudes)
+            );
         }
         
-        resultado = resultado.replace("{OUTPUT_LANGUAGE}", obtenerIdiomaSalida(config));
+        resultado = resultado.replace(TOKEN_OUTPUT_LANGUAGE, obtenerIdiomaSalida(config));
         
+        return resultado;
+    }
+
+    public static boolean contieneMarcadoresRequest(String prompt) {
+        return noEsVacio(prompt)
+            && (prompt.contains(TOKEN_REQUEST) || PATRON_REQUEST_NUMERADO.matcher(prompt).find());
+    }
+
+    public static boolean contieneMarcadoresResponse(String prompt) {
+        return noEsVacio(prompt)
+            && (prompt.contains(TOKEN_RESPONSE) || PATRON_RESPONSE_NUMERADO.matcher(prompt).find());
+    }
+
+    public static boolean contieneMarcadoresHttp(String prompt) {
+        return contieneMarcadoresRequest(prompt) || contieneMarcadoresResponse(prompt);
+    }
+
+    public static String reemplazarContenidoFlujo(String promptBase, List<String> requests, List<String> responses) {
+        String prompt = promptBase != null ? promptBase : "";
+        if (!contieneMarcadoresHttp(prompt)) {
+            return prompt;
+        }
+        if (esVacia(requests) && esVacia(responses)) {
+            return prompt;
+        }
+
+        String resultado = reemplazarMarcadoresNumerados(prompt, requests, responses);
+
+        if (resultado.contains(TOKEN_REQUEST)) {
+            resultado = resultado.replace(TOKEN_REQUEST, construirBloquesEnumerados("REQUEST", requests));
+        }
+        if (resultado.contains(TOKEN_RESPONSE)) {
+            resultado = resultado.replace(TOKEN_RESPONSE, construirBloquesEnumerados("RESPONSE", responses));
+        }
+
         return resultado;
     }
     
@@ -149,104 +175,176 @@ public final class ProcesadorPromptHTTP {
     
     // ============ MÉTODOS PRIVADOS DE CONSTRUCCIÓN ============
     
-    private static String reemplazarMarcadoresNumerados(String prompt, List<SolicitudAnalisis> solicitudes) {
+    private static String reemplazarMarcadoresNumerados(String prompt, List<String> requests, List<String> responses) {
         String resultado = prompt;
-        
-        for (int i = 0; i < solicitudes.size(); i++) {
+
+        int totalPasos = Math.max(
+            requests != null ? requests.size() : 0,
+            responses != null ? responses.size() : 0
+        );
+
+        for (int i = 0; i < totalPasos; i++) {
             String marcadorRequest = "{REQUEST_" + (i + 1) + "}";
             String marcadorResponse = "{RESPONSE_" + (i + 1) + "}";
-            
-            SolicitudAnalisis solicitud = solicitudes.get(i);
-            resultado = resultado.replace(marcadorRequest, construirRequest(solicitud));
-            resultado = resultado.replace(marcadorResponse, construirResponse(solicitud));
+
+            String request = requests != null && i < requests.size() ? normalizarContenido(requests.get(i)) : "";
+            String response = responses != null && i < responses.size() ? normalizarContenido(responses.get(i)) : "";
+            resultado = resultado.replace(marcadorRequest, request);
+            resultado = resultado.replace(marcadorResponse, response);
         }
-        
+
         return resultado;
     }
-    
-    private static String construirBloquesTransaccion(String prompt, List<SolicitudAnalisis> solicitudes) {
-        StringBuilder bloques = new StringBuilder();
-        
-        for (int i = 0; i < solicitudes.size(); i++) {
-            SolicitudAnalisis solicitud = solicitudes.get(i);
-            
-            bloques.append("<http_transaction id=\"").append(i + 1).append("\">\n");
-            bloques.append("<http_request>\n");
-            bloques.append(construirRequest(solicitud));
-            bloques.append("\n</http_request>\n");
-            bloques.append("<http_response>\n");
-            bloques.append(construirResponse(solicitud));
-            bloques.append("\n</http_response>\n");
-            bloques.append("</http_transaction>");
-            
-            if (i < solicitudes.size() - 1) {
-                bloques.append("\n\n");
+
+    private static String construirBloquesEnumerados(String etiqueta, List<String> contenidos) {
+        if (esVacia(contenidos)) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < contenidos.size(); i++) {
+            String contenido = normalizarContenido(contenidos.get(i));
+            if (esVacio(contenido)) {
+                continue;
             }
+            if (builder.length() > 0) {
+                builder.append("\n\n");
+            }
+            builder.append("=== ").append(etiqueta).append(" ").append(i + 1).append(" ===\n");
+            builder.append(contenido);
         }
-        
-        // Reemplazar sección de ejemplo con bloques reales
-        Matcher matcher = PATRON_SECCION_EJEMPLO.matcher(prompt);
-        if (matcher.find()) {
-            // Si encuentra la sección de ejemplo, reemplazarla
-            return matcher.replaceFirst(bloques.toString());
-        } else {
-            // Si no encuentra la sección, agregar bloques al final del prompt
-            return prompt + "\n\n" + bloques.toString();
-        }
+        return builder.toString();
     }
-    
-    private static String construirRequest(SolicitudAnalisis solicitud) {
-        StringBuilder request = new StringBuilder();
-        
-        // Línea inicial
-        request.append(solicitud.obtenerMetodo())
-               .append(" ")
-               .append(solicitud.obtenerUrl())
-               .append(" HTTP/1.1\n");
-        
-        // Headers
-        String encabezados = solicitud.obtenerEncabezados();
-        if (noEsVacio(encabezados)) {
-            request.append(encabezados).append("\n");
+
+    private static List<String> construirRequestsFlujo(List<SolicitudAnalisis> solicitudes) {
+        List<String> requests = new ArrayList<>();
+        for (SolicitudAnalisis solicitud : solicitudes) {
+            requests.add(solicitud != null ? construirRequest(solicitud) : "");
         }
-        
-        // Body
-        String cuerpo = solicitud.obtenerCuerpo();
+        return requests;
+    }
+
+    private static List<String> construirResponsesFlujo(List<SolicitudAnalisis> solicitudes) {
+        List<String> responses = new ArrayList<>();
+        for (SolicitudAnalisis solicitud : solicitudes) {
+            responses.add(construirResponseFlujo(solicitud));
+        }
+        return responses;
+    }
+
+    private static String construirRequest(SolicitudAnalisis solicitud) {
+        if (solicitud == null) {
+            return "[REQUEST NOT AVAILABLE]";
+        }
+
+        String encabezados = valorSeguro(solicitud.obtenerEncabezados());
+        String cuerpo = valorSeguro(solicitud.obtenerCuerpo());
+        String lineaInicial = construirLineaRequest(solicitud);
+        StringBuilder request = new StringBuilder();
+
+        if (noEsVacio(encabezados)) {
+            if (encabezados.startsWith(lineaInicial) || encabezados.startsWith(obtenerPrefijoRequest(solicitud))) {
+                request.append(encabezados);
+            } else {
+                request.append(lineaInicial).append("\n").append(encabezados);
+            }
+        } else {
+            request.append(lineaInicial);
+        }
+
         if (noEsVacio(cuerpo)) {
             request.append("\n").append(limitarCuerpo(cuerpo));
         }
-        
+
         return request.toString();
     }
-    
+
     private static String construirResponse(SolicitudAnalisis solicitud) {
-        StringBuilder response = new StringBuilder();
-        
-        // Status line
-        response.append("HTTP/1.1 ")
-                .append(solicitud.obtenerCodigoEstadoRespuesta())
-                .append("\n");
-        
-        // Headers
-        String encabezadosRespuesta = solicitud.obtenerEncabezadosRespuesta();
-        if (noEsVacio(encabezadosRespuesta)) {
-            response.append(encabezadosRespuesta).append("\n");
+        if (solicitud == null) {
+            return "HTTP/1.1 0";
         }
-        
-        // Body
-        String cuerpoRespuesta = solicitud.obtenerCuerpoRespuesta();
+
+        String encabezadosRespuesta = valorSeguro(solicitud.obtenerEncabezadosRespuesta());
+        String cuerpoRespuesta = valorSeguro(solicitud.obtenerCuerpoRespuesta());
+        String lineaEstado = construirLineaEstado(solicitud.obtenerCodigoEstadoRespuesta());
+        StringBuilder response = new StringBuilder();
+
+        if (noEsVacio(encabezadosRespuesta)) {
+            if (encabezadosRespuesta.startsWith("HTTP/")) {
+                response.append(encabezadosRespuesta);
+            } else {
+                response.append(lineaEstado).append("\n").append(encabezadosRespuesta);
+            }
+        }
+
+        if (response.length() == 0) {
+            response.append(lineaEstado);
+        }
         if (noEsVacio(cuerpoRespuesta)) {
             response.append("\n").append(limitarCuerpo(cuerpoRespuesta));
         }
-        
+
         return response.toString();
     }
-    
+
+    private static String construirResponseFlujo(SolicitudAnalisis solicitud) {
+        if (solicitud == null) {
+            return "";
+        }
+
+        String encabezadosRespuesta = valorSeguro(solicitud.obtenerEncabezadosRespuesta());
+        String cuerpoRespuesta = valorSeguro(solicitud.obtenerCuerpoRespuesta());
+        int codigoEstado = solicitud.obtenerCodigoEstadoRespuesta();
+        if (esVacio(encabezadosRespuesta) && esVacio(cuerpoRespuesta) && codigoEstado < 0) {
+            return "";
+        }
+
+        StringBuilder response = new StringBuilder();
+        if (noEsVacio(encabezadosRespuesta)) {
+            if (encabezadosRespuesta.startsWith("HTTP/")) {
+                response.append(encabezadosRespuesta);
+            } else {
+                response.append(construirLineaEstado(codigoEstado)).append("\n").append(encabezadosRespuesta);
+            }
+        } else if (codigoEstado >= 0) {
+            response.append(construirLineaEstado(codigoEstado));
+        }
+
+        if (noEsVacio(cuerpoRespuesta)) {
+            if (response.length() > 0) {
+                response.append("\n");
+            }
+            response.append(limitarCuerpo(cuerpoRespuesta));
+        }
+
+        return response.toString();
+    }
+
     private static String obtenerIdiomaSalida(ConfiguracionAPI config) {
         String idiomaUi = config.obtenerIdiomaUi();
         return "es".equalsIgnoreCase(idiomaUi) ? "Spanish" : "English";
     }
-    
+
+    private static String normalizarContenido(String contenido) {
+        return contenido != null ? contenido : "";
+    }
+
+    private static String valorSeguro(String valor) {
+        return valor != null ? valor : "";
+    }
+
+    private static String construirLineaRequest(SolicitudAnalisis solicitud) {
+        return obtenerPrefijoRequest(solicitud) + " HTTP/1.1";
+    }
+
+    private static String obtenerPrefijoRequest(SolicitudAnalisis solicitud) {
+        return valorSeguro(solicitud.obtenerMetodo()) + " " + valorSeguro(solicitud.obtenerUrl());
+    }
+
+    private static String construirLineaEstado(int codigoEstado) {
+        return "HTTP/1.1 " + codigoEstado;
+    }
+
     private static String limitarCuerpo(String cuerpo) {
         if (esVacio(cuerpo)) {
             return "";

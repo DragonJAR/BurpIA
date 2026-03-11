@@ -253,6 +253,16 @@ public final class ProveedorAI {
     }
 
     /**
+     * Indica si el proveedor permite consultar modelos remotamente desde la UI.
+     *
+     * @param proveedor Nombre del proveedor
+     * @return {@code true} si la UI puede cargar modelos dinámicamente
+     */
+    public static boolean permiteCargaRemotaModelos(String proveedor) {
+        return !"minimax".equals(proveedor);
+    }
+
+    /**
      * Obtiene la configuración completa de un proveedor por su nombre.
      *
      * @param nombre Nombre del proveedor (ej: "OpenAI", "Claude", "Gemini")
