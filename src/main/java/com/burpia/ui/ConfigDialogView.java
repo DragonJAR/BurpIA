@@ -14,7 +14,7 @@ public class ConfigDialogView {
     private static final int FILAS_PROMPT_AGENTE = 6;
     private static final int ANCHO_SCROLL_PROMPT_AGENTE = 300;
     private static final int ALTO_SCROLL_PROMPT_AGENTE = 180;
-    
+
     // Constantes de dimensiones del diálogo (compartidas con DialogoConfiguracion)
     static final int ANCHO_DIALOGO = 800;
     static final int ALTO_DIALOGO = 720;
@@ -77,20 +77,20 @@ public class ConfigDialogView {
 
     private void inicializarComponentes() {
         tabbedPane = new JTabbedPane();
-        
+
         inicializarCamposConfiguracion();
-        
+
         panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 6));
         panelBotones.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
-        
+
         btnGuardar = new JButton(I18nUI.Configuracion.BOTON_GUARDAR());
         btnGuardar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
         btnGuardar.setToolTipText(I18nUI.Tooltips.Configuracion.GUARDAR());
-        
+
         btnCerrar = new JButton(I18nUI.Configuracion.BOTON_CERRAR());
         btnCerrar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
         btnCerrar.setToolTipText(I18nUI.Tooltips.Configuracion.CERRAR());
-        
+
         panelBotones.add(btnGuardar);
         panelBotones.add(btnCerrar);
     }
@@ -129,19 +129,19 @@ public class ConfigDialogView {
 
         chkDetallado = crearCheckBox(I18nUI.Configuracion.CHECK_DETALLADO());
         chkDetallado.setToolTipText(I18nUI.Tooltips.Configuracion.DETALLADO());
-        
+
         chkIgnorarSSL = crearCheckBox(I18nUI.Configuracion.LABEL_IGNORAR_SSL());
         chkIgnorarSSL.setToolTipText(I18nUI.Tooltips.Configuracion.IGNORAR_SSL());
-        
+
         chkSoloProxy = crearCheckBox(I18nUI.Configuracion.LABEL_SOLO_PROXY());
         chkSoloProxy.setToolTipText(I18nUI.Tooltips.Configuracion.SOLO_PROXY());
-        
+
         chkAlertasHabilitadas = crearCheckBox(I18nUI.Configuracion.LABEL_HABILITAR_ALERTAS());
         chkAlertasHabilitadas.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_ALERTAS());
 
         chkPersistirBusqueda = crearCheckBox(I18nUI.Configuracion.CHECK_PERSISTIR_FILTRO_BUSQUEDA());
         chkPersistirBusqueda.setToolTipText(I18nUI.Tooltips.Configuracion.PERSISTIR_FILTRO_BUSQUEDA());
-        
+
         chkPersistirSeveridad = crearCheckBox(I18nUI.Configuracion.CHECK_PERSISTIR_FILTRO_SEVERIDAD());
         chkPersistirSeveridad.setToolTipText(I18nUI.Tooltips.Configuracion.PERSISTIR_FILTRO_SEVERIDAD());
 
@@ -185,7 +185,7 @@ public class ConfigDialogView {
 
         txtAgenteBinario = crearCampoTexto(30);
         txtAgenteBinario.setToolTipText(I18nUI.Tooltips.Configuracion.BINARIO_AGENTE());
-        
+
         chkAgenteHabilitado = crearCheckBox(I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE());
         chkAgenteHabilitado.setFont(EstilosUI.FUENTE_ESTANDAR);
         chkAgenteHabilitado.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_AGENTE());
@@ -222,11 +222,11 @@ public class ConfigDialogView {
         btnQuitarProveedor = new JButton("←");
         btnQuitarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_QUITAR());
 
-        btnSubirProveedor = new JButton("▲");
+        btnSubirProveedor = new JButton("↑");
         btnSubirProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnSubirProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_SUBIR());
 
-        btnBajarProveedor = new JButton("▼");
+        btnBajarProveedor = new JButton("↓");
         btnBajarProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnBajarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_BAJAR());
 
@@ -555,7 +555,8 @@ public class ConfigDialogView {
 
         JPanel panelLimitesSeguridad = crearPanelLimitesSeguridad();
         panelLimitesSeguridad.setAlignmentX(Component.LEFT_ALIGNMENT);
-        panelLimitesSeguridad.setMaximumSize(new Dimension(Integer.MAX_VALUE, panelLimitesSeguridad.getPreferredSize().height));
+        panelLimitesSeguridad
+                .setMaximumSize(new Dimension(Integer.MAX_VALUE, panelLimitesSeguridad.getPreferredSize().height));
         contenido.add(panelLimitesSeguridad);
         contenido.add(Box.createVerticalStrut(15));
 
@@ -582,7 +583,7 @@ public class ConfigDialogView {
         gbc.gridy = 0;
         gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_IDIOMA()), gbc);
-        
+
         gbc.gridx = 1;
         gbc.weightx = 1;
         panel.add(comboIdioma, gbc);
@@ -618,7 +619,7 @@ public class ConfigDialogView {
         gbc.gridy = 0;
         gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_MAX_HALLAZGOS_TABLA()), gbc);
-        
+
         gbc.gridx = 1;
         gbc.weightx = 1;
         panel.add(txtMaximoHallazgosTabla, gbc);
@@ -627,7 +628,7 @@ public class ConfigDialogView {
         gbc.gridy = 1;
         gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_MAXIMO_TAREAS()), gbc);
-        
+
         gbc.gridx = 1;
         gbc.weightx = 1;
         panel.add(txtMaximoTareas, gbc);
@@ -636,7 +637,7 @@ public class ConfigDialogView {
         gbc.gridy = 2;
         gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_ALERTAS()), gbc);
-        
+
         gbc.gridx = 1;
         gbc.weightx = 1;
         panel.add(chkAlertasHabilitadas, gbc);
@@ -645,7 +646,7 @@ public class ConfigDialogView {
         gbc.gridy = 3;
         gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_SEGURIDAD_SSL()), gbc);
-        
+
         gbc.gridx = 1;
         gbc.weightx = 1;
         panel.add(chkIgnorarSSL, gbc);
@@ -654,7 +655,7 @@ public class ConfigDialogView {
         gbc.gridy = 4;
         gbc.weightx = 0;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_FILTRO_HERRAMIENTAS()), gbc);
-        
+
         gbc.gridx = 1;
         gbc.weightx = 1;
         panel.add(chkSoloProxy, gbc);
@@ -787,7 +788,7 @@ public class ConfigDialogView {
         gbc.gridwidth = 1;
         gbc.weightx = 0;
         panelAgenteGeneral.add(new JLabel(I18nUI.Configuracion.Agentes.LABEL_RUTA_BINARIO()), gbc);
-        
+
         gbc.gridx = 1;
         gbc.weightx = 1.0;
         panelAgenteGeneral.add(txtAgenteBinario, gbc);

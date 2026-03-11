@@ -12,7 +12,8 @@ import java.util.Map;
 /**
  * Registro centralizado de proveedores de IA soportados por BurpIA.
  * <p>
- * Esta clase proporciona configuraciones predefinidas para múltiples proveedores
+ * Esta clase proporciona configuraciones predefinidas para múltiples
+ * proveedores
  * de IA, incluyendo URLs de API, modelos disponibles y parámetros por defecto.
  * </p>
  *
@@ -53,10 +54,10 @@ public final class ProveedorAI {
         /**
          * Construye una configuración de proveedor.
          *
-         * @param urlApi URL base de la API del proveedor
-         * @param modeloPorDefecto Modelo a usar por defecto
-         * @param modelosDisponibles Lista de modelos disponibles
-         * @param requiereClaveApi Si el proveedor requiere API key
+         * @param urlApi              URL base de la API del proveedor
+         * @param modeloPorDefecto    Modelo a usar por defecto
+         * @param modelosDisponibles  Lista de modelos disponibles
+         * @param requiereClaveApi    Si el proveedor requiere API key
          * @param maxTokensPorDefecto Límite de tokens por defecto
          */
         public ConfiguracionProveedor(String urlApi, String modeloPorDefecto,
@@ -182,7 +183,7 @@ public final class ProveedorAI {
                 Arrays.asList(
                         "glm-5",
                         "glm-4.7-thinking",
-                        "glm-4.5v",
+                        "glm-4.5",
                         "glm-4-plus", "glm-4-air", "glm-4-flash",
                         "glm-4-long"),
                 true,
@@ -311,7 +312,7 @@ public final class ProveedorAI {
      * </p>
      *
      * @param nombreProveedor Nombre del proveedor
-     * @param idiomaUi Código de idioma ("es" o "en")
+     * @param idiomaUi        Código de idioma ("es" o "en")
      * @return URL de API por defecto, o {@code null} si el proveedor no existe
      */
     public static String obtenerUrlApiPorDefecto(String nombreProveedor, String idiomaUi) {
@@ -330,7 +331,8 @@ public final class ProveedorAI {
      * Obtiene el modelo por defecto para un proveedor.
      *
      * @param nombreProveedor Nombre del proveedor
-     * @return Nombre del modelo por defecto, o {@code null} si el proveedor no existe
+     * @return Nombre del modelo por defecto, o {@code null} si el proveedor no
+     *         existe
      */
     public static String obtenerModeloPorDefecto(String nombreProveedor) {
         String proveedorNormalizado = normalizarProveedor(nombreProveedor);
@@ -371,8 +373,8 @@ public final class ProveedorAI {
             return false;
         }
         return PROVEEDOR_CUSTOM_01.equals(proveedorNormalizado)
-            || PROVEEDOR_CUSTOM_02.equals(proveedorNormalizado)
-            || PROVEEDOR_CUSTOM_03.equals(proveedorNormalizado);
+                || PROVEEDOR_CUSTOM_02.equals(proveedorNormalizado)
+                || PROVEEDOR_CUSTOM_03.equals(proveedorNormalizado);
     }
 
     /**
