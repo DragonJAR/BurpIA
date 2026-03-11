@@ -362,4 +362,74 @@ class ProviderConfigManagerTest {
         listaSeleccionadosReal.setSelectedIndex(0);
         assertTrue(btnQuitarReal.isEnabled(), "Seleccionar un proveedor ya agregado debe habilitar Quitar");
     }
+
+    @Test
+    void testValidarEstadoActualDetectaModeloVacio() {
+        when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
+        when(comboModelo.getSelectedItem()).thenReturn("");
+        when(txtTimeoutModelo.getText()).thenReturn("60");
+        when(txtMaxTokens.getText()).thenReturn("2048");
+        when(txtUrl.getText()).thenReturn("https://api.openai.com/v1");
+
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerConfigManager.validarEstadoActual(false, false);
+
+        assertFalse(resultado.esValido());
+        assertEquals("modelo", resultado.getCampo());
+        assertEquals(I18nUI.Configuracion.ERROR_MODELO_REQUERIDO(), resultado.getMensajeError());
+    }
+
+    @Test
+    void testValidarEstadoActualDetectaMaxTokensNoNumerico() {
+        when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
+        when(comboModelo.getSelectedItem()).thenReturn("gpt-4o");
+        when(txtTimeoutModelo.getText()).thenReturn("60");
+        when(txtMaxTokens.getText()).thenReturn("abc");
+        when(txtUrl.getText()).thenReturn("https://api.openai.com/v1");
+
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerConfigManager.validarEstadoActual(false, false);
+
+        assertFalse(resultado.esValido());
+        assertEquals("maxTokens", resultado.getCampo());
+        assertEquals(
+                ConfigValidator.validarMaxTokens(0).getMensajeError(),
+                resultado.getMensajeError());
+    }
+
+    @Test
+    void testValidarEstadoActualParaConexionRequiereUrl() {
+        when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
+        when(comboModelo.getSelectedItem()).thenReturn("gpt-4o");
+        when(txtTimeoutModelo.getText()).thenReturn("60");
+        when(txtMaxTokens.getText()).thenReturn("2048");
+        when(txtUrl.getText()).thenReturn("   ");
+        when(txtClave.getPassword()).thenReturn(("sk-" + "a".repeat(48)).toCharArray());
+
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerConfigManager.validarEstadoActual(true, true);
+
+        assertFalse(resultado.esValido());
+        assertEquals("url", resultado.getCampo());
+        assertEquals(I18nUI.Configuracion.MSG_URL_VACIA(), resultado.getMensajeError());
+    }
+
+    @Test
+    void testValidarEstadoActualParaConexionRequiereApiKeyValida() {
+        when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
+        when(comboModelo.getSelectedItem()).thenReturn("gpt-4o");
+        when(txtTimeoutModelo.getText()).thenReturn("60");
+        when(txtMaxTokens.getText()).thenReturn("2048");
+        when(txtUrl.getText()).thenReturn("https://api.openai.com/v1");
+        when(txtClave.getPassword()).thenReturn("".toCharArray());
+
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerConfigManager.validarEstadoActual(true, true);
+
+        assertFalse(resultado.esValido());
+        assertEquals("apiKey", resultado.getCampo());
+        assertEquals(
+                ConfigValidator.validarApiKey("", "OpenAI").getMensajeError(),
+                resultado.getMensajeError());
+    }
 }

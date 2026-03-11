@@ -857,15 +857,12 @@ public class ConfigDialogView {
 
         JLabel lblIcono = new JLabel(I18nUI.Configuracion.ICONO_APP());
         lblIcono.setFont(EstilosUI.FUENTE_TITULO_BANNER);
-        try {
-            var resourceUrl = getClass().getResource("/logo.png");
-            if (resourceUrl != null) {
-                ImageIcon icon = new ImageIcon(resourceUrl);
-                Image img = icon.getImage();
-                Image newimg = img.getScaledInstance(80, 80, java.awt.Image.SCALE_SMOOTH);
-                lblIcono = new JLabel(new ImageIcon(newimg));
-            }
-        } catch (Exception ignored) {
+        var resourceUrl = getClass().getResource("/logo.png");
+        if (resourceUrl != null) {
+            ImageIcon icon = new ImageIcon(resourceUrl);
+            Image img = icon.getImage();
+            Image newimg = img.getScaledInstance(80, 80, java.awt.Image.SCALE_SMOOTH);
+            lblIcono = new JLabel(new ImageIcon(newimg));
         }
         heroPanel.add(lblIcono, gbcHero);
 

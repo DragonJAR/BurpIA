@@ -323,6 +323,9 @@ public class GestorConfiguracion {
         if (archivo.persistirFiltroSeveridadHallazgos != null) {
             config.establecerPersistirFiltroSeveridadHallazgos(archivo.persistirFiltroSeveridadHallazgos);
         }
+        if (archivo.maximoTareasTabla != null) {
+            config.establecerMaximoTareasTabla(archivo.maximoTareasTabla);
+        }
 
         config.establecerApiKeysPorProveedor(sanitizarMapaString(archivo.apiKeysPorProveedor));
         config.establecerUrlsBasePorProveedor(sanitizarMapaString(archivo.urlsBasePorProveedor));
@@ -369,6 +372,7 @@ public class GestorConfiguracion {
         archivo.retrasoSegundos = config.obtenerRetrasoSegundos();
         archivo.maximoConcurrente = config.obtenerMaximoConcurrente();
         archivo.maximoHallazgosTabla = config.obtenerMaximoHallazgosTabla();
+        archivo.maximoTareasTabla = config.obtenerMaximoTareasTabla();
         archivo.detallado = config.esDetallado();
         archivo.tiempoEsperaAI = config.obtenerTiempoEsperaAI();
         archivo.idiomaUi = config.obtenerIdiomaUi();
@@ -495,6 +499,7 @@ public class GestorConfiguracion {
         private Integer retrasoSegundos;
         private Integer maximoConcurrente;
         private Integer maximoHallazgosTabla;
+        private Integer maximoTareasTabla;
         private Boolean detallado;
         private Integer tiempoEsperaAI;
         private String idiomaUi;

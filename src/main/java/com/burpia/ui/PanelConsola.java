@@ -7,6 +7,7 @@ import javax.swing.text.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -34,6 +35,7 @@ public class PanelConsola extends JPanel {
     private final JButton botonSiguiente;
     private final JButton botonAnterior;
     private final JLabel etiquetaResultadosBusqueda;
+    private final JLabel etiquetaBuscar;
 
     /**
      * Patrón de búsqueda actual. Null si no hay búsqueda activa.
@@ -75,78 +77,40 @@ public class PanelConsola extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // CONFIABILIDAD: Responsive con threshold-based layout switching
-        // Mismo patrón que PanelTareas y PanelEstadisticas
         panelControles = new JPanel();
         panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
         panelControles.setBorder(UIUtils.crearBordeTitulado(
             I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
 
-        // EFICIENCIA: Layout responsive que se adapta al ancho disponible
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4)) {
-            private static final int UMBRAL_RESPONSIVE = 900;
-            private boolean ultimoLayoutHorizontal = true;
-
-            @Override
-            public void doLayout() {
-                // CONFIABILIDAD: Obtener ancho del contenedor padre
-                int anchoPadre = getParent() != null ? getParent().getWidth() : getWidth();
-                int anchoDisponible = anchoPadre - 40; // 40 = margen total de bordes
-                boolean esLayoutHorizontal = anchoDisponible >= UMBRAL_RESPONSIVE;
-
-                // EFICIENCIA: Solo cambiar layout si es necesario (cache de último estado)
-                if (esLayoutHorizontal != ultimoLayoutHorizontal) {
-                    if (esLayoutHorizontal) {
-                        setLayout(new FlowLayout(FlowLayout.LEFT, 8, 4));
-                    } else {
-                        // DRY: 3 filas agrupadas lógicamente:
-                        // Fila 1: checkbox, limpiar, resumen
-                        // Fila 2: búsqueda, buscar, <, >, resultados
-                        // Fila 3: (vacía para futuro)
-                        setLayout(new GridLayout(3, 1, 0, 8));
-                    }
-                    ultimoLayoutHorizontal = esLayoutHorizontal;
-                }
-                super.doLayout();
-            }
-        };
-
         // EFICIENCIA: ESTADÍSTICAS PRIMERO - contexto inmediato para decisiones informadas
         etiquetaResumen = new JLabel(I18nUI.Consola.RESUMEN(0, 0, 0, 0));
         etiquetaResumen.setFont(EstilosUI.FUENTE_MONO);
         etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
-        panelBotones.add(etiquetaResumen);
 
         // CONFIABILIDAD: Configuración de visualización (toggle) después de contexto
         checkboxAutoScroll = new JCheckBox(I18nUI.Consola.CHECK_AUTO_SCROLL(), true);
         checkboxAutoScroll.setFont(EstilosUI.FUENTE_ESTANDAR);
         checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
-        panelBotones.add(checkboxAutoScroll);
 
         // Acción de limpieza (después de tener contexto para decisión informada)
         botonLimpiar = new JButton(I18nUI.Consola.BOTON_LIMPIAR());
         botonLimpiar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
-        panelBotones.add(botonLimpiar);
-
-        // CONFIABILIDAD: Separador visual entre contexto/configuración y búsqueda
-        panelBotones.add(new JSeparator(SwingConstants.VERTICAL));
 
         // EFICIENCIA: BÚSQUEDA agrupada lógicamente
+        etiquetaBuscar = new JLabel(I18nUI.Consola.ETIQUETA_BUSCAR());
+        etiquetaBuscar.setFont(EstilosUI.FUENTE_ESTANDAR);
         campoBusqueda = new JTextField(15);
         campoBusqueda.setFont(EstilosUI.FUENTE_MONO);
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Consola.CAMPO_BUSCAR());
-        panelBotones.add(campoBusqueda);
 
         botonBuscar = new JButton(I18nUI.Consola.BOTON_BUSCAR());
         botonBuscar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonBuscar.setToolTipText(I18nUI.Tooltips.Consola.BUSCAR());
-        panelBotones.add(botonBuscar);
 
         // EFICIENCIA: Resultados ANTES de navegación - usuario sabe si hay algo que navegar
         etiquetaResultadosBusqueda = new JLabel("");
         etiquetaResultadosBusqueda.setFont(EstilosUI.FUENTE_MONO);
-        panelBotones.add(etiquetaResultadosBusqueda);
 
         // Navegación al final (solo útil si hay resultados)
         botonAnterior = new JButton("<");
@@ -154,14 +118,22 @@ public class PanelConsola extends JPanel {
         botonAnterior.setToolTipText(I18nUI.Tooltips.Consola.ANTERIOR());
         botonAnterior.setEnabled(false);
         botonAnterior.setPreferredSize(new Dimension(40, 25));
-        panelBotones.add(botonAnterior);
 
         botonSiguiente = new JButton(">");
         botonSiguiente.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonSiguiente.setToolTipText(I18nUI.Tooltips.Consola.SIGUIENTE());
         botonSiguiente.setEnabled(false);
         botonSiguiente.setPreferredSize(new Dimension(40, 25));
-        panelBotones.add(botonSiguiente);
+
+        PanelFilasResponsive panelBotones = new PanelFilasResponsive(
+            900,
+            8,
+            8,
+            List.of(
+                List.of(etiquetaResumen, checkboxAutoScroll, botonLimpiar),
+                List.of(etiquetaBuscar, campoBusqueda, botonBuscar, etiquetaResultadosBusqueda, botonAnterior, botonSiguiente)
+            )
+        );
 
         panelControles.add(panelBotones);
 
@@ -354,12 +326,7 @@ public class PanelConsola extends JPanel {
             }
         });
 
-        // Mostrar resultado
-        String textoBusqueda = campoBusqueda.getText();
-        if (textoBusqueda.length() > 30) {
-            textoBusqueda = textoBusqueda.substring(0, 30) + "...";
-        }
-        etiquetaResultadosBusqueda.setText(I18nUI.Consola.MSG_BUSQUEDA_ENCONTRADA(1, textoBusqueda));
+        actualizarResultadoBusquedaEncontrada();
     }
 
     /**
@@ -381,7 +348,7 @@ public class PanelConsola extends JPanel {
     private void mostrarResultadoNoEncontrado(String texto) {
         posicionUltimaBusqueda = -1;
         actualizarBotonesBusqueda(false);
-        etiquetaResultadosBusqueda.setText(I18nUI.Consola.MSG_BUSQUEDA_NO_ENCONTRADA(texto));
+        etiquetaResultadosBusqueda.setText(I18nUI.Consola.MSG_BUSQUEDA_NO_ENCONTRADA(resumirTextoBusqueda(texto)));
     }
 
     /**
@@ -394,6 +361,10 @@ public class PanelConsola extends JPanel {
         campoBusqueda.setText("");
         actualizarBotonesBusqueda(false);
         etiquetaResultadosBusqueda.setText("");
+        UIUtils.ejecutarEnEdt(() -> {
+            consola.select(0, 0);
+            consola.getCaret().setSelectionVisible(false);
+        });
     }
 
     /**
@@ -425,13 +396,20 @@ public class PanelConsola extends JPanel {
     public void aplicarIdioma() {
         checkboxAutoScroll.setText(I18nUI.Consola.CHECK_AUTO_SCROLL());
         botonLimpiar.setText(I18nUI.Consola.BOTON_LIMPIAR());
+        etiquetaBuscar.setText(I18nUI.Consola.ETIQUETA_BUSCAR());
+        botonBuscar.setText(I18nUI.Consola.BOTON_BUSCAR());
         UIUtils.actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
         UIUtils.actualizarTituloPanel(panelConsolaWrapper, I18nUI.Consola.TITULO_LOGS());
         checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
         botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
+        botonBuscar.setToolTipText(I18nUI.Tooltips.Consola.BUSCAR());
+        botonAnterior.setToolTipText(I18nUI.Tooltips.Consola.ANTERIOR());
+        botonSiguiente.setToolTipText(I18nUI.Tooltips.Consola.SIGUIENTE());
+        campoBusqueda.setToolTipText(I18nUI.Tooltips.Consola.CAMPO_BUSCAR());
         etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
         consola.setToolTipText(I18nUI.Tooltips.Consola.AREA_LOGS());
         aplicarTema();
+        refrescarResultadoBusqueda();
         actualizarResumen(true);
         revalidate();
         repaint();
@@ -459,6 +437,7 @@ public class PanelConsola extends JPanel {
             consola.setCaretColor(EstilosUI.colorTextoPrimario(fondoConsola));
 
             etiquetaResumen.setForeground(EstilosUI.colorTextoSecundario(fondoPanel));
+            etiquetaBuscar.setForeground(EstilosUI.colorTextoSecundario(fondoPanel));
             etiquetaResultadosBusqueda.setForeground(EstilosUI.colorTextoSecundario(fondoPanel));
 
             panelControles.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), 12, 16));
@@ -541,6 +520,68 @@ public class PanelConsola extends JPanel {
 
     private void finalizarActualizacionAutoScroll() {
         actualizandoAutoScroll = false;
+    }
+
+    private void refrescarResultadoBusqueda() {
+        if (patronBusqueda == null || Normalizador.esVacio(campoBusqueda.getText())) {
+            etiquetaResultadosBusqueda.setText("");
+            actualizarBotonesBusqueda(false);
+            return;
+        }
+
+        String texto = obtenerTextoDocumento();
+        if (Normalizador.esVacio(texto)) {
+            mostrarResultadoNoEncontrado(campoBusqueda.getText());
+            return;
+        }
+
+        int coincidencias = contarCoincidencias(patronBusqueda, texto);
+        if (coincidencias == 0) {
+            mostrarResultadoNoEncontrado(campoBusqueda.getText());
+            return;
+        }
+
+        actualizarBotonesBusqueda(true);
+        etiquetaResultadosBusqueda.setText(I18nUI.Consola.MSG_BUSQUEDA_ENCONTRADA(
+            coincidencias,
+            resumirTextoBusqueda(campoBusqueda.getText())
+        ));
+    }
+
+    private void actualizarResultadoBusquedaEncontrada() {
+        String texto = obtenerTextoDocumento();
+        int coincidencias = contarCoincidencias(patronBusqueda, texto);
+        if (coincidencias <= 0) {
+            mostrarResultadoNoEncontrado(campoBusqueda.getText());
+            return;
+        }
+        etiquetaResultadosBusqueda.setText(I18nUI.Consola.MSG_BUSQUEDA_ENCONTRADA(
+            coincidencias,
+            resumirTextoBusqueda(campoBusqueda.getText())
+        ));
+    }
+
+    private int contarCoincidencias(Pattern patron, String texto) {
+        if (patron == null || Normalizador.esVacio(texto)) {
+            return 0;
+        }
+
+        java.util.regex.Matcher matcher = patron.matcher(texto);
+        int coincidencias = 0;
+        while (matcher.find()) {
+            coincidencias++;
+        }
+        return coincidencias;
+    }
+
+    private String resumirTextoBusqueda(String textoBusqueda) {
+        if (textoBusqueda == null) {
+            return "";
+        }
+        if (textoBusqueda.length() <= 30) {
+            return textoBusqueda;
+        }
+        return textoBusqueda.substring(0, 30) + "...";
     }
 
 }

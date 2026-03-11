@@ -1382,8 +1382,8 @@ public final class I18nUI {
         }
 
         public static String LABEL_PROVEEDORES_DISPONIBLES() {
-            return tr("Proveedores disponibles (con API key configurada):",
-                    "Available providers (with API key configured):");
+            return tr("Proveedores disponibles:",
+                    "Available providers:");
         }
 
         public static String LABEL_PROVEEDORES_SELECCIONADOS() {

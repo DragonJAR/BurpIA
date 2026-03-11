@@ -54,6 +54,50 @@ public final class ProviderConfigManager {
     private JCheckBox chkHabilitarMultiProveedor;
 
     /**
+     * Resultado inmutable de validar el estado actual del proveedor en la UI.
+     */
+    public static final class ValidationResultEstadoProveedor {
+        private final boolean valido;
+        private final EstadoProveedorUI estado;
+        private final String mensajeError;
+        private final String campo;
+
+        private ValidationResultEstadoProveedor(boolean valido,
+                                                EstadoProveedorUI estado,
+                                                String mensajeError,
+                                                String campo) {
+            this.valido = valido;
+            this.estado = estado;
+            this.mensajeError = mensajeError;
+            this.campo = campo;
+        }
+
+        public static ValidationResultEstadoProveedor valido(EstadoProveedorUI estado) {
+            return new ValidationResultEstadoProveedor(true, estado, null, null);
+        }
+
+        public static ValidationResultEstadoProveedor invalido(String mensajeError, String campo) {
+            return new ValidationResultEstadoProveedor(false, null, mensajeError, campo);
+        }
+
+        public boolean esValido() {
+            return valido;
+        }
+
+        public EstadoProveedorUI getEstado() {
+            return estado;
+        }
+
+        public String getMensajeError() {
+            return mensajeError;
+        }
+
+        public String getCampo() {
+            return campo;
+        }
+    }
+
+    /**
      * Crea un nuevo gestor de configuración de proveedores.
      *
      * @param config        Configuración API principal
@@ -276,27 +320,12 @@ public final class ProviderConfigManager {
      * @return EstadoProveedorUI con los datos actuales, o null si hay error
      */
     public EstadoProveedorUI extraerEstadoActual() {
-        String modelo = obtenerModeloSeleccionado();
-        if (Normalizador.esVacio(modelo)) {
-            gestorLogging.error(ORIGEN_LOG, "No se ha seleccionado un modelo");
+        ValidationResultEstadoProveedor resultado = validarEstadoActual(false, false);
+        if (!resultado.esValido()) {
+            gestorLogging.error(ORIGEN_LOG, "Estado actual inválido: " + resultado.getMensajeError());
             return null;
         }
-
-        Integer timeout = parsearEntero(txtTimeoutModelo != null ? txtTimeoutModelo.getText() : null);
-        if (timeout == null) {
-            gestorLogging.error(ORIGEN_LOG, "Formato de timeout inválido");
-            return null;
-        }
-
-        Integer maxTokens = parsearEntero(txtMaxTokens != null ? txtMaxTokens.getText() : null);
-        if (maxTokens == null) {
-            maxTokens = 4096;
-        }
-
-        String apiKey = txtClave != null ? new String(txtClave.getPassword()) : "";
-        String baseUrl = txtUrl != null ? txtUrl.getText().trim() : "";
-
-        return new EstadoProveedorUI(apiKey, modelo, baseUrl, maxTokens, timeout);
+        return resultado.getEstado();
     }
 
     /**
@@ -346,6 +375,87 @@ public final class ProviderConfigManager {
     }
 
     /**
+     * Valida el estado actual del proveedor en la UI usando reglas reutilizables.
+     *
+     * @param requiereUrlExplicita true si la operación necesita una URL no vacía
+     * @param validarApiKey true si debe validarse la API key del proveedor actual
+     * @return resultado de validación con estado listo para usar o detalle del error
+     */
+    public ValidationResultEstadoProveedor validarEstadoActual(boolean requiereUrlExplicita,
+                                                               boolean validarApiKey) {
+        String proveedor = obtenerProveedorActual();
+        if (Normalizador.esVacio(proveedor)) {
+            return ValidationResultEstadoProveedor.invalido(
+                    I18nUI.Configuracion.MSG_SELECCIONA_PROVEEDOR(),
+                    "proveedor");
+        }
+
+        String modelo = obtenerModeloSeleccionadoActual();
+        ConfigValidator.ValidationResult validacionModelo =
+                ConfigValidator.validarModelo(modelo, proveedor);
+        if (!validacionModelo.esValido()) {
+            return ValidationResultEstadoProveedor.invalido(
+                    validacionModelo.getMensajeError(),
+                    validacionModelo.getCampo());
+        }
+
+        Integer timeout = parsearEntero(txtTimeoutModelo != null ? txtTimeoutModelo.getText() : null);
+        if (timeout == null) {
+            ConfigValidator.ValidationResult validacionTimeout = ConfigValidator.validarTimeoutModelo(0);
+            return ValidationResultEstadoProveedor.invalido(
+                    validacionTimeout.getMensajeError(),
+                    validacionTimeout.getCampo());
+        }
+        ConfigValidator.ValidationResult validacionTimeout = ConfigValidator.validarTimeoutModelo(timeout);
+        if (!validacionTimeout.esValido()) {
+            return ValidationResultEstadoProveedor.invalido(
+                    validacionTimeout.getMensajeError(),
+                    validacionTimeout.getCampo());
+        }
+
+        Integer maxTokens = parsearEntero(txtMaxTokens != null ? txtMaxTokens.getText() : null);
+        if (maxTokens == null) {
+            ConfigValidator.ValidationResult validacionTokens = ConfigValidator.validarMaxTokens(0);
+            return ValidationResultEstadoProveedor.invalido(
+                    validacionTokens.getMensajeError(),
+                    validacionTokens.getCampo());
+        }
+        ConfigValidator.ValidationResult validacionTokens = ConfigValidator.validarMaxTokens(maxTokens);
+        if (!validacionTokens.esValido()) {
+            return ValidationResultEstadoProveedor.invalido(
+                    validacionTokens.getMensajeError(),
+                    validacionTokens.getCampo());
+        }
+
+        String baseUrl = txtUrl != null ? txtUrl.getText().trim() : "";
+        if (requiereUrlExplicita && Normalizador.esVacio(baseUrl)) {
+            return ValidationResultEstadoProveedor.invalido(
+                    I18nUI.Configuracion.MSG_URL_VACIA(),
+                    "url");
+        }
+        ConfigValidator.ValidationResult validacionUrl = ConfigValidator.validarUrlApi(baseUrl);
+        if (!validacionUrl.esValido()) {
+            return ValidationResultEstadoProveedor.invalido(
+                    validacionUrl.getMensajeError(),
+                    validacionUrl.getCampo());
+        }
+
+        String apiKey = txtClave != null ? new String(txtClave.getPassword()) : "";
+        if (validarApiKey) {
+            ConfigValidator.ValidationResult validacionApiKey =
+                    ConfigValidator.validarApiKey(apiKey, proveedor);
+            if (!validacionApiKey.esValido()) {
+                return ValidationResultEstadoProveedor.invalido(
+                        validacionApiKey.getMensajeError(),
+                        validacionApiKey.getCampo());
+            }
+        }
+
+        return ValidationResultEstadoProveedor.valido(
+                new EstadoProveedorUI(apiKey, modelo, baseUrl, maxTokens, timeout));
+    }
+
+    /**
      * Verifica si un proveedor está actualmente seleccionado en la UI.
      *
      * @param proveedor Nombre del proveedor a verificar
@@ -356,6 +466,27 @@ public final class ProviderConfigManager {
             return false;
         }
         return proveedor.equals(comboProveedor.getSelectedItem());
+    }
+
+    /**
+     * Expone el modelo actualmente seleccionado normalizado.
+     */
+    public String obtenerModeloSeleccionadoActual() {
+        return obtenerModeloSeleccionado();
+    }
+
+    /**
+     * Expone la recarga del timeout en la UI para reutilizar la lógica desde el controlador.
+     */
+    public void actualizarTimeoutModeloSeleccionadoEnUI() {
+        actualizarTimeoutModeloSeleccionado();
+    }
+
+    /**
+     * Expone la carga de modelos en el combo para reutilizar la lógica desde el controlador.
+     */
+    public void cargarModelosEnComboEnUI(List<String> modelos, String preferido) {
+        cargarModelosEnCombo(modelos, preferido);
     }
 
     /**
@@ -746,7 +877,8 @@ public final class ProviderConfigManager {
         if (Normalizador.esVacio(modelo)) {
             return "";
         }
-        return modelo.trim();
+        String limpio = modelo.trim();
+        return ":".equals(limpio) ? "" : limpio;
     }
 
     private Integer parsearEntero(String valor) {

@@ -6,13 +6,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -129,6 +133,87 @@ class PanelConsolaPreferenciasTest {
         }
     }
 
+    @Test
+    @DisplayName("aplicarIdioma refresca controles de búsqueda y tooltips")
+    void testAplicarIdiomaRefrescaControlesBusqueda() throws Exception {
+        I18nUI.establecerIdioma("es");
+        PanelConsola panel = crearPanel();
+        try {
+            JLabel etiquetaBuscar = obtenerEtiquetaBuscar(panel);
+            JButton botonBuscar = obtenerBotonBuscar(panel);
+            JButton botonAnterior = obtenerBotonAnterior(panel);
+            JButton botonSiguiente = obtenerBotonSiguiente(panel);
+
+            SwingUtilities.invokeAndWait(() -> {
+                I18nUI.establecerIdioma("en");
+                panel.aplicarIdioma();
+            });
+            flushEdt();
+
+            assertEquals(I18nUI.Consola.ETIQUETA_BUSCAR(), etiquetaBuscar.getText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:154");
+            assertEquals(I18nUI.Consola.BOTON_BUSCAR(), botonBuscar.getText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:155");
+            assertEquals(I18nUI.Tooltips.Consola.ANTERIOR(), botonAnterior.getToolTipText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:156");
+            assertEquals(I18nUI.Tooltips.Consola.SIGUIENTE(), botonSiguiente.getToolTipText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:157");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Busqueda muestra el total real de coincidencias")
+    void testBusquedaMuestraTotalCoincidencias() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            GestorConsolaGUI gestor = panel.obtenerGestorConsola();
+            JTextField campoBusqueda = obtenerCampoBusqueda(panel);
+            JLabel etiquetaResultados = obtenerEtiquetaResultadosBusqueda(panel);
+            JButton botonBuscar = obtenerBotonBuscar(panel);
+
+            SwingUtilities.invokeAndWait(gestor::limpiarConsola);
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> {
+                gestor.registrarInfo("token alpha");
+                gestor.registrarInfo("alpha beta");
+                gestor.registrarError("alpha");
+            });
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> {
+                campoBusqueda.setText("alpha");
+                botonBuscar.doClick();
+            });
+            flushEdt();
+
+            assertTrue(etiquetaResultados.getText().contains("3"), "assertTrue failed at PanelConsolaPreferenciasTest.java:188");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Modo angosto agrupa controles de consola en filas lógicas")
+    void testModoAngostoAgrupaControlesEnFilasLogicas() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            JPanel panelControles = obtenerPanelControles(panel);
+            JPanel panelResponsive = (JPanel) panelControles.getComponent(0);
+
+            SwingUtilities.invokeAndWait(() -> {
+                panelControles.setSize(500, 160);
+                panelResponsive.setSize(460, 120);
+                panelResponsive.doLayout();
+            });
+            flushEdt();
+
+            assertEquals(2, panelResponsive.getComponentCount(), "assertEquals failed at PanelConsolaPreferenciasTest.java:207");
+            assertTrue(panelResponsive.getComponent(0) instanceof JPanel, "assertTrue failed at PanelConsolaPreferenciasTest.java:208");
+            assertTrue(panelResponsive.getComponent(1) instanceof JPanel, "assertTrue failed at PanelConsolaPreferenciasTest.java:209");
+        } finally {
+            panel.destruir();
+        }
+    }
+
     private PanelConsola crearPanel() throws Exception {
         final PanelConsola[] holder = new PanelConsola[1];
         SwingUtilities.invokeAndWait(() -> holder[0] = new PanelConsola(new GestorConsolaGUI()));
@@ -139,6 +224,48 @@ class PanelConsolaPreferenciasTest {
         Field field = PanelConsola.class.getDeclaredField("etiquetaResumen");
         field.setAccessible(true);
         return (JLabel) field.get(panel);
+    }
+
+    private JLabel obtenerEtiquetaBuscar(PanelConsola panel) throws Exception {
+        Field field = PanelConsola.class.getDeclaredField("etiquetaBuscar");
+        field.setAccessible(true);
+        return (JLabel) field.get(panel);
+    }
+
+    private JLabel obtenerEtiquetaResultadosBusqueda(PanelConsola panel) throws Exception {
+        Field field = PanelConsola.class.getDeclaredField("etiquetaResultadosBusqueda");
+        field.setAccessible(true);
+        return (JLabel) field.get(panel);
+    }
+
+    private JTextField obtenerCampoBusqueda(PanelConsola panel) throws Exception {
+        Field field = PanelConsola.class.getDeclaredField("campoBusqueda");
+        field.setAccessible(true);
+        return (JTextField) field.get(panel);
+    }
+
+    private JButton obtenerBotonBuscar(PanelConsola panel) throws Exception {
+        Field field = PanelConsola.class.getDeclaredField("botonBuscar");
+        field.setAccessible(true);
+        return (JButton) field.get(panel);
+    }
+
+    private JButton obtenerBotonAnterior(PanelConsola panel) throws Exception {
+        Field field = PanelConsola.class.getDeclaredField("botonAnterior");
+        field.setAccessible(true);
+        return (JButton) field.get(panel);
+    }
+
+    private JButton obtenerBotonSiguiente(PanelConsola panel) throws Exception {
+        Field field = PanelConsola.class.getDeclaredField("botonSiguiente");
+        field.setAccessible(true);
+        return (JButton) field.get(panel);
+    }
+
+    private JPanel obtenerPanelControles(PanelConsola panel) throws Exception {
+        Field field = PanelConsola.class.getDeclaredField("panelControles");
+        field.setAccessible(true);
+        return (JPanel) field.get(panel);
     }
 
     private JTextPane obtenerConsola(PanelConsola panel) throws Exception {

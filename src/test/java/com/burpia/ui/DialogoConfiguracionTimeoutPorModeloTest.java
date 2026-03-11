@@ -18,6 +18,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JPasswordField;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -200,6 +201,68 @@ class DialogoConfiguracionTimeoutPorModeloTest {
     }
 
     @Test
+    @DisplayName("Guardar no persiste maxTokens inválido ni cierra el diálogo")
+    void testGuardarBloqueaMaxTokensInvalido() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-max-tokens-invalido");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("Z.ai");
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> guardadoCallback.set(true));
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+            JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
+            JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
+            JTextField txtMaximoConcurrente = obtenerCampo(dialogo, "txtMaximoConcurrente", JTextField.class);
+            JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogo, "txtMaximoHallazgosTabla", JTextField.class);
+            JTextField txtMaxTokens = obtenerCampo(dialogo, "txtMaxTokens", JTextField.class);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("Z.ai");
+                comboModelo.setSelectedItem("glm-5");
+                comboModelo.getEditor().setItem("glm-5");
+                txtClave.setText("test-key");
+                txtRetraso.setText("5");
+                txtMaximoConcurrente.setText("3");
+                txtMaximoHallazgosTabla.setText("1000");
+                txtMaxTokens.setText("abc");
+                txtTimeoutModelo.setText("180");
+            });
+            flushEdt();
+
+            Method guardar = DialogoConfiguracion.class.getDeclaredMethod("guardarConfiguracion");
+            guardar.setAccessible(true);
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    guardar.invoke(dialogo);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            Thread.sleep(250);
+            flushEdt();
+
+            assertFalse(guardadoCallback.get(),
+                    "El callback no debe ejecutarse cuando maxTokens es inválido");
+            assertTrue(dialogo.isDisplayable(),
+                    "El diálogo debe permanecer abierto tras una validación fallida");
+            assertEquals(null, config.obtenerMaxTokensConfiguradoParaProveedor("Z.ai"),
+                    "No debe persistirse un maxTokens normalizado por defecto cuando la entrada es inválida");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
     @DisplayName("Pestaña agentes permite editar y guardar prompt inicial y prompt de validación")
     void testGuardarPromptsAgenteDesdeUI() throws Exception {
         Path tempDir = Files.createTempDirectory("burpia-dialogo-prompts-agente");
@@ -354,7 +417,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
     }
 
     @Test
-    @DisplayName("Probar conexión conserva ciclo de estado del botón")
+    @DisplayName("Probar conexión no deshabilita el botón cuando la validación previa falla")
     void testProbarConexionCicloBoton() throws Exception {
         Path tempDir = Files.createTempDirectory("burpia-dialogo-probar-conexion-ciclo");
         userHomeOriginal = System.getProperty("user.home");
@@ -394,23 +457,10 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             });
             flushEdt();
 
-            assertFalse(btnProbarConexion.isEnabled(), "El botón debe deshabilitarse durante la prueba");
-            assertEquals(I18nUI.Configuracion.BOTON_PROBANDO(), btnProbarConexion.getText(),
-                    "El botón debe mostrar estado 'probando'");
-
-            long inicio = System.currentTimeMillis();
-            long timeoutMs = 5000;
-            while ((!btnProbarConexion.isEnabled()
-                    || !I18nUI.Configuracion.BOTON_PROBAR_CONEXION().equals(btnProbarConexion.getText()))
-                    && (System.currentTimeMillis() - inicio) < timeoutMs) {
-                Thread.sleep(50);
-                flushEdt();
-            }
-
             assertTrue(btnProbarConexion.isEnabled(),
-                    "El botón debe volver a estar habilitado tras finalizar la prueba");
+                    "Si la validación falla antes de arrancar la prueba, el botón debe seguir habilitado");
             assertEquals(I18nUI.Configuracion.BOTON_PROBAR_CONEXION(), btnProbarConexion.getText(),
-                    "El texto del botón debe restaurarse al finalizar");
+                    "El texto no debe cambiar si no se inicia la prueba de conexión");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -497,6 +547,135 @@ class DialogoConfiguracionTimeoutPorModeloTest {
     }
 
     @Test
+    @DisplayName("Ajustes de usuario persisten al guardar y reabrir el diálogo")
+    void testAjustesUsuarioPersistenAlReabrirDialogo() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-ajustes-usuario-roundtrip");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+        String[] fuenteEstandarEsperadaHolder = new String[1];
+        String[] fuenteMonoEsperadaHolder = new String[1];
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> guardadoCallback.set(true));
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JTextField txtUrl = obtenerCampo(dialogo, "txtUrl", JTextField.class);
+            JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
+            JTextField txtMaxTokens = obtenerCampo(dialogo, "txtMaxTokens", JTextField.class);
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+            JComboBox<IdiomaUI> comboIdioma = obtenerCampo(dialogo, "comboIdioma", JComboBox.class);
+            JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
+            JTextField txtMaximoConcurrente = obtenerCampo(dialogo, "txtMaximoConcurrente", JTextField.class);
+            JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogo, "txtMaximoHallazgosTabla", JTextField.class);
+            JTextField txtMaximoTareas = obtenerCampo(dialogo, "txtMaximoTareas", JTextField.class);
+            JCheckBox chkDetallado = obtenerCampo(dialogo, "chkDetallado", JCheckBox.class);
+            JCheckBox chkIgnorarSSL = obtenerCampo(dialogo, "chkIgnorarSSL", JCheckBox.class);
+            JCheckBox chkSoloProxy = obtenerCampo(dialogo, "chkSoloProxy", JCheckBox.class);
+            JCheckBox chkAlertasHabilitadas = obtenerCampo(dialogo, "chkAlertasHabilitadas", JCheckBox.class);
+            JCheckBox chkPersistirBusqueda = obtenerCampo(dialogo, "chkPersistirBusqueda", JCheckBox.class);
+            JCheckBox chkPersistirSeveridad = obtenerCampo(dialogo, "chkPersistirSeveridad", JCheckBox.class);
+            JComboBox<String> comboFuenteEstandar = obtenerCampo(dialogo, "comboFuenteEstandar", JComboBox.class);
+            JSpinner spinnerTamanioEstandar = obtenerCampo(dialogo, "spinnerTamanioEstandar", JSpinner.class);
+            JComboBox<String> comboFuenteMono = obtenerCampo(dialogo, "comboFuenteMono", JComboBox.class);
+            JSpinner spinnerTamanioMono = obtenerCampo(dialogo, "spinnerTamanioMono", JSpinner.class);
+
+            String fuenteEstandarEsperada = seleccionarFuenteAlternativa(comboFuenteEstandar);
+            String fuenteMonoEsperada = seleccionarFuenteAlternativa(comboFuenteMono);
+            fuenteEstandarEsperadaHolder[0] = fuenteEstandarEsperada;
+            fuenteMonoEsperadaHolder[0] = fuenteMonoEsperada;
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("OpenAI");
+                comboModelo.setSelectedItem("gpt-4o");
+                comboModelo.getEditor().setItem("gpt-4o");
+                txtUrl.setText("https://api.openai.com/v1");
+                txtClave.setText("test-key");
+                txtMaxTokens.setText("4096");
+                txtTimeoutModelo.setText("120");
+
+                comboIdioma.setSelectedItem(IdiomaUI.EN);
+                txtRetraso.setText("9");
+                txtMaximoConcurrente.setText("4");
+                txtMaximoHallazgosTabla.setText("2345");
+                txtMaximoTareas.setText("876");
+                chkDetallado.setSelected(true);
+                chkIgnorarSSL.setSelected(true);
+                chkSoloProxy.setSelected(true);
+                chkAlertasHabilitadas.setSelected(false);
+                chkPersistirBusqueda.setSelected(true);
+                chkPersistirSeveridad.setSelected(true);
+                comboFuenteEstandar.setSelectedItem(fuenteEstandarEsperada);
+                spinnerTamanioEstandar.setValue(16);
+                comboFuenteMono.setSelectedItem(fuenteMonoEsperada);
+                spinnerTamanioMono.setValue(15);
+            });
+            flushEdt();
+
+            Method guardar = DialogoConfiguracion.class.getDeclaredMethod("guardarConfiguracion");
+            guardar.setAccessible(true);
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    guardar.invoke(dialogo);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            esperarAlGuardado(guardadoCallback);
+            assertTrue(guardadoCallback.get(), "El guardado debe completarse antes de reabrir el diálogo");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+
+        ConfiguracionAPI configRecargada = new ConfiguracionAPI();
+        DialogoConfiguracion dialogoReabierto = crearDialogo(configRecargada, gestor, () -> {});
+        try {
+            JComboBox<IdiomaUI> comboIdioma = obtenerCampo(dialogoReabierto, "comboIdioma", JComboBox.class);
+            JTextField txtRetraso = obtenerCampo(dialogoReabierto, "txtRetraso", JTextField.class);
+            JTextField txtMaximoConcurrente = obtenerCampo(dialogoReabierto, "txtMaximoConcurrente", JTextField.class);
+            JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogoReabierto, "txtMaximoHallazgosTabla", JTextField.class);
+            JTextField txtMaximoTareas = obtenerCampo(dialogoReabierto, "txtMaximoTareas", JTextField.class);
+            JCheckBox chkDetallado = obtenerCampo(dialogoReabierto, "chkDetallado", JCheckBox.class);
+            JCheckBox chkIgnorarSSL = obtenerCampo(dialogoReabierto, "chkIgnorarSSL", JCheckBox.class);
+            JCheckBox chkSoloProxy = obtenerCampo(dialogoReabierto, "chkSoloProxy", JCheckBox.class);
+            JCheckBox chkAlertasHabilitadas = obtenerCampo(dialogoReabierto, "chkAlertasHabilitadas", JCheckBox.class);
+            JCheckBox chkPersistirBusqueda = obtenerCampo(dialogoReabierto, "chkPersistirBusqueda", JCheckBox.class);
+            JCheckBox chkPersistirSeveridad = obtenerCampo(dialogoReabierto, "chkPersistirSeveridad", JCheckBox.class);
+            JComboBox<String> comboFuenteEstandar = obtenerCampo(dialogoReabierto, "comboFuenteEstandar", JComboBox.class);
+            JSpinner spinnerTamanioEstandar = obtenerCampo(dialogoReabierto, "spinnerTamanioEstandar", JSpinner.class);
+            JComboBox<String> comboFuenteMono = obtenerCampo(dialogoReabierto, "comboFuenteMono", JComboBox.class);
+            JSpinner spinnerTamanioMono = obtenerCampo(dialogoReabierto, "spinnerTamanioMono", JSpinner.class);
+
+            assertEquals(IdiomaUI.EN, comboIdioma.getSelectedItem(), "El idioma debe persistirse");
+            assertEquals("9", txtRetraso.getText(), "El retraso debe persistirse");
+            assertEquals("4", txtMaximoConcurrente.getText(), "El máximo concurrente debe persistirse");
+            assertEquals("2345", txtMaximoHallazgosTabla.getText(), "El máximo de hallazgos debe persistirse");
+            assertEquals("876", txtMaximoTareas.getText(), "El máximo de tareas debe persistirse");
+            assertTrue(chkDetallado.isSelected(), "El modo detallado debe persistirse");
+            assertTrue(chkIgnorarSSL.isSelected(), "Ignorar SSL debe persistirse");
+            assertTrue(chkSoloProxy.isSelected(), "Solo Proxy debe persistirse");
+            assertFalse(chkAlertasHabilitadas.isSelected(), "Alertas debe persistirse");
+            assertTrue(chkPersistirBusqueda.isSelected(), "Persistir búsqueda debe persistirse");
+            assertTrue(chkPersistirSeveridad.isSelected(), "Persistir severidad debe persistirse");
+            assertEquals(16, spinnerTamanioEstandar.getValue(), "El tamaño de fuente estándar debe persistirse");
+            assertEquals(15, spinnerTamanioMono.getValue(), "El tamaño de fuente mono debe persistirse");
+            assertEquals(fuenteEstandarEsperadaHolder[0], comboFuenteEstandar.getSelectedItem(),
+                    "La fuente estándar elegida debe persistirse");
+            assertEquals(fuenteMonoEsperadaHolder[0], comboFuenteMono.getSelectedItem(),
+                    "La fuente mono elegida debe persistirse");
+            assertEquals(fuenteEstandarEsperadaHolder[0], configRecargada.obtenerNombreFuenteEstandar(),
+                    "La configuración recargada debe conservar la fuente estándar");
+            assertEquals(fuenteMonoEsperadaHolder[0], configRecargada.obtenerNombreFuenteMono(),
+                    "La configuración recargada debe conservar la fuente mono");
+        } finally {
+            destruirDialogo(dialogoReabierto);
+        }
+    }
+
+    @Test
     @DisplayName("Cambiar idioma en ajustes no muta config hasta guardar")
     void testIdiomaNoMutaConfigHastaGuardar() throws Exception {
         Path tempDir = Files.createTempDirectory("burpia-dialogo-idioma-sin-guardar");
@@ -521,14 +700,17 @@ class DialogoConfiguracionTimeoutPorModeloTest {
     }
 
     @Test
-    @DisplayName("Guardar con número inválido en límites no lanza error y no persiste cambios")
+    @DisplayName("Guardar con número inválido en límites bloquea persistencia")
     void testGuardarConNumeroInvalidoNoPersiste() throws Exception {
         Path tempDir = Files.createTempDirectory("burpia-dialogo-numero-invalido");
         userHomeOriginal = System.getProperty("user.home");
         System.setProperty("user.home", tempDir.toString());
 
         ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerMaximoTareasTabla(321);
         GestorConfiguracion gestor = new GestorConfiguracion();
+        gestor.guardarConfiguracion(config);
         AtomicBoolean guardadoCallback = new AtomicBoolean(false);
         DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> guardadoCallback.set(true));
 
@@ -537,6 +719,10 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
             JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
             JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+            JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
+            JTextField txtMaximoConcurrente = obtenerCampo(dialogo, "txtMaximoConcurrente", JTextField.class);
+            JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogo, "txtMaximoHallazgosTabla", JTextField.class);
+            JTextField txtMaxTokens = obtenerCampo(dialogo, "txtMaxTokens", JTextField.class);
             JTextField txtMaximoTareas = obtenerCampo(dialogo, "txtMaximoTareas", JTextField.class);
 
             SwingUtilities.invokeAndWait(() -> {
@@ -544,6 +730,10 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 comboModelo.setSelectedItem("glm-5");
                 comboModelo.getEditor().setItem("glm-5");
                 txtClave.setText("test-key");
+                txtRetraso.setText("5");
+                txtMaximoConcurrente.setText("3");
+                txtMaximoHallazgosTabla.setText("1000");
+                txtMaxTokens.setText("4096");
                 txtTimeoutModelo.setText("120");
                 txtMaximoTareas.setText("abc");
             });
@@ -558,10 +748,15 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                     throw new RuntimeException(e);
                 }
             });
+            Thread.sleep(250);
             flushEdt();
 
             assertFalse(guardadoCallback.get(), "Con formato inválido no debe ejecutar guardado");
             assertTrue(dialogo.isDisplayable(), "El diálogo debe permanecer abierto tras validación fallida");
+            assertEquals("OpenAI", config.obtenerProveedorAI(),
+                    "La configuración no debe mutar si la validación de límites falla");
+            assertEquals(321, config.obtenerMaximoTareasTabla(),
+                    "El valor previo debe conservarse cuando el campo numérico es inválido");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -789,6 +984,20 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 recolectarComponentes(hijo, tipo, salida);
             }
         }
+    }
+
+    private String seleccionarFuenteAlternativa(JComboBox<String> comboFuentes) {
+        if (comboFuentes == null || comboFuentes.getItemCount() == 0) {
+            return null;
+        }
+        Object seleccionActual = comboFuentes.getSelectedItem();
+        for (int i = 0; i < comboFuentes.getItemCount(); i++) {
+            String candidata = comboFuentes.getItemAt(i);
+            if (candidata != null && !candidata.equals(seleccionActual)) {
+                return candidata;
+            }
+        }
+        return comboFuentes.getItemAt(0);
     }
 
     /**

@@ -244,6 +244,26 @@ class GestorConfiguracionTest {
     }
 
     @Test
+    @DisplayName("Guarda y carga máximo de tareas en tabla")
+    void testPersistenciaMaximoTareasTabla() throws Exception {
+        configurarDirectorioTemporalComoHome();
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerMaximoTareasTabla(876);
+
+        assertTrue(gestor.guardarConfiguracion(config), "assertTrue failed at GestorConfiguracionTest.java:maximoTareas:guardar");
+
+        String json = leerConfigJson();
+        assertTrue(json.contains("\"maximoTareasTabla\": 876"),
+                "assertTrue failed at GestorConfiguracionTest.java:maximoTareas:json");
+
+        ConfiguracionAPI cargada = gestor.cargarConfiguracion();
+        assertEquals(876, cargada.obtenerMaximoTareasTabla(),
+                "assertEquals failed at GestorConfiguracionTest.java:maximoTareas:carga");
+    }
+
+    @Test
     @DisplayName("JSON sin timeout por modelo mantiene fallback global")
     void testJsonSinTimeoutPorModeloMantieneFallback() throws Exception {
         configurarDirectorioTemporalComoHome();

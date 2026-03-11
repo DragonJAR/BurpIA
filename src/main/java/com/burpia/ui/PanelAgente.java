@@ -535,36 +535,6 @@ public class PanelAgente extends JPanel {
     }
 
     private JPanel crearPanelControles() {
-        // CONFIABILIDAD: Responsive con threshold-based layout switching
-        // Mismo patrón que PanelTareas, PanelEstadisticas y PanelConsola
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, EstilosUI.ESPACIADO_COMPONENTES, 4)) {
-            private static final int UMBRAL_RESPONSIVE = 750;
-            private boolean ultimoLayoutHorizontal = true;
-
-            @Override
-            public void doLayout() {
-                // CONFIABILIDAD: Obtener ancho del contenedor padre
-                int anchoPadre = getParent() != null ? getParent().getWidth() : getWidth();
-                int anchoDisponible = anchoPadre - 40; // 40 = margen total de bordes
-                boolean esLayoutHorizontal = anchoDisponible >= UMBRAL_RESPONSIVE;
-
-                // EFICIENCIA: Solo cambiar layout si es necesario (cache de último estado)
-                if (esLayoutHorizontal != ultimoLayoutHorizontal) {
-                    if (esLayoutHorizontal) {
-                        setLayout(new FlowLayout(FlowLayout.LEFT, EstilosUI.ESPACIADO_COMPONENTES, 4));
-                    } else {
-                        // DRY: 2 filas agrupadas lógicamente:
-                        // Fila 1: reiniciar, Ctrl+C, inyectar, cambiar, ayuda
-                        // Fila 2: delay label, spinner
-                        setLayout(new GridLayout(2, 1, 0, 8));
-                    }
-                    ultimoLayoutHorizontal = esLayoutHorizontal;
-                }
-                super.doLayout();
-            }
-        };
-        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), MARGEN_BORDE_TITULO_GRANDE, 16));
-
         btnReiniciar = crearBoton("🔄 " + I18nUI.Consola.BOTON_REINICIAR(),
             I18nUI.Tooltips.Agente.REINICIAR(), e -> reiniciarYSolicitarFoco());
 
@@ -579,17 +549,6 @@ public class PanelAgente extends JPanel {
 
         btnAyudaAgente = crearBoton("❓",
             resolverTooltipAyudaAgente(), e -> abrirGuiaAgenteActual());
-
-        // CONFIABILIDAD: Orden de menor a mayor impacto
-        // 1. Ctrl+C: Interrupción suave (detiene sin destruir)
-        // 2. Reiniciar: Recrear estado (destruye y recrea)
-        // 3. Inyectar: Acción productiva
-        panel.add(btnCtrlC);
-        panel.add(btnReiniciar);
-        panel.add(btnInyectarPayload);
-        panel.add(new JSeparator(SwingConstants.VERTICAL));
-        panel.add(btnCambiarAgente);
-        panel.add(btnAyudaAgente);
 
         lblDelay = new JLabel(I18nUI.Consola.ETIQUETA_DELAY());
         lblDelay.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -612,9 +571,16 @@ public class PanelAgente extends JPanel {
             }
         });
 
-        panel.add(new JSeparator(SwingConstants.VERTICAL));
-        panel.add(lblDelay);
-        panel.add(spinnerDelay);
+        JPanel panel = new PanelFilasResponsive(
+            750,
+            EstilosUI.ESPACIADO_COMPONENTES,
+            8,
+            List.of(
+                List.of(btnCtrlC, btnReiniciar, btnInyectarPayload, btnCambiarAgente, btnAyudaAgente),
+                List.of(lblDelay, spinnerDelay)
+            )
+        );
+        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), MARGEN_BORDE_TITULO_GRANDE, 16));
 
         return panel;
     }
@@ -837,7 +803,8 @@ public class PanelAgente extends JPanel {
             proceso.waitFor(timeoutMs, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Error esperando cierre de proceso PTY"));
         }
     }
 

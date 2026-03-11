@@ -52,6 +52,45 @@ public class ConfigDialogController {
     private boolean guardandoConfiguracion = false;
     private boolean actualizandoRutaFlag = false;
 
+    private static final class ValoresNumericosConfiguracion {
+        private final int retrasoSegundos;
+        private final int maximoConcurrente;
+        private final int maximoHallazgosTabla;
+        private final int maximoTareas;
+
+        private ValoresNumericosConfiguracion(int retrasoSegundos,
+                                              int maximoConcurrente,
+                                              int maximoHallazgosTabla,
+                                              int maximoTareas) {
+            this.retrasoSegundos = retrasoSegundos;
+            this.maximoConcurrente = maximoConcurrente;
+            this.maximoHallazgosTabla = maximoHallazgosTabla;
+            this.maximoTareas = maximoTareas;
+        }
+    }
+
+    private static final class ResultadoValidacionEnteroDialogo {
+        private final boolean valido;
+        private final int valor;
+        private final String mensajeError;
+        private final String campo;
+
+        private ResultadoValidacionEnteroDialogo(boolean valido, int valor, String mensajeError, String campo) {
+            this.valido = valido;
+            this.valor = valor;
+            this.mensajeError = mensajeError;
+            this.campo = campo;
+        }
+
+        private static ResultadoValidacionEnteroDialogo valido(int valor) {
+            return new ResultadoValidacionEnteroDialogo(true, valor, null, null);
+        }
+
+        private static ResultadoValidacionEnteroDialogo invalido(String mensajeError, String campo) {
+            return new ResultadoValidacionEnteroDialogo(false, 0, mensajeError, campo);
+        }
+    }
+
     public ConfigDialogController(DialogoConfiguracion dialogo, 
                                 ConfiguracionAPI config, 
                                 GestorConfiguracion gestorConfig) {
@@ -406,7 +445,7 @@ public class ConfigDialogController {
 
     private void manejarCambioModelo() {
         gestorLogging.info(ORIGEN_LOG, "Manejando cambio de modelo");
-        SwingUtilities.invokeLater(this::actualizarTimeoutModeloSeleccionado);
+        SwingUtilities.invokeLater(providerManager::actualizarTimeoutModeloSeleccionadoEnUI);
     }
 
     private void manejarCambioAgente() {
@@ -510,38 +549,14 @@ public class ConfigDialogController {
     }
 
     public void manejarProbarConexion() {
-        EstadoProveedorUI estadoUI = providerManager.extraerEstadoActual();
+        EstadoProveedorUI estadoUI = obtenerEstadoProveedorValidado(true, true, false);
         if (estadoUI == null) {
-            UIUtils.mostrarAdvertencia(dialogo, I18nUI.Configuracion.TITULO_VALIDACION(),
-                I18nUI.Configuracion.MSG_SELECCIONA_PROVEEDOR());
             return;
         }
 
-        String urlApi = estadoUI.getBaseUrl();
-        if (Normalizador.esVacio(urlApi)) {
-            UIUtils.mostrarAdvertencia(dialogo, I18nUI.Configuracion.TITULO_VALIDACION(),
-                I18nUI.Configuracion.MSG_URL_VACIA());
-            JTextField txtUrl = dialogo.obtenerTxtUrl();
-            if (txtUrl != null) {
-                txtUrl.requestFocus();
-            }
-            return;
-        }
-
-        String claveApi = estadoUI.getApiKey().trim();
         String proveedorSeleccionado = providerManager.obtenerProveedorActual();
-        ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedorSeleccionado);
-        if (configProveedor != null && configProveedor.requiereClaveApi()) {
-            if (Normalizador.esVacio(claveApi)) {
-                UIUtils.mostrarAdvertencia(dialogo, I18nUI.Configuracion.TITULO_VALIDACION(),
-                    I18nUI.Configuracion.MSG_API_KEY_VACIA(proveedorSeleccionado));
-                JPasswordField txtClave = dialogo.obtenerTxtClave();
-                if (txtClave != null) {
-                    txtClave.requestFocus();
-                }
-                return;
-            }
-        }
+        String urlApi = estadoUI.getBaseUrl();
+        String claveApi = estadoUI.getApiKey().trim();
 
         JButton btnProbarConexion = dialogo.obtenerBtnProbarConexion();
         if (btnProbarConexion != null) {
@@ -621,8 +636,13 @@ public class ConfigDialogController {
             return;
         }
 
-        EstadoProveedorUI estadoUI = providerManager.extraerEstadoActual();
+        EstadoProveedorUI estadoUI = obtenerEstadoProveedorValidado(false, false, true);
         if (estadoUI == null) {
+            return;
+        }
+
+        ValoresNumericosConfiguracion valoresNumericos = obtenerValoresNumericosConfiguracionValidados();
+        if (valoresNumericos == null) {
             return;
         }
 
@@ -642,7 +662,7 @@ public class ConfigDialogController {
                 StringBuilder errorBuilder = new StringBuilder();
                 try {
                     snapshot = config.crearSnapshot();
-                    aplicarConfiguracionASnapshot(snapshot, estadoUI, proveedorSeleccionado);
+                    aplicarConfiguracionASnapshot(snapshot, estadoUI, proveedorSeleccionado, valoresNumericos);
 
                     Map<String, String> errores = snapshot.validar();
                     if (!errores.isEmpty()) {
@@ -701,9 +721,10 @@ public class ConfigDialogController {
         worker.execute();
     }
 
-    private void aplicarConfiguracionASnapshot(ConfiguracionAPI snapshot, 
-                                            EstadoProveedorUI estadoUI, 
-                                            String proveedorSeleccionado) {
+    private void aplicarConfiguracionASnapshot(ConfiguracionAPI snapshot,
+                                               EstadoProveedorUI estadoUI,
+                                               String proveedorSeleccionado,
+                                               ValoresNumericosConfiguracion valoresNumericos) {
         JComboBox<IdiomaUI> comboIdioma = dialogo.obtenerComboIdioma();
         if (comboIdioma != null) {
             IdiomaUI idiomaSeleccionado = (IdiomaUI) comboIdioma.getSelectedItem();
@@ -760,45 +781,10 @@ public class ConfigDialogController {
             snapshot.establecerPersistirFiltroSeveridadHallazgos(chkPersistirSeveridad.isSelected());
         }
 
-        JTextField txtRetraso = dialogo.obtenerTxtRetraso();
-        if (txtRetraso != null) {
-            ConfigValidator.ValidationResultEntero resultadoRetraso = 
-                ConfigValidator.validarEntero(txtRetraso.getText(), "retrasoSegundos", 
-                    ConfiguracionAPI.MINIMO_RETRASO_SEGUNDOS, ConfiguracionAPI.MAXIMO_RETRASO_SEGUNDOS);
-            if (resultadoRetraso.esValido()) {
-                snapshot.establecerRetrasoSegundos(resultadoRetraso.getValor());
-            }
-        }
-
-        JTextField txtMaximoConcurrente = dialogo.obtenerTxtMaximoConcurrente();
-        if (txtMaximoConcurrente != null) {
-            ConfigValidator.ValidationResultEntero resultadoConcurrente = 
-                ConfigValidator.validarEntero(txtMaximoConcurrente.getText(), "maximoConcurrente",
-                    ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE, ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE);
-            if (resultadoConcurrente.esValido()) {
-                snapshot.establecerMaximoConcurrente(resultadoConcurrente.getValor());
-            }
-        }
-
-        JTextField txtMaximoHallazgosTabla = dialogo.obtenerTxtMaximoHallazgosTabla();
-        if (txtMaximoHallazgosTabla != null) {
-            ConfigValidator.ValidationResultEntero resultadoHallazgos = 
-                ConfigValidator.validarEntero(txtMaximoHallazgosTabla.getText(), "maximoHallazgos",
-                    ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA, ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA);
-            if (resultadoHallazgos.esValido()) {
-                snapshot.establecerMaximoHallazgosTabla(resultadoHallazgos.getValor());
-            }
-        }
-
-        JTextField txtMaximoTareas = dialogo.obtenerTxtMaximoTareas();
-        if (txtMaximoTareas != null) {
-            ConfigValidator.ValidationResultEntero resultadoTareas = 
-                ConfigValidator.validarEntero(txtMaximoTareas.getText(), "maximoTareas",
-                    ConfiguracionAPI.MINIMO_TAREAS_TABLA, ConfiguracionAPI.MAXIMO_TAREAS_TABLA);
-            if (resultadoTareas.esValido()) {
-                snapshot.establecerMaximoTareasTabla(resultadoTareas.getValor());
-            }
-        }
+        snapshot.establecerRetrasoSegundos(valoresNumericos.retrasoSegundos);
+        snapshot.establecerMaximoConcurrente(valoresNumericos.maximoConcurrente);
+        snapshot.establecerMaximoHallazgosTabla(valoresNumericos.maximoHallazgosTabla);
+        snapshot.establecerMaximoTareasTabla(valoresNumericos.maximoTareas);
 
         JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
         JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
@@ -969,14 +955,10 @@ public class ConfigDialogController {
     }
 
     private void manejarRestaurarFuentesPorDefecto() {
-        int confirm = JOptionPane.showConfirmDialog(
-            dialogo,
-            I18nUI.Configuracion.MSG_CONFIRMAR_RESTAURAR_FUENTES(),
-            I18nUI.Configuracion.TITULO_CONFIRMAR_RESTAURACION(),
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE);
-
-        if (confirm == JOptionPane.YES_OPTION) {
+        if (UIUtils.confirmarAdvertencia(
+                dialogo,
+                I18nUI.Configuracion.TITULO_CONFIRMAR_RESTAURACION(),
+                I18nUI.Configuracion.MSG_CONFIRMAR_RESTAURAR_FUENTES())) {
             JComboBox<String> comboFuenteEstandar = dialogo.obtenerComboFuenteEstandar();
             JSpinner spinnerTamanioEstandar = dialogo.obtenerSpinnerTamanioEstandar();
             JComboBox<String> comboFuenteMono = dialogo.obtenerComboFuenteMono();
@@ -1031,27 +1013,7 @@ public class ConfigDialogController {
     }
 
     public void actualizarTimeoutModeloSeleccionado() {
-        JTextField txtTimeoutModelo = dialogo.obtenerTxtTimeoutModelo();
-        if (txtTimeoutModelo == null) {
-            return;
-        }
-
-        String proveedorSeleccionado = providerManager.obtenerProveedorActual();
-        if (Normalizador.esVacio(proveedorSeleccionado)) {
-            txtTimeoutModelo.setText(String.valueOf(config.obtenerTiempoEsperaAI()));
-            return;
-        }
-
-        String modelo = obtenerModeloSeleccionado();
-        if (Normalizador.esVacio(modelo)) {
-            ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedorSeleccionado);
-            if (configProveedor != null) {
-                modelo = configProveedor.obtenerModeloPorDefecto();
-            }
-        }
-
-        int timeout = config.obtenerTiempoEsperaParaModelo(proveedorSeleccionado, modelo);
-        txtTimeoutModelo.setText(String.valueOf(timeout));
+        providerManager.actualizarTimeoutModeloSeleccionadoEnUI();
     }
 
     private String resolverRutaBinarioAgente(String agenteSeleccionado) {
@@ -1067,76 +1029,11 @@ public class ConfigDialogController {
     }
 
     private String obtenerModeloSeleccionado() {
-        JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
-        if (comboModelo == null) {
-            return "";
-        }
-
-        String modeloActual = (String) comboModelo.getSelectedItem();
-        if (modeloActual == null) {
-            return "";
-        }
-        if (!esOpcionModeloCustom(modeloActual)) {
-            return normalizarModeloSeleccionado(modeloActual);
-        }
-        Object editorValue = comboModelo.getEditor().getItem();
-        return editorValue != null ? normalizarModeloSeleccionado(editorValue.toString()) : "";
-    }
-
-    private boolean esOpcionModeloCustom(String valor) {
-        return I18nUI.Configuracion.OPCION_MODELO_CUSTOM().equals(valor);
-    }
-
-    private String normalizarModeloSeleccionado(String modelo) {
-        if (Normalizador.esVacio(modelo)) {
-            return "";
-        }
-        String limpio = modelo.trim();
-        return ":".equals(limpio) ? "" : limpio;
-    }
-
-    private List<String> normalizarModelos(List<String> modelos) {
-        List<String> unicos = new ArrayList<>();
-        if (modelos != null) {
-            for (String modelo : modelos) {
-                String limpio = normalizarModeloSeleccionado(modelo);
-                if (!limpio.isEmpty() && !unicos.contains(limpio)) {
-                    unicos.add(limpio);
-                }
-            }
-        }
-        return unicos;
+        return providerManager.obtenerModeloSeleccionadoActual();
     }
 
     private void cargarModelosEnCombo(List<String> modelos, String preferido) {
-        JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
-        if (comboModelo == null) {
-            return;
-        }
-
-        comboModelo.removeAllItems();
-        comboModelo.addItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
-
-        List<String> modelosNormalizados = normalizarModelos(modelos);
-        for (String modelo : modelosNormalizados) {
-            comboModelo.addItem(modelo);
-        }
-
-        String preferidoNormalizado = normalizarModeloSeleccionado(preferido);
-        if (preferidoNormalizado.isEmpty() && !modelosNormalizados.isEmpty()) {
-            preferidoNormalizado = modelosNormalizados.get(0);
-        }
-
-        for (int i = 0; i < comboModelo.getItemCount(); i++) {
-            if (preferidoNormalizado.equals(comboModelo.getItemAt(i))) {
-                comboModelo.setSelectedIndex(i);
-                return;
-            }
-        }
-
-        comboModelo.setSelectedItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
-        comboModelo.getEditor().setItem(preferidoNormalizado);
-        actualizarTimeoutModeloSeleccionado();
+        providerManager.cargarModelosEnComboEnUI(modelos, preferido);
     }
 
     private List<String> obtenerModelosDesdeAPI(String proveedor) {
@@ -1225,6 +1122,173 @@ public class ConfigDialogController {
             return I18nUI.Configuracion.SIN_DETALLE_ERROR();
         }
         return mensaje.trim();
+    }
+
+    private EstadoProveedorUI obtenerEstadoProveedorValidado(boolean requiereUrlExplicita,
+                                                             boolean validarApiKey,
+                                                             boolean mostrarComoError) {
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerManager.validarEstadoActual(requiereUrlExplicita, validarApiKey);
+        if (resultado.esValido()) {
+            return resultado.getEstado();
+        }
+
+        mostrarErrorValidacionProveedor(resultado, mostrarComoError);
+        return null;
+    }
+
+    private ValoresNumericosConfiguracion obtenerValoresNumericosConfiguracionValidados() {
+        ResultadoValidacionEnteroDialogo retraso = validarCampoEntero(
+                dialogo.obtenerTxtRetraso(),
+                "retrasoSegundos",
+                limpiarEtiquetaCampo(I18nUI.Configuracion.LABEL_RETRASO()),
+                ConfiguracionAPI.MINIMO_RETRASO_SEGUNDOS,
+                ConfiguracionAPI.MAXIMO_RETRASO_SEGUNDOS);
+        if (!retraso.valido) {
+            mostrarErrorValidacionGenerica(retraso.mensajeError, retraso.campo);
+            return null;
+        }
+
+        ResultadoValidacionEnteroDialogo maximoConcurrente = validarCampoEntero(
+                dialogo.obtenerTxtMaximoConcurrente(),
+                "maximoConcurrente",
+                limpiarEtiquetaCampo(I18nUI.Configuracion.LABEL_MAXIMO_CONCURRENTE()),
+                ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE,
+                ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE);
+        if (!maximoConcurrente.valido) {
+            mostrarErrorValidacionGenerica(maximoConcurrente.mensajeError, maximoConcurrente.campo);
+            return null;
+        }
+
+        ResultadoValidacionEnteroDialogo maximoHallazgos = validarCampoEntero(
+                dialogo.obtenerTxtMaximoHallazgosTabla(),
+                "maximoHallazgos",
+                limpiarEtiquetaCampo(I18nUI.Configuracion.LABEL_MAX_HALLAZGOS_TABLA()),
+                ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA,
+                ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA);
+        if (!maximoHallazgos.valido) {
+            mostrarErrorValidacionGenerica(maximoHallazgos.mensajeError, maximoHallazgos.campo);
+            return null;
+        }
+
+        ResultadoValidacionEnteroDialogo maximoTareas = validarCampoEntero(
+                dialogo.obtenerTxtMaximoTareas(),
+                "maximoTareas",
+                limpiarEtiquetaCampo(I18nUI.Configuracion.LABEL_MAXIMO_TAREAS()),
+                ConfiguracionAPI.MINIMO_TAREAS_TABLA,
+                ConfiguracionAPI.MAXIMO_TAREAS_TABLA);
+        if (!maximoTareas.valido) {
+            mostrarErrorValidacionGenerica(maximoTareas.mensajeError, maximoTareas.campo);
+            return null;
+        }
+
+        return new ValoresNumericosConfiguracion(
+                retraso.valor,
+                maximoConcurrente.valor,
+                maximoHallazgos.valor,
+                maximoTareas.valor);
+    }
+
+    private ResultadoValidacionEnteroDialogo validarCampoEntero(JTextField campoTexto,
+                                                                String campo,
+                                                                String nombreVisible,
+                                                                int minimo,
+                                                                int maximo) {
+        ConfigValidator.ValidationResultEntero resultado = ConfigValidator.validarEntero(
+                obtenerTexto(campoTexto),
+                nombreVisible,
+                minimo,
+                maximo);
+        if (!resultado.esValido()) {
+            return ResultadoValidacionEnteroDialogo.invalido(resultado.getMensajeError(), campo);
+        }
+        return ResultadoValidacionEnteroDialogo.valido(resultado.getValor());
+    }
+
+    private String limpiarEtiquetaCampo(String etiqueta) {
+        if (Normalizador.esVacio(etiqueta)) {
+            return "";
+        }
+        String limpia = etiqueta.trim();
+        if (limpia.endsWith(":")) {
+            limpia = limpia.substring(0, limpia.length() - 1).trim();
+        }
+        return limpia;
+    }
+
+    private void mostrarErrorValidacionProveedor(ProviderConfigManager.ValidationResultEstadoProveedor resultado,
+                                                 boolean mostrarComoError) {
+        if (resultado == null || Normalizador.esVacio(resultado.getMensajeError())) {
+            return;
+        }
+
+        if (mostrarComoError) {
+            UIUtils.mostrarError(dialogo,
+                    I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
+                    resultado.getMensajeError());
+        } else {
+            UIUtils.mostrarAdvertencia(dialogo,
+                    I18nUI.Configuracion.TITULO_VALIDACION(),
+                    resultado.getMensajeError());
+        }
+        enfocarCampoConfiguracion(resultado.getCampo());
+    }
+
+    private void mostrarErrorValidacionGenerica(String mensajeError, String campo) {
+        if (Normalizador.esVacio(mensajeError)) {
+            return;
+        }
+        UIUtils.mostrarError(dialogo,
+                I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
+                mensajeError);
+        enfocarCampoConfiguracion(campo);
+    }
+
+    private void enfocarCampoConfiguracion(String campo) {
+        if (Normalizador.esVacio(campo)) {
+            return;
+        }
+
+        switch (campo) {
+            case "proveedor":
+                enfocar(dialogo.obtenerComboProveedor());
+                break;
+            case "modelo":
+                enfocar(dialogo.obtenerComboModelo());
+                break;
+            case "url":
+                enfocar(dialogo.obtenerTxtUrl());
+                break;
+            case "apiKey":
+                enfocar(dialogo.obtenerTxtClave());
+                break;
+            case "timeout":
+                enfocar(dialogo.obtenerTxtTimeoutModelo());
+                break;
+            case "maxTokens":
+                enfocar(dialogo.obtenerTxtMaxTokens());
+                break;
+            case "retrasoSegundos":
+                enfocar(dialogo.obtenerTxtRetraso());
+                break;
+            case "maximoConcurrente":
+                enfocar(dialogo.obtenerTxtMaximoConcurrente());
+                break;
+            case "maximoHallazgos":
+                enfocar(dialogo.obtenerTxtMaximoHallazgosTabla());
+                break;
+            case "maximoTareas":
+                enfocar(dialogo.obtenerTxtMaximoTareas());
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void enfocar(Component componente) {
+        if (componente != null) {
+            componente.requestFocusInWindow();
+        }
     }
 
     public boolean tieneCambiosSinGuardar() {

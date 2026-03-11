@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import javax.swing.JButton;
+import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -455,6 +456,27 @@ class PanelAgenteTransporteTest {
         }
     }
 
+    @Test
+    @DisplayName("Modo angosto agrupa controles del agente en filas lógicas")
+    void testModoAngostoAgrupaControlesEnFilasLogicas() throws Exception {
+        PanelAgente panel = crearPanelSinConsola();
+        try {
+            JPanel panelControles = obtenerPanelControles(panel);
+
+            SwingUtilities.invokeAndWait(() -> {
+                panel.setSize(500, 280);
+                panelControles.setSize(500, 140);
+                panelControles.doLayout();
+            });
+
+            assertEquals(2, panelControles.getComponentCount(), "assertEquals failed at PanelAgenteTransporteTest.java:445");
+            assertTrue(panelControles.getComponent(0) instanceof JPanel, "assertTrue failed at PanelAgenteTransporteTest.java:446");
+            assertTrue(panelControles.getComponent(1) instanceof JPanel, "assertTrue failed at PanelAgenteTransporteTest.java:447");
+        } finally {
+            panel.destruir();
+        }
+    }
+
     private PanelAgente crearPanelSinConsola() throws Exception {
         return crearPanelSinConsola(new ConfiguracionAPI());
     }
@@ -481,6 +503,12 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField(nombreCampo);
         field.setAccessible(true);
         return (JButton) field.get(panel);
+    }
+
+    private JPanel obtenerPanelControles(PanelAgente panel) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("panelControles");
+        field.setAccessible(true);
+        return (JPanel) field.get(panel);
     }
 
     private ExecutorService obtenerInyectorPty(PanelAgente panel) throws Exception {

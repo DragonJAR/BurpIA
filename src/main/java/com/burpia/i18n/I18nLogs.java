@@ -192,6 +192,7 @@ public final class I18nLogs {
         {"Error cerrando terminalWidget", "Error closing terminalWidget"},
         {"Error cerrando ttyConnector", "Error closing ttyConnector"},
         {"Error cerrando proceso PTY", "Error closing PTY process"},
+        {"Error esperando cierre de proceso PTY", "Error waiting for PTY process shutdown"},
         {"Iniciando secuencia de inyeccion automatica de agente...", "Starting automatic agent injection sequence..."},
         {"Error desconocido PTY", "Unknown PTY error"},
         {"Error de E/S iniciando proceso PTY", "I/O error starting PTY process"},
