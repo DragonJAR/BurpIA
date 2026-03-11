@@ -112,6 +112,33 @@ class ModeloTablaHallazgosTest {
 
             assertEquals(3, modelo.getRowCount(), "assertEquals failed at ModeloTablaHallazgosTest.java:113");
         }
+
+        @Test
+        @DisplayName("Agregar lote conserva los mismos hallazgos recientes que el agregado individual")
+        void testAgregarHallazgosLoteMantieneMismosRecientesQueAgregarIndividual() throws Exception {
+            ModeloTablaHallazgos modeloLote = new ModeloTablaHallazgos(3);
+            ModeloTablaHallazgos modeloIndividual = new ModeloTablaHallazgos(3);
+            List<Hallazgo> hallazgos = new ArrayList<>();
+            for (int i = 0; i < 5; i++) {
+                hallazgos.add(crearHallazgo("https://example.com/" + i, "Test " + i));
+            }
+
+            modeloLote.agregarHallazgos(hallazgos);
+            for (Hallazgo hallazgo : hallazgos) {
+                modeloIndividual.agregarHallazgo(hallazgo);
+            }
+            SwingUtilities.invokeAndWait(() -> {});
+
+            assertEquals(modeloIndividual.getRowCount(), modeloLote.getRowCount(),
+                "Ambas rutas deben respetar el mismo límite");
+            for (int i = 0; i < modeloIndividual.getRowCount(); i++) {
+                assertEquals(
+                    modeloIndividual.obtenerHallazgo(i).obtenerTitulo(),
+                    modeloLote.obtenerHallazgo(i).obtenerTitulo(),
+                    "El agregado por lote debe conservar el mismo subconjunto reciente que el agregado individual"
+                );
+            }
+        }
     }
 
     @Nested

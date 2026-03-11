@@ -26,13 +26,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
@@ -244,7 +244,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private String textoBusquedaCacheado = "";
-    private String textoBusquedaQuotado = "";
+    private Pattern patronBusquedaCacheado;
     private String severidadCacheada = "";
     private String severidadQuotada = "";
 
@@ -254,18 +254,20 @@ public class PanelHallazgos extends JPanel {
 
         if (!textoBusqueda.equals(textoBusquedaCacheado)) {
             textoBusquedaCacheado = textoBusqueda;
-            textoBusquedaQuotado = Normalizador.esVacio(textoBusqueda) ? "" : java.util.regex.Pattern.quote(textoBusqueda);
+            patronBusquedaCacheado = Normalizador.esVacio(textoBusqueda)
+                ? null
+                : Pattern.compile(Pattern.quote(textoBusqueda), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         }
 
         if (severidadSeleccionada != null && !severidadSeleccionada.equals(severidadCacheada)) {
             severidadCacheada = severidadSeleccionada;
-            severidadQuotada = java.util.regex.Pattern.quote(severidadSeleccionada);
+            severidadQuotada = Pattern.quote(severidadSeleccionada);
         }
 
         List<RowFilter<Object, Object>> filtros = new ArrayList<>();
 
-        if (Normalizador.noEsVacio(textoBusqueda)) {
-            filtros.add(RowFilter.regexFilter("(?i)" + textoBusquedaQuotado, 1, 2));
+        if (patronBusquedaCacheado != null) {
+            filtros.add(crearFiltroBusqueda(patronBusquedaCacheado));
         }
 
         if (severidadSeleccionada != null && comboSeveridad.getSelectedIndex() > 0) {
@@ -287,9 +289,44 @@ public class PanelHallazgos extends JPanel {
         sorter.setRowFilter(null);
         // Reset filter cache to ensure fresh state
         textoBusquedaCacheado = "";
-        textoBusquedaQuotado = "";
+        patronBusquedaCacheado = null;
         severidadCacheada = "";
         severidadQuotada = "";
+    }
+
+    private RowFilter<Object, Object> crearFiltroBusqueda(Pattern patronBusqueda) {
+        return new RowFilter<>() {
+            @Override
+            public boolean include(Entry<?, ?> entry) {
+                Integer filaModelo = obtenerFilaModeloDesdeEntry(entry);
+                if (filaModelo == null) {
+                    return false;
+                }
+
+                Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
+                if (hallazgo == null) {
+                    return false;
+                }
+
+                return contieneTexto(hallazgo.obtenerUrl(), patronBusqueda)
+                    || contieneTexto(hallazgo.obtenerTitulo(), patronBusqueda)
+                    || contieneTexto(hallazgo.obtenerHallazgo(), patronBusqueda);
+            }
+        };
+    }
+
+    private Integer obtenerFilaModeloDesdeEntry(RowFilter.Entry<?, ?> entry) {
+        if (entry == null || !(entry.getIdentifier() instanceof Integer)) {
+            return null;
+        }
+        Integer filaModelo = (Integer) entry.getIdentifier();
+        return filaModelo >= 0 ? filaModelo : null;
+    }
+
+    private boolean contieneTexto(String texto, Pattern patronBusqueda) {
+        return patronBusqueda != null
+            && Normalizador.noEsVacio(texto)
+            && patronBusqueda.matcher(texto).find();
     }
 
     private void exportarCSV() {
@@ -1123,10 +1160,7 @@ public class PanelHallazgos extends JPanel {
      * @return Número de hallazgos visibles, o 0 si no hay modelo
      */
     public int obtenerHallazgosVisibles() {
-        if (modelo == null) {
-            return 0;
-        }
-        return modelo.obtenerFilasVisibles();
+        return obtenerResumenHallazgosVisibles()[0];
     }
 
     /**
@@ -1136,10 +1170,59 @@ public class PanelHallazgos extends JPanel {
      * @return Array de 6 elementos: [total, critical, high, medium, low, info] o array de ceros si error
      */
     public int[] obtenerEstadisticasVisibles() {
-        if (modelo == null) {
-            return new int[6];
+        return obtenerResumenHallazgosVisibles();
+    }
+
+    private int[] obtenerResumenHallazgosVisibles() {
+        final int[][] resumen = new int[1][];
+        UIUtils.ejecutarEnEdtYEsperar(() -> resumen[0] = recopilarEstadisticasVisiblesDesdeTabla());
+        return resumen[0] != null ? resumen[0] : new int[6];
+    }
+
+    private int[] recopilarEstadisticasVisiblesDesdeTabla() {
+        int[] estadisticas = new int[6];
+        if (tabla == null || modelo == null) {
+            return estadisticas;
         }
-        return modelo.obtenerEstadisticasVisibles();
+
+        for (int filaVista = 0; filaVista < tabla.getRowCount(); filaVista++) {
+            int filaModelo = tabla.convertRowIndexToModel(filaVista);
+            if (filaModelo < 0 || modelo.estaIgnorado(filaModelo)) {
+                continue;
+            }
+
+            Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
+            if (hallazgo == null) {
+                continue;
+            }
+
+            estadisticas[0]++;
+            acumularSeveridadVisible(estadisticas, hallazgo.obtenerSeveridad());
+        }
+
+        return estadisticas;
+    }
+
+    private void acumularSeveridadVisible(int[] estadisticas, String severidad) {
+        switch (Hallazgo.normalizarSeveridad(severidad)) {
+            case Hallazgo.SEVERIDAD_CRITICAL:
+                estadisticas[1]++;
+                break;
+            case Hallazgo.SEVERIDAD_HIGH:
+                estadisticas[2]++;
+                break;
+            case Hallazgo.SEVERIDAD_MEDIUM:
+                estadisticas[3]++;
+                break;
+            case Hallazgo.SEVERIDAD_LOW:
+                estadisticas[4]++;
+                break;
+            case Hallazgo.SEVERIDAD_INFO:
+                estadisticas[5]++;
+                break;
+            default:
+                break;
+        }
     }
 
     public void establecerManejadorCambioGuardadoIssues(Consumer<Boolean> manejadorCambioGuardadoIssues) {
@@ -1292,6 +1375,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     public void destruir() {
+        temporizadorPersistenciaFiltros.stop();
         ejecutorAcciones.shutdownNow();
     }
 

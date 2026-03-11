@@ -60,17 +60,19 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             return;
         }
         ejecutarEnEdt(() -> {
+            boolean huboCambios = false;
             lock.lock();
             try {
-                datos.add(hallazgo);
-                addRow(hallazgo.aFilaTabla());
-                if (aplicarLimiteFilas()) {
+                huboCambios = agregarHallazgoInterno(hallazgo);
+                if (huboCambios && aplicarLimiteFilas()) {
                     fireTableDataChanged();
                 }
             } finally {
                 lock.unlock();
             }
-            notificarCambios();
+            if (huboCambios) {
+                notificarCambios();
+            }
         });
     }
 
@@ -85,22 +87,12 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             lock.lock();
             try {
                 for (Hallazgo hallazgo : hallazgos) {
-                    if (hallazgo == null) {
-                        continue;
+                    if (agregarHallazgoInterno(hallazgo)) {
+                        huboCambios = true;
                     }
-
-                    if (datos.size() >= limiteFilas) {
-                        break;
-                    }
-
-                    datos.add(hallazgo);
-                    Object[] rowData = hallazgo.aFilaTabla();
-                    addRow(rowData);
-                    huboCambios = true;
                 }
 
-                if (huboCambios) {
-                    aplicarLimiteFilas();
+                if (huboCambios && aplicarLimiteFilas()) {
                     fireTableDataChanged();
                 }
             } finally {
@@ -131,6 +123,15 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             }
         }
         return false;
+    }
+
+    private boolean agregarHallazgoInterno(Hallazgo hallazgo) {
+        if (hallazgo == null) {
+            return false;
+        }
+        datos.add(hallazgo);
+        addRow(hallazgo.aFilaTabla());
+        return true;
     }
 
     public void limpiar() {
@@ -205,10 +206,10 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     /**
-     * Obtiene el número de filas actualmente visibles en la tabla.
-     * Cuenta las filas que NO están ignoradas por filtros o marcas manuales.
+     * Obtiene el número de filas consideradas activas en el modelo.
+     * Cuenta solo las filas que NO están marcadas como ignoradas.
      *
-     * @return Número de filas visibles, o 0 si no hay datos
+     * @return Número de filas activas, o 0 si no hay datos
      */
     public int obtenerFilasVisibles() {
         lock.lock();
@@ -230,8 +231,8 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     /**
-     * Obtiene el conteo de hallazgos visibles agrupados por severidad.
-     * Solo cuenta hallazgos que NO están ignorados por filtros.
+     * Obtiene el conteo de hallazgos activos agrupados por severidad.
+     * Solo cuenta hallazgos que NO están marcados como ignorados.
      *
      * @return Array de 6 elementos: [total, critical, high, medium, low, info]
      */

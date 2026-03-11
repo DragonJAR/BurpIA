@@ -65,6 +65,32 @@ class PanelHallazgosFiltrosTest {
     }
 
     @Test
+    @DisplayName("Búsqueda por texto consulta también la descripción del hallazgo")
+    void testBusquedaIncluyeDescripcionHallazgo() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        modelo.agregarHallazgos(List.of(
+            new Hallazgo("https://example.com/login", "Pantalla Login", "Fuga de stack trace", "Low", "Medium"),
+            new Hallazgo("https://example.com/search", "Buscador", "SQL injection en parámetro q", "High", "High")
+        ));
+        flushEdt();
+
+        JTextField campoBusqueda = obtenerCampo(panel, "campoBusqueda", JTextField.class);
+        JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
+
+        SwingUtilities.invokeAndWait(() -> campoBusqueda.setText("sql injection"));
+        flushEdt();
+
+        assertEquals(1, tabla.getRowCount(), "La búsqueda debe encontrar coincidencias en la descripción");
+        assertEquals("Buscador", tabla.getValueAt(0, 2), "Debe conservar el hallazgo cuya descripción coincide");
+    }
+
+    @Test
     @DisplayName("Estado de guardado automático en Issues se sincroniza con el checkbox")
     void testEstadoGuardadoAutomaticoIssues() throws Exception {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
@@ -189,6 +215,45 @@ class PanelHallazgosFiltrosTest {
         metodo.setAccessible(true);
 
         assertDoesNotThrow(() -> metodo.invoke(panel, (Object) new int[]{0}));
+    }
+
+    @Test
+    @DisplayName("Conteos visibles respetan filtros activos e ignorados")
+    void testConteosVisiblesRespetanFiltrosEIgnorados() throws Exception {
+        I18nUI.establecerIdioma("es");
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        modelo.agregarHallazgos(List.of(
+            new Hallazgo("https://example.com/a", "TA", "Hallazgo A", "High", "High"),
+            new Hallazgo("https://example.com/b", "TB", "Hallazgo B", "High", "Medium"),
+            new Hallazgo("https://example.com/c", "TC", "Hallazgo C", "Low", "Low")
+        ));
+        flushEdt();
+
+        modelo.marcarComoIgnorado(0);
+        flushEdt();
+
+        JComboBox<?> comboSeveridad = obtenerCampo(panel, "comboSeveridad", JComboBox.class);
+        JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
+
+        SwingUtilities.invokeAndWait(() -> comboSeveridad.setSelectedItem(I18nUI.Hallazgos.SEVERIDAD_HIGH()));
+        flushEdt();
+
+        assertEquals(2, tabla.getRowCount(), "La vista filtrada debe mostrar los dos hallazgos High");
+        assertEquals(1, panel.obtenerHallazgosVisibles(),
+            "Los conteos visibles deben excluir hallazgos ignorados aunque sigan visibles en la tabla");
+
+        int[] estadisticas = panel.obtenerEstadisticasVisibles();
+        assertEquals(1, estadisticas[0], "Solo debe contarse un hallazgo visible y no ignorado");
+        assertEquals(0, estadisticas[1], "No debe haber Critical visibles");
+        assertEquals(1, estadisticas[2], "Debe haber un High visible");
+        assertEquals(0, estadisticas[3], "No debe haber Medium visibles");
+        assertEquals(0, estadisticas[4], "El Low quedó fuera por el filtro");
+        assertEquals(0, estadisticas[5], "No debe haber Info visibles");
     }
 
     @Test
