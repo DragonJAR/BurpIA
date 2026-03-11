@@ -97,6 +97,14 @@ public final class I18nUI {
             return tr("Configuración IA", "AI Configuration");
         }
 
+        public static String BOTON_COPIAR() {
+            return tr("Copiar", "Copy");
+        }
+
+        public static String BOTON_CERRAR() {
+            return tr("Cerrar", "Close");
+        }
+
         public static String CHECK_NO_VOLVER_MOSTRAR_ALERTA() {
             return tr("No volver a mostrar este mensaje", "Do not show this message again");
         }
@@ -331,6 +339,11 @@ public final class I18nUI {
 
         public static String TITULO_INFORMACION() {
             return tr("Información", "Information");
+        }
+
+        public static String ENCABEZADO_DETALLES_ERROR() {
+            return tr("La tarea para la siguiente URL falló:",
+                    "The task for the following URL failed:");
         }
 
         public static String TITULO_CONFIRMAR_CANCELACION() {
@@ -1636,6 +1649,10 @@ public final class I18nUI {
             return tr("💾 Guardar Ajustes", "💾 Save Settings");
         }
 
+        public static String BOTON_CERRAR() {
+            return tr("Cerrar", "Close");
+        }
+
         public static String BOTON_GUARDANDO() {
             return tr("💾 Guardando...", "💾 Saving...");
         }
@@ -2562,6 +2579,21 @@ public final class I18nUI {
         private Tooltips() {
         }
 
+        public static final class General {
+            private General() {
+            }
+
+            public static String COPIAR_PORTAPAPELES() {
+                return I18nUI.tr("Copia el contenido actual al portapapeles del sistema.",
+                        "Copy the current content to the system clipboard.");
+            }
+
+            public static String CERRAR_DIALOGO() {
+                return I18nUI.tr("Cierra esta ventana sin realizar más acciones.",
+                        "Close this window without taking further action.");
+            }
+        }
+
         public static final class Pestanias {
             private Pestanias() {
             }
@@ -2656,6 +2688,26 @@ public final class I18nUI {
                         "Analysis queue with status, URL and duration per task.");
             }
 
+            public static String COLUMNA_TIPO() {
+                return I18nUI.tr("Identificador del tipo o categoría de tarea encolada.",
+                        "Identifier for the queued task type or category.");
+            }
+
+            public static String COLUMNA_URL() {
+                return I18nUI.tr("URL objetivo asociada a la tarea de análisis.",
+                        "Target URL associated with the analysis task.");
+            }
+
+            public static String COLUMNA_ESTADO() {
+                return I18nUI.tr("Estado actual de ejecución de la tarea.",
+                        "Current execution status of the task.");
+            }
+
+            public static String COLUMNA_DURACION() {
+                return I18nUI.tr("Tiempo transcurrido o total consumido por la tarea.",
+                        "Elapsed or total time consumed by the task.");
+            }
+
             public static String PAUSAR_TODO() {
                 return I18nUI.tr("Pausa todas las tareas en cola o análisis.",
                         "Pause all queued or running tasks.");
@@ -2667,8 +2719,8 @@ public final class I18nUI {
             }
 
             public static String MENU_VER_DETALLES_ERROR() {
-                return I18nUI.tr("Muestra URL, estado y duración de la tarea con error.",
-                        "Show URL, status and duration of the failed task.");
+                return I18nUI.tr("Abre un diálogo con la URL y el detalle técnico del error de la tarea.",
+                        "Open a dialog with the task URL and technical error details.");
             }
 
             public static String MENU_REINTENTAR_UNA() {
@@ -2752,8 +2804,8 @@ public final class I18nUI {
             }
 
             public static String LIMPIAR_TODO() {
-                return I18nUI.tr("Elimina todos los hallazgos visibles en la tabla.",
-                        "Remove all visible findings from table.");
+                return I18nUI.tr("Elimina todos los hallazgos almacenados en la tabla actual.",
+                        "Remove every finding currently stored in the table.");
             }
 
             public static String GUARDAR_ISSUES() {
@@ -2770,6 +2822,31 @@ public final class I18nUI {
             public static String TABLA() {
                 return I18nUI.tr("Listado de hallazgos; doble clic para editar y clic derecho para acciones.",
                         "Findings list; double click to edit and right click for actions.");
+            }
+
+            public static String COLUMNA_HORA() {
+                return I18nUI.tr("Hora en la que BurpIA registró el hallazgo.",
+                        "Time when BurpIA recorded the finding.");
+            }
+
+            public static String COLUMNA_URL() {
+                return I18nUI.tr("URL relacionada con el hallazgo mostrado.",
+                        "URL related to the displayed finding.");
+            }
+
+            public static String COLUMNA_HALLAZGO() {
+                return I18nUI.tr("Título resumido del hallazgo detectado.",
+                        "Short title of the detected finding.");
+            }
+
+            public static String COLUMNA_SEVERIDAD() {
+                return I18nUI.tr("Clasificación de impacto estimado del hallazgo.",
+                        "Estimated impact classification for the finding.");
+            }
+
+            public static String COLUMNA_CONFIANZA() {
+                return I18nUI.tr("Nivel de confianza asignado a la detección.",
+                        "Confidence level assigned to the detection.");
             }
 
             public static String MENU_REPEATER() {
@@ -2875,6 +2952,36 @@ public final class I18nUI {
             public static String GUARDAR() {
                 return I18nUI.tr("Valida y guarda la configuración activa de BurpIA.",
                         "Validate and save current BurpIA configuration.");
+            }
+
+            public static String CERRAR() {
+                return I18nUI.tr("Cierra ajustes. Si hay cambios pendientes, pedirá confirmación.",
+                        "Close settings. If there are pending changes, confirmation will be requested.");
+            }
+
+            public static String TAB_AJUSTES_USUARIO() {
+                return I18nUI.tr("Preferencias generales de idioma, límites, alertas y fuentes.",
+                        "General preferences for language, limits, alerts, and fonts.");
+            }
+
+            public static String TAB_PROVEEDOR() {
+                return I18nUI.tr("Configuración del proveedor LLM, modelo y orden multi-proveedor.",
+                        "LLM provider, model, and multi-provider order settings.");
+            }
+
+            public static String TAB_PROMPT() {
+                return I18nUI.tr("Editor del prompt base utilizado en el análisis HTTP.",
+                        "Editor for the base prompt used in HTTP analysis.");
+            }
+
+            public static String TAB_AGENTES() {
+                return I18nUI.tr("Parámetros del agente CLI, binario y prompts asociados.",
+                        "CLI agent settings, binary path, and related prompts.");
+            }
+
+            public static String TAB_ACERCA() {
+                return I18nUI.tr("Información del proyecto, sitio web y verificación de actualizaciones.",
+                        "Project information, website, and update checks.");
             }
 
             public static String PROBAR_CONEXION() {
@@ -3022,6 +3129,21 @@ public final class I18nUI {
                         "Move selected provider down in execution order.");
             }
 
+            public static String HABILITAR_MULTI_PROVEEDOR() {
+                return I18nUI.tr("Activa la consulta secuencial a múltiples proveedores configurados.",
+                        "Enable sequential querying across configured providers.");
+            }
+
+            public static String LISTA_PROVEEDORES_DISPONIBLES() {
+                return I18nUI.tr("Proveedores disponibles para agregar a la cadena multi-proveedor.",
+                        "Providers available to add to the multi-provider chain.");
+            }
+
+            public static String LISTA_PROVEEDORES_SELECCIONADOS() {
+                return I18nUI.tr("Orden actual de proveedores que se usarán en multi-proveedor.",
+                        "Current provider order that will be used for multi-provider mode.");
+            }
+
             public static String RESTAURAR_PROMPT_AGENTE() {
                 return I18nUI.tr("Restaura el prompt de validación del agente al valor por defecto.",
                         "Restores the agent validation prompt to its default value.");
@@ -3125,6 +3247,11 @@ public final class I18nUI {
                         "Quickly switch between available agents.");
             }
 
+            public static String TERMINAL() {
+                return I18nUI.tr("Terminal embebida donde se ejecuta el agente seleccionado.",
+                        "Embedded terminal where the selected agent runs.");
+            }
+
             public static String GUIA_AGENTE(String nombreAgente) {
                 return I18nUI.trf(
                         "Abrir guía de instalación/configuración de %s.",
@@ -3140,6 +3267,11 @@ public final class I18nUI {
             public static String URL() {
                 return I18nUI.tr("URL asociada al hallazgo.",
                         "URL associated with the finding.");
+            }
+
+            public static String TITULO() {
+                return I18nUI.tr("Título corto que resume el hallazgo detectado.",
+                        "Short title summarizing the detected finding.");
             }
 
             public static String SEVERIDAD() {

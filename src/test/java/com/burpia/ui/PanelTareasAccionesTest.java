@@ -8,7 +8,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JButton;
+import javax.swing.JTable;
+import javax.swing.table.JTableHeader;
 import javax.swing.SwingUtilities;
+import java.awt.Rectangle;
+import java.awt.event.MouseEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -216,6 +220,18 @@ class PanelTareasAccionesTest {
     }
 
     @Test
+    @DisplayName("Encabezados de tabla muestran tooltips traducidos por columna")
+    void testTooltipsEncabezadosTabla() throws Exception {
+        JTable tabla = panel.obtenerTabla();
+        JTableHeader encabezado = tabla.getTableHeader();
+
+        assertTooltipEncabezado(encabezado, 0, I18nUI.Tooltips.Tareas.COLUMNA_TIPO());
+        assertTooltipEncabezado(encabezado, 1, I18nUI.Tooltips.Tareas.COLUMNA_URL());
+        assertTooltipEncabezado(encabezado, 2, I18nUI.Tooltips.Tareas.COLUMNA_ESTADO());
+        assertTooltipEncabezado(encabezado, 3, I18nUI.Tooltips.Tareas.COLUMNA_DURACION());
+    }
+
+    @Test
     @DisplayName("establecerConfiguracion aplica limite de filas de tareas desde ajustes")
     void testEstablecerConfiguracionAplicaLimiteFilas() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -270,6 +286,25 @@ class PanelTareasAccionesTest {
         Method metodo = PanelTareas.class.getDeclaredMethod("actualizarEstadisticas");
         metodo.setAccessible(true);
         return metodo;
+    }
+
+    private void assertTooltipEncabezado(JTableHeader encabezado, int columnaVista, String esperado) throws Exception {
+        Rectangle rect = encabezado.getHeaderRect(columnaVista);
+        MouseEvent evento = new MouseEvent(
+                encabezado,
+                MouseEvent.MOUSE_MOVED,
+                System.currentTimeMillis(),
+                0,
+                rect.x + Math.max(1, rect.width / 2),
+                rect.y + Math.max(1, rect.height / 2),
+                0,
+                false);
+        SwingUtilities.invokeAndWait(() -> {
+            for (var listener : encabezado.getMouseMotionListeners()) {
+                listener.mouseMoved(evento);
+            }
+        });
+        assertEquals(esperado, encabezado.getToolTipText(), "assertEquals failed at PanelTareasAccionesTest.java:286");
     }
 
     private void flushEdt() throws Exception {

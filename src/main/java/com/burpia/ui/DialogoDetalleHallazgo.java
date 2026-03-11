@@ -68,11 +68,13 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblTitulo = new JLabel(I18nUI.DetalleHallazgo.LABEL_TITULO());
+        lblTitulo.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.TITULO());
         panelContenido.add(lblTitulo, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
         txtTitulo = new JTextField();
         txtTitulo.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
+        txtTitulo.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.TITULO());
         panelContenido.add(txtTitulo, gbc);
 
         fila++;

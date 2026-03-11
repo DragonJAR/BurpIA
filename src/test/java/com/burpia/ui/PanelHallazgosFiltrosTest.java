@@ -8,9 +8,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JButton;
 import javax.swing.JTable;
+import javax.swing.table.JTableHeader;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import java.awt.Rectangle;
+import java.awt.event.MouseEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -197,6 +201,29 @@ class PanelHallazgosFiltrosTest {
         assertEquals("Low", comboSeveridad.getItemAt(4), "assertEquals failed at PanelHallazgosFiltrosTest.java:171");
         assertEquals("Info", comboSeveridad.getItemAt(5), "assertEquals failed at PanelHallazgosFiltrosTest.java:172");
         assertEquals(2, comboSeveridad.getSelectedIndex(), "assertEquals failed at PanelHallazgosFiltrosTest.java:173");
+    }
+
+    @Test
+    @DisplayName("Tabla y acción de limpieza exponen tooltips coherentes")
+    void testTooltipsTablaYLimpiarTodo() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
+        JTableHeader encabezado = tabla.getTableHeader();
+        JButton botonLimpiarTodo = obtenerCampo(panel, "botonLimpiarTodo", JButton.class);
+
+        assertTooltipEncabezado(encabezado, 0, I18nUI.Tooltips.Hallazgos.COLUMNA_HORA());
+        assertTooltipEncabezado(encabezado, 1, I18nUI.Tooltips.Hallazgos.COLUMNA_URL());
+        assertTooltipEncabezado(encabezado, 2, I18nUI.Tooltips.Hallazgos.COLUMNA_HALLAZGO());
+        assertTooltipEncabezado(encabezado, 3, I18nUI.Tooltips.Hallazgos.COLUMNA_SEVERIDAD());
+        assertTooltipEncabezado(encabezado, 4, I18nUI.Tooltips.Hallazgos.COLUMNA_CONFIANZA());
+        assertEquals(I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO(), botonLimpiarTodo.getToolTipText(),
+                "El tooltip de limpiar debe describir el comportamiento real");
     }
 
     @Test
@@ -395,6 +422,25 @@ class PanelHallazgosFiltrosTest {
         Field field = target.getClass().getDeclaredField(nombre);
         field.setAccessible(true);
         return (T) field.get(target);
+    }
+
+    private void assertTooltipEncabezado(JTableHeader encabezado, int columnaVista, String esperado) throws Exception {
+        Rectangle rect = encabezado.getHeaderRect(columnaVista);
+        MouseEvent evento = new MouseEvent(
+                encabezado,
+                MouseEvent.MOUSE_MOVED,
+                System.currentTimeMillis(),
+                0,
+                rect.x + Math.max(1, rect.width / 2),
+                rect.y + Math.max(1, rect.height / 2),
+                0,
+                false);
+        SwingUtilities.invokeAndWait(() -> {
+            for (var listener : encabezado.getMouseMotionListeners()) {
+                listener.mouseMoved(evento);
+            }
+        });
+        assertEquals(esperado, encabezado.getToolTipText(), "assertEquals failed at PanelHallazgosFiltrosTest.java:430");
     }
 
     private void flushEdt() throws Exception {

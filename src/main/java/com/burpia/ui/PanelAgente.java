@@ -489,6 +489,9 @@ public class PanelAgente extends JPanel {
         if (spinnerDelay != null) {
             spinnerDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
         }
+        if (terminalWidget != null) {
+            establecerTooltipTerminal(I18nUI.Tooltips.Agente.TERMINAL());
+        }
 
         aplicarTema();
         revalidate();
@@ -877,7 +880,22 @@ public class PanelAgente extends JPanel {
     private JediTermWidget crearTerminalWidget() {
         JediTermWidget widget = new JediTermWidget(TERMINAL_ANCHO_CARACTERES, TERMINAL_ALTO_LINEAS, new AgentTerminalSettingsProvider());
         widget.getTerminalPanel().setBorder(BorderFactory.createEmptyBorder(TERMINAL_MARGEN, TERMINAL_MARGEN, TERMINAL_MARGEN, TERMINAL_MARGEN));
+        establecerTooltipTerminal(widget, I18nUI.Tooltips.Agente.TERMINAL());
         return widget;
+    }
+
+    private void establecerTooltipTerminal(String tooltip) {
+        establecerTooltipTerminal(terminalWidget, tooltip);
+    }
+
+    private void establecerTooltipTerminal(JediTermWidget widget, String tooltip) {
+        if (widget == null) {
+            return;
+        }
+        widget.setToolTipText(tooltip);
+        if (widget.getTerminalPanel() != null) {
+            widget.getTerminalPanel().setToolTipText(tooltip);
+        }
     }
 
     private void iniciarProcesoPty(long sesionObjetivo) {

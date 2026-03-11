@@ -85,9 +85,11 @@ public class ConfigDialogView {
         
         btnGuardar = new JButton(I18nUI.Configuracion.BOTON_GUARDAR());
         btnGuardar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
+        btnGuardar.setToolTipText(I18nUI.Tooltips.Configuracion.GUARDAR());
         
-        btnCerrar = new JButton(I18nUI.DetalleHallazgo.BOTON_CANCELAR());
+        btnCerrar = new JButton(I18nUI.Configuracion.BOTON_CERRAR());
         btnCerrar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
+        btnCerrar.setToolTipText(I18nUI.Tooltips.Configuracion.CERRAR());
         
         panelBotones.add(btnGuardar);
         panelBotones.add(btnCerrar);
@@ -167,40 +169,52 @@ public class ConfigDialogView {
         String[] fuentes = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
         comboFuenteEstandar = new JComboBox<>(fuentes);
         comboFuenteEstandar.setFont(EstilosUI.FUENTE_ESTANDAR);
+        comboFuenteEstandar.setToolTipText(I18nUI.Tooltips.Configuracion.FUENTE_ESTANDAR());
         comboFuenteMono = new JComboBox<>(fuentes);
         comboFuenteMono.setFont(EstilosUI.FUENTE_ESTANDAR);
+        comboFuenteMono.setToolTipText(I18nUI.Tooltips.Configuracion.FUENTE_MONO());
 
         spinnerTamanioEstandar = new JSpinner(new SpinnerNumberModel(11, 6, 72, 1));
+        spinnerTamanioEstandar.setToolTipText(I18nUI.Tooltips.Configuracion.TAMANIO_ESTANDAR());
         spinnerTamanioMono = new JSpinner(new SpinnerNumberModel(12, 6, 72, 1));
+        spinnerTamanioMono.setToolTipText(I18nUI.Tooltips.Configuracion.TAMANIO_MONO());
 
         comboAgente = new JComboBox<>(AgenteTipo.codigosDisponibles());
         comboAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
+        comboAgente.setToolTipText(I18nUI.Tooltips.Configuracion.SELECCIONAR_AGENTE());
 
         txtAgenteBinario = crearCampoTexto(30);
+        txtAgenteBinario.setToolTipText(I18nUI.Tooltips.Configuracion.BINARIO_AGENTE());
         
         chkAgenteHabilitado = crearCheckBox(I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE());
         chkAgenteHabilitado.setFont(EstilosUI.FUENTE_ESTANDAR);
+        chkAgenteHabilitado.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_AGENTE());
 
         btnBuscarActualizaciones = new JButton(I18nUI.Configuracion.BOTON_BUSCAR_ACTUALIZACIONES());
         btnBuscarActualizaciones.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnBuscarActualizaciones.setToolTipText(I18nUI.Tooltips.Configuracion.CHECK_ACTUALIZACIONES());
 
         btnSitioWeb = new JButton(I18nUI.Configuracion.BOTON_SITIO_WEB());
         btnSitioWeb.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnSitioWeb.setToolTipText(I18nUI.Tooltips.Configuracion.SITIO_AUTOR());
 
         modeloListaDisponibles = new DefaultListModel<>();
         listaProveedoresDisponibles = new JList<>(modeloListaDisponibles);
         listaProveedoresDisponibles.setFont(EstilosUI.FUENTE_ESTANDAR);
         listaProveedoresDisponibles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listaProveedoresDisponibles.setVisibleRowCount(5);
+        listaProveedoresDisponibles.setToolTipText(I18nUI.Tooltips.Configuracion.LISTA_PROVEEDORES_DISPONIBLES());
 
         modeloListaSeleccionados = new DefaultListModel<>();
         listaProveedoresSeleccionados = new JList<>(modeloListaSeleccionados);
         listaProveedoresSeleccionados.setFont(EstilosUI.FUENTE_ESTANDAR);
         listaProveedoresSeleccionados.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         listaProveedoresSeleccionados.setVisibleRowCount(5);
+        listaProveedoresSeleccionados.setToolTipText(I18nUI.Tooltips.Configuracion.LISTA_PROVEEDORES_SELECCIONADOS());
 
         chkHabilitarMultiProveedor = new JCheckBox(I18nUI.Configuracion.LABEL_HABILITAR_MULTI_PROVEEDOR());
         chkHabilitarMultiProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
+        chkHabilitarMultiProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_MULTI_PROVEEDOR());
 
         btnAgregarProveedor = new JButton("→");
         btnAgregarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_AGREGAR());
@@ -222,6 +236,7 @@ public class ConfigDialogView {
 
         btnRestaurarFuentes = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_FUENTES());
         btnRestaurarFuentes.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnRestaurarFuentes.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_FUENTES());
     }
 
     private JTextField crearCampoTexto() {
@@ -408,12 +423,23 @@ public class ConfigDialogView {
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 3;
+        gbc.gridheight = 1;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
         panel.add(chkHabilitarMultiProveedor, gbc);
 
         fila++;
 
+        gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 3;
+        gbc.gridheight = 1;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(16, 8, 8, 8);
         panel.add(new JSeparator(SwingConstants.HORIZONTAL), gbc);
         gbc.insets = new Insets(8, 8, 8, 8);
@@ -423,19 +449,33 @@ public class ConfigDialogView {
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 1;
+        gbc.gridheight = 1;
         gbc.weightx = 1;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDORES_DISPONIBLES()), gbc);
 
         gbc.gridx = 2;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
+        gbc.gridheight = 1;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
         panel.add(new JLabel(I18nUI.Configuracion.LABEL_PROVEEDORES_SELECCIONADOS()), gbc);
 
         fila++;
 
+        gbc.gridx = 0;
         gbc.gridy = fila;
+        gbc.gridwidth = 1;
         gbc.gridheight = 5;
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1;
         gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
 
         JScrollPane scrollDisponibles = new JScrollPane(listaProveedoresDisponibles);
         scrollDisponibles.setPreferredSize(new Dimension(200, 120));
@@ -443,6 +483,7 @@ public class ConfigDialogView {
 
         gbc.gridx = 1;
         gbc.gridy = fila;
+        gbc.gridwidth = 1;
         gbc.gridheight = 1;
         gbc.weightx = 0;
         gbc.weighty = 0;
@@ -456,10 +497,13 @@ public class ConfigDialogView {
         panel.add(panelBotonesCentro, gbc);
 
         gbc.gridx = 2;
+        gbc.gridy = fila;
+        gbc.gridwidth = 1;
         gbc.gridheight = 5;
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1;
         gbc.weighty = 1;
+        gbc.anchor = GridBagConstraints.CENTER;
 
         JScrollPane scrollSeleccionados = new JScrollPane(listaProveedoresSeleccionados);
         scrollSeleccionados.setPreferredSize(new Dimension(200, 120));
@@ -474,6 +518,7 @@ public class ConfigDialogView {
         gbc.weightx = 0;
         gbc.weighty = 0;
         gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.CENTER;
 
         JPanel panelBotonesReordenar = new JPanel(new GridLayout(1, 2, 5, 0));
         panelBotonesReordenar.add(btnSubirProveedor);
@@ -485,7 +530,11 @@ public class ConfigDialogView {
         gbc.gridx = 0;
         gbc.gridy = fila;
         gbc.gridwidth = 3;
+        gbc.gridheight = 1;
+        gbc.weightx = 1;
+        gbc.weighty = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
         panel.add(lblEstadoMultiProveedor, gbc);
 
         return panel;
@@ -754,15 +803,19 @@ public class ConfigDialogView {
 
         txtAgentePromptInicial = new JTextArea();
         configurarAreaPromptAgente(txtAgentePromptInicial);
+        txtAgentePromptInicial.setToolTipText(I18nUI.Tooltips.Configuracion.PROMPT_INICIAL_AGENTE());
 
         btnRestaurarPromptAgenteInicial = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
         btnRestaurarPromptAgenteInicial.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnRestaurarPromptAgenteInicial.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_INICIAL_AGENTE());
 
         txtAgentePrompt = new JTextArea();
         configurarAreaPromptAgente(txtAgentePrompt);
+        txtAgentePrompt.setToolTipText(I18nUI.Tooltips.Configuracion.PROMPT_AGENTE());
 
         btnRestaurarPromptAgente = new JButton(I18nUI.Configuracion.BOTON_RESTAURAR_PROMPT());
         btnRestaurarPromptAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
+        btnRestaurarPromptAgente.setToolTipText(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_AGENTE());
 
         panelPrompts.add(crearSeccionPromptAgente(
                 I18nUI.Configuracion.Agentes.TITULO_PROMPT_INICIAL_AGENTE(),
@@ -976,11 +1029,23 @@ public class ConfigDialogView {
         tabbedPane.addTab(I18nUI.Configuracion.TAB_PROMPT(), crearPanelPrompt());
         tabbedPane.addTab(I18nUI.Configuracion.TAB_AGENTES(), crearPanelAgentes());
         tabbedPane.addTab(I18nUI.Configuracion.TAB_ACERCA(), crearPanelAcercaDe());
+        aplicarTooltipsPestanias();
 
         panelPrincipal.add(tabbedPane, BorderLayout.CENTER);
         panelPrincipal.add(panelBotones, BorderLayout.SOUTH);
 
         return panelPrincipal;
+    }
+
+    private void aplicarTooltipsPestanias() {
+        if (tabbedPane.getTabCount() < 5) {
+            return;
+        }
+        tabbedPane.setToolTipTextAt(0, I18nUI.Tooltips.Configuracion.TAB_AJUSTES_USUARIO());
+        tabbedPane.setToolTipTextAt(1, I18nUI.Tooltips.Configuracion.TAB_PROVEEDOR());
+        tabbedPane.setToolTipTextAt(2, I18nUI.Tooltips.Configuracion.TAB_PROMPT());
+        tabbedPane.setToolTipTextAt(3, I18nUI.Tooltips.Configuracion.TAB_AGENTES());
+        tabbedPane.setToolTipTextAt(4, I18nUI.Tooltips.Configuracion.TAB_ACERCA());
     }
 
     public JTabbedPane obtenerTabbedPane() {

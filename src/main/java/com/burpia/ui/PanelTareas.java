@@ -652,6 +652,11 @@ public class PanelTareas extends JPanel {
         tabla.getColumnModel().getColumn(COLUMNA_URL).setPreferredWidth(ANCHO_COLUMNA_URL);
         tabla.getColumnModel().getColumn(COLUMNA_ESTADO).setPreferredWidth(ANCHO_COLUMNA_ESTADO);
         tabla.getColumnModel().getColumn(COLUMNA_DURACION).setPreferredWidth(ANCHO_COLUMNA_DURACION);
+        UIUtils.instalarTooltipsEncabezadoTabla(tabla,
+                I18nUI.Tooltips.Tareas.COLUMNA_TIPO(),
+                I18nUI.Tooltips.Tareas.COLUMNA_URL(),
+                I18nUI.Tooltips.Tareas.COLUMNA_ESTADO(),
+                I18nUI.Tooltips.Tareas.COLUMNA_DURACION());
     }
 
     public void agregarTarea(Tarea tarea) {

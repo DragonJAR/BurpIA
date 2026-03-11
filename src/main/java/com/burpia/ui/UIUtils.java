@@ -1,6 +1,8 @@
 package com.burpia.ui;
 
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
 
@@ -10,6 +12,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
@@ -23,6 +26,11 @@ import java.awt.font.TextAttribute;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class UIUtils {
+    private static final String ORIGEN_LOG = "UIUtils";
+    private static final GestorLoggingUnificado GESTOR_LOGGING =
+            GestorLoggingUnificado.crearMinimal(null, null);
+    private static final String PROPIEDAD_TOOLTIPS_ENCABEZADO = "burpia.tooltips.encabezado";
+    private static final String PROPIEDAD_LISTENER_ENCABEZADO = "burpia.listener.encabezado";
     private static final int DIALOGO_COLUMNAS_MIN = 36;
     private static final int DIALOGO_COLUMNAS_MAX = 52;
     private static final int DIALOGO_FILAS_MIN = 2;
@@ -87,6 +95,60 @@ public final class UIUtils {
             ((AbstractButton) componente).setText(texto);
         }
         componente.setToolTipText(tooltip);
+    }
+
+    public static void instalarTooltipsEncabezadoTabla(JTable tabla, String... tooltipsPorModelo) {
+        if (tabla == null) {
+            return;
+        }
+        JTableHeader encabezado = tabla.getTableHeader();
+        if (encabezado == null) {
+            return;
+        }
+
+        encabezado.putClientProperty(PROPIEDAD_TOOLTIPS_ENCABEZADO,
+                tooltipsPorModelo != null ? tooltipsPorModelo.clone() : null);
+
+        if (encabezado.getClientProperty(PROPIEDAD_LISTENER_ENCABEZADO) instanceof MouseAdapter) {
+            return;
+        }
+
+        MouseAdapter listener = new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                actualizarTooltipEncabezado(encabezado, e);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                encabezado.setToolTipText(null);
+            }
+        };
+        encabezado.addMouseMotionListener(listener);
+        encabezado.addMouseListener(listener);
+        encabezado.putClientProperty(PROPIEDAD_LISTENER_ENCABEZADO, listener);
+    }
+
+    private static void actualizarTooltipEncabezado(JTableHeader encabezado, MouseEvent evento) {
+        if (encabezado == null || evento == null) {
+            return;
+        }
+        Object valor = encabezado.getClientProperty(PROPIEDAD_TOOLTIPS_ENCABEZADO);
+        if (!(valor instanceof String[])) {
+            encabezado.setToolTipText(null);
+            return;
+        }
+
+        String[] tooltips = (String[]) valor;
+        int indiceVista = encabezado.columnAtPoint(evento.getPoint());
+        if (indiceVista < 0 || indiceVista >= encabezado.getColumnModel().getColumnCount()) {
+            encabezado.setToolTipText(null);
+            return;
+        }
+
+        int indiceModelo = encabezado.getColumnModel().getColumn(indiceVista).getModelIndex();
+        String tooltip = indiceModelo >= 0 && indiceModelo < tooltips.length ? tooltips[indiceModelo] : null;
+        encabezado.setToolTipText(tooltip);
     }
 
     public static Border crearBordeTitulado(String titulo, int pV, int pH) {
@@ -292,6 +354,7 @@ public final class UIUtils {
             desktop.browse(new URI(urlLimpia));
             return true;
         } catch (Exception e) {
+            GESTOR_LOGGING.error(ORIGEN_LOG, I18nLogs.tr("No se pudo abrir URL en el navegador"), e);
             return false;
         }
     }
@@ -645,7 +708,8 @@ public final class UIUtils {
         try {
             StringSelection selection = new StringSelection(texto);
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            GESTOR_LOGGING.error(ORIGEN_LOG, I18nLogs.tr("No se pudo copiar contenido al portapapeles"), e);
         }
     }
 
@@ -653,7 +717,7 @@ public final class UIUtils {
         ejecutarEnEdt(() -> {
             JDialog dialogo = new JDialog(resolverVentanaDialogoEstable(
                     parent instanceof Window ? (Window) parent : SwingUtilities.getWindowAncestor(parent)),
-                    I18nUI.tr("Detalles del Error", "Error Details"), Dialog.ModalityType.APPLICATION_MODAL);
+                    I18nUI.Tareas.TITULO_DETALLES_ERROR(), Dialog.ModalityType.APPLICATION_MODAL);
 
             dialogo.setLayout(new BorderLayout(0, 0));
             dialogo.setResizable(true);
@@ -667,7 +731,7 @@ public final class UIUtils {
             panelCabecera.setOpaque(false);
 
             JLabel lblTitulo = new JLabel(
-                    I18nUI.tr("La tarea para la siguiente URL falló:", "The task for the following URL failed:"));
+                    I18nUI.Tareas.ENCABEZADO_DETALLES_ERROR());
             lblTitulo.setFont(EstilosUI.FUENTE_NEGRITA);
             lblTitulo.setForeground(EstilosUI.COLOR_TEXTO_NORMAL);
 
@@ -698,10 +762,12 @@ public final class UIUtils {
             JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
             panelBotones.setOpaque(false);
 
-            JButton btnCopiar = new JButton(I18nUI.tr("Copiar", "Copy"));
+            JButton btnCopiar = new JButton(I18nUI.General.BOTON_COPIAR());
+            btnCopiar.setToolTipText(I18nUI.Tooltips.General.COPIAR_PORTAPAPELES());
             btnCopiar.addActionListener(e -> copiarAlPortapapeles(error));
 
-            JButton btnCerrar = new JButton(I18nUI.tr("Cerrar", "Close"));
+            JButton btnCerrar = new JButton(I18nUI.General.BOTON_CERRAR());
+            btnCerrar.setToolTipText(I18nUI.Tooltips.General.CERRAR_DIALOGO());
             btnCerrar.addActionListener(e -> dialogo.dispose());
             btnCerrar.setFont(EstilosUI.FUENTE_BOTON_PRINCIPAL);
 

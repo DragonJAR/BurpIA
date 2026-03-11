@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JSpinner;
 import javax.swing.JPanel;
 import javax.swing.SpinnerNumberModel;
@@ -656,6 +657,30 @@ class PanelAgenteTransporteTest {
         }
     }
 
+    @Test
+    @DisplayName("Terminal embebida expone tooltip traducido")
+    void testTerminalEmbebidaExponeTooltip() throws Exception {
+        PanelAgente panel = crearPanelSinConsola();
+        try {
+            Method recrearTerminalWidget = PanelAgente.class.getDeclaredMethod("recrearTerminalWidget");
+            recrearTerminalWidget.setAccessible(true);
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    recrearTerminalWidget.invoke(panel);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            JComponent terminal = obtenerTerminalWidget(panel);
+            assertNotNull(terminal, "assertNotNull failed at PanelAgenteTransporteTest.java:468");
+            assertEquals(I18nUI.Tooltips.Agente.TERMINAL(), terminal.getToolTipText(),
+                    "assertEquals failed at PanelAgenteTransporteTest.java:470");
+        } finally {
+            panel.destruir();
+        }
+    }
+
     private PanelAgente crearPanelSinConsola() throws Exception {
         return crearPanelSinConsola(new ConfiguracionAPI());
     }
@@ -694,6 +719,12 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField("panelControles");
         field.setAccessible(true);
         return (JPanel) field.get(panel);
+    }
+
+    private JComponent obtenerTerminalWidget(PanelAgente panel) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("terminalWidget");
+        field.setAccessible(true);
+        return (JComponent) field.get(panel);
     }
 
     private ExecutorService obtenerInyectorPty(PanelAgente panel) throws Exception {

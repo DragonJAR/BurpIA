@@ -1151,6 +1151,12 @@ public class PanelHallazgos extends JPanel {
         tabla.getColumnModel().getColumn(COLUMNA_TITULO).setPreferredWidth(ANCHO_COLUMNA_TITULO);
         tabla.getColumnModel().getColumn(COLUMNA_SEVERIDAD).setPreferredWidth(ANCHO_COLUMNA_SEVERIDAD);
         tabla.getColumnModel().getColumn(COLUMNA_CONFIANZA).setPreferredWidth(ANCHO_COLUMNA_CONFIANZA);
+        UIUtils.instalarTooltipsEncabezadoTabla(tabla,
+                I18nUI.Tooltips.Hallazgos.COLUMNA_HORA(),
+                I18nUI.Tooltips.Hallazgos.COLUMNA_URL(),
+                I18nUI.Tooltips.Hallazgos.COLUMNA_HALLAZGO(),
+                I18nUI.Tooltips.Hallazgos.COLUMNA_SEVERIDAD(),
+                I18nUI.Tooltips.Hallazgos.COLUMNA_CONFIANZA());
     }
 
     public ModeloTablaHallazgos obtenerModelo() {

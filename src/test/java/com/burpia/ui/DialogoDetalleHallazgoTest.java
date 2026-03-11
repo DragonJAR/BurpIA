@@ -205,6 +205,23 @@ class DialogoDetalleHallazgoTest {
     }
 
     @Test
+    @DisplayName("Campos editables exponen tooltips coherentes")
+    void testCamposEditablesTienenTooltips() throws Exception {
+        Consumer<Hallazgo> alGuardar = h -> {};
+        DialogoDetalleHallazgo dialogo = crearDialogo(null, alGuardar);
+        try {
+            JTextField txtTitulo = obtenerCampo(dialogo, "txtTitulo");
+
+            SwingUtilities.invokeAndWait(() -> assertEquals(
+                    I18nUI.Tooltips.DetalleHallazgo.TITULO(),
+                    txtTitulo.getToolTipText(),
+                    "assertEquals failed at DialogoDetalleHallazgoTest.java:222"));
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
     @DisplayName("Diálogo usa idioma configurado al crearse")
     void testInternacionalizacion() throws Exception {
         // Arrange & Act - Test con idioma español

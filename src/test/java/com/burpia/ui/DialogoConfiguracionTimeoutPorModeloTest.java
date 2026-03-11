@@ -23,6 +23,7 @@ import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JList;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Container;
@@ -40,6 +41,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -153,6 +155,121 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                     .anyMatch(label -> I18nUI.Configuracion.LABEL_PROVEEDORES_SELECCIONADOS().equals(label.getText()));
             assertTrue(encontroEtiqueta,
                     "La pestaña Proveedor debe etiquetar explícitamente la columna de proveedores seleccionados");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    @DisplayName("Pestaña proveedor renderiza ambas listas de multi proveedor en paneles distintos")
+    void testPestaniaProveedorRenderizaAmbasListasMultiProveedor() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("minimax");
+        config.establecerProveedoresMultiConsulta(List.of("Ollama", "Claude", "Gemini"));
+        GestorConfiguracion gestor = new GestorConfiguracion();
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+        try {
+            JList<String> listaDisponibles = obtenerCampo(dialogo, "listaProveedoresDisponibles", JList.class);
+            JList<String> listaSeleccionados = obtenerCampo(dialogo, "listaProveedoresSeleccionados", JList.class);
+
+            final Component[] panelProveedorHolder = new Component[1];
+            SwingUtilities.invokeAndWait(() -> {
+                JTabbedPane tabsPrincipal = buscarPrimerComponente(dialogo.getContentPane(), JTabbedPane.class);
+                assertNotNull(tabsPrincipal, "El diálogo debe contener pestañas principales");
+                int indiceProveedor = tabsPrincipal.indexOfTab(I18nUI.Configuracion.TAB_PROVEEDOR());
+                assertTrue(indiceProveedor >= 0, "La pestaña Proveedor LLM debe existir");
+                panelProveedorHolder[0] = tabsPrincipal.getComponentAt(indiceProveedor);
+                panelProveedorHolder[0].setSize(760, 620);
+                forzarLayoutCompleto(panelProveedorHolder[0]);
+            });
+            flushEdt();
+
+            List<JScrollPane> scrolls = new ArrayList<>();
+            recolectarComponentes(panelProveedorHolder[0], JScrollPane.class, scrolls);
+            assertEquals(2, scrolls.size(), "La pestaña Proveedor debe mostrar exactamente dos listas con scroll");
+
+            JScrollPane scrollDisponibles = obtenerScrollQueEnvuelve(scrolls, listaDisponibles);
+            JScrollPane scrollSeleccionados = obtenerScrollQueEnvuelve(scrolls, listaSeleccionados);
+            assertNotNull(scrollDisponibles, "La lista de proveedores disponibles debe estar envuelta en un scroll");
+            assertNotNull(scrollSeleccionados, "La lista de proveedores seleccionados debe estar envuelta en un scroll");
+            assertTrue(listaDisponibles.getModel().getSize() > 0,
+                    "La lista de proveedores disponibles debe contener opciones no seleccionadas");
+            assertNotEquals(scrollDisponibles.getBounds(), scrollSeleccionados.getBounds(),
+                    "Cada lista debe ocupar un panel distinto y no solaparse");
+            assertTrue(scrollDisponibles.getBounds().width > 0,
+                    "La lista de disponibles debe recibir ancho real tras el layout");
+            assertTrue(scrollSeleccionados.getBounds().width > 0,
+                    "La lista de seleccionados debe recibir ancho real tras el layout");
+            assertTrue(scrollDisponibles.getX() < scrollSeleccionados.getX(),
+                    "La lista de disponibles debe renderizarse a la izquierda de la seleccionada");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Controles críticos de ajustes exponen tooltips y labels correctos")
+    void testControlesCriticosExponenTooltips() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+        try {
+            JButton btnGuardar = obtenerCampo(dialogo, "btnGuardar", JButton.class);
+            JButton btnCerrar = obtenerCampo(dialogo, "btnCerrar", JButton.class);
+            JComboBox<String> comboFuenteEstandar = obtenerCampo(dialogo, "comboFuenteEstandar", JComboBox.class);
+            JSpinner spinnerTamanioEstandar = obtenerCampo(dialogo, "spinnerTamanioEstandar", JSpinner.class);
+            JComboBox<String> comboFuenteMono = obtenerCampo(dialogo, "comboFuenteMono", JComboBox.class);
+            JSpinner spinnerTamanioMono = obtenerCampo(dialogo, "spinnerTamanioMono", JSpinner.class);
+            JButton btnRestaurarFuentes = obtenerCampo(dialogo, "btnRestaurarFuentes", JButton.class);
+            JCheckBox chkHabilitarMultiProveedor = obtenerCampo(dialogo, "chkHabilitarMultiProveedor", JCheckBox.class);
+            JList<String> listaDisponibles = obtenerCampo(dialogo, "listaProveedoresDisponibles", JList.class);
+            JList<String> listaSeleccionados = obtenerCampo(dialogo, "listaProveedoresSeleccionados", JList.class);
+            JComboBox<String> comboAgente = obtenerCampo(dialogo, "comboAgente", JComboBox.class);
+            JTextField txtAgenteBinario = obtenerCampo(dialogo, "txtAgenteBinario", JTextField.class);
+            JCheckBox chkAgenteHabilitado = obtenerCampo(dialogo, "chkAgenteHabilitado", JCheckBox.class);
+            JTextArea txtAgentePromptInicial = obtenerCampo(dialogo, "txtAgentePromptInicial", JTextArea.class);
+            JTextArea txtAgentePrompt = obtenerCampo(dialogo, "txtAgentePrompt", JTextArea.class);
+            JButton btnRestaurarPromptAgenteInicial = obtenerCampo(dialogo, "btnRestaurarPromptAgenteInicial", JButton.class);
+            JButton btnRestaurarPromptAgente = obtenerCampo(dialogo, "btnRestaurarPromptAgente", JButton.class);
+            JButton btnSitioWeb = obtenerCampo(dialogo, "btnSitioWeb", JButton.class);
+            JButton btnBuscarActualizaciones = obtenerCampo(dialogo, "btnBuscarActualizaciones", JButton.class);
+
+            final JTabbedPane[] tabsHolder = new JTabbedPane[1];
+            SwingUtilities.invokeAndWait(() -> tabsHolder[0] = buscarPrimerComponente(dialogo.getContentPane(), JTabbedPane.class));
+            JTabbedPane tabs = tabsHolder[0];
+
+            assertNotNull(tabs, "El diálogo debe contener pestañas principales");
+            assertEquals(I18nUI.Configuracion.BOTON_CERRAR(), btnCerrar.getText(),
+                    "El footer debe usar la acción Cerrar y no Cancelar");
+            assertEquals(I18nUI.Tooltips.Configuracion.GUARDAR(), btnGuardar.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.CERRAR(), btnCerrar.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.FUENTE_ESTANDAR(), comboFuenteEstandar.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.TAMANIO_ESTANDAR(), spinnerTamanioEstandar.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.FUENTE_MONO(), comboFuenteMono.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.TAMANIO_MONO(), spinnerTamanioMono.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.RESTAURAR_FUENTES(), btnRestaurarFuentes.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.HABILITAR_MULTI_PROVEEDOR(), chkHabilitarMultiProveedor.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.LISTA_PROVEEDORES_DISPONIBLES(), listaDisponibles.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.LISTA_PROVEEDORES_SELECCIONADOS(), listaSeleccionados.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.SELECCIONAR_AGENTE(), comboAgente.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.BINARIO_AGENTE(), txtAgenteBinario.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.HABILITAR_AGENTE(), chkAgenteHabilitado.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.PROMPT_INICIAL_AGENTE(), txtAgentePromptInicial.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.PROMPT_AGENTE(), txtAgentePrompt.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_INICIAL_AGENTE(),
+                    btnRestaurarPromptAgenteInicial.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.RESTAURAR_PROMPT_AGENTE(),
+                    btnRestaurarPromptAgente.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.SITIO_AUTOR(), btnSitioWeb.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.CHECK_ACTUALIZACIONES(), btnBuscarActualizaciones.getToolTipText());
+            assertEquals(I18nUI.Tooltips.Configuracion.TAB_AJUSTES_USUARIO(), tabs.getToolTipTextAt(0));
+            assertEquals(I18nUI.Tooltips.Configuracion.TAB_PROVEEDOR(), tabs.getToolTipTextAt(1));
+            assertEquals(I18nUI.Tooltips.Configuracion.TAB_PROMPT(), tabs.getToolTipTextAt(2));
+            assertEquals(I18nUI.Tooltips.Configuracion.TAB_AGENTES(), tabs.getToolTipTextAt(3));
+            assertEquals(I18nUI.Tooltips.Configuracion.TAB_ACERCA(), tabs.getToolTipTextAt(4));
         } finally {
             destruirDialogo(dialogo);
         }
@@ -1075,6 +1192,33 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         if (raiz instanceof Container) {
             for (Component hijo : ((Container) raiz).getComponents()) {
                 recolectarComponentes(hijo, tipo, salida);
+            }
+        }
+    }
+
+    private JScrollPane obtenerScrollQueEnvuelve(List<JScrollPane> scrolls, Component vistaEsperada) {
+        if (scrolls == null || vistaEsperada == null) {
+            return null;
+        }
+        for (JScrollPane scroll : scrolls) {
+            if (scroll != null && vistaEsperada.equals(scroll.getViewport().getView())) {
+                return scroll;
+            }
+        }
+        return null;
+    }
+
+    private void forzarLayoutCompleto(Component componente) {
+        if (componente == null) {
+            return;
+        }
+        if (componente instanceof Container contenedor) {
+            contenedor.doLayout();
+            for (Component hijo : contenedor.getComponents()) {
+                if (hijo.getWidth() <= 0 || hijo.getHeight() <= 0) {
+                    hijo.setSize(hijo.getPreferredSize());
+                }
+                forzarLayoutCompleto(hijo);
             }
         }
     }
