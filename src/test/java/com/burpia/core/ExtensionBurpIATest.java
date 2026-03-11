@@ -179,6 +179,29 @@ class ExtensionBurpIATest {
             verify(pestania).establecerGuardadoAutomaticoIssuesActivo(false);
             verify(config, never()).establecerAutoGuardadoIssuesHabilitado(false);
         }
+
+        @Test
+        @DisplayName("Professional aplica preferencias de auto issues y auto scroll exactamente")
+        void testProfessionalAplicaPreferenciasExactasEnUi() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = mock(ConfiguracionAPI.class);
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+
+            when(config.autoGuardadoIssuesHabilitado()).thenReturn(true);
+            when(config.autoScrollConsolaHabilitado()).thenReturn(false);
+            when(pestania.obtenerPanelAgente()).thenReturn(null);
+
+            establecerCampo(extension, "config", config);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+            establecerCampo(extension, "esProfessional", true);
+
+            Method metodo = ExtensionBurpIA.class.getDeclaredMethod("inicializarPreferenciasUsuarioEnUI");
+            metodo.setAccessible(true);
+            metodo.invoke(extension);
+
+            verify(pestania).establecerGuardadoAutomaticoIssuesActivo(true);
+            verify(pestania).establecerAutoScrollConsolaActivo(false);
+        }
     }
 
     @Nested
@@ -703,6 +726,30 @@ class ExtensionBurpIATest {
             assertEquals(0, contadorResponse.get(), "assertEquals failed at ExtensionBurpIATest.java:701");
             verify(panelAgente).inyectarComando(anyString(), eq(0));
         }
+
+        @Test
+        @DisplayName("Enviar flujo al Agente retorna false con más de cuatro requests válidas")
+        void testEnviarFlujoAAgenteConMasDeCuatroRequestsValidasRetornaFalse() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerAgenteHabilitado(true);
+            config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
+            establecerCampo(extension, "config", config);
+
+            Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
+            enviarFlujoAAgente.setAccessible(true);
+
+            List<HttpRequestResponse> solicitudes = List.of(
+                crearSolicitudRespuestaConRequest("GET /1 HTTP/1.1"),
+                crearSolicitudRespuestaConRequest("GET /2 HTTP/1.1"),
+                crearSolicitudRespuestaConRequest("GET /3 HTTP/1.1"),
+                crearSolicitudRespuestaConRequest("GET /4 HTTP/1.1"),
+                crearSolicitudRespuestaConRequest("GET /5 HTTP/1.1")
+            );
+
+            Object resultado = enviarFlujoAAgente.invoke(extension, solicitudes);
+            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:726");
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -730,6 +777,14 @@ class ExtensionBurpIATest {
                 return null;
             }
         );
+    }
+
+    private HttpRequestResponse crearSolicitudRespuestaConRequest(String contenidoRequest) {
+        HttpRequestResponse solicitudRespuesta = mock(HttpRequestResponse.class);
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.toString()).thenReturn(contenidoRequest);
+        when(solicitudRespuesta.request()).thenReturn(request);
+        return solicitudRespuesta;
     }
 
     private static void establecerCampo(Object objetivo, String nombre, Object valor) throws Exception {

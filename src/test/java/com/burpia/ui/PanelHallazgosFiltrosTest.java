@@ -102,15 +102,15 @@ class PanelHallazgosFiltrosTest {
 
         JCheckBox checkbox = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosFiltrosTest.java:79");
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosFiltrosTest.java:79");
 
         SwingUtilities.invokeAndWait(checkbox::doClick);
         flushEdt();
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosFiltrosTest.java:83");
+        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosFiltrosTest.java:83");
 
         SwingUtilities.invokeAndWait(checkbox::doClick);
         flushEdt();
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosFiltrosTest.java:87");
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosFiltrosTest.java:87");
     }
 
     @Test

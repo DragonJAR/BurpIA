@@ -40,6 +40,9 @@ public class SolicitudAnalisis {
     /** Código de estado HTTP de la respuesta (ej: 200, 404, 500). */
     private final int codigoEstadoRespuesta;
 
+    /** Prompt preconstruido opcional para casos especiales como análisis de flujo. */
+    private final String promptPreconstruido;
+
     /** Encabezados de la solicitud (inicialización lazy, thread-safe). */
     private volatile String encabezados;
 
@@ -75,6 +78,7 @@ public class SolicitudAnalisis {
         this.solicitudHttp = solicitudHttp;
         this.respuestaHttp = respuestaHttp;
         this.codigoEstadoRespuesta = codigoEstadoRespuesta;
+        this.promptPreconstruido = null;
     }
 
     /**
@@ -104,6 +108,20 @@ public class SolicitudAnalisis {
                              int codigoEstadoRespuesta,
                              String encabezadosRespuesta,
                              String cuerpoRespuesta) {
+        this(url, metodo, encabezados, cuerpo, hashSolicitud, solicitudHttp, codigoEstadoRespuesta,
+            encabezadosRespuesta, cuerpoRespuesta, null);
+    }
+
+    public SolicitudAnalisis(String url,
+                             String metodo,
+                             String encabezados,
+                             String cuerpo,
+                             String hashSolicitud,
+                             HttpRequest solicitudHttp,
+                             int codigoEstadoRespuesta,
+                             String encabezadosRespuesta,
+                             String cuerpoRespuesta,
+                             String promptPreconstruido) {
         this.url = url;
         this.metodo = metodo;
         this.hashSolicitud = hashSolicitud;
@@ -114,6 +132,7 @@ public class SolicitudAnalisis {
         this.cuerpo = normalizarNull(cuerpo);
         this.encabezadosRespuesta = normalizarNull(encabezadosRespuesta);
         this.cuerpoRespuesta = normalizarNull(cuerpoRespuesta);
+        this.promptPreconstruido = promptPreconstruido;
     }
 
     /**
@@ -267,4 +286,7 @@ public class SolicitudAnalisis {
 
     /** @return El código de estado HTTP de la respuesta */
     public int obtenerCodigoEstadoRespuesta() { return codigoEstadoRespuesta; }
+
+    /** @return Prompt preconstruido o {@code null} si debe construirse normalmente */
+    public String obtenerPromptPreconstruido() { return promptPreconstruido; }
 }

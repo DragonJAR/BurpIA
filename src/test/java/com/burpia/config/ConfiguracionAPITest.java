@@ -36,6 +36,7 @@ class ConfiguracionAPITest {
         assertEquals(ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA_DEFECTO, config.obtenerMaximoHallazgosTabla(), "assertEquals failed at ConfiguracionAPITest.java:35");
         assertEquals(ConfiguracionAPI.AGENTE_DELAY_DEFECTO_MS, config.obtenerAgenteDelay(), "assertEquals failed at ConfiguracionAPITest.java:36");
         assertTrue(config.alertasClickDerechoEnviarAHabilitadas(), "assertTrue failed at ConfiguracionAPITest.java:37");
+        assertFalse(config.autoGuardadoIssuesHabilitado(), "assertFalse failed at ConfiguracionAPITest.java:38");
     }
 
     @Test

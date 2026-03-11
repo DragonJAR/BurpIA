@@ -11,6 +11,8 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.flow.FlowAnalysisConstraints;
+import com.burpia.flow.FlowAnalysisRequestBuilder;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
@@ -36,17 +38,11 @@ import com.burpia.util.PoliticaMemoria;
 import javax.swing.*;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 public class ManejadorHttpBurpIA implements HttpHandler {
@@ -79,19 +75,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final HttpRequestProcessor httpRequestProcessor;
     private final TaskExecutionManager taskExecutionManager;
     private final Map<ConfiguracionAPI.CodigoValidacionConsulta, Long> alertasConfiguracionEmitidas;
-
-    private static final class ContextoReintento {
-        private final SolicitudAnalisis solicitudAnalisis;
-        private final String evidenciaId;
-        private final long creadoMs;
-
-        private ContextoReintento(SolicitudAnalisis solicitudAnalisis,
-                String evidenciaId) {
-            this.solicitudAnalisis = solicitudAnalisis;
-            this.evidenciaId = evidenciaId;
-            this.creadoMs = System.currentTimeMillis();
-        }
-    }
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
             PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
@@ -308,6 +291,48 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 "Analisis Manual");
     }
 
+    public void analizarFlujoForzado(List<HttpRequestResponse> solicitudesRespuestaOriginales) {
+        List<HttpRequestResponse> solicitudesValidas = FlowAnalysisConstraints.filtrarSolicitudesValidas(solicitudesRespuestaOriginales);
+        if (!FlowAnalysisConstraints.tieneMinimoValido(solicitudesRespuestaOriginales)) {
+            registrarError(I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS());
+            return;
+        }
+        if (FlowAnalysisConstraints.excedeMaximoValido(solicitudesRespuestaOriginales)) {
+            registrarError(I18nUI.Contexto.MSG_FLUJO_MAXIMO_PETICIONES(FlowAnalysisConstraints.MAXIMO_PETICIONES_FLUJO));
+            return;
+        }
+
+        String urlRepresentativa = solicitudesValidas.get(0).request().url();
+        if (!puedeIniciarAnalisis("Analisis Flujo", urlRepresentativa)) {
+            return;
+        }
+
+        List<SolicitudAnalisis> solicitudesFlujo = new ArrayList<>();
+        for (HttpRequestResponse solicitudRespuesta : solicitudesValidas) {
+            SolicitudAnalisis solicitud = httpRequestProcessor.crearSolicitudAnalisisForzada(
+                solicitudRespuesta.request(),
+                solicitudRespuesta
+            );
+            if (solicitud != null) {
+                solicitudesFlujo.add(solicitud);
+            }
+        }
+
+        if (solicitudesFlujo.size() < 2) {
+            registrarError(I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS());
+            return;
+        }
+
+        SolicitudAnalisis solicitudFlujo = FlowAnalysisRequestBuilder.crearSolicitudFlujo(config, solicitudesFlujo);
+        if (solicitudFlujo == null) {
+            registrarError("No se pudo crear solicitud de análisis de flujo");
+            return;
+        }
+
+        registrar(I18nUI.Contexto.LOG_FLUJO_INICIADO(solicitudesFlujo.size()));
+        programarAnalisis(solicitudFlujo, solicitudesValidas.get(0), "Analisis Flujo");
+    }
+
     public boolean reencolarTarea(String tareaId) {
         // Usar TaskExecutionManager para reencolar
         boolean resultado = taskExecutionManager.reencolarTarea(tareaId);
@@ -336,10 +361,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         // Usar TaskExecutionManager para programar análisis
         return taskExecutionManager.programarAnalisis(solicitudAnalisis, evidenciaHttp, tipoTarea);
     }
-
-
-
-
 
 
 

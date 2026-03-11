@@ -195,7 +195,10 @@ public class OrquestadorAnalisis {
 
     private String construirPromptAnalisis() {
         gestorLogging.verbose(ORIGEN_LOG, "Construyendo prompt para URL: " + solicitud.obtenerUrl());
-        String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
+        String promptPreconstruido = solicitud.obtenerPromptPreconstruido();
+        String prompt = Normalizador.noEsVacio(promptPreconstruido)
+            ? promptPreconstruido
+            : constructorPrompt.construirPromptAnalisis(solicitud);
         gestorLogging.verbose(ORIGEN_LOG, "Longitud de prompt: " + prompt.length() + " caracteres");
         gestorLogging.verbose(ORIGEN_LOG, "Prompt (preview):\n" + resumirParaLog(prompt));
         return prompt;

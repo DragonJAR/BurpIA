@@ -2286,6 +2286,12 @@ public final class I18nUI {
             return tr("Selecciona al menos 2 peticiones válidas con request para analizar el flujo.",
                     "Select at least 2 valid requests with request data to analyze the flow.");
         }
+
+        public static String MSG_FLUJO_MAXIMO_PETICIONES(int maximo) {
+            return trf("Máximo %d peticiones en el flujo.",
+                    "Maximum %d requests in the flow.",
+                    maximo);
+        }
         
         public static String TITULO_FLUJO_REQUIERE_MULTIPLES() {
             return tr("Selección Insuficiente", "Insufficient Selection");

@@ -7,6 +7,7 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.flow.FlowAnalysisConstraints;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
@@ -188,12 +189,18 @@ public class ExtensionBurpIA implements BurpExtension {
         }
     }
 
+    private void analizarFlujoManual(List<HttpRequestResponse> solicitudesRespuestaOriginales) {
+        if (manejadorHttp != null) {
+            manejadorHttp.analizarFlujoForzado(solicitudesRespuestaOriginales);
+        }
+    }
+
     private void registrarMenuContextual() {
         if (fabricaMenuContextual == null) {
             fabricaMenuContextual = new FabricaMenuContextual(
                     api,
                     this::analizarSolicitudManual,
-                    null,
+                    this::analizarFlujoManual,
                     config,
                     this::enviarAAgente,
                     this::enviarFlujoAAgente,
@@ -235,9 +242,13 @@ public class ExtensionBurpIA implements BurpExtension {
                 return false;
             }
 
-            List<HttpRequestResponse> solicitudesValidas = filtrarSolicitudesConRequest(solicitudesRespuesta);
-            if (solicitudesValidas.size() < 2) {
+            List<HttpRequestResponse> solicitudesValidas = FlowAnalysisConstraints.filtrarSolicitudesValidas(solicitudesRespuesta);
+            if (!FlowAnalysisConstraints.tieneMinimoValido(solicitudesRespuesta)) {
                 registrarError(I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS());
+                return false;
+            }
+            if (FlowAnalysisConstraints.excedeMaximoValido(solicitudesRespuesta)) {
+                registrarError(I18nUI.Contexto.MSG_FLUJO_MAXIMO_PETICIONES(FlowAnalysisConstraints.MAXIMO_PETICIONES_FLUJO));
                 return false;
             }
 
@@ -473,19 +484,6 @@ public class ExtensionBurpIA implements BurpExtension {
             indice++;
         }
         return builder.toString();
-    }
-
-    private List<HttpRequestResponse> filtrarSolicitudesConRequest(List<HttpRequestResponse> solicitudesRespuesta) {
-        List<HttpRequestResponse> solicitudesValidas = new ArrayList<>();
-        if (Normalizador.esVacia(solicitudesRespuesta)) {
-            return solicitudesValidas;
-        }
-        for (HttpRequestResponse solicitudRespuesta : solicitudesRespuesta) {
-            if (solicitudRespuesta != null && solicitudRespuesta.request() != null) {
-                solicitudesValidas.add(solicitudRespuesta);
-            }
-        }
-        return solicitudesValidas;
     }
 
     private boolean enviarPayloadAgente(String inputFinal) {

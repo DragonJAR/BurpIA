@@ -33,18 +33,18 @@ class PanelHallazgosIssuesMenuTest {
 
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:36");
-        assertTrue(checkAutoIssues.isSelected(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:37");
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:36");
+        assertFalse(checkAutoIssues.isSelected(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:37");
 
         SwingUtilities.invokeAndWait(checkAutoIssues::doClick);
         flushEdt();
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:41");
-        assertFalse(checkAutoIssues.isSelected(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:42");
+        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:41");
+        assertTrue(checkAutoIssues.isSelected(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:42");
 
         SwingUtilities.invokeAndWait(checkAutoIssues::doClick);
         flushEdt();
-        assertTrue(panel.isGuardadoAutomaticoIssuesActivo(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:46");
-        assertTrue(checkAutoIssues.isSelected(), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:47");
+        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:46");
+        assertFalse(checkAutoIssues.isSelected(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:47");
     }
 
     @Test

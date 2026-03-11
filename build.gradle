@@ -29,6 +29,17 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << "-Xlint:all,-serial"
 }
 
+def directorioHomeTests = file("$buildDir/test-user-home")
+
+tasks.withType(Test).configureEach {
+    systemProperty 'user.home', directorioHomeTests.absolutePath
+    doFirst {
+        if (!directorioHomeTests.exists()) {
+            directorioHomeTests.mkdirs()
+        }
+    }
+}
+
 group = 'com.burpia'
 version = versionCentral
 

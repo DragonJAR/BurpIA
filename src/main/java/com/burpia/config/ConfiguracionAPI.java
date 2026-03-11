@@ -107,7 +107,7 @@ public class ConfiguracionAPI {
         this.detallado = false;
         this.idiomaUi = IdiomaUI.porDefecto().codigo();
         this.escaneoPasivoHabilitado = true;
-        this.autoGuardadoIssuesHabilitado = true;
+        this.autoGuardadoIssuesHabilitado = false;
         this.autoScrollConsolaHabilitado = true;
         this.alertasHabilitadas = true;
         this.alertasClickDerechoEnviarAHabilitadas = true;

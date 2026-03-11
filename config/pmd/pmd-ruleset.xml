@@ -14,7 +14,5 @@
     <rule ref="category/java/codestyle.xml/FieldNamingConventions"/>
     <rule ref="category/java/errorprone.xml/AssignmentInOperand"/>
     <rule ref="category/java/errorprone.xml/EmptyCatchBlock"/>
-    <rule ref="category/java/errorprone.xml/EmptyIfStmt"/>
-    <rule ref="category/java/errorprone.xml/EmptyWhileStmt"/>
-    <rule ref="category/java/errorprone.xml/EmptyStatementBlock"/>
+    <rule ref="category/java/codestyle.xml/EmptyControlStatement"/>
 </ruleset>

@@ -34,7 +34,7 @@ class PanelConsolaPreferenciasTest {
     void testSetterProgramaticoAutoScroll() throws Exception {
         PanelConsola panel = crearPanel();
         try {
-            assertTrue(panel.isAutoScrollActivo(), "assertTrue failed at PanelConsolaPreferenciasTest.java:33");
+            assertFalse(panel.isAutoScrollActivo(), "assertFalse failed at PanelConsolaPreferenciasTest.java:33");
 
             SwingUtilities.invokeAndWait(() -> panel.establecerAutoScrollActivo(false));
             flushEdt();

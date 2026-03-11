@@ -383,7 +383,7 @@ class FabricaMenuContextualTest {
         }
 
         @Test
-        @DisplayName("omite elementos null en flujo de agente")
+        @DisplayName("bloquea flujo de agente cuando no quedan dos requests válidas")
         void omiteElementosNull() {
             when(config.agenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
@@ -426,7 +426,7 @@ class FabricaMenuContextualTest {
             assertNotNull(itemAgente3, "Debe encontrar item de menú del agente");
             itemAgente3.doClick();
 
-            assertEquals(2, enviados.get(), "Se debe haber enviado la selección original al callback de flujo");
+            assertEquals(0, enviados.get(), "No debe ejecutar flujo de agente si no quedan dos requests válidas");
         }
 
         @Test
@@ -456,6 +456,33 @@ class FabricaMenuContextualTest {
             JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
             itemAgente.doClick();
             assertEquals(2, recibidas.get(), "assertEquals failed at FabricaMenuContextualTest.java:420");
+        }
+
+        @Test
+        @DisplayName("bloquea flujo de agente con más de cuatro requests válidas")
+        void bloqueaFlujoAgenteConMasDeCuatroRequestsValidas() {
+            when(config.agenteHabilitado()).thenReturn(true);
+            when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+
+            List<HttpRequestResponse> seleccion = List.of(crearSolicitudValida(), crearSolicitudValida(),
+                crearSolicitudValida(), crearSolicitudValida(), crearSolicitudValida());
+            ContextMenuEvent evento = mock(ContextMenuEvent.class);
+            when(evento.selectedRequestResponses()).thenReturn(seleccion);
+
+            AtomicInteger recibidas = new AtomicInteger(0);
+            FabricaMenuContextual fabrica = crearFabricaCompleta(
+                (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                rr -> true,
+                solicitudes -> {},
+                solicitudes -> {
+                    recibidas.set(solicitudes.size());
+                    return true;
+                }
+            );
+
+            JMenuItem itemAgente = (JMenuItem) fabrica.provideMenuItems(evento).get(1);
+            itemAgente.doClick();
+            assertEquals(0, recibidas.get(), "No debe ejecutar flujo de agente con más de cuatro requests válidas");
         }
     }
 
@@ -567,5 +594,11 @@ class FabricaMenuContextualTest {
         when(rr.request()).thenReturn(request);
         when(evento.selectedRequestResponses()).thenReturn(List.of(rr));
         return evento;
+    }
+
+    private HttpRequestResponse crearSolicitudValida() {
+        HttpRequestResponse rr = mock(HttpRequestResponse.class);
+        when(rr.request()).thenReturn(mock(HttpRequest.class));
+        return rr;
     }
 }

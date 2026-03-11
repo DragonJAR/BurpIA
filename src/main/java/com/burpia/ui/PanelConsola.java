@@ -28,6 +28,7 @@ public class PanelConsola extends JPanel {
     private final JPanel panelControles;
     private final JPanel panelConsolaWrapper;
     private Consumer<Boolean> manejadorCambioAutoScroll;
+    private volatile boolean autoScrollActivo;
 
     // CONFIABILIDAD: Componentes de búsqueda
     private final JTextField campoBusqueda;
@@ -88,7 +89,7 @@ public class PanelConsola extends JPanel {
         etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
 
         // CONFIABILIDAD: Configuración de visualización (toggle) después de contexto
-        checkboxAutoScroll = new JCheckBox(I18nUI.Consola.CHECK_AUTO_SCROLL(), true);
+        checkboxAutoScroll = new JCheckBox(I18nUI.Consola.CHECK_AUTO_SCROLL(), false);
         checkboxAutoScroll.setFont(EstilosUI.FUENTE_ESTANDAR);
         checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
 
@@ -149,6 +150,8 @@ public class PanelConsola extends JPanel {
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
         gestorConsola.establecerConsola(consola);
+        gestorConsola.establecerAutoScroll(false);
+        autoScrollActivo = false;
 
         // Listeners existentes
         checkboxAutoScroll.addActionListener(e -> {
@@ -491,12 +494,13 @@ public class PanelConsola extends JPanel {
      * @return true si auto-scroll está activo, false en caso contrario
      */
     public boolean isAutoScrollActivo() {
-        return checkboxAutoScroll.isSelected();
+        return autoScrollActivo;
     }
 
     private void aplicarAutoScrollEnEdt(boolean activo, boolean notificarCambio) {
-        boolean estadoActual = checkboxAutoScroll.isSelected();
+        boolean estadoActual = autoScrollActivo;
         boolean cambioEstado = estadoActual != activo;
+        autoScrollActivo = activo;
 
         if (cambioEstado) {
             iniciarActualizacionAutoScroll();

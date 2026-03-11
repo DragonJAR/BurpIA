@@ -72,7 +72,7 @@ public class PanelHallazgos extends JPanel {
 
     private TableRowSorter<ModeloTablaHallazgos> sorter;
     private JCheckBox chkGuardarEnIssues;
-    private volatile boolean guardadoAutomaticoIssuesActivo = true;
+    private volatile boolean guardadoAutomaticoIssuesActivo = false;
     private Consumer<Boolean> manejadorCambioGuardadoIssues;
     private final AtomicBoolean actualizandoEstadoAutoIssues = new AtomicBoolean(false);
 
@@ -176,7 +176,7 @@ public class PanelHallazgos extends JPanel {
         panelGuardarProyecto.setBorder(UIUtils.crearBordeTitulado(
             I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO(), 12, 16));
         chkGuardarEnIssues = new JCheckBox(obtenerEtiquetaGuardadoIssues());
-        chkGuardarEnIssues.setSelected(true);
+        chkGuardarEnIssues.setSelected(false);
         chkGuardarEnIssues.setFont(EstilosUI.FUENTE_ESTANDAR);
         chkGuardarEnIssues.setToolTipText(obtenerTooltipGuardadoIssues());
         chkGuardarEnIssues.addActionListener(e -> {

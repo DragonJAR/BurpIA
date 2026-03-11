@@ -1,10 +1,16 @@
 package com.burpia.core;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.core.ByteArray;
+import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.http.message.HttpHeader;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
+import com.burpia.ui.ModeloTablaHallazgos;
+import com.burpia.ui.ModeloTablaTareas;
+import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
 import org.junit.jupiter.api.AfterEach;
@@ -235,6 +241,121 @@ class ManejadorHttpBurpIATest {
     }
 
     @Test
+    @DisplayName("Analizar flujo forzado crea tarea usando pipeline normal")
+    @SuppressWarnings("unchecked")
+    void testAnalizarFlujoForzadoCreaTareaUsandoPipelineNormal() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "test-key");
+        ManejadorHttpBurpIA manejador = crearManejador(null, config);
+
+        HttpRequestResponse rr1 = mock(HttpRequestResponse.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        HttpRequestResponse rr2 = mock(HttpRequestResponse.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        ByteArray body1 = mock(ByteArray.class);
+        ByteArray body2 = mock(ByteArray.class);
+        HttpHeader header1 = mock(HttpHeader.class);
+        HttpHeader header2 = mock(HttpHeader.class);
+        HttpHeader header3 = mock(HttpHeader.class);
+        HttpHeader header4 = mock(HttpHeader.class);
+        when(header1.toString()).thenReturn("GET /one HTTP/1.1");
+        when(header2.toString()).thenReturn("Host: example.com");
+        when(header3.toString()).thenReturn("POST /two HTTP/1.1");
+        when(header4.toString()).thenReturn("Host: example.com");
+        when(rr1.request().url()).thenReturn("https://example.com/one");
+        when(rr1.request().method()).thenReturn("GET");
+        when(rr1.request().headers()).thenReturn(List.of(header1, header2));
+        when(body1.length()).thenReturn(0);
+        when(body1.toString()).thenReturn("");
+        when(rr1.request().body()).thenReturn(body1);
+
+        when(rr2.request().url()).thenReturn("https://example.com/two");
+        when(rr2.request().method()).thenReturn("POST");
+        when(rr2.request().headers()).thenReturn(List.of(header3, header4));
+        when(body2.length()).thenReturn("{\"a\":1}".length());
+        when(body2.toString()).thenReturn("{\"a\":1}");
+        when(rr2.request().body()).thenReturn(body2);
+
+        manejador.analizarFlujoForzado(List.of(rr1, rr2));
+
+        Field campoGestorTareas = ManejadorHttpBurpIA.class.getDeclaredField("gestorTareas");
+        campoGestorTareas.setAccessible(true);
+        Object gestorTareas = campoGestorTareas.get(manejador);
+        Field campoTareas = gestorTareas.getClass().getDeclaredField("tareas");
+        campoTareas.setAccessible(true);
+        Map<String, Object> tareas = (Map<String, Object>) campoTareas.get(gestorTareas);
+
+        assertFalse(tareas.isEmpty(), "Debe registrarse una tarea para el análisis de flujo");
+        Object tarea = tareas.values().iterator().next();
+        Method obtenerTipo = tarea.getClass().getMethod("obtenerTipo");
+        assertEquals("Analisis Flujo", obtenerTipo.invoke(tarea), "El flujo debe usar tipo de tarea específico");
+    }
+
+    @Test
+    @DisplayName("Analizar flujo forzado exige al menos dos requests validas")
+    @SuppressWarnings("unchecked")
+    void testAnalizarFlujoForzadoExigeDosRequestsValidas() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "test-key");
+        SalidaManejador salida = crearManejadorConSalida(null, config);
+
+        HttpRequestResponse invalida = mock(HttpRequestResponse.class);
+        when(invalida.request()).thenReturn(null);
+
+        salida.manejador.analizarFlujoForzado(List.of(invalida));
+
+        Field campoGestorTareas = ManejadorHttpBurpIA.class.getDeclaredField("gestorTareas");
+        campoGestorTareas.setAccessible(true);
+        Object gestorTareas = campoGestorTareas.get(salida.manejador);
+        Field campoTareas = gestorTareas.getClass().getDeclaredField("tareas");
+        campoTareas.setAccessible(true);
+        Map<String, Object> tareas = (Map<String, Object>) campoTareas.get(gestorTareas);
+
+        assertTrue(tareas.isEmpty(), "No debe crearse tarea si no hay suficientes requests válidas");
+        assertTrue(salida.stderr.toString().contains("peticiones válidas")
+                || salida.stderr.toString().contains("valid requests"),
+            "Debe registrarse el motivo del rechazo del flujo");
+    }
+
+    @Test
+    @DisplayName("Analizar flujo forzado rechaza más de cuatro requests válidas")
+    @SuppressWarnings("unchecked")
+    void testAnalizarFlujoForzadoRechazaMasDeCuatroRequestsValidas() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "test-key");
+        SalidaManejador salida = crearManejadorConSalida(null, config);
+
+        List<HttpRequestResponse> seleccion = List.of(
+            crearSolicitudRespuestaValida("https://example.com/1", "GET", ""),
+            crearSolicitudRespuestaValida("https://example.com/2", "GET", ""),
+            crearSolicitudRespuestaValida("https://example.com/3", "GET", ""),
+            crearSolicitudRespuestaValida("https://example.com/4", "GET", ""),
+            crearSolicitudRespuestaValida("https://example.com/5", "GET", "")
+        );
+
+        salida.manejador.analizarFlujoForzado(seleccion);
+
+        Field campoGestorTareas = ManejadorHttpBurpIA.class.getDeclaredField("gestorTareas");
+        campoGestorTareas.setAccessible(true);
+        Object gestorTareas = campoGestorTareas.get(salida.manejador);
+        Field campoTareas = gestorTareas.getClass().getDeclaredField("tareas");
+        campoTareas.setAccessible(true);
+        Map<String, Object> tareas = (Map<String, Object>) campoTareas.get(gestorTareas);
+
+        assertTrue(tareas.isEmpty(), "No debe crear tareas con más de cuatro requests válidas");
+        assertTrue(salida.stderr.toString().contains("Máximo 4 peticiones en el flujo")
+                || salida.stderr.toString().contains("Maximum 4 requests in the flow"),
+            "Debe registrar el límite máximo de flujo");
+    }
+
+    @Test
     @DisplayName("Nota de scope incluye guia de Target > Scope")
     void testNotaScopeIncluyeGuia() {
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -273,13 +394,19 @@ class ManejadorHttpBurpIATest {
         }
         StringWriter stdoutBuffer = new StringWriter();
         StringWriter stderrBuffer = new StringWriter();
+        ModeloTablaTareas modeloTablaTareas = new ModeloTablaTareas(configFinal.obtenerMaximoTareasTabla());
+        GestorTareas gestorTareas = new GestorTareas(modeloTablaTareas, mensaje -> { });
         ManejadorHttpBurpIA manejador = new ManejadorHttpBurpIA(
             api,
             configFinal,
             null,
             new PrintWriter(stdoutBuffer, true),
             new PrintWriter(stderrBuffer, true),
-            new LimitadorTasa(1)
+            new LimitadorTasa(1),
+            null,
+            gestorTareas,
+            null,
+            new ModeloTablaHallazgos(configFinal.obtenerMaximoHallazgosTabla())
         );
         manejadores.add(manejador);
         return new SalidaManejador(manejador, stdoutBuffer, stderrBuffer);
@@ -350,5 +477,21 @@ class ManejadorHttpBurpIATest {
             indice += patron.length();
         }
         return contador;
+    }
+
+    private HttpRequestResponse crearSolicitudRespuestaValida(String url, String metodo, String cuerpo) {
+        HttpRequestResponse rr = mock(HttpRequestResponse.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        ByteArray body = mock(ByteArray.class);
+        HttpHeader header1 = mock(HttpHeader.class);
+        HttpHeader header2 = mock(HttpHeader.class);
+        when(header1.toString()).thenReturn(metodo + " / HTTP/1.1");
+        when(header2.toString()).thenReturn("Host: example.com");
+        when(rr.request().url()).thenReturn(url);
+        when(rr.request().method()).thenReturn(metodo);
+        when(rr.request().headers()).thenReturn(List.of(header1, header2));
+        when(body.length()).thenReturn(cuerpo.length());
+        when(body.toString()).thenReturn(cuerpo);
+        when(rr.request().body()).thenReturn(body);
+        return rr;
     }
 }
