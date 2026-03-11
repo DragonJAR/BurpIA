@@ -6,6 +6,8 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
 import com.jediterm.terminal.TtyConnector;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -40,6 +42,17 @@ import static org.mockito.Mockito.when;
 
 @DisplayName("PanelAgente Transporte Tests")
 class PanelAgenteTransporteTest {
+
+    @BeforeEach
+    void setUp() {
+        TestDialogUtils.registrarCapturaDialogos();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TestDialogUtils.limpiarDialogosPendientes();
+        TestDialogUtils.desregistrarCapturaDialogos();
+    }
 
     @Test
     @DisplayName("Payload corto por TTY se envia en una sola escritura")
@@ -435,6 +448,62 @@ class PanelAgenteTransporteTest {
             assertEquals(AgenteTipo.FACTORY_DROID.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:280");
 
             assertTrue(focoSolicitado.get(), "assertTrue failed at PanelAgenteTransporteTest.java:282");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Cambiar agente rapido muestra cada error y continua hasta el siguiente agente valido")
+    void testCambiarAgenteRapidoContinuaTrasMultiplesAgentesInvalidos() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
+        config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), "/ruta/inexistente/gemini");
+        config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), "/ruta/inexistente/opencode");
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), binarioExistente);
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            AtomicBoolean focoSolicitado = new AtomicBoolean(false);
+            panel.establecerManejadorFocoPestania(() -> focoSolicitado.set(true));
+
+            invocarCambiarAgenteRapido(panel);
+
+            assertEquals(AgenteTipo.FACTORY_DROID.name(), config.obtenerTipoAgente(),
+                "assertEquals failed at PanelAgenteTransporteTest.java:463");
+            assertTrue(focoSolicitado.get(), "assertTrue failed at PanelAgenteTransporteTest.java:464");
+            assertTrue(TestDialogUtils.contarVentanasPendientes() >= 2,
+                "assertTrue failed at PanelAgenteTransporteTest.java:465");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Cambiar agente rapido agota alternativas invalidas y mantiene el agente actual")
+    void testCambiarAgenteRapidoMantieneActualSiNoHayAlternativasValidas() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
+        config.establecerTipoAgente(AgenteTipo.OPEN_CODE.name());
+        config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), "/ruta/inexistente/droid");
+        config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), "/ruta/inexistente/claude");
+        config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), "/ruta/inexistente/gemini");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            AtomicBoolean focoSolicitado = new AtomicBoolean(false);
+            panel.establecerManejadorFocoPestania(() -> focoSolicitado.set(true));
+
+            invocarCambiarAgenteRapido(panel);
+
+            assertEquals(AgenteTipo.OPEN_CODE.name(), config.obtenerTipoAgente(),
+                "assertEquals failed at PanelAgenteTransporteTest.java:487");
+            assertFalse(focoSolicitado.get(), "assertFalse failed at PanelAgenteTransporteTest.java:488");
+            assertTrue(TestDialogUtils.contarVentanasPendientes() >= 3,
+                "assertTrue failed at PanelAgenteTransporteTest.java:489");
         } finally {
             panel.destruir();
         }

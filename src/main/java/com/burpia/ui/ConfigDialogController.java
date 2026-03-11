@@ -407,16 +407,7 @@ public class ConfigDialogController {
     }
     
     private boolean esAgenteDisponible(String codigoAgente) {
-        if (Normalizador.esVacio(codigoAgente)) {
-            return false;
-        }
-        
-        AgenteTipo tipoAgente = AgenteTipo.desdeCodigo(codigoAgente, null);
-        if (tipoAgente == null) {
-            return false;
-        }
-
-        return OSUtils.existeBinario(resolverRutaBinarioAgente(codigoAgente));
+        return config.tieneBinarioAgenteDisponible(codigoAgente);
     }
 
     private void cargarConfiguracionFuentes() {

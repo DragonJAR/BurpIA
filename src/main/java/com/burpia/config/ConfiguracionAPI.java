@@ -367,6 +367,14 @@ public class ConfiguracionAPI {
         }
     }
 
+    public boolean tieneBinarioAgenteDisponible(String agente) {
+        AgenteTipo tipoAgente = AgenteTipo.desdeCodigo(agente, null);
+        if (tipoAgente == null) {
+            return false;
+        }
+        return OSUtils.existeBinario(obtenerRutaBinarioAgente(agente));
+    }
+
     public Map<String, String> obtenerTodasLasRutasBinario() {
         if (rutasBinarioPorAgente == null)
             rutasBinarioPorAgente = new HashMap<>();

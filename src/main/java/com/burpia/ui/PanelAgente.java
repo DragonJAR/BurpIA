@@ -598,28 +598,13 @@ public class PanelAgente extends JPanel {
     private void cambiarAgenteRapido() {
         try {
             AgenteTipo actual = obtenerAgenteActualSeguro();
-            AgenteTipo destino = AgenteTipo.siguienteCircular(actual);
-
-            String rutaBinario = resolverRutaBinario(destino);
-            if (!OSUtils.existeBinario(rutaBinario)) {
-                String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(destino.obtenerNombreVisible(), rutaBinario);
-                UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
-                    this,
-                    destino.obtenerNombreVisible(),
-                    mensaje,
-                    I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(destino.obtenerNombreVisible()),
-                    destino.obtenerUrlDocPorIdioma(config.obtenerIdiomaUi())
-                );
+            AgenteTipo destino = buscarSiguienteAgenteDisponible(actual);
+            if (destino == null || destino == actual) {
                 return;
             }
 
             config.establecerTipoAgente(destino.name());
-            
-            Runnable handler = manejadorCambioConfiguracion.get();
-            if (handler != null) {
-                handler.run();
-            }
-            
+            notificarCambioConfiguracionSiExiste();
             reiniciarYSolicitarFoco();
             actualizarEstadoBotones();
             aplicarIdioma();
@@ -627,6 +612,29 @@ public class PanelAgente extends JPanel {
         } catch (Exception ex) {
             gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al cambiar de agente"), ex);
         }
+    }
+
+    private AgenteTipo buscarSiguienteAgenteDisponible(AgenteTipo actual) {
+        AgenteTipo candidato = actual;
+        for (int i = 0; i < AgenteTipo.values().length - 1; i++) {
+            candidato = AgenteTipo.siguienteCircular(candidato);
+            if (config.tieneBinarioAgenteDisponible(candidato.name())) {
+                return candidato;
+            }
+            mostrarErrorBinarioAgenteNoDisponible(candidato, resolverRutaBinario(candidato));
+        }
+        return null;
+    }
+
+    private void mostrarErrorBinarioAgenteNoDisponible(AgenteTipo agente, String rutaBinario) {
+        String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(agente.obtenerNombreVisible(), rutaBinario);
+        UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
+            this,
+            agente.obtenerNombreVisible(),
+            mensaje,
+            I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(agente.obtenerNombreVisible()),
+            agente.obtenerUrlDocPorIdioma(config.obtenerIdiomaUi())
+        );
     }
 
     public String obtenerUltimoAgenteIniciado() {
