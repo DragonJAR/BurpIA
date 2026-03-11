@@ -356,18 +356,24 @@ public class PanelHallazgos extends JPanel {
      * @return Mensaje de error si hay validación fallida, null si es válido
      */
     private String validarArchivoExportacion(File archivo) {
+        if (archivo == null) {
+            return I18nUI.Hallazgos.MSG_ERROR_DIRECTORIO_INVALIDO();
+        }
+
+        File archivoAbsoluto = archivo.getAbsoluteFile();
+
         // Validación 1: El archivo existe (advertir sobre sobrescritura)
-        if (archivo.exists()) {
-            if (!archivo.isFile()) {
-                return I18nUI.Hallazgos.MSG_ERROR_RUTA_NO_ES_ARCHIVO(archivo.getAbsolutePath());
+        if (archivoAbsoluto.exists()) {
+            if (!archivoAbsoluto.isFile()) {
+                return I18nUI.Hallazgos.MSG_ERROR_RUTA_NO_ES_ARCHIVO(archivoAbsoluto.getAbsolutePath());
             }
-            if (!archivo.canWrite()) {
-                return I18nUI.Hallazgos.MSG_ERROR_SIN_PERMISO_ESCRITURA(archivo.getAbsolutePath());
+            if (!archivoAbsoluto.canWrite()) {
+                return I18nUI.Hallazgos.MSG_ERROR_SIN_PERMISO_ESCRITURA(archivoAbsoluto.getAbsolutePath());
             }
         }
 
         // Validación 2: Directorio padre existe y es escribible
-        File directorioPadre = archivo.getParentFile();
+        File directorioPadre = archivoAbsoluto.getParentFile();
         if (directorioPadre == null) {
             return I18nUI.Hallazgos.MSG_ERROR_DIRECTORIO_INVALIDO();
         }

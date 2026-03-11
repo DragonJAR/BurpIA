@@ -199,8 +199,8 @@ class GestorConfiguracionTest {
     }
 
     @Test
-    @DisplayName("agenteDelay en JSON respeta exactamente el valor del usuario")
-    void testAgenteDelayJsonRespetaValorUsuario() throws Exception {
+    @DisplayName("agenteDelay en JSON se normaliza al rango permitido")
+    void testAgenteDelayJsonSeNormalizaAlRangoPermitido() throws Exception {
         configurarDirectorioTemporalComoHome();
 
         String json = "{\n" +
@@ -216,7 +216,8 @@ class GestorConfiguracionTest {
         GestorConfiguracion gestor = new GestorConfiguracion();
         ConfiguracionAPI cargada = gestor.cargarConfiguracion();
 
-        assertEquals(75000, cargada.obtenerAgenteDelay(), "assertEquals failed at GestorConfiguracionTest.java:229");
+        assertEquals(ConfiguracionAPI.AGENTE_DELAY_MAXIMO_MS, cargada.obtenerAgenteDelay(),
+            "assertEquals failed at GestorConfiguracionTest.java:229");
     }
 
     @Test

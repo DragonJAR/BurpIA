@@ -341,9 +341,10 @@ public final class ConfigValidator {
     public static ValidationResult validarAgenteDelay(int delayMs) {
         return validarRangoEntero(
             delayMs,
-            0,
-            60000,
-            I18nUI.trf("El delay del agente debe estar entre %d y %d ms", "Agent delay must be between %d and %d ms", 0, 60000),
+            ConfiguracionAPI.AGENTE_DELAY_MINIMO_MS,
+            ConfiguracionAPI.AGENTE_DELAY_MAXIMO_MS,
+            I18nUI.trf("El delay del agente debe estar entre %d y %d ms", "Agent delay must be between %d and %d ms",
+                ConfiguracionAPI.AGENTE_DELAY_MINIMO_MS, ConfiguracionAPI.AGENTE_DELAY_MAXIMO_MS),
             "agenteDelay"
         );
     }

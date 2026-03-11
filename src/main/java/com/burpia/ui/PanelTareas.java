@@ -1,9 +1,11 @@
 package com.burpia.ui;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
 import com.burpia.util.ContadorEstadosTareas;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.Normalizador;
 import javax.swing.*;
@@ -19,6 +21,10 @@ import java.util.stream.Collectors;
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PanelTareas extends JPanel {
+    private static final String ORIGEN_LOG = "PanelTareas";
+    private static final GestorLoggingUnificado GESTOR_LOGGING =
+        GestorLoggingUnificado.crearMinimal(null, null);
+
     private final ModeloTablaTareas modelo;
     private final JTable tabla;
     private JButton botonPausarReanudar;
@@ -444,7 +450,8 @@ public class PanelTareas extends JPanel {
         if (manejador != null) {
             try {
                 return Boolean.TRUE.equals(manejador.apply(tareaId));
-            } catch (Exception ignored) {
+            } catch (Exception ex) {
+                GESTOR_LOGGING.error(ORIGEN_LOG, I18nLogs.tr("Error al reencolar tarea desde el manejador configurado"), ex);
                 return false;
             }
         } else {

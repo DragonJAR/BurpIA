@@ -3,6 +3,7 @@ package com.burpia.config;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.Normalizador;
+import com.burpia.util.OSUtils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ArrayList;
@@ -33,6 +34,8 @@ public class ConfiguracionAPI {
     public static final int TIEMPO_ESPERA_MIN_SEGUNDOS = 10;
     public static final int TIEMPO_ESPERA_MAX_SEGUNDOS = 300;
     public static final int AGENTE_DELAY_DEFECTO_MS = 4000;
+    public static final int AGENTE_DELAY_MINIMO_MS = 0;
+    public static final int AGENTE_DELAY_MAXIMO_MS = 60000;
     public static final int AGENTE_DELAY_PASO_MS = 500;
 
     public static final String FUENTE_ESTANDAR_DEFECTO = "Monospaced";
@@ -395,7 +398,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerAgenteDelay(int delay) {
-        this.agenteDelay = delay;
+        this.agenteDelay = normalizarAgenteDelay(delay);
     }
 
     public String obtenerNombreFuenteEstandar() {
@@ -875,6 +878,19 @@ public class ConfiguracionAPI {
                     I18nUI.Configuracion.ERROR_PROMPT_REQUERIDO());
         }
 
+        ConfigValidator.ValidationResult validacionDelayAgente =
+                ConfigValidator.validarAgenteDelay(agenteDelay);
+        if (!validacionDelayAgente.esValido()) {
+            errores.put("agenteDelay", validacionDelayAgente.obtenerMensajeError());
+        }
+
+        if (agenteHabilitado) {
+            ConfigValidator.ValidationResult validacionAgenteHabilitado = validarAgenteHabilitado();
+            if (!validacionAgenteHabilitado.esValido()) {
+                errores.put("agente", validacionAgenteHabilitado.obtenerMensajeError());
+            }
+        }
+
         return errores;
     }
 
@@ -1283,6 +1299,10 @@ public class ConfiguracionAPI {
         return normalizarRango(valor, MINIMO_MAXIMO_CONCURRENTE, MAXIMO_MAXIMO_CONCURRENTE);
     }
 
+    private static int normalizarAgenteDelay(int delay) {
+        return normalizarRango(delay, AGENTE_DELAY_MINIMO_MS, AGENTE_DELAY_MAXIMO_MS);
+    }
+
     private static String normalizarPromptAgente(String prompt) {
         if (Normalizador.esVacio(prompt)) {
             return obtenerAgentePromptPorDefecto();
@@ -1304,6 +1324,29 @@ public class ConfiguracionAPI {
 
     private static String normalizarProveedor(String proveedor) {
         return ProveedorAI.normalizarProveedor(proveedor);
+    }
+
+    private ConfigValidator.ValidationResult validarAgenteHabilitado() {
+        String tipoAgenteActual = obtenerTipoAgente();
+        String rutaBinario = obtenerRutaBinarioAgente(tipoAgenteActual);
+        ConfigValidator.ValidationResult validacionRuta =
+                ConfigValidator.validarRutaBinarioAgente(rutaBinario, tipoAgenteActual);
+        if (!validacionRuta.esValido()) {
+            return validacionRuta;
+        }
+
+        if (OSUtils.existeBinario(rutaBinario)) {
+            return ConfigValidator.ValidationResult.valido();
+        }
+
+        String nombreAgente = AgenteTipo.obtenerNombreVisible(
+                tipoAgenteActual,
+                I18nUI.General.AGENTE_GENERICO());
+        String ejecutable = OSUtils.resolverEjecutableComando(rutaBinario);
+        String rutaVisible = Normalizador.noEsVacio(ejecutable) ? ejecutable : rutaBinario;
+        return ConfigValidator.ValidationResult.invalido(
+                I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE(nombreAgente, rutaVisible),
+                "rutaBinario");
     }
 
     private static Map<String, String> normalizarMapaStringPorProveedor(Map<String, String> mapa) {

@@ -65,6 +65,18 @@ class PanelHallazgosExportTest {
         assertTrue(json.contains("\"confianza\": \"Low\""), "assertTrue failed at PanelHallazgosExportTest.java:65");
     }
 
+    @Test
+    @DisplayName("Validación de exportación acepta nombres de archivo relativos")
+    void testValidarArchivoExportacionAceptaRutaRelativa() throws Exception {
+        PanelHallazgos panel = crearPanel();
+        Method metodo = PanelHallazgos.class.getDeclaredMethod("validarArchivoExportacion", java.io.File.class);
+        metodo.setAccessible(true);
+
+        String resultado = (String) metodo.invoke(panel, new java.io.File("hallazgos-export.csv"));
+
+        assertEquals(null, resultado, "assertEquals failed at PanelHallazgosExportTest.java:76");
+    }
+
     /**
      * Crea una instancia de PanelHallazgos para testing.
      * <p>

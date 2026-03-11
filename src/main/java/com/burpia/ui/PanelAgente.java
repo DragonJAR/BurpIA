@@ -550,21 +550,26 @@ public class PanelAgente extends JPanel {
         lblDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
 
         spinnerDelay = new JSpinner(new SpinnerNumberModel(
-            config.obtenerAgenteDelay(), null, null, ConfiguracionAPI.AGENTE_DELAY_PASO_MS));
+            config.obtenerAgenteDelay(),
+            ConfiguracionAPI.AGENTE_DELAY_MINIMO_MS,
+            ConfiguracionAPI.AGENTE_DELAY_MAXIMO_MS,
+            ConfiguracionAPI.AGENTE_DELAY_PASO_MS));
         spinnerDelay.setFont(EstilosUI.FUENTE_ESTANDAR);
         spinnerDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
         spinnerDelay.setPreferredSize(new Dimension(80, 24));
         spinnerDelay.addChangeListener(e -> {
             int nuevoDelay = ((Number) spinnerDelay.getValue()).intValue();
-            if (nuevoDelay == config.obtenerAgenteDelay()) {
-                return;
-            }
             config.establecerAgenteDelay(nuevoDelay);
-            Runnable handler = manejadorCambioConfiguracion.get();
-            if (handler != null) {
-                handler.run();
+            int delayAplicado = config.obtenerAgenteDelay();
+            if (delayAplicado != nuevoDelay) {
+                spinnerDelay.setValue(delayAplicado);
             }
+            notificarCambioConfiguracionSiExiste();
         });
+
+        if (((Number) spinnerDelay.getValue()).intValue() != config.obtenerAgenteDelay()) {
+            spinnerDelay.setValue(config.obtenerAgenteDelay());
+        }
 
         JPanel panel = new PanelFilasResponsive(
             750,
@@ -578,6 +583,13 @@ public class PanelAgente extends JPanel {
         panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_CONTROLES(), MARGEN_BORDE_TITULO_GRANDE, 16));
 
         return panel;
+    }
+    
+    private void notificarCambioConfiguracionSiExiste() {
+        Runnable handler = manejadorCambioConfiguracion.get();
+        if (handler != null) {
+            handler.run();
+        }
     }
     
     private void cambiarAgenteRapido() {

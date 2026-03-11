@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -40,13 +41,32 @@ class ConfiguracionAPITest {
     }
 
     @Test
-    @DisplayName("Agente delay conserva valores sin normalizacion por rango")
-    void testAgenteDelaySinNormalizacionPorRango() {
+    @DisplayName("Agente delay se normaliza dentro del rango permitido")
+    void testAgenteDelaySeNormalizaPorRango() {
         config.establecerAgenteDelay(-250);
-        assertEquals(-250, config.obtenerAgenteDelay(), "assertEquals failed at ConfiguracionAPITest.java:44");
+        assertEquals(ConfiguracionAPI.AGENTE_DELAY_MINIMO_MS, config.obtenerAgenteDelay(),
+            "assertEquals failed at ConfiguracionAPITest.java:45");
 
         config.establecerAgenteDelay(120_000);
-        assertEquals(120_000, config.obtenerAgenteDelay(), "assertEquals failed at ConfiguracionAPITest.java:47");
+        assertEquals(ConfiguracionAPI.AGENTE_DELAY_MAXIMO_MS, config.obtenerAgenteDelay(),
+            "assertEquals failed at ConfiguracionAPITest.java:49");
+    }
+
+    @Test
+    @DisplayName("Validacion falla cuando el agente habilitado apunta a un binario inexistente")
+    void testValidacionAgenteHabilitadoRechazaBinarioInexistente() {
+        config.establecerAgenteHabilitado(true);
+        config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        config.establecerRutaBinarioAgente(
+            AgenteTipo.CLAUDE_CODE.name(),
+            Path.of("ruta-que-no-existe-claude").toAbsolutePath().toString()
+        );
+        config.establecerModelo("modelo-valido");
+        config.establecerClaveApi("valid-key");
+
+        Map<String, String> errores = config.validar();
+
+        assertTrue(errores.containsKey("agente"), "assertTrue failed at ConfiguracionAPITest.java:64");
     }
 
     @Test

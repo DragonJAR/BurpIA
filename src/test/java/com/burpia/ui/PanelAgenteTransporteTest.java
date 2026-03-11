@@ -11,7 +11,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import javax.swing.JButton;
+import javax.swing.JSpinner;
 import javax.swing.JPanel;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -467,6 +469,28 @@ class PanelAgenteTransporteTest {
     }
 
     @Test
+    @DisplayName("Spinner de delay usa el rango configurado y refleja valores normalizados")
+    void testSpinnerDelayUsaRangoConfigurado() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerAgenteDelay(-500);
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            JSpinner spinnerDelay = obtenerSpinnerDelay(panel);
+            SpinnerNumberModel modelo = (SpinnerNumberModel) spinnerDelay.getModel();
+
+            assertEquals(ConfiguracionAPI.AGENTE_DELAY_MINIMO_MS, ((Number) modelo.getMinimum()).intValue(),
+                "assertEquals failed at PanelAgenteTransporteTest.java:485");
+            assertEquals(ConfiguracionAPI.AGENTE_DELAY_MAXIMO_MS, ((Number) modelo.getMaximum()).intValue(),
+                "assertEquals failed at PanelAgenteTransporteTest.java:487");
+            assertEquals(ConfiguracionAPI.AGENTE_DELAY_MINIMO_MS, ((Number) spinnerDelay.getValue()).intValue(),
+                "assertEquals failed at PanelAgenteTransporteTest.java:489");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
     @DisplayName("Destruir reinicia el inyector PTY para permitir reutilización segura")
     void testDestruirReiniciaInyectorPty() throws Exception {
         PanelAgente panel = crearPanelSinConsola();
@@ -658,6 +682,12 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField(nombreCampo);
         field.setAccessible(true);
         return (JButton) field.get(panel);
+    }
+
+    private JSpinner obtenerSpinnerDelay(PanelAgente panel) throws Exception {
+        Field field = PanelAgente.class.getDeclaredField("spinnerDelay");
+        field.setAccessible(true);
+        return (JSpinner) field.get(panel);
     }
 
     private JPanel obtenerPanelControles(PanelAgente panel) throws Exception {

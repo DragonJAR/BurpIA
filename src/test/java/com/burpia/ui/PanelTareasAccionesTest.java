@@ -177,6 +177,23 @@ class PanelTareasAccionesTest {
     }
 
     @Test
+    @DisplayName("Reintentar con manejador que falla retorna false sin propagar excepción")
+    void testReintentarConManejadorQueLanzaRetornaFalse() throws Exception {
+        Tarea error = gestor.crearTarea("A", "https://example.com/error", Tarea.ESTADO_ERROR, "");
+        flushEdt();
+
+        SwingUtilities.invokeAndWait(() -> panel.establecerManejadorReintento(tareaId -> {
+            throw new IllegalStateException("fallo-controlado");
+        }));
+
+        boolean resultado = (boolean) metodoReencolarTarea.invoke(panel, error.obtenerId());
+
+        assertFalse(resultado, "assertFalse failed at PanelTareasAccionesTest.java:187");
+        assertEquals(Tarea.ESTADO_ERROR, gestor.obtenerTarea(error.obtenerId()).obtenerEstado(),
+            "assertEquals failed at PanelTareasAccionesTest.java:189");
+    }
+
+    @Test
     @DisplayName("aplicarIdioma actualiza boton principal aun sin cambios de version")
     void testAplicarIdiomaRefrescaBotonPrincipal() throws Exception {
         gestor.crearTarea("A", "https://example.com/pausada", Tarea.ESTADO_PAUSADO, "");

@@ -12,11 +12,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.swing.JComboBox;
+import javax.swing.JCheckBox;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -247,6 +252,60 @@ class ConfigDialogControllerAgentesTest {
         }
     }
 
+    @Test
+    @DisplayName("Guardar bloquea agente habilitado cuando la ruta del binario no existe")
+    void testGuardarBloqueaBinarioAgenteInexistente() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("Z.ai");
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(null, config, gestor, () -> guardadoCallback.set(true));
+
+        try {
+            JComboBox<String> comboProveedor = dialogo.obtenerComboProveedor();
+            JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
+            JTextField txtTimeoutModelo = dialogo.obtenerTxtTimeoutModelo();
+            JPasswordField txtClave = dialogo.obtenerTxtClave();
+            JTextField txtRetraso = dialogo.obtenerTxtRetraso();
+            JTextField txtMaximoConcurrente = dialogo.obtenerTxtMaximoConcurrente();
+            JTextField txtMaximoHallazgosTabla = dialogo.obtenerTxtMaximoHallazgosTabla();
+            JTextField txtMaximoTareas = dialogo.obtenerTxtMaximoTareas();
+            JTextField txtMaxTokens = dialogo.obtenerTxtMaxTokens();
+            JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
+            JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
+            JTextField txtAgenteBinario = dialogo.obtenerTxtAgenteBinario();
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("Z.ai");
+                comboModelo.setSelectedItem("glm-5");
+                comboModelo.getEditor().setItem("glm-5");
+                txtClave.setText("test-key");
+                txtRetraso.setText("5");
+                txtMaximoConcurrente.setText("3");
+                txtMaximoHallazgosTabla.setText("1000");
+                txtMaximoTareas.setText("500");
+                txtMaxTokens.setText("4096");
+                txtTimeoutModelo.setText("180");
+                comboAgente.setSelectedItem(AgenteTipo.CLAUDE_CODE.name());
+                chkAgenteHabilitado.setSelected(true);
+                txtAgenteBinario.setText(tempDir.resolve("binario-claude-no-existe").toString());
+            });
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(dialogo::guardarConfiguracion);
+            Thread.sleep(250);
+            flushEdt();
+
+            assertFalse(guardadoCallback.get(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:293");
+            assertTrue(dialogo.isDisplayable(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:294");
+            assertFalse(config.agenteHabilitado(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:295");
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
     private void crearArchivoConfiguracion(ConfiguracionAPI config) throws IOException {
         Path configFile = burpiaDir.resolve("config.json");
         
@@ -269,5 +328,9 @@ class ConfigDialogControllerAgentesTest {
         json.append("}");
         
         Files.writeString(configFile, json.toString(), StandardCharsets.UTF_8);
+    }
+
+    private void flushEdt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {});
     }
 }
