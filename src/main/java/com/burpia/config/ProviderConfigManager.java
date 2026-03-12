@@ -3,15 +3,20 @@ package com.burpia.config;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstadoProveedorUI;
+import com.burpia.ui.UIUtils;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 
 import javax.swing.*;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.text.JTextComponent;
+import java.awt.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Gestor centralizado para la configuración de proveedores AI.
@@ -35,6 +40,13 @@ public final class ProviderConfigManager {
     private String proveedorActualUi;
     private boolean actualizandoProveedorUi = false;
     private boolean actualizandoListaMultiProveedor = false;
+    private boolean actualizandoModeloUi = false;
+    private boolean actualizandoCamposProveedorUi = false;
+    private boolean actualizandoTimeoutModeloUi = false;
+    private boolean sincronizacionBorradorRegistrada = false;
+    private String proveedorTimeoutManualUi = "";
+    private String modeloTimeoutManualUi = "";
+    private String timeoutManualTextoUi = "";
 
     private DefaultListModel<String> modeloListaDisponibles;
     private DefaultListModel<String> modeloListaSeleccionados;
@@ -191,6 +203,7 @@ public final class ProviderConfigManager {
         this.modeloListaSeleccionados = modeloListaSeleccionados;
         this.listaProveedoresDisponibles = listaProveedoresDisponibles;
         this.listaProveedoresSeleccionados = listaProveedoresSeleccionados;
+        asegurarSincronizacionBorradorActualRegistrada();
 
         if (comboProveedor != null) {
             comboProveedor.addActionListener(e -> alCambiarProveedor());
@@ -268,6 +281,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
+        SwingUtilities.invokeLater(this::limpiarTimeoutManualActual);
 
         gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Configuración inicial cargada"));
     }
@@ -285,7 +299,7 @@ public final class ProviderConfigManager {
         actualizandoProveedorUi = true;
         try {
             if (proveedorActualUi != null) {
-                EstadoProveedorUI estadoActual = extraerEstadoActualRapido();
+                EstadoProveedorUI estadoActual = extraerEstadoActualParaBorrador(proveedorActualUi);
                 if (estadoActual != null) {
                     estadoProveedorTemporal.put(proveedorActualUi, estadoActual);
                 }
@@ -330,9 +344,8 @@ public final class ProviderConfigManager {
      * @return EstadoProveedorUI con datos actuales
      */
     public EstadoProveedorUI extraerEstadoActualRapido() {
-        Integer timeout = parsearEntero(txtTimeoutModelo != null ? txtTimeoutModelo.getText() : null);
-        Integer maxTokens = parsearEntero(txtMaxTokens != null ? txtMaxTokens.getText() : null);
-        
+        String timeoutTexto = txtTimeoutModelo != null ? txtTimeoutModelo.getText() : "";
+        String maxTokensTexto = txtMaxTokens != null ? txtMaxTokens.getText() : "";
         String apiKey = txtClave != null ? new String(txtClave.getPassword()) : "";
         String modelo = obtenerModeloSeleccionado();
         String baseUrl = txtUrl != null ? txtUrl.getText().trim() : "";
@@ -341,8 +354,28 @@ public final class ProviderConfigManager {
                 apiKey,
                 modelo,
                 baseUrl,
-                maxTokens != null ? maxTokens : 4096,
-                timeout != null ? timeout : 120);
+                maxTokensTexto,
+                timeoutTexto);
+    }
+
+    private EstadoProveedorUI extraerEstadoActualParaBorrador(String proveedor) {
+        EstadoProveedorUI estadoActual = extraerEstadoActualRapido();
+        if (estadoActual == null) {
+            return null;
+        }
+
+        if (tieneTimeoutManualActual(proveedor, estadoActual.obtenerModelo())) {
+            return estadoActual;
+        }
+
+        String timeoutCanonico = String.valueOf(
+                config.obtenerTiempoEsperaParaModelo(proveedor, estadoActual.obtenerModelo()));
+        return new EstadoProveedorUI(
+                estadoActual.obtenerApiKey(),
+                estadoActual.obtenerModelo(),
+                estadoActual.obtenerBaseUrl(),
+                estadoActual.obtenerMaxTokensTexto(),
+                timeoutCanonico);
     }
 
     /**
@@ -464,7 +497,12 @@ public final class ProviderConfigManager {
         }
 
         return ValidationResultEstadoProveedor.valido(
-                new EstadoProveedorUI(apiKey, modelo, baseUrl, maxTokens, timeout));
+                new EstadoProveedorUI(
+                        apiKey,
+                        modelo,
+                        baseUrl,
+                        txtMaxTokens != null ? txtMaxTokens.getText() : "",
+                        txtTimeoutModelo != null ? txtTimeoutModelo.getText() : ""));
     }
 
     /**
@@ -536,17 +574,22 @@ public final class ProviderConfigManager {
             return;
         }
 
-        EstadoProveedorUI borrador = estadoProveedorTemporal.get(proveedor);
-        ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedor);
-        if (configProveedor == null) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se encontró configuración para proveedor: " + proveedor));
-            return;
-        }
+        actualizandoCamposProveedorUi = true;
+        try {
+            EstadoProveedorUI borrador = estadoProveedorTemporal.get(proveedor);
+            ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedor);
+            if (configProveedor == null) {
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se encontró configuración para proveedor: " + proveedor));
+                return;
+            }
 
         if (borrador != null) {
             cargarEstadoDesdeBorrador(borrador, configProveedor);
         } else {
             cargarEstadoDesdeConfiguracion(proveedor, configProveedor);
+        }
+        } finally {
+            actualizandoCamposProveedorUi = false;
         }
     }
 
@@ -558,11 +601,11 @@ public final class ProviderConfigManager {
             txtClave.setText(borrador.obtenerApiKey());
         }
         if (txtMaxTokens != null) {
-            txtMaxTokens.setText(String.valueOf(borrador.obtenerMaxTokens()));
+            txtMaxTokens.setText(borrador.obtenerMaxTokensTexto());
         }
-        cargarModelosEnCombo(configProveedor.obtenerModelosDisponibles(), borrador.obtenerModelo());
+        cargarModelosEnCombo(configProveedor.obtenerModelosDisponibles(), borrador.obtenerModelo(), true);
         if (txtTimeoutModelo != null) {
-            txtTimeoutModelo.setText(String.valueOf(borrador.obtenerTimeout()));
+            txtTimeoutModelo.setText(borrador.obtenerTimeoutTexto());
         }
     }
 
@@ -595,7 +638,7 @@ public final class ProviderConfigManager {
         if (Normalizador.esVacio(modelo)) {
             modelo = configProveedor.obtenerModeloPorDefecto();
         }
-        cargarModelosEnCombo(configProveedor.obtenerModelosDisponibles(), modelo);
+        cargarModelosEnCombo(configProveedor.obtenerModelosDisponibles(), modelo, false);
         actualizarTimeoutModeloSeleccionado();
     }
 
@@ -827,43 +870,170 @@ public final class ProviderConfigManager {
     }
 
     private void actualizarTimeoutModeloSeleccionado() {
-        if (txtTimeoutModelo == null || comboModelo == null || proveedorActualUi == null) {
+        if (actualizandoModeloUi || txtTimeoutModelo == null || comboModelo == null || proveedorActualUi == null) {
             return;
         }
 
         String modelo = obtenerModeloSeleccionado();
-        int timeout = config.obtenerTiempoEsperaParaModelo(proveedorActualUi, modelo);
-        txtTimeoutModelo.setText(String.valueOf(timeout));
+        actualizandoTimeoutModeloUi = true;
+        try {
+            if (Objects.equals(proveedorTimeoutManualUi, proveedorActualUi)
+                    && Objects.equals(normalizarModeloSeleccionado(modeloTimeoutManualUi), modelo)
+                    && Normalizador.noEsVacio(timeoutManualTextoUi)) {
+                txtTimeoutModelo.setText(timeoutManualTextoUi);
+                return;
+            }
+
+            EstadoProveedorUI borrador = estadoProveedorTemporal.get(proveedorActualUi);
+            if (borrador != null
+                    && Objects.equals(normalizarModeloSeleccionado(borrador.obtenerModelo()), modelo)
+                    && Normalizador.noEsVacio(borrador.obtenerTimeoutTexto())) {
+                txtTimeoutModelo.setText(borrador.obtenerTimeoutTexto());
+                return;
+            }
+
+            int timeout = config.obtenerTiempoEsperaParaModelo(proveedorActualUi, modelo);
+            txtTimeoutModelo.setText(String.valueOf(timeout));
+        } finally {
+            actualizandoTimeoutModeloUi = false;
+        }
+    }
+
+    private void registrarSincronizacionBorradorActual() {
+        agregarDocumentListenerSiPresente(
+                txtTimeoutModelo,
+                UIUtils.crearDocumentListener(this::programarActualizacionBorradorProveedorActual));
+        agregarDocumentListenerSiPresente(
+                obtenerEditorTextoComboModelo(),
+                UIUtils.crearDocumentListener(this::programarSincronizacionTimeoutModeloCustomActual));
+    }
+
+    private void asegurarSincronizacionBorradorActualRegistrada() {
+        if (sincronizacionBorradorRegistrada) {
+            return;
+        }
+        registrarSincronizacionBorradorActual();
+        sincronizacionBorradorRegistrada = true;
+    }
+
+    private JTextComponent obtenerEditorTextoComboModelo() {
+        if (comboModelo == null || comboModelo.getEditor() == null) {
+            return null;
+        }
+
+        Component editor = comboModelo.getEditor().getEditorComponent();
+        if (editor instanceof JTextComponent textComponent) {
+            return textComponent;
+        }
+        return null;
+    }
+
+    private void agregarDocumentListenerSiPresente(JTextComponent campo, DocumentListener listener) {
+        if (campo != null && listener != null && campo.getDocument() != null) {
+            campo.getDocument().addDocumentListener(listener);
+        }
+    }
+
+    private void actualizarBorradorProveedorActual() {
+        if (actualizandoCamposProveedorUi
+                || actualizandoProveedorUi
+                || actualizandoTimeoutModeloUi
+                || Normalizador.esVacio(proveedorActualUi)
+                || txtTimeoutModelo == null) {
+            return;
+        }
+
+        proveedorTimeoutManualUi = proveedorActualUi;
+        modeloTimeoutManualUi = obtenerModeloSeleccionado();
+        timeoutManualTextoUi = txtTimeoutModelo.getText();
+    }
+
+    private void programarActualizacionBorradorProveedorActual() {
+        SwingUtilities.invokeLater(this::actualizarBorradorProveedorActual);
+    }
+
+    private void sincronizarTimeoutModeloCustomActual() {
+        if (actualizandoCamposProveedorUi
+                || actualizandoProveedorUi
+                || actualizandoTimeoutModeloUi
+                || actualizandoModeloUi
+                || Normalizador.esVacio(proveedorActualUi)
+                || comboModelo == null
+                || txtTimeoutModelo == null) {
+            return;
+        }
+
+        Object opcionSeleccionada = comboModelo.getSelectedItem();
+        if (!(opcionSeleccionada instanceof String opcionModelo) || !esOpcionModeloCustom(opcionModelo)) {
+            return;
+        }
+
+        proveedorTimeoutManualUi = proveedorActualUi;
+        modeloTimeoutManualUi = obtenerModeloSeleccionado();
+        timeoutManualTextoUi = txtTimeoutModelo.getText();
+    }
+
+    private void programarSincronizacionTimeoutModeloCustomActual() {
+        SwingUtilities.invokeLater(this::sincronizarTimeoutModeloCustomActual);
+    }
+
+    private boolean tieneTimeoutManualActual(String proveedor, String modelo) {
+        return Objects.equals(proveedorTimeoutManualUi, proveedor)
+                && Objects.equals(normalizarModeloSeleccionado(modeloTimeoutManualUi),
+                normalizarModeloSeleccionado(modelo))
+                && Normalizador.noEsVacio(timeoutManualTextoUi);
+    }
+
+    private void limpiarTimeoutManualActual() {
+        proveedorTimeoutManualUi = "";
+        modeloTimeoutManualUi = "";
+        timeoutManualTextoUi = "";
     }
 
     private void cargarModelosEnCombo(List<String> modelos, String preferido) {
+        cargarModelosEnCombo(modelos, preferido, false);
+    }
+
+    private void cargarModelosEnCombo(List<String> modelos, String preferido, boolean preservarTimeoutActual) {
         if (comboModelo == null) {
             return;
         }
 
-        comboModelo.removeAllItems();
-        comboModelo.addItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
-
-        List<String> modelosNormalizados = normalizarModelos(modelos);
-        for (String modelo : modelosNormalizados) {
-            comboModelo.addItem(modelo);
+        if (preservarTimeoutActual) {
+            actualizandoModeloUi = true;
         }
 
-        String preferidoNormalizado = normalizarModeloSeleccionado(preferido);
-        if (preferidoNormalizado.isEmpty() && !modelosNormalizados.isEmpty()) {
-            preferidoNormalizado = modelosNormalizados.get(0);
-        }
+        try {
+            comboModelo.removeAllItems();
+            comboModelo.addItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
 
-        for (int i = 0; i < comboModelo.getItemCount(); i++) {
-            if (preferidoNormalizado.equals(comboModelo.getItemAt(i))) {
-                comboModelo.setSelectedIndex(i);
-                return;
+            List<String> modelosNormalizados = normalizarModelos(modelos);
+            for (String modelo : modelosNormalizados) {
+                comboModelo.addItem(modelo);
+            }
+
+            String preferidoNormalizado = normalizarModeloSeleccionado(preferido);
+            if (preferidoNormalizado.isEmpty() && !modelosNormalizados.isEmpty()) {
+                preferidoNormalizado = modelosNormalizados.get(0);
+            }
+
+            for (int i = 0; i < comboModelo.getItemCount(); i++) {
+                if (preferidoNormalizado.equals(comboModelo.getItemAt(i))) {
+                    comboModelo.setSelectedIndex(i);
+                    return;
+                }
+            }
+
+            comboModelo.setSelectedItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
+            comboModelo.getEditor().setItem(preferidoNormalizado);
+            if (!preservarTimeoutActual) {
+                actualizarTimeoutModeloSeleccionado();
+            }
+        } finally {
+            if (preservarTimeoutActual) {
+                SwingUtilities.invokeLater(() -> actualizandoModeloUi = false);
             }
         }
-
-        comboModelo.setSelectedItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
-        comboModelo.getEditor().setItem(preferidoNormalizado);
-        actualizarTimeoutModeloSeleccionado();
     }
 
     private String obtenerModeloSeleccionado() {

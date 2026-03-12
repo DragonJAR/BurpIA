@@ -21,6 +21,8 @@ public final class EstadoProveedorUI {
     private final String apiKey;
     private final String modelo;
     private final String baseUrl;
+    private final String maxTokensTexto;
+    private final String timeoutTexto;
     private final int maxTokens;
     private final int timeout;
 
@@ -34,14 +36,58 @@ public final class EstadoProveedorUI {
      * @param timeout    Timeout en segundos (debe ser positivo, usa valor por defecto si es inválido)
      */
     public EstadoProveedorUI(String apiKey, String modelo, String baseUrl, int maxTokens, int timeout) {
+        this(
+                apiKey,
+                modelo,
+                baseUrl,
+                String.valueOf(normalizarPositivo(maxTokens, MAX_TOKENS_POR_DEFECTO)),
+                String.valueOf(normalizarPositivo(timeout, TIMEOUT_POR_DEFECTO)),
+                maxTokens,
+                timeout);
+    }
+
+    /**
+     * Crea un estado de proveedor preservando los textos originales de la UI para
+     * mantener borradores válidos e inválidos mientras el diálogo siga abierto.
+     *
+     * @param apiKey API key del proveedor
+     * @param modelo modelo seleccionado
+     * @param baseUrl URL base configurada
+     * @param maxTokensTexto texto crudo del campo max tokens
+     * @param timeoutTexto texto crudo del campo timeout
+     */
+    public EstadoProveedorUI(String apiKey,
+                             String modelo,
+                             String baseUrl,
+                             String maxTokensTexto,
+                             String timeoutTexto) {
+        this(
+                apiKey,
+                modelo,
+                baseUrl,
+                maxTokensTexto,
+                timeoutTexto,
+                parsearEnteroPositivo(maxTokensTexto, MAX_TOKENS_POR_DEFECTO),
+                parsearEnteroPositivo(timeoutTexto, TIMEOUT_POR_DEFECTO));
+    }
+
+    private EstadoProveedorUI(String apiKey,
+                              String modelo,
+                              String baseUrl,
+                              String maxTokensTexto,
+                              String timeoutTexto,
+                              int maxTokens,
+                              int timeout) {
         // Inmutabilidad defensiva: crear copias de strings
         this.apiKey = apiKey != null ? new String(apiKey) : "";
         this.modelo = modelo != null ? new String(modelo) : "";
         this.baseUrl = baseUrl != null ? new String(baseUrl) : "";
+        this.maxTokensTexto = maxTokensTexto != null ? new String(maxTokensTexto) : "";
+        this.timeoutTexto = timeoutTexto != null ? new String(timeoutTexto) : "";
 
         // Validación de rangos con valores por defecto
-        this.maxTokens = maxTokens > 0 ? maxTokens : MAX_TOKENS_POR_DEFECTO;
-        this.timeout = timeout > 0 ? timeout : TIMEOUT_POR_DEFECTO;
+        this.maxTokens = normalizarPositivo(maxTokens, MAX_TOKENS_POR_DEFECTO);
+        this.timeout = normalizarPositivo(timeout, TIMEOUT_POR_DEFECTO);
     }
 
     /**
@@ -81,12 +127,30 @@ public final class EstadoProveedorUI {
     }
 
     /**
+     * Obtiene el texto original del campo de máximo de tokens.
+     *
+     * @return texto del campo, nunca null
+     */
+    public String obtenerMaxTokensTexto() {
+        return maxTokensTexto;
+    }
+
+    /**
      * Obtiene el timeout en segundos.
      *
      * @return Timeout en segundos (siempre positivo)
      */
     public int obtenerTimeout() {
         return timeout;
+    }
+
+    /**
+     * Obtiene el texto original del campo de timeout.
+     *
+     * @return texto del campo, nunca null
+     */
+    public String obtenerTimeoutTexto() {
+        return timeoutTexto;
     }
 
     /**
@@ -124,11 +188,29 @@ public final class EstadoProveedorUI {
      */
     @Override
     public String toString() {
-        return String.format("EstadoProveedorUI{modelo='%s', baseUrl='%s', maxTokens=%d, timeout=%d, apiKey=%s}",
+        return String.format(
+                "EstadoProveedorUI{modelo='%s', baseUrl='%s', maxTokensTexto='%s', timeoutTexto='%s', maxTokens=%d, timeout=%d, apiKey=%s}",
                 modelo,
                 baseUrl,
+                maxTokensTexto,
+                timeoutTexto,
                 maxTokens,
                 timeout,
                 Normalizador.sanitizarApiKey(apiKey));
+    }
+
+    private static int parsearEnteroPositivo(String texto, int valorPorDefecto) {
+        if (Normalizador.esVacio(texto)) {
+            return valorPorDefecto;
+        }
+        try {
+            return normalizarPositivo(Integer.parseInt(texto.trim()), valorPorDefecto);
+        } catch (NumberFormatException e) {
+            return valorPorDefecto;
+        }
+    }
+
+    private static int normalizarPositivo(int valor, int valorPorDefecto) {
+        return valor > 0 ? valor : valorPorDefecto;
     }
 }

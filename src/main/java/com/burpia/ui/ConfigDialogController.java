@@ -6,8 +6,6 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.*;
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -67,6 +65,68 @@ public class ConfigDialogController {
             this.maximoConcurrente = maximoConcurrente;
             this.maximoHallazgosTabla = maximoHallazgosTabla;
             this.maximoTareas = maximoTareas;
+        }
+    }
+
+    private static final class DatosGuardadoDialogo {
+        private final String codigoIdioma;
+        private final boolean detallado;
+        private final boolean ignorarSsl;
+        private final boolean soloProxy;
+        private final boolean alertasHabilitadas;
+        private final boolean persistirBusqueda;
+        private final boolean persistirSeveridad;
+        private final String tipoAgenteSeleccionado;
+        private final Map<String, Boolean> estadosHabilitacionAgentes;
+        private final Map<String, String> rutasBinarioAgentes;
+        private final String agentePromptInicial;
+        private final String agentePrompt;
+        private final String promptActual;
+        private final String fuenteEstandar;
+        private final int tamanioFuenteEstandar;
+        private final String fuenteMono;
+        private final int tamanioFuenteMono;
+        private final boolean multiProveedorHabilitado;
+        private final List<String> proveedoresMultiSeleccionados;
+
+        private DatosGuardadoDialogo(String codigoIdioma,
+                                     boolean detallado,
+                                     boolean ignorarSsl,
+                                     boolean soloProxy,
+                                     boolean alertasHabilitadas,
+                                     boolean persistirBusqueda,
+                                     boolean persistirSeveridad,
+                                     String tipoAgenteSeleccionado,
+                                     Map<String, Boolean> estadosHabilitacionAgentes,
+                                     Map<String, String> rutasBinarioAgentes,
+                                     String agentePromptInicial,
+                                     String agentePrompt,
+                                     String promptActual,
+                                     String fuenteEstandar,
+                                     int tamanioFuenteEstandar,
+                                     String fuenteMono,
+                                     int tamanioFuenteMono,
+                                     boolean multiProveedorHabilitado,
+                                     List<String> proveedoresMultiSeleccionados) {
+            this.codigoIdioma = codigoIdioma;
+            this.detallado = detallado;
+            this.ignorarSsl = ignorarSsl;
+            this.soloProxy = soloProxy;
+            this.alertasHabilitadas = alertasHabilitadas;
+            this.persistirBusqueda = persistirBusqueda;
+            this.persistirSeveridad = persistirSeveridad;
+            this.tipoAgenteSeleccionado = tipoAgenteSeleccionado;
+            this.estadosHabilitacionAgentes = estadosHabilitacionAgentes;
+            this.rutasBinarioAgentes = rutasBinarioAgentes;
+            this.agentePromptInicial = agentePromptInicial;
+            this.agentePrompt = agentePrompt;
+            this.promptActual = promptActual;
+            this.fuenteEstandar = fuenteEstandar;
+            this.tamanioFuenteEstandar = tamanioFuenteEstandar;
+            this.fuenteMono = fuenteMono;
+            this.tamanioFuenteMono = tamanioFuenteMono;
+            this.multiProveedorHabilitado = multiProveedorHabilitado;
+            this.proveedoresMultiSeleccionados = proveedoresMultiSeleccionados;
         }
     }
 
@@ -178,46 +238,10 @@ public class ConfigDialogController {
     }
 
     private void inicializarEventHandlersDocumentos() {
-        agregarDocumentListenerSiPresente(dialogo.obtenerTxtPrompt(), crearDocumentListenerPrompt());
-        agregarDocumentListenerSiPresente(dialogo.obtenerTxtAgenteBinario(), crearDocumentListenerAgenteBinario());
-    }
-
-    private DocumentListener crearDocumentListenerPrompt() {
-        return new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                actualizarContadorPrompt();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                actualizarContadorPrompt();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                actualizarContadorPrompt();
-            }
-        };
-    }
-
-    private DocumentListener crearDocumentListenerAgenteBinario() {
-        return new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                actualizarRutaEnMemoria();
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                actualizarRutaEnMemoria();
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                actualizarRutaEnMemoria();
-            }
-        };
+        agregarDocumentListenerSiPresente(dialogo.obtenerTxtPrompt(),
+                UIUtils.crearDocumentListener(this::actualizarContadorPrompt));
+        agregarDocumentListenerSiPresente(dialogo.obtenerTxtAgenteBinario(),
+                UIUtils.crearDocumentListener(this::actualizarRutaEnMemoria));
     }
 
     // ===== MÉTODOS DRY PARA EVENT HANDLERS =====
@@ -697,6 +721,11 @@ public class ConfigDialogController {
             return;
         }
 
+        DatosGuardadoDialogo datosGuardado = capturarDatosGuardadoDialogo();
+        Map<String, EstadoProveedorUI> estadosProveedorGuardar =
+                new HashMap<>(providerManager.obtenerConfiguracionParaGuardar());
+        estadosProveedorGuardar.put(proveedorSeleccionado, estadoUI);
+
         JButton btnGuardar = dialogo.obtenerBtnGuardar();
         if (btnGuardar != null) {
             btnGuardar.setEnabled(false);
@@ -712,8 +741,21 @@ public class ConfigDialogController {
             protected Boolean doInBackground() {
                 StringBuilder errorBuilder = new StringBuilder();
                 try {
+                    Map<String, String> erroresBorradores = validarCamposNumericosProveedores(estadosProveedorGuardar);
+                    if (!erroresBorradores.isEmpty()) {
+                        errorBuilder.append(construirMensajeErroresValidacion(erroresBorradores));
+                        errorMsg = errorBuilder.toString();
+                        return false;
+                    }
+
                     snapshot = config.crearSnapshot();
-                    aplicarConfiguracionASnapshot(snapshot, estadoUI, proveedorSeleccionado, valoresNumericos);
+                    aplicarConfiguracionASnapshot(
+                            snapshot,
+                            estadoUI,
+                            proveedorSeleccionado,
+                            valoresNumericos,
+                            estadosProveedorGuardar,
+                            datosGuardado);
 
                     Map<String, String> errores = snapshot.validar();
                     if (!errores.isEmpty()) {
@@ -775,20 +817,22 @@ public class ConfigDialogController {
     private void aplicarConfiguracionASnapshot(ConfiguracionAPI snapshot,
                                                EstadoProveedorUI estadoUI,
                                                String proveedorSeleccionado,
-                                               ValoresNumericosConfiguracion valoresNumericos) {
-        JComboBox<IdiomaUI> comboIdioma = dialogo.obtenerComboIdioma();
-        if (comboIdioma != null) {
-            IdiomaUI idiomaSeleccionado = (IdiomaUI) comboIdioma.getSelectedItem();
-            snapshot.establecerIdiomaUi(
-                idiomaSeleccionado != null ? idiomaSeleccionado.codigo() : IdiomaUI.porDefecto().codigo());
+                                               ValoresNumericosConfiguracion valoresNumericos,
+                                               Map<String, EstadoProveedorUI> estadosProveedorGuardar,
+                                               DatosGuardadoDialogo datosGuardado) {
+        if (datosGuardado != null) {
+            snapshot.establecerIdiomaUi(datosGuardado.codigoIdioma);
         }
 
         snapshot.establecerProveedorAI(proveedorSeleccionado);
 
-        Map<String, EstadoProveedorUI> estadosProveedorGuardar = providerManager.obtenerConfiguracionParaGuardar();
-        estadosProveedorGuardar.put(proveedorSeleccionado, estadoUI);
+        Map<String, EstadoProveedorUI> estadosProveedorAplicar = new HashMap<>();
+        if (estadosProveedorGuardar != null) {
+            estadosProveedorAplicar.putAll(estadosProveedorGuardar);
+        }
+        estadosProveedorAplicar.put(proveedorSeleccionado, estadoUI);
 
-        for (Map.Entry<String, EstadoProveedorUI> entry : estadosProveedorGuardar.entrySet()) {
+        for (Map.Entry<String, EstadoProveedorUI> entry : estadosProveedorAplicar.entrySet()) {
             String nombreProveedor = entry.getKey();
             EstadoProveedorUI estadoProveedor = entry.getValue();
 
@@ -802,34 +846,13 @@ public class ConfigDialogController {
             }
         }
 
-        JCheckBox chkDetallado = dialogo.obtenerChkDetallado();
-        if (chkDetallado != null) {
-            snapshot.establecerDetallado(chkDetallado.isSelected());
-        }
-
-        JCheckBox chkIgnorarSSL = dialogo.obtenerChkIgnorarSSL();
-        if (chkIgnorarSSL != null) {
-            snapshot.establecerIgnorarErroresSSL(chkIgnorarSSL.isSelected());
-        }
-
-        JCheckBox chkSoloProxy = dialogo.obtenerChkSoloProxy();
-        if (chkSoloProxy != null) {
-            snapshot.establecerSoloProxy(chkSoloProxy.isSelected());
-        }
-
-        JCheckBox chkAlertasHabilitadas = dialogo.obtenerChkAlertasHabilitadas();
-        if (chkAlertasHabilitadas != null) {
-            snapshot.establecerAlertasHabilitadas(chkAlertasHabilitadas.isSelected());
-        }
-
-        JCheckBox chkPersistirBusqueda = dialogo.obtenerChkPersistirBusqueda();
-        if (chkPersistirBusqueda != null) {
-            snapshot.establecerPersistirFiltroBusquedaHallazgos(chkPersistirBusqueda.isSelected());
-        }
-
-        JCheckBox chkPersistirSeveridad = dialogo.obtenerChkPersistirSeveridad();
-        if (chkPersistirSeveridad != null) {
-            snapshot.establecerPersistirFiltroSeveridadHallazgos(chkPersistirSeveridad.isSelected());
+        if (datosGuardado != null) {
+            snapshot.establecerDetallado(datosGuardado.detallado);
+            snapshot.establecerIgnorarErroresSSL(datosGuardado.ignorarSsl);
+            snapshot.establecerSoloProxy(datosGuardado.soloProxy);
+            snapshot.establecerAlertasHabilitadas(datosGuardado.alertasHabilitadas);
+            snapshot.establecerPersistirFiltroBusquedaHallazgos(datosGuardado.persistirBusqueda);
+            snapshot.establecerPersistirFiltroSeveridadHallazgos(datosGuardado.persistirSeveridad);
         }
 
         snapshot.establecerRetrasoSegundos(valoresNumericos.retrasoSegundos);
@@ -837,68 +860,66 @@ public class ConfigDialogController {
         snapshot.establecerMaximoHallazgosTabla(valoresNumericos.maximoHallazgosTabla);
         snapshot.establecerMaximoTareasTabla(valoresNumericos.maximoTareas);
 
-        JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
-        JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
-        JTextArea txtAgentePromptInicial = dialogo.obtenerTxtAgentePromptInicial();
-        JTextArea txtAgentePrompt = dialogo.obtenerTxtAgentePrompt();
+        if (datosGuardado != null) {
+            snapshot.establecerTipoAgente(datosGuardado.tipoAgenteSeleccionado);
+            snapshot.establecerEstadosHabilitacionAgentes(datosGuardado.estadosHabilitacionAgentes);
+            snapshot.establecerAgentePreflightPrompt(datosGuardado.agentePromptInicial);
+            snapshot.establecerAgentePrompt(datosGuardado.agentePrompt);
 
-        if (comboAgente != null) {
-            snapshot.establecerTipoAgente((String) comboAgente.getSelectedItem());
-        }
-        if (chkAgenteHabilitado != null && comboAgente != null) {
-            guardarEstadoHabilitacionAgenteActual((String) comboAgente.getSelectedItem());
-        }
-        snapshot.establecerEstadosHabilitacionAgentes(estadosHabilitacionAgenteTemporal);
-        if (txtAgentePromptInicial != null) {
-            snapshot.establecerAgentePreflightPrompt(txtAgentePromptInicial.getText());
-        }
-        if (txtAgentePrompt != null) {
-            snapshot.establecerAgentePrompt(txtAgentePrompt.getText());
-        }
-
-        for (Map.Entry<String, String> entry : rutasBinarioAgenteTemporal.entrySet()) {
-            snapshot.establecerRutaBinarioAgente(entry.getKey(), entry.getValue());
-        }
-
-        JTextArea txtPrompt = dialogo.obtenerTxtPrompt();
-        if (txtPrompt != null) {
-            String promptActual = txtPrompt.getText();
-            String promptPorDefecto = ConfiguracionAPI.obtenerPromptPorDefecto();
-            snapshot.establecerPromptConfigurable(promptActual);
-            snapshot.establecerPromptModificado(!promptActual.equals(promptPorDefecto));
-        }
-
-        JComboBox<String> comboFuenteEstandar = dialogo.obtenerComboFuenteEstandar();
-        JSpinner spinnerTamanioEstandar = dialogo.obtenerSpinnerTamanioEstandar();
-        JComboBox<String> comboFuenteMono = dialogo.obtenerComboFuenteMono();
-        JSpinner spinnerTamanioMono = dialogo.obtenerSpinnerTamanioMono();
-
-        if (comboFuenteEstandar != null) {
-            snapshot.establecerNombreFuenteEstandar((String) comboFuenteEstandar.getSelectedItem());
-        }
-        if (spinnerTamanioEstandar != null) {
-            snapshot.establecerTamanioFuenteEstandar((int) spinnerTamanioEstandar.getValue());
-        }
-        if (comboFuenteMono != null) {
-            snapshot.establecerNombreFuenteMono((String) comboFuenteMono.getSelectedItem());
-        }
-        if (spinnerTamanioMono != null) {
-            snapshot.establecerTamanioFuenteMono((int) spinnerTamanioMono.getValue());
-        }
-
-        JCheckBox chkHabilitarMultiProveedor = dialogo.obtenerChkHabilitarMultiProveedor();
-        if (chkHabilitarMultiProveedor != null) {
-            snapshot.establecerMultiProveedorHabilitado(chkHabilitarMultiProveedor.isSelected());
-
-            DefaultListModel<String> modeloListaSeleccionados = dialogo.obtenerModeloListaSeleccionados();
-            if (modeloListaSeleccionados != null) {
-                List<String> proveedoresSeleccionados = new ArrayList<>();
-                for (int i = 0; i < modeloListaSeleccionados.getSize(); i++) {
-                    proveedoresSeleccionados.add(modeloListaSeleccionados.getElementAt(i));
-                }
-                snapshot.establecerProveedoresMultiConsulta(proveedoresSeleccionados);
+            for (Map.Entry<String, String> entry : datosGuardado.rutasBinarioAgentes.entrySet()) {
+                snapshot.establecerRutaBinarioAgente(entry.getKey(), entry.getValue());
             }
         }
+
+        if (datosGuardado != null) {
+            String promptPorDefecto = ConfiguracionAPI.obtenerPromptPorDefecto();
+            snapshot.establecerPromptConfigurable(datosGuardado.promptActual);
+            snapshot.establecerPromptModificado(!datosGuardado.promptActual.equals(promptPorDefecto));
+        }
+
+        if (datosGuardado != null) {
+            snapshot.establecerNombreFuenteEstandar(datosGuardado.fuenteEstandar);
+            snapshot.establecerTamanioFuenteEstandar(datosGuardado.tamanioFuenteEstandar);
+            snapshot.establecerNombreFuenteMono(datosGuardado.fuenteMono);
+            snapshot.establecerTamanioFuenteMono(datosGuardado.tamanioFuenteMono);
+            snapshot.establecerMultiProveedorHabilitado(datosGuardado.multiProveedorHabilitado);
+            snapshot.establecerProveedoresMultiConsulta(datosGuardado.proveedoresMultiSeleccionados);
+        }
+    }
+
+    private DatosGuardadoDialogo capturarDatosGuardadoDialogo() {
+        IdiomaUI idiomaSeleccionado = obtenerValorSeleccionado(dialogo.obtenerComboIdioma(), IdiomaUI.class);
+        String tipoAgenteSeleccionado = obtenerTextoSeleccionado(dialogo.obtenerComboAgente());
+        guardarEstadoHabilitacionAgenteActual(tipoAgenteSeleccionado);
+
+        List<String> proveedoresSeleccionados = new ArrayList<>();
+        DefaultListModel<String> modeloListaSeleccionados = dialogo.obtenerModeloListaSeleccionados();
+        if (modeloListaSeleccionados != null) {
+            for (int i = 0; i < modeloListaSeleccionados.getSize(); i++) {
+                proveedoresSeleccionados.add(modeloListaSeleccionados.getElementAt(i));
+            }
+        }
+
+        return new DatosGuardadoDialogo(
+                idiomaSeleccionado != null ? idiomaSeleccionado.codigo() : IdiomaUI.porDefecto().codigo(),
+                estaSeleccionado(dialogo.obtenerChkDetallado()),
+                estaSeleccionado(dialogo.obtenerChkIgnorarSSL()),
+                estaSeleccionado(dialogo.obtenerChkSoloProxy()),
+                estaSeleccionado(dialogo.obtenerChkAlertasHabilitadas()),
+                estaSeleccionado(dialogo.obtenerChkPersistirBusqueda()),
+                estaSeleccionado(dialogo.obtenerChkPersistirSeveridad()),
+                tipoAgenteSeleccionado,
+                new HashMap<>(estadosHabilitacionAgenteTemporal),
+                new HashMap<>(rutasBinarioAgenteTemporal),
+                dialogo.obtenerTxtAgentePromptInicial() != null ? dialogo.obtenerTxtAgentePromptInicial().getText() : "",
+                dialogo.obtenerTxtAgentePrompt() != null ? dialogo.obtenerTxtAgentePrompt().getText() : "",
+                dialogo.obtenerTxtPrompt() != null ? dialogo.obtenerTxtPrompt().getText() : "",
+                obtenerTextoSeleccionado(dialogo.obtenerComboFuenteEstandar()),
+                obtenerValorSpinner(dialogo.obtenerSpinnerTamanioEstandar(), ConfiguracionAPI.TAMANIO_FUENTE_ESTANDAR_DEFECTO),
+                obtenerTextoSeleccionado(dialogo.obtenerComboFuenteMono()),
+                obtenerValorSpinner(dialogo.obtenerSpinnerTamanioMono(), ConfiguracionAPI.TAMANIO_FUENTE_MONO_DEFECTO),
+                estaSeleccionado(dialogo.obtenerChkHabilitarMultiProveedor()),
+                proveedoresSeleccionados);
     }
 
     public void manejarCerrarDialogo() {
@@ -1196,6 +1217,61 @@ public class ConfigDialogController {
                 maximoTareas.valor);
     }
 
+    private Map<String, String> validarCamposNumericosProveedores(Map<String, EstadoProveedorUI> estadosProveedor) {
+        Map<String, String> errores = new HashMap<>();
+        if (Normalizador.esVacia(estadosProveedor)) {
+            return errores;
+        }
+
+        for (Map.Entry<String, EstadoProveedorUI> entry : estadosProveedor.entrySet()) {
+            String proveedor = entry.getKey();
+            EstadoProveedorUI estado = entry.getValue();
+            if (Normalizador.esVacio(proveedor) || estado == null) {
+                continue;
+            }
+
+            agregarErrorProveedorSiExiste(
+                    errores,
+                    proveedor,
+                    "maxTokens",
+                    estado.obtenerMaxTokensTexto(),
+                    I18nUI.Configuracion.LABEL_MAX_TOKENS(),
+                    1,
+                    200000);
+            agregarErrorProveedorSiExiste(
+                    errores,
+                    proveedor,
+                    "timeout",
+                    estado.obtenerTimeoutTexto(),
+                    I18nUI.Configuracion.LABEL_TIMEOUT_MODELO(),
+                    ConfiguracionAPI.TIEMPO_ESPERA_MIN_SEGUNDOS,
+                    ConfiguracionAPI.TIEMPO_ESPERA_MAX_SEGUNDOS);
+        }
+
+        return errores;
+    }
+
+    private void agregarErrorProveedorSiExiste(Map<String, String> errores,
+                                               String proveedor,
+                                               String campo,
+                                               String valor,
+                                               String etiquetaBase,
+                                               int minimo,
+                                               int maximo) {
+        if (errores == null || Normalizador.esVacio(proveedor) || Normalizador.esVacio(campo)) {
+            return;
+        }
+
+        ConfigValidator.ValidationResultEntero resultado = ConfigValidator.validarEntero(
+                valor,
+                construirEtiquetaCampoProveedor(etiquetaBase, proveedor),
+                minimo,
+                maximo);
+        if (!resultado.esValido()) {
+            errores.put(proveedor + ":" + campo, resultado.obtenerMensajeError());
+        }
+    }
+
     private ResultadoValidacionEnteroDialogo validarCampoEntero(JTextField campoTexto,
                                                                 String campo,
                                                                 String nombreVisible,
@@ -1221,6 +1297,14 @@ public class ConfigDialogController {
             limpia = limpia.substring(0, limpia.length() - 1).trim();
         }
         return limpia;
+    }
+
+    private String construirEtiquetaCampoProveedor(String etiquetaBase, String proveedor) {
+        String etiquetaLimpia = limpiarEtiquetaCampo(etiquetaBase);
+        if (Normalizador.esVacio(proveedor)) {
+            return etiquetaLimpia;
+        }
+        return I18nUI.trf("%s (%s)", "%s (%s)", etiquetaLimpia, proveedor);
     }
 
     private void mostrarErrorValidacionProveedor(ProviderConfigManager.ValidationResultEstadoProveedor resultado,

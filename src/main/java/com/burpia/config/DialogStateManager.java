@@ -296,6 +296,8 @@ public final class DialogStateManager {
                     textoSeguro(borrador.obtenerApiKey()),
                     textoSeguro(borrador.obtenerModelo()),
                     textoSeguro(borrador.obtenerBaseUrl()),
+                    textoSeguro(borrador.obtenerMaxTokensTexto()),
+                    textoSeguro(borrador.obtenerTimeoutTexto()),
                     borrador.obtenerMaxTokens(),
                     borrador.obtenerTimeout());
         }
@@ -610,13 +612,27 @@ public final class DialogStateManager {
         private final String apiKey;
         private final String modelo;
         private final String baseUrl;
+        private final String maxTokensTexto;
+        private final String timeoutTexto;
         private final int maxTokens;
         private final int timeout;
 
         public EstadoProveedorSnapshot(String apiKey, String modelo, String baseUrl, int maxTokens, int timeout) {
+            this(apiKey, modelo, baseUrl, String.valueOf(maxTokens), String.valueOf(timeout), maxTokens, timeout);
+        }
+
+        public EstadoProveedorSnapshot(String apiKey,
+                                       String modelo,
+                                       String baseUrl,
+                                       String maxTokensTexto,
+                                       String timeoutTexto,
+                                       int maxTokens,
+                                       int timeout) {
             this.apiKey = apiKey;
             this.modelo = modelo;
             this.baseUrl = baseUrl;
+            this.maxTokensTexto = maxTokensTexto;
+            this.timeoutTexto = timeoutTexto;
             this.maxTokens = maxTokens;
             this.timeout = timeout;
         }
@@ -624,6 +640,8 @@ public final class DialogStateManager {
         public String apiKey() { return apiKey; }
         public String modelo() { return modelo; }
         public String baseUrl() { return baseUrl; }
+        public String maxTokensTexto() { return maxTokensTexto; }
+        public String timeoutTexto() { return timeoutTexto; }
         public int maxTokens() { return maxTokens; }
         public int timeout() { return timeout; }
 
@@ -640,12 +658,14 @@ public final class DialogStateManager {
                     && timeout == that.timeout
                     && Objects.equals(apiKey, that.apiKey)
                     && Objects.equals(modelo, that.modelo)
-                    && Objects.equals(baseUrl, that.baseUrl);
+                    && Objects.equals(baseUrl, that.baseUrl)
+                    && Objects.equals(maxTokensTexto, that.maxTokensTexto)
+                    && Objects.equals(timeoutTexto, that.timeoutTexto);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(apiKey, modelo, baseUrl, maxTokens, timeout);
+            return Objects.hash(apiKey, modelo, baseUrl, maxTokensTexto, timeoutTexto, maxTokens, timeout);
         }
     }
 }

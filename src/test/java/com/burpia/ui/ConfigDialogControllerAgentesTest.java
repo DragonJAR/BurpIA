@@ -41,9 +41,10 @@ class ConfigDialogControllerAgentesTest {
         TestDialogUtils.registrarCapturaDialogos();
         
         originalUserHome = System.getProperty("user.home");
-        burpiaDir = tempDir.resolve(".burpia");
+        Path homeAislado = Files.createTempDirectory(tempDir, "home-");
+        burpiaDir = homeAislado.resolve(".burpia");
         Files.createDirectories(burpiaDir);
-        System.setProperty("user.home", tempDir.toString());
+        System.setProperty("user.home", homeAislado.toString());
     }
 
     @AfterEach
@@ -290,10 +291,7 @@ class ConfigDialogControllerAgentesTest {
     @Test
     @DisplayName("Guardar acepta agente habilitado con ruta expandible por tilde")
     void testGuardarAceptaBinarioAgenteConTildeYArgumentos() throws Exception {
-        Path binarioClaude = tempDir.resolve(".local").resolve("bin").resolve("claude");
-        Files.createDirectories(binarioClaude.getParent());
-        Files.writeString(binarioClaude, "#!/bin/bash\necho 'claude'");
-        binarioClaude.toFile().setExecutable(true);
+        Path binarioClaude = crearBinarioClaudeEnHomeActual();
 
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("Z.ai");
@@ -309,7 +307,7 @@ class ConfigDialogControllerAgentesTest {
                 "~/.local/bin/claude --dangerously-skip-permissions"
             );
 
-            ejecutarGuardado(dialogo);
+            ejecutarGuardado(dialogo, guardadoCallback);
 
             assertTrue(guardadoCallback.get(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:270");
             assertFalse(dialogo.isDisplayable(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:271");
@@ -379,7 +377,7 @@ class ConfigDialogControllerAgentesTest {
             );
 
             TestDialogUtils.reiniciarDialogosMensajeCapturados();
-            ejecutarGuardado(dialogo);
+            ejecutarGuardado(dialogo, guardadoCallback);
 
             assertTrue(guardadoCallback.get(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:360");
             assertFalse(dialogo.isDisplayable(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:361");
@@ -400,10 +398,7 @@ class ConfigDialogControllerAgentesTest {
     @Test
     @DisplayName("Guardar no muestra error si el agente seleccionado es invalido pero queda deshabilitado")
     void testGuardarNoMuestraErrorSiAgenteSeleccionadoInvalidoQuedaDeshabilitado() throws Exception {
-        Path binarioClaude = tempDir.resolve(".local").resolve("bin").resolve("claude");
-        Files.createDirectories(binarioClaude.getParent());
-        Files.writeString(binarioClaude, "#!/bin/bash\necho 'claude'");
-        binarioClaude.toFile().setExecutable(true);
+        Path binarioClaude = crearBinarioClaudeEnHomeActual();
         String comandoGeminiInvalido = "~/.local/bin/binario-gemini-no-existe --sandbox";
 
         ConfiguracionAPI config = new ConfiguracionAPI();
@@ -451,7 +446,7 @@ class ConfigDialogControllerAgentesTest {
             flushEdt();
 
             TestDialogUtils.reiniciarDialogosMensajeCapturados();
-            ejecutarGuardado(dialogo);
+            ejecutarGuardado(dialogo, guardadoCallback);
 
             assertTrue(guardadoCallback.get(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:421");
             assertFalse(TestDialogUtils.seCapturoDialogoMensaje(),
@@ -559,8 +554,37 @@ class ConfigDialogControllerAgentesTest {
 
     private void ejecutarGuardado(DialogoConfiguracion dialogo) throws Exception {
         SwingUtilities.invokeAndWait(dialogo::guardarConfiguracion);
-        Thread.sleep(250);
+        long inicio = System.currentTimeMillis();
+        long timeoutMs = 5000;
+        int dialogosIniciales = TestDialogUtils.contarDialogosMensajeCapturados();
+        while (dialogo.isDisplayable()
+                && TestDialogUtils.contarDialogosMensajeCapturados() == dialogosIniciales
+                && (System.currentTimeMillis() - inicio) < timeoutMs) {
+            Thread.sleep(50);
+            flushEdt();
+        }
         flushEdt();
+    }
+
+    private void ejecutarGuardado(DialogoConfiguracion dialogo,
+                                  AtomicBoolean guardadoCallback) throws Exception {
+        SwingUtilities.invokeAndWait(dialogo::guardarConfiguracion);
+        long inicio = System.currentTimeMillis();
+        long timeoutMs = 5000;
+        while (!guardadoCallback.get() && (System.currentTimeMillis() - inicio) < timeoutMs) {
+            Thread.sleep(50);
+            flushEdt();
+        }
+        flushEdt();
+    }
+
+    private Path crearBinarioClaudeEnHomeActual() throws IOException {
+        Path homeActual = Path.of(System.getProperty("user.home"));
+        Path binarioClaude = homeActual.resolve(".local").resolve("bin").resolve("claude");
+        Files.createDirectories(binarioClaude.getParent());
+        Files.writeString(binarioClaude, "#!/bin/bash\necho 'claude'");
+        binarioClaude.toFile().setExecutable(true);
+        return binarioClaude;
     }
 
     private void flushEdt() throws Exception {

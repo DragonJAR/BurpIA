@@ -219,15 +219,15 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         try {
             JButton btnGuardar = obtenerCampo(dialogo, "btnGuardar", JButton.class);
             JButton btnCerrar = obtenerCampo(dialogo, "btnCerrar", JButton.class);
-            JComboBox<String> comboFuenteEstandar = obtenerCampo(dialogo, "comboFuenteEstandar", JComboBox.class);
+            JComboBox<String> comboFuenteEstandar = obtenerComboString(dialogo, "comboFuenteEstandar");
             JSpinner spinnerTamanioEstandar = obtenerCampo(dialogo, "spinnerTamanioEstandar", JSpinner.class);
-            JComboBox<String> comboFuenteMono = obtenerCampo(dialogo, "comboFuenteMono", JComboBox.class);
+            JComboBox<String> comboFuenteMono = obtenerComboString(dialogo, "comboFuenteMono");
             JSpinner spinnerTamanioMono = obtenerCampo(dialogo, "spinnerTamanioMono", JSpinner.class);
             JButton btnRestaurarFuentes = obtenerCampo(dialogo, "btnRestaurarFuentes", JButton.class);
             JCheckBox chkHabilitarMultiProveedor = obtenerCampo(dialogo, "chkHabilitarMultiProveedor", JCheckBox.class);
-            JList<String> listaDisponibles = obtenerCampo(dialogo, "listaProveedoresDisponibles", JList.class);
-            JList<String> listaSeleccionados = obtenerCampo(dialogo, "listaProveedoresSeleccionados", JList.class);
-            JComboBox<String> comboAgente = obtenerCampo(dialogo, "comboAgente", JComboBox.class);
+            JList<String> listaDisponibles = obtenerListaString(dialogo, "listaProveedoresDisponibles");
+            JList<String> listaSeleccionados = obtenerListaString(dialogo, "listaProveedoresSeleccionados");
+            JComboBox<String> comboAgente = obtenerComboString(dialogo, "comboAgente");
             JTextField txtAgenteBinario = obtenerCampo(dialogo, "txtAgenteBinario", JTextField.class);
             JCheckBox chkAgenteHabilitado = obtenerCampo(dialogo, "chkAgenteHabilitado", JCheckBox.class);
             JTextArea txtAgentePromptInicial = obtenerCampo(dialogo, "txtAgentePromptInicial", JTextArea.class);
@@ -714,7 +714,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
             JTextField txtMaxTokens = obtenerCampo(dialogo, "txtMaxTokens", JTextField.class);
             JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
-            JComboBox<IdiomaUI> comboIdioma = obtenerCampo(dialogo, "comboIdioma", JComboBox.class);
+            JComboBox<IdiomaUI> comboIdioma = obtenerComboIdioma(dialogo, "comboIdioma");
             JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
             JTextField txtMaximoConcurrente = obtenerCampo(dialogo, "txtMaximoConcurrente", JTextField.class);
             JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogo, "txtMaximoHallazgosTabla", JTextField.class);
@@ -725,9 +725,9 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             JCheckBox chkAlertasHabilitadas = obtenerCampo(dialogo, "chkAlertasHabilitadas", JCheckBox.class);
             JCheckBox chkPersistirBusqueda = obtenerCampo(dialogo, "chkPersistirBusqueda", JCheckBox.class);
             JCheckBox chkPersistirSeveridad = obtenerCampo(dialogo, "chkPersistirSeveridad", JCheckBox.class);
-            JComboBox<String> comboFuenteEstandar = obtenerCampo(dialogo, "comboFuenteEstandar", JComboBox.class);
+            JComboBox<String> comboFuenteEstandar = obtenerComboString(dialogo, "comboFuenteEstandar");
             JSpinner spinnerTamanioEstandar = obtenerCampo(dialogo, "spinnerTamanioEstandar", JSpinner.class);
-            JComboBox<String> comboFuenteMono = obtenerCampo(dialogo, "comboFuenteMono", JComboBox.class);
+            JComboBox<String> comboFuenteMono = obtenerComboString(dialogo, "comboFuenteMono");
             JSpinner spinnerTamanioMono = obtenerCampo(dialogo, "spinnerTamanioMono", JSpinner.class);
 
             String fuenteEstandarEsperada = seleccionarFuenteAlternativa(comboFuenteEstandar);
@@ -780,7 +780,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         ConfiguracionAPI configRecargada = new ConfiguracionAPI();
         DialogoConfiguracion dialogoReabierto = crearDialogo(configRecargada, gestor, () -> {});
         try {
-            JComboBox<IdiomaUI> comboIdioma = obtenerCampo(dialogoReabierto, "comboIdioma", JComboBox.class);
+            JComboBox<IdiomaUI> comboIdioma = obtenerComboIdioma(dialogoReabierto, "comboIdioma");
             JTextField txtRetraso = obtenerCampo(dialogoReabierto, "txtRetraso", JTextField.class);
             JTextField txtMaximoConcurrente = obtenerCampo(dialogoReabierto, "txtMaximoConcurrente", JTextField.class);
             JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogoReabierto, "txtMaximoHallazgosTabla", JTextField.class);
@@ -791,9 +791,9 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             JCheckBox chkAlertasHabilitadas = obtenerCampo(dialogoReabierto, "chkAlertasHabilitadas", JCheckBox.class);
             JCheckBox chkPersistirBusqueda = obtenerCampo(dialogoReabierto, "chkPersistirBusqueda", JCheckBox.class);
             JCheckBox chkPersistirSeveridad = obtenerCampo(dialogoReabierto, "chkPersistirSeveridad", JCheckBox.class);
-            JComboBox<String> comboFuenteEstandar = obtenerCampo(dialogoReabierto, "comboFuenteEstandar", JComboBox.class);
+            JComboBox<String> comboFuenteEstandar = obtenerComboString(dialogoReabierto, "comboFuenteEstandar");
             JSpinner spinnerTamanioEstandar = obtenerCampo(dialogoReabierto, "spinnerTamanioEstandar", JSpinner.class);
-            JComboBox<String> comboFuenteMono = obtenerCampo(dialogoReabierto, "comboFuenteMono", JComboBox.class);
+            JComboBox<String> comboFuenteMono = obtenerComboString(dialogoReabierto, "comboFuenteMono");
             JSpinner spinnerTamanioMono = obtenerCampo(dialogoReabierto, "spinnerTamanioMono", JSpinner.class);
 
             assertEquals(IdiomaUI.EN, comboIdioma.getSelectedItem(), "El idioma debe persistirse");
@@ -1019,6 +1019,16 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         return (JComboBox<String>) obtenerCampo(target, nombreCampo, JComboBox.class);
     }
 
+    @SuppressWarnings("unchecked")
+    private JComboBox<IdiomaUI> obtenerComboIdioma(Object target, String nombreCampo) throws Exception {
+        return (JComboBox<IdiomaUI>) obtenerCampo(target, nombreCampo, JComboBox.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private JList<String> obtenerListaString(Object target, String nombreCampo) throws Exception {
+        return (JList<String>) obtenerCampo(target, nombreCampo, JList.class);
+    }
+
     @Test
     @DisplayName("Los cambios no guardados se mantienen como borrador al cambiar de proveedor")
     void testBorradorPersisteAlCambiarProveedor() throws Exception {
@@ -1057,6 +1067,161 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             // 4. Verificar que se mantuvo el cambio
             assertEquals("https://mi-proxy.com", txtUrl.getText(), "El URL modificado de OpenAI debería persistir como borrador");
 
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Borradores numéricos inválidos se conservan al cambiar de proveedor")
+    void testBorradorNumericoInvalidoPersisteAlCambiarProveedor() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-borrador-invalido-test");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JTextField txtMaxTokens = obtenerCampo(dialogo, "txtMaxTokens", JTextField.class);
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("OpenAI");
+                txtMaxTokens.setText("abc");
+                txtTimeoutModelo.setText("999999");
+            });
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("Gemini"));
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("OpenAI"));
+            flushEdt();
+
+            assertEquals("abc", txtMaxTokens.getText(),
+                    "El texto inválido de maxTokens debe conservarse como borrador al volver al proveedor");
+            assertEquals("999999", txtTimeoutModelo.getText(),
+                    "El texto inválido de timeout debe conservarse como borrador al volver al proveedor");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Timeout borrador sigue al modelo custom editado al cambiar de proveedor")
+    void testTimeoutBorradorPersisteTrasRenombrarModeloCustom() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-borrador-timeout-custom");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("OpenAI");
+                comboModelo.setSelectedItem(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
+                comboModelo.getEditor().setItem("modelo-custom-a");
+                txtTimeoutModelo.setText("345");
+                comboModelo.getEditor().setItem("modelo-custom-b");
+            });
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("Gemini"));
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> comboProveedor.setSelectedItem("OpenAI"));
+            flushEdt();
+
+            assertEquals("modelo-custom-b", comboModelo.getEditor().getItem(),
+                    "El borrador debe conservar el último nombre del modelo custom editado");
+            assertEquals("345", txtTimeoutModelo.getText(),
+                    "El timeout visible debe seguir asociado al modelo custom editado");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Guardar bloquea borradores inválidos de proveedores no activos")
+    void testGuardarBloqueaBorradoresInvalidosDeProveedorOculto() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-borrador-oculto-invalido");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> guardadoCallback.set(true));
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JPasswordField txtClave = obtenerCampo(dialogo, "txtClave", JPasswordField.class);
+            JTextField txtMaxTokens = obtenerCampo(dialogo, "txtMaxTokens", JTextField.class);
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+            JTextField txtRetraso = obtenerCampo(dialogo, "txtRetraso", JTextField.class);
+            JTextField txtMaximoConcurrente = obtenerCampo(dialogo, "txtMaximoConcurrente", JTextField.class);
+            JTextField txtMaximoHallazgosTabla = obtenerCampo(dialogo, "txtMaximoHallazgosTabla", JTextField.class);
+            JTextField txtMaximoTareas = obtenerCampo(dialogo, "txtMaximoTareas", JTextField.class);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("OpenAI");
+                comboModelo.setSelectedItem("gpt-4");
+                comboModelo.getEditor().setItem("gpt-4");
+                txtClave.setText("sk-hidden-provider");
+                txtMaxTokens.setText("abc");
+                txtTimeoutModelo.setText("180");
+            });
+            flushEdt();
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("Z.ai");
+                comboModelo.setSelectedItem("glm-5");
+                comboModelo.getEditor().setItem("glm-5");
+                txtClave.setText("zai-visible-provider");
+                txtMaxTokens.setText("4096");
+                txtTimeoutModelo.setText("180");
+                txtRetraso.setText("5");
+                txtMaximoConcurrente.setText("3");
+                txtMaximoHallazgosTabla.setText("1000");
+                txtMaximoTareas.setText("100");
+            });
+            flushEdt();
+
+            Method guardar = DialogoConfiguracion.class.getDeclaredMethod("guardarConfiguracion");
+            guardar.setAccessible(true);
+            SwingUtilities.invokeAndWait(() -> {
+                try {
+                    guardar.invoke(dialogo);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            Thread.sleep(250);
+            flushEdt();
+
+            assertFalse(guardadoCallback.get(),
+                    "El callback no debe ejecutarse cuando existe un borrador inválido en otro proveedor");
+            assertTrue(dialogo.isDisplayable(),
+                    "El diálogo debe seguir abierto para corregir el borrador inválido");
+            assertEquals(null, config.obtenerMaxTokensConfiguradoParaProveedor("OpenAI"),
+                    "No debe persistirse un maxTokens normalizado para un proveedor oculto con entrada inválida");
         } finally {
             destruirDialogo(dialogo);
         }

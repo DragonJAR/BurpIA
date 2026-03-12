@@ -176,6 +176,23 @@ class ProviderConfigManagerTest {
     }
 
     @Test
+    void testExtraerEstadoActualRapidoPreservaTextosInvalidosDeBorrador() {
+        when(txtClave.getPassword()).thenReturn("test-key".toCharArray());
+        when(txtUrl.getText()).thenReturn("https://test.com");
+        when(txtMaxTokens.getText()).thenReturn("abc");
+        when(txtTimeoutModelo.getText()).thenReturn("999999");
+        when(comboModelo.getSelectedItem()).thenReturn("gpt-4");
+
+        EstadoProveedorUI estado = providerConfigManager.extraerEstadoActualRapido();
+
+        assertNotNull(estado);
+        assertEquals("abc", estado.obtenerMaxTokensTexto());
+        assertEquals("999999", estado.obtenerTimeoutTexto());
+        assertEquals(EstadoProveedorUI.MAX_TOKENS_POR_DEFECTO, estado.obtenerMaxTokens());
+        assertEquals(999999, estado.obtenerTimeout());
+    }
+
+    @Test
     void testObtenerConfiguracionParaGuardar() {
         EstadoProveedorUI estadoExistente = new EstadoProveedorUI("key1", "model1", "url1", 1024, 30);
         providerConfigManager.cambiarProveedor("OpenAI");
