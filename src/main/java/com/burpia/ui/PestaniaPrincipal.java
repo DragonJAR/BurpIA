@@ -101,7 +101,7 @@ public class PestaniaPrincipal extends JPanel {
         panelEstadisticas = new PanelEstadisticas(estadisticas, modeloHallazgos::obtenerLimiteFilas, panelHallazgos);
         panelHallazgos.establecerManejadorFiltrosAplicados(panelEstadisticas::actualizarForzado);
         this.panelConsola = new PanelConsola(gestorConsola);
-        this.panelAgente = new PanelAgente(config, config.agenteHabilitado());
+        this.panelAgente = new PanelAgente(config, config.hayAlgunAgenteHabilitado());
         this.panelAgente.establecerManejadorFocoPestania(this::enfocarPestaniaAgenteDesdeManejador);
         this.componentesPorDestino = new EnumMap<>(DestinoPestania.class);
         registrarComponentePestania(DestinoPestania.TAREAS, panelTareas);
@@ -115,7 +115,7 @@ public class PestaniaPrincipal extends JPanel {
         agregarPestania(DestinoPestania.TAREAS);
         agregarPestania(DestinoPestania.HALLAZGOS);
 
-        if (config.agenteHabilitado()) {
+        if (config.hayAlgunAgenteHabilitado()) {
             agregarPestania(DestinoPestania.AGENTE);
         }
         agregarPestania(DestinoPestania.CONSOLA);
@@ -236,7 +236,7 @@ public class PestaniaPrincipal extends JPanel {
      * Si está habilitado y visible, actualiza su título y tooltip.
      */
     public void actualizarVisibilidadAgentes() {
-        boolean habilitado = config.agenteHabilitado();
+        boolean habilitado = config.hayAlgunAgenteHabilitado();
         int index = obtenerIndicePestania(DestinoPestania.AGENTE);
 
         if (habilitado && index == -1) {
@@ -258,7 +258,7 @@ public class PestaniaPrincipal extends JPanel {
 
             panelAgente.asegurarConsolaIniciada();
             
-            String idActual = config.obtenerTipoAgente();
+            String idActual = config.obtenerTipoAgenteOperativo();
             if (!Objects.equals(idActual, panelAgente.obtenerUltimoAgenteIniciado())) {
                 panelAgente.reiniciar();
             }

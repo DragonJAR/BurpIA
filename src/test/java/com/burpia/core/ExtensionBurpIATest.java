@@ -373,6 +373,44 @@ class ExtensionBurpIATest {
         }
 
         @Test
+        @DisplayName("Prompt de agente usa cualquier agente operativo habilitado")
+        void testObtenerPromptAgenteDisponibleConAgenteOperativo() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = mock(ConfiguracionAPI.class);
+            when(config.agenteHabilitado()).thenReturn(false);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
+            when(config.obtenerAgentePrompt()).thenReturn("PROMPT_OPERATIVO");
+            establecerCampo(extension, "config", config);
+
+            Method metodo = ExtensionBurpIA.class.getDeclaredMethod("obtenerPromptAgenteDisponible");
+            metodo.setAccessible(true);
+
+            Object resultado = metodo.invoke(extension);
+            assertEquals("PROMPT_OPERATIVO", resultado,
+                "assertEquals failed at ExtensionBurpIATest.java:361");
+        }
+
+        @Test
+        @DisplayName("Inicializacion del agente usa cualquier agente habilitado disponible")
+        void testInicializarAgenteSiHabilitadoConAgenteOperativo() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = mock(ConfiguracionAPI.class);
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+            PanelAgente panelAgente = mock(PanelAgente.class);
+            when(config.agenteHabilitado()).thenReturn(false);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
+            when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+            establecerCampo(extension, "config", config);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+            Method metodo = ExtensionBurpIA.class.getDeclaredMethod("inicializarAgenteSiHabilitado");
+            metodo.setAccessible(true);
+            metodo.invoke(extension);
+
+            verify(panelAgente).asegurarConsolaIniciada();
+        }
+
+        @Test
         @DisplayName("Enviar al Agente tolera solicitud-respuesta nula")
         void testEnviarAAgenteNuloNoFalla() throws Exception {
             ExtensionBurpIA extension = new ExtensionBurpIA();

@@ -214,6 +214,7 @@ public class ConfigPersistenceManager {
         snapshot.put("ignorarErroresSSL", config.ignorarErroresSSL());
         snapshot.put("soloProxy", config.soloProxy());
         snapshot.put("agenteHabilitado", config.agenteHabilitado());
+        snapshot.put("agentesHabilitadosPorTipo", new HashMap<>(config.obtenerEstadosHabilitacionAgentes()));
         snapshot.put("tipoAgente", config.obtenerTipoAgente());
         snapshot.put("agentePreflightPrompt", config.obtenerAgentePreflightPrompt());
         snapshot.put("agentePrompt", config.obtenerAgentePrompt());

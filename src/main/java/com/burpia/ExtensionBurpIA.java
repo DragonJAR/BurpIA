@@ -314,12 +314,24 @@ public class ExtensionBurpIA implements BurpExtension {
         return enviarFlujoAAgente(solicitudesRespuesta, null);
     }
 
+    private boolean hayAgenteOperativoDisponible() {
+        return config != null && config.hayAlgunAgenteHabilitado();
+    }
+
+    private String obtenerTipoAgenteOperativoActual() {
+        if (config == null) {
+            return null;
+        }
+        String tipoAgenteOperativo = config.obtenerTipoAgenteOperativo();
+        return Normalizador.noEsVacio(tipoAgenteOperativo) ? tipoAgenteOperativo : config.obtenerTipoAgente();
+    }
+
     private boolean enviarHallazgoAAgente(Hallazgo hallazgo) {
         if (config == null) {
             registrarError("No se puede usar el Agente: configuracion no inicializada");
             return false;
         }
-        if (!config.agenteHabilitado()) {
+        if (!hayAgenteOperativoDisponible()) {
             registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
             return false;
         }
@@ -426,7 +438,7 @@ public class ExtensionBurpIA implements BurpExtension {
             registrarError("No se puede usar el Agente: configuracion no inicializada");
             return null;
         }
-        if (!config.agenteHabilitado()) {
+        if (!hayAgenteOperativoDisponible()) {
             registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
             return null;
         }
@@ -655,7 +667,7 @@ public class ExtensionBurpIA implements BurpExtension {
                 }
                 pestaniaPrincipal.actualizarVisibilidadAgentes();
                 pestaniaPrincipal.aplicarIdioma();
-                registrar("Agente cambiado rápidamente a: " + config.obtenerTipoAgente());
+                registrar("Agente cambiado rápidamente a: " + obtenerTipoAgenteOperativoActual());
             });
 
             api.userInterface().registerSuiteTab("BurpIA", pestaniaPrincipal.obtenerPanel());
@@ -724,7 +736,7 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar("  " + I18nLogs.Inicializacion.MODO_DETALLADO()
                 + (detallado ? I18nLogs.Inicializacion.SI() : I18nLogs.Inicializacion.NO())
                 + " | " + I18nLogs.Inicializacion.AGENTE()
-                + (config.agenteHabilitado() ? I18nLogs.Inicializacion.SI() : I18nLogs.Inicializacion.NO()));
+                + (hayAgenteOperativoDisponible() ? I18nLogs.Inicializacion.SI() : I18nLogs.Inicializacion.NO()));
         gestorLogging.separador();
 
         // Sección [Environment] - SOLO MODO DETALLADO
@@ -778,10 +790,11 @@ public class ExtensionBurpIA implements BurpExtension {
 
             // Agent details
             registrar(I18nLogs.Inicializacion.SECCION_AGENTE());
-            registrar("  " + I18nLogs.Inicializacion.AGENTE_HABILITADO(config.agenteHabilitado()));
-            if (config.agenteHabilitado()) {
-                registrar("  " + I18nLogs.Inicializacion.AGENTE_TIPO(config.obtenerTipoAgente()));
-                String rutaBinario = config.obtenerRutaBinarioAgente(config.obtenerTipoAgente());
+            registrar("  " + I18nLogs.Inicializacion.AGENTE_HABILITADO(hayAgenteOperativoDisponible()));
+            if (hayAgenteOperativoDisponible()) {
+                String tipoAgenteOperativo = obtenerTipoAgenteOperativoActual();
+                registrar("  " + I18nLogs.Inicializacion.AGENTE_TIPO(tipoAgenteOperativo));
+                String rutaBinario = config.obtenerRutaBinarioAgente(tipoAgenteOperativo);
                 if (Normalizador.noEsVacio(rutaBinario)) {
                     registrar("  " + I18nLogs.Inicializacion.AGENTE_BINARIO(rutaBinario));
                 }
@@ -1013,7 +1026,7 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void inicializarAgenteSiHabilitado() {
-        if (!config.agenteHabilitado()) {
+        if (!hayAgenteOperativoDisponible()) {
             registrar("Agente deshabilitado en configuración");
             return;
         }

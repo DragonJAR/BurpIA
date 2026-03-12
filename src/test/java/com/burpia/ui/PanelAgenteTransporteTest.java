@@ -423,6 +423,10 @@ class PanelAgenteTransporteTest {
     void testCambiarAgenteRapidoRecuperaFocoConManejador() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+        config.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.OPEN_CODE.name(), true);
         String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
         config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), binarioExistente);
@@ -459,6 +463,10 @@ class PanelAgenteTransporteTest {
         ConfiguracionAPI config = new ConfiguracionAPI();
         String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
         config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.OPEN_CODE.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
         config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), "/ruta/inexistente/gemini");
         config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), "/ruta/inexistente/opencode");
@@ -487,6 +495,10 @@ class PanelAgenteTransporteTest {
         ConfiguracionAPI config = new ConfiguracionAPI();
         String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
         config.establecerTipoAgente(AgenteTipo.OPEN_CODE.name());
+        config.establecerAgenteHabilitado(AgenteTipo.OPEN_CODE.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), true);
         config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), "/ruta/inexistente/droid");
         config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), "/ruta/inexistente/claude");
@@ -504,6 +516,32 @@ class PanelAgenteTransporteTest {
             assertFalse(focoSolicitado.get(), "assertFalse failed at PanelAgenteTransporteTest.java:488");
             assertTrue(TestDialogUtils.contarVentanasPendientes() >= 3,
                 "assertTrue failed at PanelAgenteTransporteTest.java:489");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("Cambiar agente rapido omite agentes deshabilitados sin mostrar errores")
+    void testCambiarAgenteRapidoOmiteAgentesDeshabilitados() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
+        config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+        config.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), true);
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), "/ruta/inexistente/claude");
+        config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), "/ruta/inexistente/opencode");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            invocarCambiarAgenteRapido(panel);
+
+            assertEquals(AgenteTipo.GEMINI_CLI.name(), config.obtenerTipoAgente(),
+                "assertEquals failed at PanelAgenteTransporteTest.java:521");
+            assertEquals(0, TestDialogUtils.contarVentanasPendientes(),
+                "assertEquals failed at PanelAgenteTransporteTest.java:523");
         } finally {
             panel.destruir();
         }

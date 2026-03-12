@@ -25,6 +25,17 @@ class ConfiguracionAPITest {
     }
 
     @Test
+    @DisplayName("Todos los agentes inician deshabilitados por defecto")
+    void testAgentesInicianDeshabilitadosPorDefecto() {
+        for (AgenteTipo tipo : AgenteTipo.values()) {
+            assertFalse(config.agenteHabilitado(tipo.name()),
+                "assertFalse failed at ConfiguracionAPITest.java:29");
+        }
+        assertFalse(config.hayAlgunAgenteHabilitado(),
+            "assertFalse failed at ConfiguracionAPITest.java:32");
+    }
+
+    @Test
     @DisplayName("Configuracion por defecto tiene valores validos")
     void testConfiguracionPorDefecto() {
         assertNotNull(config.obtenerProveedorAI(), "assertNotNull failed at ConfiguracionAPITest.java:29");
@@ -54,7 +65,7 @@ class ConfiguracionAPITest {
     @Test
     @DisplayName("Validacion falla cuando el agente habilitado apunta a un binario inexistente")
     void testValidacionAgenteHabilitadoRechazaBinarioInexistente() {
-        config.establecerAgenteHabilitado(true);
+        config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
         config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
         config.establecerRutaBinarioAgente(
             AgenteTipo.CLAUDE_CODE.name(),
@@ -327,7 +338,7 @@ class ConfiguracionAPITest {
     void testSnapshotYAplicarDesdeConservanPreferenciasFactoryDroidYProxy() {
         ConfiguracionAPI origen = new ConfiguracionAPI();
         origen.establecerSoloProxy(false);
-        origen.establecerAgenteHabilitado(true);
+        origen.establecerAgenteHabilitado("FACTORY_DROID", true);
         origen.establecerRutaBinarioAgente("FACTORY_DROID", "/tmp/droid");
         origen.establecerAgentePreflightPrompt("preflight-prueba");
         origen.establecerAgentePrompt("prompt-prueba");
@@ -335,7 +346,7 @@ class ConfiguracionAPITest {
 
         ConfiguracionAPI snapshot = origen.crearSnapshot();
         assertFalse(snapshot.soloProxy(), "assertFalse failed at ConfiguracionAPITest.java:313");
-        assertTrue(snapshot.agenteHabilitado(), "assertTrue failed at ConfiguracionAPITest.java:314");
+        assertTrue(snapshot.agenteHabilitado("FACTORY_DROID"), "assertTrue failed at ConfiguracionAPITest.java:314");
         assertEquals("/tmp/droid", snapshot.obtenerRutaBinarioAgente("FACTORY_DROID"), "assertEquals failed at ConfiguracionAPITest.java:315");
         assertEquals("preflight-prueba", snapshot.obtenerAgentePreflightPrompt(), "assertEquals failed at ConfiguracionAPITest.java:316");
         assertEquals("prompt-prueba", snapshot.obtenerAgentePrompt(), "assertEquals failed at ConfiguracionAPITest.java:317");
@@ -344,11 +355,50 @@ class ConfiguracionAPITest {
         ConfiguracionAPI destino = new ConfiguracionAPI();
         destino.aplicarDesde(origen);
         assertFalse(destino.soloProxy(), "assertFalse failed at ConfiguracionAPITest.java:322");
-        assertTrue(destino.agenteHabilitado(), "assertTrue failed at ConfiguracionAPITest.java:323");
+        assertTrue(destino.agenteHabilitado("FACTORY_DROID"), "assertTrue failed at ConfiguracionAPITest.java:323");
         assertEquals("/tmp/droid", destino.obtenerRutaBinarioAgente("FACTORY_DROID"), "assertEquals failed at ConfiguracionAPITest.java:324");
         assertEquals("preflight-prueba", destino.obtenerAgentePreflightPrompt(), "assertEquals failed at ConfiguracionAPITest.java:325");
         assertEquals("prompt-prueba", destino.obtenerAgentePrompt(), "assertEquals failed at ConfiguracionAPITest.java:326");
         assertEquals(2500, destino.obtenerAgenteDelay(), "assertEquals failed at ConfiguracionAPITest.java:327");
+    }
+
+    @Test
+    @DisplayName("Snapshot conserva habilitacion por agente y normaliza agente activo")
+    void testSnapshotConservaMapaAgentesYNormalizaActivo() {
+        ConfiguracionAPI origen = new ConfiguracionAPI();
+        origen.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        origen.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
+        origen.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), false);
+
+        ConfiguracionAPI snapshot = origen.crearSnapshot();
+
+        assertTrue(snapshot.agenteHabilitado(AgenteTipo.FACTORY_DROID.name()),
+            "assertTrue failed at ConfiguracionAPITest.java:336");
+        assertFalse(snapshot.agenteHabilitado(AgenteTipo.CLAUDE_CODE.name()),
+            "assertFalse failed at ConfiguracionAPITest.java:338");
+        assertEquals(AgenteTipo.FACTORY_DROID.name(), snapshot.obtenerTipoAgente(),
+            "assertEquals failed at ConfiguracionAPITest.java:340");
+    }
+
+    @Test
+    @DisplayName("Estados de habilitacion normalizan agente seleccionado deshabilitado")
+    void testEstadosHabilitacionNormalizanTipoAgenteDeshabilitado() {
+        ConfiguracionAPI configLocal = new ConfiguracionAPI();
+        Map<String, Boolean> estados = new HashMap<>();
+        estados.put(AgenteTipo.FACTORY_DROID.name(), true);
+        estados.put(AgenteTipo.CLAUDE_CODE.name(), false);
+
+        configLocal.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        configLocal.establecerEstadosHabilitacionAgentes(estados);
+
+        assertTrue(configLocal.agenteHabilitado(AgenteTipo.FACTORY_DROID.name()),
+            "assertTrue failed at ConfiguracionAPITest.java:351");
+        assertFalse(configLocal.agenteHabilitado(AgenteTipo.CLAUDE_CODE.name()),
+            "assertFalse failed at ConfiguracionAPITest.java:353");
+        assertEquals(AgenteTipo.FACTORY_DROID.name(), configLocal.obtenerTipoAgente(),
+            "assertEquals failed at ConfiguracionAPITest.java:355");
+        assertEquals(AgenteTipo.FACTORY_DROID.name(), configLocal.obtenerTipoAgenteOperativo(),
+            "assertEquals failed at ConfiguracionAPITest.java:357");
     }
 
     @Test

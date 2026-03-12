@@ -71,6 +71,16 @@ public final class DialogStateManager {
             }
         }
 
+        Map<String, Boolean> estadosHabilitacionAgentes = new HashMap<>(
+                uiProvider.obtenerConfiguracion().obtenerEstadosHabilitacionAgentes());
+        Map<String, Boolean> estadosTemporalesAgentes = uiProvider.obtenerEstadosHabilitacionAgentesTemporales();
+        if (estadosTemporalesAgentes != null) {
+            estadosHabilitacionAgentes.putAll(estadosTemporalesAgentes);
+        }
+        if (Normalizador.noEsVacio(agenteSeleccionado)) {
+            estadosHabilitacionAgentes.put(agenteSeleccionado, uiProvider.esAgenteHabilitadoSeleccionado());
+        }
+
         Map<String, EstadoProveedorUI> borradores = new HashMap<>(estadoProveedorTemporal);
         Map<String, EstadoProveedorUI> estadosTemporalesExternos = uiProvider.obtenerEstadosProveedorTemporales();
         if (estadosTemporalesExternos != null) {
@@ -119,6 +129,7 @@ public final class DialogStateManager {
                 uiProvider.obtenerFuenteMono(),
                 uiProvider.obtenerTamanioFuenteMono(),
                 uiProvider.esMultiProveedorHabilitado(),
+                estadosHabilitacionAgentes,
                 rutasAgente,
                 proveedoresSeleccionados,
                 estadosProveedor);
@@ -338,6 +349,9 @@ public final class DialogStateManager {
         default Map<String, EstadoProveedorUI> obtenerEstadosProveedorTemporales() {
             return Collections.emptyMap();
         }
+        default Map<String, Boolean> obtenerEstadosHabilitacionAgentesTemporales() {
+            return Collections.emptyMap();
+        }
         List<String> obtenerProveedoresMultiSeleccionados();
         String obtenerCodigoIdiomaSeleccionado();
         String obtenerModeloSeleccionado();
@@ -399,6 +413,7 @@ public final class DialogStateManager {
         private final String fuenteMono;
         private final int tamanioFuenteMono;
         private final boolean multiProveedorHabilitado;
+        private final Map<String, Boolean> estadosHabilitacionAgentes;
         private final Map<String, String> rutasBinarioAgente;
         private final List<String> proveedoresMultiConsulta;
         private final Map<String, EstadoProveedorSnapshot> estadosProveedor;
@@ -431,6 +446,7 @@ public final class DialogStateManager {
                 String fuenteMono,
                 int tamanioFuenteMono,
                 boolean multiProveedorHabilitado,
+                Map<String, Boolean> estadosHabilitacionAgentes,
                 Map<String, String> rutasBinarioAgente,
                 List<String> proveedoresMultiConsulta,
                 Map<String, EstadoProveedorSnapshot> estadosProveedor) {
@@ -461,6 +477,9 @@ public final class DialogStateManager {
             this.fuenteMono = fuenteMono;
             this.tamanioFuenteMono = tamanioFuenteMono;
             this.multiProveedorHabilitado = multiProveedorHabilitado;
+            this.estadosHabilitacionAgentes = estadosHabilitacionAgentes != null
+                    ? Collections.unmodifiableMap(new HashMap<>(estadosHabilitacionAgentes))
+                    : Collections.emptyMap();
             this.rutasBinarioAgente = rutasBinarioAgente != null
                     ? Collections.unmodifiableMap(new HashMap<>(rutasBinarioAgente))
                     : Collections.emptyMap();
@@ -500,6 +519,7 @@ public final class DialogStateManager {
         public String fuenteMono() { return fuenteMono; }
         public int tamanioFuenteMono() { return tamanioFuenteMono; }
         public boolean multiProveedorHabilitado() { return multiProveedorHabilitado; }
+        public Map<String, Boolean> estadosHabilitacionAgentes() { return estadosHabilitacionAgentes; }
         public Map<String, String> rutasBinarioAgente() { return rutasBinarioAgente; }
         public List<String> proveedoresMultiConsulta() { return proveedoresMultiConsulta; }
         public Map<String, EstadoProveedorSnapshot> estadosProveedor() { return estadosProveedor; }
@@ -540,6 +560,7 @@ public final class DialogStateManager {
                     && Objects.equals(agentePrompt, that.agentePrompt)
                     && Objects.equals(fuenteEstandar, that.fuenteEstandar)
                     && Objects.equals(fuenteMono, that.fuenteMono)
+                    && Objects.equals(estadosHabilitacionAgentes, that.estadosHabilitacionAgentes)
                     && Objects.equals(rutasBinarioAgente, that.rutasBinarioAgente)
                     && Objects.equals(proveedoresMultiConsulta, that.proveedoresMultiConsulta)
                     && Objects.equals(estadosProveedor, that.estadosProveedor);
@@ -575,6 +596,7 @@ public final class DialogStateManager {
                     fuenteMono,
                     tamanioFuenteMono,
                     multiProveedorHabilitado,
+                    estadosHabilitacionAgentes,
                     rutasBinarioAgente,
                     proveedoresMultiConsulta,
                     estadosProveedor);

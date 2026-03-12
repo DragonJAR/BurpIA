@@ -3,6 +3,7 @@ package com.burpia.ui;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.i18n.I18nUI;
 import com.burpia.util.OSUtils;
 import com.burpia.util.RutasBurpIA;
 import org.junit.jupiter.api.AfterEach;
@@ -190,6 +191,40 @@ class ConfigDialogControllerAgentesTest {
     }
 
     @Test
+    @DisplayName("Cada agente conserva su check independiente al cambiar el combo")
+    void testCadaAgenteConservaCheckIndependienteAlCambiarCombo() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
+        config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), false);
+
+        crearArchivoConfiguracion(config);
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(
+            null, new ConfiguracionAPI(), gestor, () -> {});
+
+        try {
+            JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
+            JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
+            assertNotNull(comboAgente, "assertNotNull failed at ConfigDialogControllerAgentesTest.java:201");
+            assertNotNull(chkAgenteHabilitado, "assertNotNull failed at ConfigDialogControllerAgentesTest.java:202");
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboAgente.setSelectedItem(AgenteTipo.CLAUDE_CODE.name());
+                assertTrue(chkAgenteHabilitado.isSelected(),
+                    "assertTrue failed at ConfigDialogControllerAgentesTest.java:206");
+
+                comboAgente.setSelectedItem(AgenteTipo.GEMINI_CLI.name());
+                assertFalse(chkAgenteHabilitado.isSelected(),
+                    "assertFalse failed at ConfigDialogControllerAgentesTest.java:210");
+            });
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
+    @Test
     @DisplayName("Conserva rutas de agentes con argumentos en la UI")
     void testConservaRutasConArgumentosEnLaUI() throws IOException {
         Path binarioClaude = burpiaDir.resolve("claude");
@@ -306,11 +341,143 @@ class ConfigDialogControllerAgentesTest {
                 "~/.local/bin/binario-claude-no-existe --dangerously-skip-permissions"
             );
 
+            TestDialogUtils.reiniciarDialogosMensajeCapturados();
             ejecutarGuardado(dialogo);
 
+            TestDialogUtils.DialogoMensajeCapturado dialogoCapturado =
+                TestDialogUtils.obtenerUltimoDialogoMensajeCapturado();
             assertFalse(guardadoCallback.get(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:293");
             assertTrue(dialogo.isDisplayable(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:294");
             assertFalse(config.agenteHabilitado(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:295");
+            assertNotNull(dialogoCapturado, "assertNotNull failed at ConfigDialogControllerAgentesTest.java:296");
+            assertEquals(I18nUI.Configuracion.TITULO_ERROR_GUARDAR(), dialogoCapturado.obtenerTitulo(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:297");
+            assertTrue(dialogoCapturado.obtenerMensaje().contains("binario-claude-no-existe"),
+                "assertTrue failed at ConfigDialogControllerAgentesTest.java:299");
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
+    @Test
+    @DisplayName("Guardar permite agente invalido deshabilitado sin mostrar mensaje cuando todos quedan deshabilitados")
+    void testGuardarPermiteAgenteInvalidoDeshabilitadoSinMostrarMensaje() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("Z.ai");
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(null, config, gestor, () -> guardadoCallback.set(true));
+        String comandoInvalido = "~/.local/bin/binario-claude-no-existe --dangerously-skip-permissions";
+
+        try {
+            completarFormularioMinimoGuardado(
+                dialogo,
+                comandoInvalido,
+                false
+            );
+
+            TestDialogUtils.reiniciarDialogosMensajeCapturados();
+            ejecutarGuardado(dialogo);
+
+            assertTrue(guardadoCallback.get(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:360");
+            assertFalse(dialogo.isDisplayable(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:361");
+            assertFalse(TestDialogUtils.seCapturoDialogoMensaje(),
+                "assertFalse failed at ConfigDialogControllerAgentesTest.java:362");
+            for (AgenteTipo tipo : AgenteTipo.values()) {
+                assertFalse(config.agenteHabilitado(tipo.name()),
+                    "assertFalse failed at ConfigDialogControllerAgentesTest.java:365");
+            }
+            assertFalse(config.agenteHabilitado(), "assertFalse failed at ConfigDialogControllerAgentesTest.java:367");
+            assertEquals(comandoInvalido, config.obtenerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name()),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:369");
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
+    @Test
+    @DisplayName("Guardar no muestra error si el agente seleccionado es invalido pero queda deshabilitado")
+    void testGuardarNoMuestraErrorSiAgenteSeleccionadoInvalidoQuedaDeshabilitado() throws Exception {
+        Path binarioClaude = tempDir.resolve(".local").resolve("bin").resolve("claude");
+        Files.createDirectories(binarioClaude.getParent());
+        Files.writeString(binarioClaude, "#!/bin/bash\necho 'claude'");
+        binarioClaude.toFile().setExecutable(true);
+        String comandoGeminiInvalido = "~/.local/bin/binario-gemini-no-existe --sandbox";
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("Z.ai");
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(null, config, gestor, () -> guardadoCallback.set(true));
+
+        try {
+            JComboBox<String> comboProveedor = dialogo.obtenerComboProveedor();
+            JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
+            JTextField txtTimeoutModelo = dialogo.obtenerTxtTimeoutModelo();
+            JPasswordField txtClave = dialogo.obtenerTxtClave();
+            JTextField txtRetraso = dialogo.obtenerTxtRetraso();
+            JTextField txtMaximoConcurrente = dialogo.obtenerTxtMaximoConcurrente();
+            JTextField txtMaximoHallazgosTabla = dialogo.obtenerTxtMaximoHallazgosTabla();
+            JTextField txtMaximoTareas = dialogo.obtenerTxtMaximoTareas();
+            JTextField txtMaxTokens = dialogo.obtenerTxtMaxTokens();
+            JComboBox<String> comboAgente = dialogo.obtenerComboAgente();
+            JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
+            JTextField txtAgenteBinario = dialogo.obtenerTxtAgenteBinario();
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("Z.ai");
+                comboModelo.setSelectedItem("glm-5");
+                comboModelo.getEditor().setItem("glm-5");
+                txtClave.setText("test-key");
+                txtRetraso.setText("5");
+                txtMaximoConcurrente.setText("3");
+                txtMaximoHallazgosTabla.setText("1000");
+                txtMaximoTareas.setText("500");
+                txtMaxTokens.setText("4096");
+                txtTimeoutModelo.setText("180");
+
+                comboAgente.setSelectedItem(AgenteTipo.CLAUDE_CODE.name());
+                chkAgenteHabilitado.setSelected(true);
+                txtAgenteBinario.setText(binarioClaude.toString());
+
+                comboAgente.setSelectedItem(AgenteTipo.GEMINI_CLI.name());
+                chkAgenteHabilitado.setSelected(false);
+                txtAgenteBinario.setText(comandoGeminiInvalido);
+            });
+            flushEdt();
+
+            TestDialogUtils.reiniciarDialogosMensajeCapturados();
+            ejecutarGuardado(dialogo);
+
+            assertTrue(guardadoCallback.get(), "assertTrue failed at ConfigDialogControllerAgentesTest.java:421");
+            assertFalse(TestDialogUtils.seCapturoDialogoMensaje(),
+                "assertFalse failed at ConfigDialogControllerAgentesTest.java:422");
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), config.obtenerTipoAgente(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:424");
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), config.obtenerTipoAgenteOperativo(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:426");
+            assertTrue(config.agenteHabilitado(AgenteTipo.CLAUDE_CODE.name()),
+                "assertTrue failed at ConfigDialogControllerAgentesTest.java:428");
+            assertFalse(config.agenteHabilitado(AgenteTipo.GEMINI_CLI.name()),
+                "assertFalse failed at ConfigDialogControllerAgentesTest.java:430");
+            assertEquals(comandoGeminiInvalido, config.obtenerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name()),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:432");
+
+            ConfiguracionAPI recargada = gestor.cargarConfiguracion();
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), recargada.obtenerTipoAgente(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:435");
+            assertEquals(AgenteTipo.CLAUDE_CODE.name(), recargada.obtenerTipoAgenteOperativo(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:437");
+            assertTrue(recargada.agenteHabilitado(AgenteTipo.CLAUDE_CODE.name()),
+                "assertTrue failed at ConfigDialogControllerAgentesTest.java:439");
+            assertFalse(recargada.agenteHabilitado(AgenteTipo.GEMINI_CLI.name()),
+                "assertFalse failed at ConfigDialogControllerAgentesTest.java:441");
+            assertEquals(comandoGeminiInvalido, recargada.obtenerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name()),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:443");
         } finally {
             dialogo.dispose();
         }
@@ -334,6 +501,18 @@ class ConfigDialogControllerAgentesTest {
         }
         
         json.append("\n  },\n");
+        json.append("  \"agentesHabilitadosPorTipo\": {\n");
+
+        Map<String, Boolean> estadosAgentes = config.obtenerEstadosHabilitacionAgentes();
+        count = 0;
+        for (Map.Entry<String, Boolean> entry : estadosAgentes.entrySet()) {
+            if (count > 0) json.append(",\n");
+            json.append("    \"").append(entry.getKey()).append("\": ")
+                .append(Boolean.TRUE.equals(entry.getValue()));
+            count++;
+        }
+
+        json.append("\n  },\n");
         json.append("  \"tipoAgente\": \"").append(config.obtenerTipoAgente()).append("\"\n");
         json.append("}");
         
@@ -341,6 +520,12 @@ class ConfigDialogControllerAgentesTest {
     }
 
     private void completarFormularioMinimoGuardado(DialogoConfiguracion dialogo, String comandoBinario) throws Exception {
+        completarFormularioMinimoGuardado(dialogo, comandoBinario, true);
+    }
+
+    private void completarFormularioMinimoGuardado(DialogoConfiguracion dialogo,
+                                                   String comandoBinario,
+                                                   boolean agenteHabilitado) throws Exception {
         JComboBox<String> comboProveedor = dialogo.obtenerComboProveedor();
         JComboBox<String> comboModelo = dialogo.obtenerComboModelo();
         JTextField txtTimeoutModelo = dialogo.obtenerTxtTimeoutModelo();
@@ -366,7 +551,7 @@ class ConfigDialogControllerAgentesTest {
             txtMaxTokens.setText("4096");
             txtTimeoutModelo.setText("180");
             comboAgente.setSelectedItem(AgenteTipo.CLAUDE_CODE.name());
-            chkAgenteHabilitado.setSelected(true);
+            chkAgenteHabilitado.setSelected(agenteHabilitado);
             txtAgenteBinario.setText(comandoBinario);
         });
         flushEdt();

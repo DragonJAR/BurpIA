@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,7 @@ class DialogStateManagerTest {
         when(uiProvider.esPersistirSeveridadSeleccionado()).thenReturn(false);
         when(uiProvider.obtenerPromptActual()).thenReturn("Analyze {REQUEST}");
         when(uiProvider.esAgenteHabilitadoSeleccionado()).thenReturn(true);
+        when(uiProvider.obtenerEstadosHabilitacionAgentesTemporales()).thenReturn(new HashMap<>());
         when(uiProvider.obtenerAgentePromptInicial()).thenReturn("Initial prompt");
         when(uiProvider.obtenerAgentePrompt()).thenReturn("Agent prompt");
         when(uiProvider.obtenerFuenteEstandar()).thenReturn("Arial");
@@ -113,6 +115,22 @@ class DialogStateManagerTest {
         when(uiProvider.obtenerModeloSeleccionado()).thenReturn("gpt-3.5-turbo");
         
         assertTrue(stateManager.hayCambiosNoGuardados(uiProvider));
+    }
+
+    @Test
+    void testHayCambiosNoGuardados_CuandoCambiaHabilitacionAgenteSeleccionado() {
+        Map<String, Boolean> estadosIniciales = new HashMap<>();
+        estadosIniciales.put("gemini", true);
+        when(uiProvider.obtenerEstadosHabilitacionAgentesTemporales()).thenReturn(estadosIniciales);
+        stateManager.capturarEstadoInicial(uiProvider);
+
+        Map<String, Boolean> estadosActualizados = new HashMap<>();
+        estadosActualizados.put("gemini", false);
+        when(uiProvider.obtenerEstadosHabilitacionAgentesTemporales()).thenReturn(estadosActualizados);
+        when(uiProvider.esAgenteHabilitadoSeleccionado()).thenReturn(false);
+
+        assertTrue(stateManager.hayCambiosNoGuardados(uiProvider),
+            "assertTrue failed at DialogStateManagerTest.java:110");
     }
 
     @Test
@@ -192,7 +210,7 @@ class DialogStateManagerTest {
             "4096", "120", "0", "5", "1000", "100",
             true, false, false, true, true, false,
             "Analyze {REQUEST}", true, "gemini", "Initial", "Agent",
-            "Arial", 12, "Monaco", 10, true,
+            "Arial", 12, "Monaco", 10, true, Collections.emptyMap(),
             Collections.emptyMap(), Collections.emptyList(), Collections.emptyMap()
         );
         
@@ -201,7 +219,7 @@ class DialogStateManagerTest {
             "4096", "120", "0", "5", "1000", "100",
             true, false, false, true, true, false,
             "Analyze {REQUEST}", true, "gemini", "Initial", "Agent",
-            "Arial", 12, "Monaco", 10, true,
+            "Arial", 12, "Monaco", 10, true, Collections.emptyMap(),
             Collections.emptyMap(), Collections.emptyList(), Collections.emptyMap()
         );
         
@@ -210,7 +228,7 @@ class DialogStateManagerTest {
             "4096", "120", "0", "5", "1000", "100",
             true, false, false, true, true, false,
             "Analyze {REQUEST}", true, "gemini", "Initial", "Agent",
-            "Arial", 12, "Monaco", 10, true,
+            "Arial", 12, "Monaco", 10, true, Collections.emptyMap(),
             Collections.emptyMap(), Collections.emptyList(), Collections.emptyMap()
         );
         

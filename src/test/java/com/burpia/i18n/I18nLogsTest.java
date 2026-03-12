@@ -377,14 +377,16 @@ class I18nLogsTest {
         @DisplayName("ERROR_DESHABILITADO en ingles")
         void errorDeshabilitadoIngles() {
             I18nUI.establecerIdioma(IdiomaUI.EN);
-            assertEquals("Factory Droid agent disabled in settings.", I18nLogs.Agente.ERROR_DESHABILITADO(), "assertEquals failed at I18nLogsTest.java:334");
+            assertEquals("Agent disabled in settings.", I18nLogs.Agente.ERROR_DESHABILITADO(),
+                "assertEquals failed at I18nLogsTest.java:334");
         }
 
         @Test
         @DisplayName("ERROR_DESHABILITADO en espanol")
         void errorDeshabilitadoEspanol() {
             I18nUI.establecerIdioma(IdiomaUI.ES);
-            assertEquals("Agente Factory Droid deshabilitado en ajustes.", I18nLogs.Agente.ERROR_DESHABILITADO(), "assertEquals failed at I18nLogsTest.java:341");
+            assertEquals("Agente deshabilitado en ajustes.", I18nLogs.Agente.ERROR_DESHABILITADO(),
+                "assertEquals failed at I18nLogsTest.java:341");
         }
     }
 

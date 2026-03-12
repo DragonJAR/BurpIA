@@ -618,6 +618,9 @@ public class PanelAgente extends JPanel {
         AgenteTipo candidato = actual;
         for (int i = 0; i < AgenteTipo.values().length - 1; i++) {
             candidato = AgenteTipo.siguienteCircular(candidato);
+            if (!config.agenteHabilitado(candidato.name())) {
+                continue;
+            }
             if (config.tieneBinarioAgenteDisponible(candidato.name())) {
                 return candidato;
             }
@@ -642,7 +645,12 @@ public class PanelAgente extends JPanel {
     }
 
     private AgenteTipo obtenerAgenteActualSeguro() {
-        return AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.porDefecto());
+        return AgenteTipo.desdeCodigo(obtenerTipoAgenteConfiguradoActual(), AgenteTipo.porDefecto());
+    }
+
+    private String obtenerTipoAgenteConfiguradoActual() {
+        String tipoAgenteOperativo = config.obtenerTipoAgenteOperativo();
+        return Normalizador.noEsVacio(tipoAgenteOperativo) ? tipoAgenteOperativo : config.obtenerTipoAgente();
     }
 
     private String resolverTooltipAyudaAgente() {
@@ -966,7 +974,7 @@ public class PanelAgente extends JPanel {
                 if (esSesionVigente(sesionObjetivo) && terminalWidget != null) {
                     terminalWidget.setTtyConnector(nuevoConnector);
                     terminalWidget.start();
-                    ultimoAgenteIniciado = config.obtenerTipoAgente();
+                    ultimoAgenteIniciado = obtenerTipoAgenteConfiguradoActual();
                     programarInyeccionInicial(sesionObjetivo);
                 }
                 consolaArrancando.set(false);
@@ -987,7 +995,7 @@ public class PanelAgente extends JPanel {
     }
 
     private void programarInyeccionInicial(long sesionObjetivo) {
-        AgenteTipo tipoActual = AgenteTipo.desdeCodigo(config.obtenerTipoAgente(), AgenteTipo.porDefecto());
+        AgenteTipo tipoActual = AgenteTipo.desdeCodigo(obtenerTipoAgenteConfiguradoActual(), AgenteTipo.porDefecto());
         String prompt = obtenerPromptPreflightDisponible();
         int usuarioDelay = config.obtenerAgenteDelay();
         AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(tipoActual);
@@ -1061,7 +1069,9 @@ public class PanelAgente extends JPanel {
     }
 
     private String resolverRutaBinario(AgenteTipo tipo) {
-        String binarioConfig = config.obtenerRutaBinarioAgente(tipo != null ? tipo.name() : config.obtenerTipoAgente());
+        String binarioConfig = config.obtenerRutaBinarioAgente(
+            tipo != null ? tipo.name() : obtenerTipoAgenteConfiguradoActual()
+        );
         
         if (Normalizador.esVacio(binarioConfig)) {
             return OSUtils.normalizarComandoParaShell(
@@ -1085,7 +1095,7 @@ public class PanelAgente extends JPanel {
         if (!arranqueAgenteDespachado.get() || !esSesionVigente(sesionObjetivo)) {
             return;
         }
-        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(config.obtenerTipoAgente());
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(obtenerTipoAgenteConfiguradoActual());
         List<InyeccionPendiente> pendientes = extraerInyeccionesPendientes();
         for (int i = 0; i < pendientes.size(); i++) {
             InyeccionPendiente pendiente = pendientes.get(i);
@@ -1096,7 +1106,7 @@ public class PanelAgente extends JPanel {
     }
 
     private void ejecutarInyeccionConOpciones(String texto, int delayPendienteMsUsuario) {
-        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(config.obtenerTipoAgente());
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar(obtenerTipoAgenteConfiguradoActual());
         inyectarComandoConRetraso(texto, delayPendienteMsUsuario, opciones, "API_OR_UI", sesionActivaId);
     }
 

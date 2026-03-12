@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -190,6 +191,47 @@ class PanelHallazgosSendTest {
 
         assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS), "assertTrue failed at PanelHallazgosSendTest.java:191");
         assertEquals(1, enviados.get(), "assertEquals failed at PanelHallazgosSendTest.java:192");
+    }
+
+    @Test
+    @DisplayName("Menu contextual usa el agente operativo visible cuando el seleccionado esta deshabilitado")
+    void testMenuContextualUsaAgenteOperativoVisible() throws Exception {
+        ConfiguracionAPI config = mock(ConfiguracionAPI.class);
+        doReturn(100).when(config).obtenerMaximoHallazgosTabla();
+        when(config.persistirFiltroBusquedaHallazgos()).thenReturn(false);
+        when(config.persistirFiltroSeveridadHallazgos()).thenReturn(false);
+        when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
+        when(config.agenteHabilitado()).thenReturn(false);
+        when(config.obtenerTipoAgenteOperativo()).thenReturn("OPEN_CODE");
+        when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+        panel.establecerConfiguracion(config);
+        panel.establecerManejadorEnviarAAgente(h -> true);
+
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/menu");
+        agregarHallazgoConRequest(panel, request, "https://example.com/menu");
+        flushEdt();
+
+        JTable tabla = obtenerTabla(panel);
+        SwingUtilities.invokeAndWait(() -> tabla.setRowSelectionInterval(0, 0));
+
+        Method metodo = PanelHallazgos.class.getDeclaredMethod("construirMenuContextualDinamico");
+        metodo.setAccessible(true);
+        javax.swing.JPopupMenu menu = (javax.swing.JPopupMenu) metodo.invoke(panel);
+        assertNotNull(menu, "assertNotNull failed at PanelHallazgosSendTest.java:216");
+
+        boolean encontrado = false;
+        for (java.awt.Component componente : menu.getComponents()) {
+            if (componente instanceof javax.swing.JMenuItem) {
+                String texto = ((javax.swing.JMenuItem) componente).getText();
+                if (texto != null && texto.contains("Open Code")) {
+                    encontrado = true;
+                    break;
+                }
+            }
+        }
+
+        assertTrue(encontrado, "assertTrue failed at PanelHallazgosSendTest.java:227");
     }
 
     @Test

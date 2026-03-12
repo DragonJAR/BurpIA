@@ -41,8 +41,11 @@ class FabricaMenuContextualTest {
         api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         config = mock(ConfiguracionAPI.class);
         when(config.agenteHabilitado()).thenReturn(false);
+        when(config.hayAlgunAgenteHabilitado()).thenReturn(false);
         when(config.alertasHabilitadas()).thenReturn(true);
         when(config.alertasClickDerechoEnviarAHabilitadas()).thenReturn(false);
+        when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+        when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
     }
 
     @Nested
@@ -99,7 +102,9 @@ class FabricaMenuContextualTest {
         @DisplayName("crea item de agente cuando esta habilitado")
         void creaMenuItemAgente() {
             when(config.agenteHabilitado()).thenReturn(true);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
 
             ContextMenuEvent evento = crearEventoConSolicitud("GET /agent HTTP/1.1");
 
@@ -126,7 +131,9 @@ class FabricaMenuContextualTest {
         @DisplayName("seleccion multiple muestra solo acciones de flujo")
         void seleccionMultipleMuestraSoloFlujo() {
             when(config.agenteHabilitado()).thenReturn(true);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
 
             HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
             HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
@@ -149,6 +156,32 @@ class FabricaMenuContextualTest {
             assertEquals(2, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:143");
             assertTrue(((JMenuItem) items.get(0)).getText().contains("Flujo"), "assertTrue failed at FabricaMenuContextualTest.java:144");
             assertTrue(((JMenuItem) items.get(1)).getText().contains("Flujo"), "assertTrue failed at FabricaMenuContextualTest.java:145");
+        }
+
+        @Test
+        @DisplayName("usa el agente operativo cuando el seleccionado esta deshabilitado")
+        void usaAgenteOperativoCuandoSeleccionadoEstaDeshabilitado() {
+            when(config.agenteHabilitado()).thenReturn(false);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
+            when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("OPEN_CODE");
+
+            ContextMenuEvent evento = crearEventoConSolicitud("GET /agent HTTP/1.1");
+
+            FabricaMenuContextual fabrica = new FabricaMenuContextual(
+                api,
+                (solicitud, forzar, solicitudRespuestaOriginal) -> {},
+                null,
+                config,
+                rr -> true,
+                null,
+                () -> {},
+                null);
+
+            List<Component> items = fabrica.provideMenuItems(evento);
+            assertEquals(2, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:170");
+            assertTrue(((JMenuItem) items.get(1)).getText().contains("Open Code"),
+                "assertTrue failed at FabricaMenuContextualTest.java:171");
         }
     }
 
@@ -314,7 +347,9 @@ class FabricaMenuContextualTest {
         @DisplayName("ejecuta callback de envio al hacer click")
         void clickEjecutaCallback() {
             when(config.agenteHabilitado()).thenReturn(true);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
 
             ContextMenuEvent evento = crearEventoConSolicitud("GET /agent HTTP/1.1");
 
@@ -342,7 +377,9 @@ class FabricaMenuContextualTest {
         @DisplayName("procesa flujo con agente en seleccion multiple")
         void procesaSeleccionMultiple() {
             when(config.agenteHabilitado()).thenReturn(true);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
 
             HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
             HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
@@ -395,7 +432,9 @@ class FabricaMenuContextualTest {
         @DisplayName("maneja excepcion en manejador de agente sin fallar")
         void manejaExcepcionEnManejador() {
             when(config.agenteHabilitado()).thenReturn(true);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
 
             ContextMenuEvent evento = crearEventoConSolicitud("GET /agent HTTP/1.1");
 
@@ -422,7 +461,9 @@ class FabricaMenuContextualTest {
         @DisplayName("bloquea flujo de agente cuando no quedan dos requests válidas")
         void omiteElementosNull() {
             when(config.agenteHabilitado()).thenReturn(true);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
 
             HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
             HttpRequest request1 = mock(HttpRequest.class);
@@ -471,7 +512,9 @@ class FabricaMenuContextualTest {
         @DisplayName("ejecuta callback de flujo al hacer click")
         void clickEjecutaCallbackFlujo() {
             when(config.agenteHabilitado()).thenReturn(true);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
 
             HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
             HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
@@ -502,7 +545,9 @@ class FabricaMenuContextualTest {
         @DisplayName("bloquea flujo de agente con más de cuatro requests válidas")
         void bloqueaFlujoAgenteConMasDeCuatroRequestsValidas() {
             when(config.agenteHabilitado()).thenReturn(true);
+            when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
+            when(config.obtenerTipoAgenteOperativo()).thenReturn("FACTORY_DROID");
 
             List<HttpRequestResponse> seleccion = List.of(crearSolicitudValida(), crearSolicitudValida(),
                 crearSolicitudValida(), crearSolicitudValida(), crearSolicitudValida());

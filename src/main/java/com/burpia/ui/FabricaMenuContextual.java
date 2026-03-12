@@ -126,9 +126,9 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             itemsMenu.add(itemFlujo);
         }
 
-        if (config != null && config.agenteHabilitado()) {
+        if (config != null && config.hayAlgunAgenteHabilitado()) {
             String nombreAgente = AgenteTipo.obtenerNombreVisible(
-                config.obtenerTipoAgente(),
+                config.obtenerTipoAgenteOperativo(),
                 I18nUI.General.AGENTE_GENERICO()
             );
             if (cantidadSeleccionada == 1 && manejadorAgenteSolicitud != null) {

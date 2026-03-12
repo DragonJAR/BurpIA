@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -47,16 +48,24 @@ class PestaniaPrincipalTest {
     @Mock private GestorLoggingUnificado gestorLogging;
 
     private PestaniaPrincipal pestaniaPrincipal;
-    private final AtomicBoolean agenteHabilitado = new AtomicBoolean(true);
+    private final AtomicBoolean hayAgentesHabilitados = new AtomicBoolean(true);
+    private final AtomicBoolean agenteSeleccionadoHabilitado = new AtomicBoolean(true);
+    private final AtomicReference<String> tipoAgenteOperativo = new AtomicReference<>("FACTORY_DROID");
     private Map<String, String> estadoUIPersistido;
 
     @BeforeEach
     void setUp() throws Exception {
-        agenteHabilitado.set(true);
+        hayAgentesHabilitados.set(true);
+        agenteSeleccionadoHabilitado.set(true);
+        tipoAgenteOperativo.set("FACTORY_DROID");
         estadoUIPersistido = new HashMap<>();
         I18nUI.establecerIdioma("es");
 
-        when(configuracionAPI.agenteHabilitado()).thenAnswer(invocation -> agenteHabilitado.get());
+        when(configuracionAPI.hayAlgunAgenteHabilitado()).thenAnswer(invocation -> hayAgentesHabilitados.get());
+        when(configuracionAPI.agenteHabilitado()).thenAnswer(invocation -> agenteSeleccionadoHabilitado.get());
+        when(configuracionAPI.obtenerTipoAgenteOperativo()).thenAnswer(invocation ->
+            hayAgentesHabilitados.get() ? tipoAgenteOperativo.get() : null);
+        when(configuracionAPI.obtenerTipoAgente()).thenAnswer(invocation -> tipoAgenteOperativo.get());
         when(configuracionAPI.obtenerAgenteDelay()).thenReturn(1500);
         when(configuracionAPI.obtenerEstadoUI()).thenAnswer(invocation -> new HashMap<>(estadoUIPersistido));
         doAnswer(invocation -> {
@@ -118,16 +127,37 @@ class PestaniaPrincipalTest {
             assertNotNull(panelAgente, "El panel de Agente no debe ser nulo inicialmente");
             assertTrue(tabs.indexOfComponent(panelAgente) >= 0, "El agente debe estar visible inicialmente");
 
-            agenteHabilitado.set(false);
+            hayAgentesHabilitados.set(false);
+            agenteSeleccionadoHabilitado.set(false);
             pestaniaPrincipal.actualizarVisibilidadAgentes();
             assertEquals(-1, tabs.indexOfComponent(panelAgente), "El agente debe estar oculto tras deshabilitar");
 
-            agenteHabilitado.set(true);
+            hayAgentesHabilitados.set(true);
+            agenteSeleccionadoHabilitado.set(true);
             pestaniaPrincipal.actualizarVisibilidadAgentes();
             assertTrue(tabs.indexOfComponent(panelAgente) >= 0, "El agente debe estar visible tras re-habilitar");
 
             assertDoesNotThrow(() -> panelAgente.escribirComandoCrudo("echo lifecycle"),
                 "Escribir comando no debe lanzar excepcion tras ciclo de visibilidad");
+        });
+    }
+
+    @Test
+    @DisplayName("Visibilidad del agente usa cualquier agente habilitado y no solo el seleccionado")
+    void testVisibilidadAgenteUsaAlgunAgenteHabilitado() throws Exception {
+        SwingUtilities.invokeAndWait(() -> pestaniaPrincipal.destruir());
+        pestaniaPrincipal = null;
+
+        hayAgentesHabilitados.set(true);
+        agenteSeleccionadoHabilitado.set(false);
+        tipoAgenteOperativo.set("OPEN_CODE");
+        pestaniaPrincipal = crearPestaniaPrincipal();
+
+        SwingUtilities.invokeAndWait(() -> {
+            PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
+            JTabbedPane tabs = obtenerTabbedPane(pestaniaPrincipal);
+            assertTrue(tabs.indexOfComponent(panelAgente) >= 0,
+                "assertTrue failed at PestaniaPrincipalTest.java:149");
         });
     }
 

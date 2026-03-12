@@ -179,6 +179,36 @@ class GestorConfiguracionTest {
     }
 
     @Test
+    @DisplayName("Config legado migra habilitacion solo al agente seleccionado")
+    void testConfigLegadoMigraHabilitacionSoloAlAgenteSeleccionado() throws Exception {
+        configurarDirectorioTemporalComoHome();
+
+        String json = "{\n" +
+            "  \"agenteHabilitado\": true,\n" +
+            "  \"tipoAgente\": \"CLAUDE_CODE\",\n" +
+            "  \"apiKeysPorProveedor\": {\"OpenAI\": \"\"},\n" +
+            "  \"urlsBasePorProveedor\": {\"OpenAI\": \"https://api.openai.com/v1\"},\n" +
+            "  \"modelosPorProveedor\": {\"OpenAI\": \"gpt-4o\"},\n" +
+            "  \"maxTokensPorProveedor\": {\"OpenAI\": 4096}\n" +
+            "}";
+        escribirConfigJson(json);
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI cargada = gestor.cargarConfiguracion();
+
+        assertTrue(cargada.agenteHabilitado(AgenteTipo.CLAUDE_CODE.name()),
+            "assertTrue failed at GestorConfiguracionTest.java:208");
+        assertFalse(cargada.agenteHabilitado(AgenteTipo.FACTORY_DROID.name()),
+            "assertFalse failed at GestorConfiguracionTest.java:210");
+        assertFalse(cargada.agenteHabilitado(AgenteTipo.GEMINI_CLI.name()),
+            "assertFalse failed at GestorConfiguracionTest.java:212");
+        assertFalse(cargada.agenteHabilitado(AgenteTipo.OPEN_CODE.name()),
+            "assertFalse failed at GestorConfiguracionTest.java:214");
+        assertEquals(AgenteTipo.CLAUDE_CODE.name(), cargada.obtenerTipoAgente(),
+            "assertEquals failed at GestorConfiguracionTest.java:216");
+    }
+
+    @Test
     @DisplayName("Sin agenteDelay en JSON usa el valor por defecto")
     void testAgenteDelayUsaDefaultCuandoNoExisteEnJson() throws Exception {
         configurarDirectorioTemporalComoHome();

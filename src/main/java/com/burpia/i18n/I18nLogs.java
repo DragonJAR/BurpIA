@@ -399,19 +399,19 @@ public final class I18nLogs {
         {"NOTA: Solo analiza tráfico en Scope. Agrega objetivos en Target > Scope",
             "NOTE: Only analyzes traffic in Scope. Add targets in Target > Scope"},
         {"Manejador HTTP inicializado (max concurrente=", "HTTP handler initialized (max concurrent="},
-        {"Agente Factory Droid deshabilitado en ajustes.", "Factory Droid agent disabled in settings."},
+        {"Agente deshabilitado en ajustes.", "Agent disabled in settings."},
         {"Inicialización completada exitosamente", "Initialization completed successfully"}
     };
 
     /**
-     * Mensajes de logging relacionados con el agente Factory Droid.
+     * Mensajes de logging relacionados con el agente CLI configurado.
      */
     public static final class Agente {
         private Agente() {
         }
 
         public static String ERROR_DESHABILITADO() {
-            return tr("Agente Factory Droid deshabilitado en ajustes.");
+            return tr("Agente deshabilitado en ajustes.");
         }
     }
 

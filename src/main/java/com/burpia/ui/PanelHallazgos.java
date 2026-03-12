@@ -680,7 +680,7 @@ public class PanelHallazgos extends JPanel {
                                 I18nUI.Tooltips.Hallazgos.MENU_SCANNER(), this::enviarAScanner);
         }
 
-        if (config != null && config.agenteHabilitado() && manejadorEnviarAAgente != null) {
+        if (config != null && config.hayAlgunAgenteHabilitado() && manejadorEnviarAAgente != null) {
             String nombreAgente = obtenerNombreAgenteVisible();
             agregarMenuItemEnvio(menu, I18nUI.Hallazgos.MENU_ENVIAR_AGENTE_ROCKET(nombreAgente),
                                 I18nUI.Tooltips.Hallazgos.ENVIAR_AGENTE(nombreAgente), this::enviarAAgente);
@@ -1436,7 +1436,7 @@ public class PanelHallazgos extends JPanel {
             return I18nUI.General.AGENTE_GENERICO();
         }
         return AgenteTipo.obtenerNombreVisible(
-            config.obtenerTipoAgente(),
+            config.obtenerTipoAgenteOperativo(),
             I18nUI.General.AGENTE_GENERICO()
         );
     }

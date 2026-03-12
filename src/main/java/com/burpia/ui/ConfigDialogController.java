@@ -45,11 +45,13 @@ public class ConfigDialogController {
     private final DialogStateManager dialogStateManager;
     private final ConnectionTester connectionTester;
     private final Map<String, String> rutasBinarioAgenteTemporal;
+    private final Map<String, Boolean> estadosHabilitacionAgenteTemporal;
     private final AtomicLong secuenciaRefrescoModelos;
     private final String tooltipCargarModelosPorDefecto;
 
     private boolean guardandoConfiguracion = false;
     private boolean actualizandoRutaFlag = false;
+    private String ultimoAgenteSeleccionado = null;
 
     private static final class ValoresNumericosConfiguracion {
         private final int retrasoSegundos;
@@ -107,6 +109,7 @@ public class ConfigDialogController {
         this.dialogStateManager = new DialogStateManager(gestorLogging);
         this.connectionTester = new ConnectionTester();
         this.rutasBinarioAgenteTemporal = new HashMap<>();
+        this.estadosHabilitacionAgenteTemporal = new HashMap<>();
         this.secuenciaRefrescoModelos = new AtomicLong(0);
         this.tooltipCargarModelosPorDefecto = I18nUI.Tooltips.Configuracion.CARGAR_MODELOS();
 
@@ -270,6 +273,9 @@ public class ConfigDialogController {
         
         rutasBinarioAgenteTemporal.clear();
         rutasBinarioAgenteTemporal.putAll(new HashMap<>(config.obtenerTodasLasRutasBinario()));
+        estadosHabilitacionAgenteTemporal.clear();
+        estadosHabilitacionAgenteTemporal.putAll(new HashMap<>(config.obtenerEstadosHabilitacionAgentes()));
+        ultimoAgenteSeleccionado = null;
 
         cargarConfiguracionGeneral();
         cargarConfiguracionAgente();
@@ -373,7 +379,7 @@ public class ConfigDialogController {
 
         JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
         if (chkAgenteHabilitado != null) {
-            chkAgenteHabilitado.setSelected(config.agenteHabilitado());
+            chkAgenteHabilitado.setSelected(resolverEstadoHabilitacionAgente(config.obtenerTipoAgente()));
         }
 
         JTextArea txtAgentePromptInicial = dialogo.obtenerTxtAgentePromptInicial();
@@ -448,12 +454,14 @@ public class ConfigDialogController {
 
         actualizandoRutaFlag = true;
         try {
+            guardarEstadoHabilitacionAgenteActual(ultimoAgenteSeleccionado);
             AgenteTipo enumAgente = AgenteTipo.desdeCodigo(agenteSeleccionado, null);
             if (enumAgente != null) {
                 JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
                 if (chkAgenteHabilitado != null) {
                     chkAgenteHabilitado.setText(
                         I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE(enumAgente.obtenerNombreVisible()));
+                    chkAgenteHabilitado.setSelected(resolverEstadoHabilitacionAgente(agenteSeleccionado));
                 }
 
                 String rutaSeleccionada = resolverRutaBinarioAgente(agenteSeleccionado);
@@ -473,14 +481,36 @@ public class ConfigDialogController {
                 if (chkAgenteHabilitado != null) {
                     chkAgenteHabilitado.setText(
                         I18nUI.Configuracion.Agentes.CHECK_HABILITAR_AGENTE(agenteSeleccionado));
+                    chkAgenteHabilitado.setSelected(false);
                 }
                 JTextField txtAgenteBinario = dialogo.obtenerTxtAgenteBinario();
                 if (txtAgenteBinario != null) {
                     txtAgenteBinario.setText("");
                 }
             }
+            ultimoAgenteSeleccionado = agenteSeleccionado;
         } finally {
             actualizandoRutaFlag = false;
+        }
+    }
+
+    private boolean resolverEstadoHabilitacionAgente(String agenteSeleccionado) {
+        if (Normalizador.esVacio(agenteSeleccionado)) {
+            return false;
+        }
+        if (estadosHabilitacionAgenteTemporal.containsKey(agenteSeleccionado)) {
+            return Boolean.TRUE.equals(estadosHabilitacionAgenteTemporal.get(agenteSeleccionado));
+        }
+        return config.agenteHabilitado(agenteSeleccionado);
+    }
+
+    private void guardarEstadoHabilitacionAgenteActual(String agente) {
+        if (Normalizador.esVacio(agente)) {
+            return;
+        }
+        JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
+        if (chkAgenteHabilitado != null) {
+            estadosHabilitacionAgenteTemporal.put(agente, chkAgenteHabilitado.isSelected());
         }
     }
 
@@ -815,9 +845,10 @@ public class ConfigDialogController {
         if (comboAgente != null) {
             snapshot.establecerTipoAgente((String) comboAgente.getSelectedItem());
         }
-        if (chkAgenteHabilitado != null) {
-            snapshot.establecerAgenteHabilitado(chkAgenteHabilitado.isSelected());
+        if (chkAgenteHabilitado != null && comboAgente != null) {
+            guardarEstadoHabilitacionAgenteActual((String) comboAgente.getSelectedItem());
         }
+        snapshot.establecerEstadosHabilitacionAgentes(estadosHabilitacionAgenteTemporal);
         if (txtAgentePromptInicial != null) {
             snapshot.establecerAgentePreflightPrompt(txtAgentePromptInicial.getText());
         }
@@ -1302,6 +1333,11 @@ public class ConfigDialogController {
         @Override
         public Map<String, String> obtenerRutasBinarioAgenteTemporales() {
             return new HashMap<>(rutasBinarioAgenteTemporal);
+        }
+
+        @Override
+        public Map<String, Boolean> obtenerEstadosHabilitacionAgentesTemporales() {
+            return new HashMap<>(estadosHabilitacionAgenteTemporal);
         }
 
         @Override

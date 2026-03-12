@@ -37,6 +37,8 @@ import java.util.List;
 public class TestDialogUtils {
 
     private static final List<Window> ventanasCapturadas = new CopyOnWriteArrayList<>();
+    private static final List<Window> dialogosMensajeProcesados = new CopyOnWriteArrayList<>();
+    private static final List<DialogoMensajeCapturado> dialogosMensajeCapturados = new CopyOnWriteArrayList<>();
     private static final AtomicBoolean capturaActiva = new AtomicBoolean(false);
     private static volatile Thread backgroundCleaner;
 
@@ -50,6 +52,8 @@ public class TestDialogUtils {
         }
         capturaActiva.set(true);
         ventanasCapturadas.clear();
+        dialogosMensajeProcesados.clear();
+        dialogosMensajeCapturados.clear();
 
         // Iniciar thread en background que cierra diálogos automáticamente
         iniciarBackgroundCleaner();
@@ -70,6 +74,7 @@ public class TestDialogUtils {
                                 if (!ventanasCapturadas.contains(ventana)) {
                                     ventanasCapturadas.add(ventana);
                                 }
+                                capturarDialogoMensajeSiAplica((JDialog) ventana);
                                 // Cerrar diálogos modales automáticamente
                                 ventana.dispose();
                             }
@@ -109,6 +114,8 @@ public class TestDialogUtils {
 
         limpiarDialogosPendientes();
         ventanasCapturadas.clear();
+        dialogosMensajeProcesados.clear();
+        dialogosMensajeCapturados.clear();
     }
 
     /**
@@ -181,7 +188,28 @@ public class TestDialogUtils {
             System.err.println("TestDialogUtils: Error cerrando ventanas: " + e.getMessage());
         } finally {
             ventanasCapturadas.clear();
+            dialogosMensajeProcesados.clear();
         }
+    }
+
+    public static void reiniciarDialogosMensajeCapturados() {
+        dialogosMensajeProcesados.clear();
+        dialogosMensajeCapturados.clear();
+    }
+
+    public static boolean seCapturoDialogoMensaje() {
+        return !dialogosMensajeCapturados.isEmpty();
+    }
+
+    public static int contarDialogosMensajeCapturados() {
+        return dialogosMensajeCapturados.size();
+    }
+
+    public static DialogoMensajeCapturado obtenerUltimoDialogoMensajeCapturado() {
+        if (dialogosMensajeCapturados.isEmpty()) {
+            return null;
+        }
+        return dialogosMensajeCapturados.get(dialogosMensajeCapturados.size() - 1);
     }
 
     /**
@@ -208,5 +236,106 @@ public class TestDialogUtils {
             }
         }
         return count;
+    }
+
+    private static void capturarDialogoMensajeSiAplica(JDialog dialogo) {
+        if (dialogo == null || dialogosMensajeProcesados.contains(dialogo)) {
+            return;
+        }
+
+        JOptionPane optionPane = buscarOptionPane(dialogo.getContentPane());
+        if (optionPane == null) {
+            return;
+        }
+
+        dialogosMensajeCapturados.add(
+            new DialogoMensajeCapturado(dialogo.getTitle(), extraerTextoMensaje(optionPane.getMessage()))
+        );
+        dialogosMensajeProcesados.add(dialogo);
+    }
+
+    private static JOptionPane buscarOptionPane(Component componente) {
+        if (componente instanceof JOptionPane) {
+            return (JOptionPane) componente;
+        }
+        if (!(componente instanceof Container)) {
+            return null;
+        }
+
+        for (Component hijo : ((Container) componente).getComponents()) {
+            JOptionPane optionPane = buscarOptionPane(hijo);
+            if (optionPane != null) {
+                return optionPane;
+            }
+        }
+        return null;
+    }
+
+    private static String extraerTextoMensaje(Object mensaje) {
+        if (mensaje == null) {
+            return "";
+        }
+        if (mensaje instanceof String) {
+            return ((String) mensaje).trim();
+        }
+        if (mensaje instanceof Component) {
+            return extraerTextoComponente((Component) mensaje).trim();
+        }
+        if (mensaje instanceof Object[]) {
+            StringBuilder texto = new StringBuilder();
+            for (Object item : (Object[]) mensaje) {
+                agregarTexto(texto, extraerTextoMensaje(item));
+            }
+            return texto.toString().trim();
+        }
+        return String.valueOf(mensaje).trim();
+    }
+
+    private static String extraerTextoComponente(Component componente) {
+        StringBuilder texto = new StringBuilder();
+        if (componente instanceof JTextArea) {
+            agregarTexto(texto, ((JTextArea) componente).getText());
+        } else if (componente instanceof JLabel) {
+            agregarTexto(texto, ((JLabel) componente).getText());
+        }
+
+        if (componente instanceof Container) {
+            for (Component hijo : ((Container) componente).getComponents()) {
+                agregarTexto(texto, extraerTextoComponente(hijo));
+            }
+        }
+        return texto.toString().trim();
+    }
+
+    private static void agregarTexto(StringBuilder texto, String valor) {
+        if (valor == null) {
+            return;
+        }
+        String limpio = valor.trim();
+        if (limpio.isEmpty()) {
+            return;
+        }
+        if (texto.length() > 0) {
+            texto.append('\n');
+        }
+        texto.append(limpio);
+    }
+
+    public static final class DialogoMensajeCapturado {
+        private final String titulo;
+        private final String mensaje;
+
+        private DialogoMensajeCapturado(String titulo, String mensaje) {
+            this.titulo = titulo != null ? titulo : "";
+            this.mensaje = mensaje != null ? mensaje : "";
+        }
+
+        public String obtenerTitulo() {
+            return titulo;
+        }
+
+        public String obtenerMensaje() {
+            return mensaje;
+        }
     }
 }

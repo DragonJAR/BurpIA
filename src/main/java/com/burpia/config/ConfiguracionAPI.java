@@ -71,8 +71,8 @@ public class ConfiguracionAPI {
     private String nombreFuenteMono;
     private int tamanioFuenteMono;
 
-    private boolean agenteHabilitado;
     private String tipoAgente;
+    private Map<String, Boolean> agentesHabilitadosPorTipo;
     private Map<String, String> rutasBinarioPorAgente;
     private String agentePreflightPrompt;
     private String agentePrompt;
@@ -117,8 +117,8 @@ public class ConfiguracionAPI {
         this.promptModificado = false;
         this.ignorarErroresSSL = false;
         this.soloProxy = true;
-        this.agenteHabilitado = false;
         this.tipoAgente = AgenteTipo.porDefecto().name();
+        this.agentesHabilitadosPorTipo = crearEstadosHabilitacionAgentesPorDefecto();
         this.rutasBinarioPorAgente = new HashMap<>();
         this.agentePreflightPrompt = obtenerAgentePreflightPromptPorDefecto();
         this.agentePrompt = obtenerAgentePromptPorDefecto();
@@ -331,11 +331,59 @@ public class ConfiguracionAPI {
     }
 
     public boolean agenteHabilitado() {
-        return agenteHabilitado;
+        return agenteHabilitado(obtenerTipoAgente());
     }
 
     public void establecerAgenteHabilitado(boolean habilitado) {
-        this.agenteHabilitado = habilitado;
+        establecerAgenteHabilitado(obtenerTipoAgente(), habilitado);
+    }
+
+    public boolean agenteHabilitado(String agente) {
+        asegurarMapas();
+        return agenteHabilitadoSinAsegurar(agente);
+    }
+
+    private boolean agenteHabilitadoSinAsegurar(String agente) {
+        AgenteTipo tipo = AgenteTipo.desdeCodigo(agente, null);
+        if (tipo == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(agentesHabilitadosPorTipo.get(tipo.name()));
+    }
+
+    public void establecerAgenteHabilitado(String agente, boolean habilitado) {
+        asegurarMapas();
+        AgenteTipo tipo = AgenteTipo.desdeCodigo(agente, null);
+        if (tipo == null) {
+            return;
+        }
+        agentesHabilitadosPorTipo.put(tipo.name(), habilitado);
+        normalizarTipoAgenteSegunHabilitacion();
+    }
+
+    public Map<String, Boolean> obtenerEstadosHabilitacionAgentes() {
+        asegurarMapas();
+        return new HashMap<>(agentesHabilitadosPorTipo);
+    }
+
+    public void establecerEstadosHabilitacionAgentes(Map<String, Boolean> estados) {
+        this.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(estados);
+        normalizarTipoAgenteSegunHabilitacion();
+    }
+
+    public boolean hayAlgunAgenteHabilitado() {
+        asegurarMapas();
+        for (Boolean habilitado : agentesHabilitadosPorTipo.values()) {
+            if (Boolean.TRUE.equals(habilitado)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public String obtenerTipoAgenteOperativo() {
+        asegurarMapas();
+        return resolverTipoAgenteOperativoActual();
     }
 
     public String obtenerTipoAgente() {
@@ -344,6 +392,7 @@ public class ConfiguracionAPI {
 
     public void establecerTipoAgente(String tipo) {
         this.tipoAgente = AgenteTipo.desdeCodigo(tipo, AgenteTipo.porDefecto()).name();
+        normalizarTipoAgenteSegunHabilitacion();
     }
 
     public String obtenerRutaBinarioAgente(String agente) {
@@ -901,10 +950,15 @@ public class ConfiguracionAPI {
             errores.put("agenteDelay", validacionDelayAgente.obtenerMensajeError());
         }
 
-        if (agenteHabilitado) {
-            ConfigValidator.ValidationResult validacionAgenteHabilitado = validarAgenteHabilitado();
+        for (AgenteTipo tipoAgente : AgenteTipo.values()) {
+            if (!agenteHabilitado(tipoAgente.name())) {
+                continue;
+            }
+            ConfigValidator.ValidationResult validacionAgenteHabilitado =
+                validarAgenteHabilitado(tipoAgente.name());
             if (!validacionAgenteHabilitado.esValido()) {
                 errores.put("agente", validacionAgenteHabilitado.obtenerMensajeError());
+                break;
             }
         }
 
@@ -1219,6 +1273,9 @@ public class ConfiguracionAPI {
     }
 
     private void asegurarMapas() {
+        if (agentesHabilitadosPorTipo == null) {
+            agentesHabilitadosPorTipo = crearEstadosHabilitacionAgentesPorDefecto();
+        }
         if (apiKeysPorProveedor == null) {
             apiKeysPorProveedor = new HashMap<>();
         }
@@ -1231,6 +1288,7 @@ public class ConfiguracionAPI {
         if (maxTokensPorProveedor == null) {
             maxTokensPorProveedor = new HashMap<>();
         }
+        agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(agentesHabilitadosPorTipo);
         apiKeysPorProveedor = normalizarMapaStringPorProveedor(apiKeysPorProveedor);
         urlsBasePorProveedor = normalizarMapaStringPorProveedor(urlsBasePorProveedor);
         modelosPorProveedor = normalizarMapaStringPorProveedor(modelosPorProveedor);
@@ -1247,6 +1305,7 @@ public class ConfiguracionAPI {
         maximoConcurrente = normalizarMaximoConcurrente(maximoConcurrente);
         maximoHallazgosTabla = normalizarMaximoHallazgos(maximoHallazgosTabla);
         maximoTareasTabla = normalizarMaximoTareas(maximoTareasTabla);
+        normalizarTipoAgenteSegunHabilitacion();
     }
 
     /**
@@ -1343,8 +1402,7 @@ public class ConfiguracionAPI {
         return ProveedorAI.normalizarProveedor(proveedor);
     }
 
-    private ConfigValidator.ValidationResult validarAgenteHabilitado() {
-        String tipoAgenteActual = obtenerTipoAgente();
+    private ConfigValidator.ValidationResult validarAgenteHabilitado(String tipoAgenteActual) {
         String rutaBinario = obtenerRutaBinarioAgente(tipoAgenteActual);
         ConfigValidator.ValidationResult validacionRuta = ConfigValidator.validarRutaBinarioAgente(rutaBinario,
                 tipoAgenteActual);
@@ -1364,6 +1422,61 @@ public class ConfiguracionAPI {
         return ConfigValidator.ValidationResult.invalido(
                 I18nUI.Configuracion.Agentes.MSG_BINARIO_NO_EXISTE(nombreAgente, rutaVisible),
                 "rutaBinario");
+    }
+
+    private static Map<String, Boolean> crearEstadosHabilitacionAgentesPorDefecto() {
+        Map<String, Boolean> estados = new HashMap<>();
+        for (AgenteTipo tipo : AgenteTipo.values()) {
+            estados.put(tipo.name(), false);
+        }
+        return estados;
+    }
+
+    private static Map<String, Boolean> normalizarMapaHabilitacionAgentes(Map<String, Boolean> estados) {
+        Map<String, Boolean> normalizados = crearEstadosHabilitacionAgentesPorDefecto();
+        if (estados == null) {
+            return normalizados;
+        }
+        for (Map.Entry<String, Boolean> entry : estados.entrySet()) {
+            if (entry == null) {
+                continue;
+            }
+            AgenteTipo tipo = AgenteTipo.desdeCodigo(entry.getKey(), null);
+            if (tipo == null) {
+                continue;
+            }
+            normalizados.put(tipo.name(), Boolean.TRUE.equals(entry.getValue()));
+        }
+        return normalizados;
+    }
+
+    private String obtenerPrimerAgenteHabilitado() {
+        asegurarMapas();
+        return obtenerPrimerAgenteHabilitadoSinAsegurar();
+    }
+
+    private String obtenerPrimerAgenteHabilitadoSinAsegurar() {
+        for (AgenteTipo tipo : AgenteTipo.values()) {
+            if (agenteHabilitadoSinAsegurar(tipo.name())) {
+                return tipo.name();
+            }
+        }
+        return null;
+    }
+
+    private String resolverTipoAgenteOperativoActual() {
+        if (agenteHabilitadoSinAsegurar(tipoAgente)) {
+            return tipoAgente;
+        }
+        return obtenerPrimerAgenteHabilitadoSinAsegurar();
+    }
+
+    private void normalizarTipoAgenteSegunHabilitacion() {
+        this.tipoAgente = AgenteTipo.desdeCodigo(tipoAgente, AgenteTipo.porDefecto()).name();
+        String tipoOperativo = resolverTipoAgenteOperativoActual();
+        if (Normalizador.noEsVacio(tipoOperativo)) {
+            this.tipoAgente = tipoOperativo;
+        }
     }
 
     private static Map<String, String> normalizarMapaStringPorProveedor(Map<String, String> mapa) {
@@ -1451,7 +1564,7 @@ public class ConfiguracionAPI {
         snapshot.promptModificado = this.promptModificado;
         snapshot.ignorarErroresSSL = this.ignorarErroresSSL;
         snapshot.soloProxy = this.soloProxy;
-        snapshot.agenteHabilitado = this.agenteHabilitado;
+        snapshot.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(this.agentesHabilitadosPorTipo);
         snapshot.establecerTipoAgente(this.tipoAgente);
         snapshot.rutasBinarioPorAgente = new HashMap<>();
         if (this.rutasBinarioPorAgente != null) {
@@ -1509,7 +1622,7 @@ public class ConfiguracionAPI {
         this.promptModificado = origen.promptModificado;
         this.ignorarErroresSSL = origen.ignorarErroresSSL;
         this.soloProxy = origen.soloProxy;
-        this.agenteHabilitado = origen.agenteHabilitado;
+        this.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(origen.agentesHabilitadosPorTipo);
         establecerTipoAgente(origen.tipoAgente);
         this.rutasBinarioPorAgente = new HashMap<>();
         if (origen.rutasBinarioPorAgente != null) {

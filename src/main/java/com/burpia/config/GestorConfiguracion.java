@@ -272,12 +272,14 @@ public class GestorConfiguracion {
             config.establecerSoloProxy(archivo.soloProxy);
         }
 
-        if (archivo.agenteHabilitado != null) {
-            config.establecerAgenteHabilitado(archivo.agenteHabilitado);
-        }
-
         if (archivo.tipoAgente != null) {
             config.establecerTipoAgente(archivo.tipoAgente);
+        }
+
+        if (archivo.agentesHabilitadosPorTipo != null) {
+            config.establecerEstadosHabilitacionAgentes(archivo.agentesHabilitadosPorTipo);
+        } else if (Boolean.TRUE.equals(archivo.agenteHabilitado)) {
+            config.establecerAgenteHabilitado(config.obtenerTipoAgente(), true);
         }
 
         if (archivo.rutasBinarioPorAgente != null) {
@@ -386,6 +388,7 @@ public class GestorConfiguracion {
         archivo.ignorarErroresSSL = config.ignorarErroresSSL();
         archivo.soloProxy = config.soloProxy();
         archivo.agenteHabilitado = config.agenteHabilitado();
+        archivo.agentesHabilitadosPorTipo = new HashMap<>(config.obtenerEstadosHabilitacionAgentes());
         archivo.tipoAgente = config.obtenerTipoAgente();
         archivo.agentePreflightPrompt = config.obtenerAgentePreflightPrompt();
         archivo.agentePrompt = config.obtenerAgentePrompt();
@@ -513,6 +516,7 @@ public class GestorConfiguracion {
         private Boolean ignorarErroresSSL;
         private Boolean soloProxy;
         private Boolean agenteHabilitado;
+        private Map<String, Boolean> agentesHabilitadosPorTipo;
         private String tipoAgente;
         private String agentePreflightPrompt;
         private String agentePrompt;
