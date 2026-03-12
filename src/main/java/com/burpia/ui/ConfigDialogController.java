@@ -464,7 +464,7 @@ public class ConfigDialogController {
 
     private void manejarCambioModelo() {
         gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Manejando cambio de modelo"));
-        SwingUtilities.invokeLater(providerManager::actualizarTimeoutModeloSeleccionadoEnUI);
+        providerManager.actualizarTimeoutModeloSeleccionadoEnUI();
     }
 
     private void manejarCambioAgente() {

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JButton;
+import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -218,6 +219,23 @@ class UIUtilsTest {
         @DisplayName("maneja Integer.MAX_VALUE")
         void maximoEntero() {
             assertEquals(Integer.MAX_VALUE, UIUtils.normalizarDelayMs(Integer.MAX_VALUE), "assertEquals failed at UIUtilsTest.java:220");
+        }
+    }
+
+    @Nested
+    @DisplayName("crearMenuItemContextual")
+    class CrearMenuItemContextualTests {
+
+        @Test
+        @DisplayName("aplica texto, tooltip y listener con estilo estándar")
+        void configuraMenuItemCompleto() {
+            JMenuItem item = UIUtils.crearMenuItemContextual("Reintentar", "Reintenta la acción", e -> {
+            });
+
+            assertEquals("Reintentar", item.getText(), "assertEquals failed at UIUtilsTest.java:236");
+            assertEquals("Reintenta la acción", item.getToolTipText(), "assertEquals failed at UIUtilsTest.java:237");
+            assertNotNull(item.getFont(), "assertNotNull failed at UIUtilsTest.java:238");
+            assertEquals(1, item.getActionListeners().length, "assertEquals failed at UIUtilsTest.java:239");
         }
     }
 

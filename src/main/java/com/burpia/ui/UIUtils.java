@@ -97,6 +97,18 @@ public final class UIUtils {
         componente.setToolTipText(tooltip);
     }
 
+    public static JMenuItem crearMenuItemContextual(String texto,
+            String tooltip,
+            java.awt.event.ActionListener accion) {
+        JMenuItem menuItem = new JMenuItem(texto);
+        menuItem.setFont(EstilosUI.FUENTE_ESTANDAR);
+        menuItem.setToolTipText(tooltip);
+        if (accion != null) {
+            menuItem.addActionListener(accion);
+        }
+        return menuItem;
+    }
+
     public static void instalarTooltipsEncabezadoTabla(JTable tabla, String... tooltipsPorModelo) {
         if (tabla == null) {
             return;

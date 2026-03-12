@@ -53,7 +53,7 @@ public class PanelAgente extends JPanel {
     private static final int TERMINAL_MARGEN = 4;
 
     private static final int MARGEN_BORDE_TITULO_GRANDE = 12;
-    private static final int MARGEN_BORDE_TITULO_PEQUEÑO = 3;
+    private static final int MARGEN_BORDE_TITULO_PEQUENO = 3;
 
     private static final String SHELL_POR_DEFECTO = "/bin/bash";
     private static final String PARAMETRO_SHELL_LOGIN = "--login";
@@ -509,7 +509,7 @@ public class PanelAgente extends JPanel {
             }
             if (panelResultadosWrapper != null) {
                 panelResultadosWrapper.setBackground(fondoPanel);
-                panelResultadosWrapper.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), MARGEN_BORDE_TITULO_PEQUEÑO, MARGEN_BORDE_TITULO_PEQUEÑO));
+                panelResultadosWrapper.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), MARGEN_BORDE_TITULO_PEQUENO, MARGEN_BORDE_TITULO_PEQUENO));
             }
 
             if (lblDelay != null) {
@@ -708,7 +708,7 @@ public class PanelAgente extends JPanel {
 
     private JPanel crearPanelResultados() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), MARGEN_BORDE_TITULO_PEQUEÑO, MARGEN_BORDE_TITULO_PEQUEÑO));
+        panel.setBorder(UIUtils.crearBordeTitulado(I18nUI.Consola.TITULO_PANEL_AGENTE_GENERICO(), MARGEN_BORDE_TITULO_PEQUENO, MARGEN_BORDE_TITULO_PEQUENO));
         return panel;
     }
 
@@ -1329,9 +1329,10 @@ public class PanelAgente extends JPanel {
 
     private List<InyeccionPendiente> extraerInyeccionesPendientes() {
         List<InyeccionPendiente> pendientes = new java.util.ArrayList<>();
-        InyeccionPendiente pendiente;
-        while ((pendiente = inyeccionesPendientes.poll()) != null) {
+        InyeccionPendiente pendiente = inyeccionesPendientes.poll();
+        while (pendiente != null) {
             pendientes.add(pendiente);
+            pendiente = inyeccionesPendientes.poll();
         }
         return pendientes;
     }

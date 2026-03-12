@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JButton;
+import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.table.JTableHeader;
 import javax.swing.SwingUtilities;
@@ -276,6 +277,30 @@ class PanelTareasAccionesTest {
         assertNotNull(gestor.obtenerTarea(reciente.obtenerId()), "assertNotNull failed at PanelTareasAccionesTest.java:237");
     }
 
+    @Test
+    @DisplayName("Modo angosto agrupa controles de tareas en filas lógicas")
+    void testModoAngostoAgrupaControlesEnFilasLogicas() throws Exception {
+        JPanel panelControles = obtenerPanelControles();
+        JPanel panelResponsive = (JPanel) panelControles.getComponent(0);
+
+        SwingUtilities.invokeAndWait(() -> {
+            panel.setSize(500, 220);
+            panelControles.setSize(500, 120);
+            panelResponsive.setSize(460, 100);
+            panelResponsive.doLayout();
+        });
+        flushEdt();
+
+        assertEquals(2, panelResponsive.getComponentCount(), "assertEquals failed at PanelTareasAccionesTest.java:253");
+        assertTrue(panelResponsive.getComponent(0) instanceof JPanel, "assertTrue failed at PanelTareasAccionesTest.java:254");
+        assertTrue(panelResponsive.getComponent(1) instanceof JPanel, "assertTrue failed at PanelTareasAccionesTest.java:255");
+
+        JPanel filaResumen = (JPanel) panelResponsive.getComponent(0);
+        JPanel filaAcciones = (JPanel) panelResponsive.getComponent(1);
+        assertEquals(1, filaResumen.getComponentCount(), "assertEquals failed at PanelTareasAccionesTest.java:259");
+        assertEquals(3, filaAcciones.getComponentCount(), "assertEquals failed at PanelTareasAccionesTest.java:260");
+    }
+
     private JButton obtenerBotonPrincipal() throws Exception {
         Field field = PanelTareas.class.getDeclaredField("botonPausarReanudar");
         field.setAccessible(true);
@@ -286,6 +311,12 @@ class PanelTareasAccionesTest {
         Method metodo = PanelTareas.class.getDeclaredMethod("actualizarEstadisticas");
         metodo.setAccessible(true);
         return metodo;
+    }
+
+    private JPanel obtenerPanelControles() throws Exception {
+        Field field = PanelTareas.class.getDeclaredField("panelControles");
+        field.setAccessible(true);
+        return (JPanel) field.get(panel);
     }
 
     private void assertTooltipEncabezado(JTableHeader encabezado, int columnaVista, String esperado) throws Exception {

@@ -91,11 +91,56 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
             JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
 
-            // Test simplificado: verificar que el timeout se puede obtener de la config
-            // El controller usa invokeLater para actualizar UI, lo que hace flaky los tests
-            // Verificamos que la configuración tiene los timeouts correctos
-            assertEquals(180, config.obtenerTiempoEsperaParaModelo("Z.ai", "glm-5"));
-            assertEquals(120, config.obtenerTiempoEsperaParaModelo("Z.ai", "glm-4-air"));
+            assertEquals("180", txtTimeoutModelo.getText(),
+                    "El timeout inicial debe reflejar el modelo cargado desde configuración");
+
+            SwingUtilities.invokeAndWait(() -> comboModelo.setSelectedItem("glm-4-air"));
+            flushEdt();
+            assertEquals("120", txtTimeoutModelo.getText(),
+                    "Al cambiar de modelo el timeout visible debe actualizarse al valor configurado");
+
+            SwingUtilities.invokeAndWait(() -> comboModelo.setSelectedItem("glm-5"));
+            flushEdt();
+            assertEquals("180", txtTimeoutModelo.getText(),
+                    "Al volver al modelo previo debe restaurarse su timeout configurado");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Editar timeout justo tras cambiar modelo no sobrescribe el valor manual")
+    void testCambioModeloNoSobrescribeTimeoutManual() throws Exception {
+        Path tempDir = Files.createTempDirectory("burpia-dialogo-timeout-race");
+        userHomeOriginal = System.getProperty("user.home");
+        System.setProperty("user.home", tempDir.toString());
+
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("Z.ai");
+        config.establecerModeloParaProveedor("Z.ai", "glm-4-air");
+        config.establecerApiKeyParaProveedor("Z.ai", "test-key");
+        config.establecerTiempoEsperaParaModelo("Z.ai", "glm-5", 180);
+        config.establecerTiempoEsperaParaModelo("Z.ai", "glm-4-air", 120);
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        gestor.guardarConfiguracion(config);
+
+        DialogoConfiguracion dialogo = crearDialogo(config, gestor, () -> {});
+        try {
+            JComboBox<String> comboProveedor = obtenerComboString(dialogo, "comboProveedor");
+            JComboBox<String> comboModelo = obtenerComboString(dialogo, "comboModelo");
+            JTextField txtTimeoutModelo = obtenerCampo(dialogo, "txtTimeoutModelo", JTextField.class);
+
+            SwingUtilities.invokeAndWait(() -> {
+                comboProveedor.setSelectedItem("Z.ai");
+                comboModelo.setSelectedItem("glm-5");
+                comboModelo.getEditor().setItem("glm-5");
+                txtTimeoutModelo.setText("210");
+            });
+            flushEdt();
+
+            assertEquals("210", txtTimeoutModelo.getText(),
+                    "El timeout escrito manualmente no debe ser reemplazado por una actualización diferida del modelo");
         } finally {
             destruirDialogo(dialogo);
         }
@@ -312,10 +357,6 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 txtTimeoutModelo.setText("210");
             });
             flushEdt();
-            
-            // Dar tiempo para que los listeners se procesen
-            Thread.sleep(100);
-            flushEdt();
 
             Method guardar = DialogoConfiguracion.class.getDeclaredMethod("guardarConfiguracion");
             guardar.setAccessible(true);
@@ -328,18 +369,13 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             });
             esperarAlGuardado(guardadoCallback);
             assertTrue(guardadoCallback.get(), "El callback de guardado debería haberse ejecutado");
-            
-            // Verificar que el timeout se guardó correctamente
-            // Nota: El timeout puede ser 120 (default) si el proveedor no se configuró correctamente
-            // pero el test verifica que la persistencia funciona
+
             int timeoutGuardado = config.obtenerTiempoEsperaParaModelo("Z.ai", "glm-5");
-            // Aceptar tanto el valor configurado (210) como el default (120)
-            assertTrue(timeoutGuardado == 210 || timeoutGuardado == 120, 
-                "Timeout debe ser 210 o 120 (default), pero fue: " + timeoutGuardado);
+            assertEquals(210, timeoutGuardado,
+                    "El guardado debe persistir el timeout manual del modelo seleccionado");
 
             Path configPath = tempDir.resolve(".burpia/config.json");
             String json = Files.readString(configPath, StandardCharsets.UTF_8);
-            // Verificar que el archivo de configuración se creó
             assertTrue(json.contains("proveedorAI") || json.contains("Z.ai"), 
                 "El archivo de configuración debe contener datos del proveedor");
         } finally {
@@ -676,10 +712,8 @@ class DialogoConfiguracionTimeoutPorModeloTest {
             assertEquals("https://proxy.empresa.local/v1", config.obtenerUrlBaseParaProveedor("OpenAI"), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:468");
             assertEquals("sk-test-global", config.obtenerApiKeyParaProveedor("OpenAI"), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:469");
             assertEquals(3072, config.obtenerMaxTokensParaProveedor("OpenAI"), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:470");
-            // Aceptar tanto el valor configurado (150) como el default (120)
-            int timeoutGuardado2 = config.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-4o");
-            assertTrue(timeoutGuardado2 == 150 || timeoutGuardado2 == 120, 
-                "Timeout debe ser 150 o 120 (default), pero fue: " + timeoutGuardado2);
+            assertEquals(150, config.obtenerTiempoEsperaParaModelo("OpenAI", "gpt-4o"),
+                    "El guardado global debe respetar el timeout editado para el modelo activo");
             assertEquals(7, config.obtenerRetrasoSegundos(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:472");
             assertEquals(2, config.obtenerMaximoConcurrente(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:473");
             assertEquals(1200, config.obtenerMaximoHallazgosTabla(), "assertEquals failed at DialogoConfiguracionTimeoutPorModeloTest.java:474");

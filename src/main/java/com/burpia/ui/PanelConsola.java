@@ -320,13 +320,15 @@ public class PanelConsola extends JPanel {
         actualizarBotonesBusqueda(true);
 
         UIUtils.ejecutarEnEdt(() -> {
-            try {
-                consola.setCaretPosition(fin);
-                consola.moveCaretPosition(inicio);
-                consola.getCaret().setSelectionVisible(true);
-            } catch (IllegalArgumentException e) {
-                // Posición inválida, ignorar
+            int longitudDocumento = consola.getDocument() != null ? consola.getDocument().getLength() : 0;
+            if (inicio < 0 || fin < inicio || fin > longitudDocumento) {
+                consola.select(0, 0);
+                consola.getCaret().setSelectionVisible(false);
+                return;
             }
+            consola.setCaretPosition(fin);
+            consola.moveCaretPosition(inicio);
+            consola.getCaret().setSelectionVisible(true);
         });
 
         actualizarResultadoBusquedaEncontrada();

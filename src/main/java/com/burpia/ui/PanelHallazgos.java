@@ -15,7 +15,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.BufferedWriter;
@@ -122,63 +121,61 @@ public class PanelHallazgos extends JPanel {
         panelFiltros.setBorder(UIUtils.crearBordeTitulado(
             I18nUI.Hallazgos.TITULO_FILTROS(), 12, 16));
 
-        JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 12, 4));
-
         // EFICIENCIA: FILTRADO primero - flujo natural de trabajo
         etiquetaBusqueda = new JLabel(I18nUI.Hallazgos.ETIQUETA_BUSCAR());
         etiquetaBusqueda.setFont(EstilosUI.FUENTE_ESTANDAR);
         etiquetaBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
-        panelTodosControles.add(etiquetaBusqueda);
 
         campoBusqueda = new JTextField(15);
         campoBusqueda.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
-        panelTodosControles.add(campoBusqueda);
 
         comboSeveridad = new JComboBox<>(I18nUI.Hallazgos.OPCIONES_FILTRO_SEVERIDAD());
         comboSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
         comboSeveridad.setToolTipText(I18nUI.Tooltips.Hallazgos.FILTRO_SEVERIDAD());
-        panelTodosControles.add(comboSeveridad);
 
         botonLimpiarFiltro = new JButton(I18nUI.Hallazgos.BOTON_LIMPIAR());
         botonLimpiarFiltro.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiarFiltro.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
-        panelTodosControles.add(botonLimpiarFiltro);
-
-        // CONFIABILIDAD: Separador visual entre filtrado y exportación
-        panelTodosControles.add(Box.createHorizontalStrut(20));
 
         // EFICIENCIA: EXPORTACIÓN agrupada - después de filtrar, usuario exporta
         botonExportarCSV = new JButton(I18nUI.Hallazgos.BOTON_EXPORTAR_CSV());
         botonExportarCSV.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonExportarCSV.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
-        panelTodosControles.add(botonExportarCSV);
 
         botonExportarJSON = new JButton(I18nUI.Hallazgos.BOTON_EXPORTAR_JSON());
         botonExportarJSON.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonExportarJSON.setToolTipText(I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
-        panelTodosControles.add(botonExportarJSON);
-
-        // CONFIABILIDAD: Separador visual antes de acción destructiva
-        panelTodosControles.add(Box.createHorizontalStrut(20));
 
         // CONFIABILIDAD: Acción destructiva AISLADA al final
         botonLimpiarTodo = new JButton(I18nUI.Hallazgos.BOTON_LIMPIAR_TODO());
         botonLimpiarTodo.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiarTodo.setToolTipText(I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
-        panelTodosControles.add(botonLimpiarTodo);
+        JPanel panelTodosControles = new PanelFilasResponsive(
+            920,
+            12,
+            8,
+            List.of(
+                List.of(etiquetaBusqueda, campoBusqueda, comboSeveridad, botonLimpiarFiltro),
+                List.of(botonExportarCSV, botonExportarJSON),
+                List.of(botonLimpiarTodo)
+            )
+        );
 
         panelFiltros.add(panelTodosControles);
 
         JPanel panelSuperior = new JPanel(new BorderLayout(10, 0));
+        panelSuperior.setOpaque(false);
         panelSuperior.add(panelFiltros, BorderLayout.CENTER);
 
         panelGuardarProyecto = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 4));
+        panelGuardarProyecto.setOpaque(false);
         panelGuardarProyecto.setBorder(UIUtils.crearBordeTitulado(
             I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO(), 12, 16));
         chkGuardarEnIssues = new JCheckBox(obtenerEtiquetaGuardadoIssues());
         chkGuardarEnIssues.setSelected(false);
         chkGuardarEnIssues.setFont(EstilosUI.FUENTE_ESTANDAR);
+        chkGuardarEnIssues.setOpaque(false);
         chkGuardarEnIssues.setToolTipText(obtenerTooltipGuardadoIssues());
         chkGuardarEnIssues.addActionListener(e -> {
             if (actualizandoEstadoAutoIssues.get()) {
@@ -590,14 +587,6 @@ public class PanelHallazgos extends JPanel {
         });
     }
 
-    private JMenuItem crearMenuItemContextual(String texto, String tooltip, ActionListener accion) {
-        JMenuItem menuItem = new JMenuItem(texto);
-        menuItem.setFont(EstilosUI.FUENTE_ESTANDAR);
-        menuItem.setToolTipText(tooltip);
-        menuItem.addActionListener(accion);
-        return menuItem;
-    }
-
     private void abrirDialogoEdicion(int filaVista) {
         int filaModelo = tabla.convertRowIndexToModel(filaVista);
         Hallazgo hallazgoOriginal = modelo.obtenerHallazgo(filaModelo);
@@ -653,12 +642,12 @@ public class PanelHallazgos extends JPanel {
      */
     private void agregarMenuItemEnvio(JPopupMenu menu, String etiqueta, String tooltip,
                                        java.util.function.Consumer<int[]> accion) {
-        menu.add(crearMenuItemContextual(etiqueta, tooltip, e -> accion.accept(tabla.getSelectedRows())));
+        menu.add(UIUtils.crearMenuItemContextual(etiqueta, tooltip, e -> accion.accept(tabla.getSelectedRows())));
     }
 
     private JPopupMenu construirMenuContextualDinamico() {
         JPopupMenu menu = new JPopupMenu();
-        menu.add(crearMenuItemContextual(
+        menu.add(UIUtils.crearMenuItemContextual(
             I18nUI.Hallazgos.MENU_AGREGAR_HALLAZGO(),
             I18nUI.Tooltips.Hallazgos.MENU_AGREGAR_HALLAZGO(),
             e -> abrirDialogoCreacion()
@@ -692,7 +681,7 @@ public class PanelHallazgos extends JPanel {
         }
 
         menu.addSeparator();
-        menu.add(crearMenuItemContextual(
+        menu.add(UIUtils.crearMenuItemContextual(
             I18nUI.Hallazgos.MENU_IGNORAR(),
             I18nUI.Tooltips.Hallazgos.MENU_IGNORAR(),
             e -> confirmarYEjecutar(
@@ -702,7 +691,7 @@ public class PanelHallazgos extends JPanel {
                 () -> ignorarHallazgos(tabla.getSelectedRows())
             )
         ));
-        menu.add(crearMenuItemContextual(
+        menu.add(UIUtils.crearMenuItemContextual(
             I18nUI.Hallazgos.MENU_BORRAR(),
             I18nUI.Tooltips.Hallazgos.MENU_BORRAR(),
             e -> confirmarYEjecutar(
@@ -1094,8 +1083,41 @@ public class PanelHallazgos extends JPanel {
             configurarColumnasTabla();
             aplicarFiltros();
         });
+        aplicarTema();
         revalidate();
         repaint();
+    }
+
+    public void aplicarTema() {
+        Runnable aplicar = () -> {
+            Color fondoPanel = EstilosUI.obtenerFondoPanel();
+            Color colorTextoSecundario = EstilosUI.colorTextoSecundario(fondoPanel);
+            Color colorTextoPrimario = EstilosUI.colorTextoPrimario(fondoPanel);
+
+            setBackground(fondoPanel);
+            if (panelFiltros != null) {
+                panelFiltros.setBackground(fondoPanel);
+                panelFiltros.setBorder(UIUtils.crearBordeTitulado(I18nUI.Hallazgos.TITULO_FILTROS(), 12, 16));
+            }
+            if (panelGuardarProyecto != null) {
+                panelGuardarProyecto.setBackground(fondoPanel);
+                panelGuardarProyecto.setBorder(UIUtils.crearBordeTitulado(I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO(), 12, 16));
+            }
+            if (panelTablaWrapper != null) {
+                panelTablaWrapper.setBackground(fondoPanel);
+                panelTablaWrapper.setBorder(UIUtils.crearBordeTitulado(I18nUI.Hallazgos.TITULO_TABLA(), 12, 16));
+            }
+            if (etiquetaBusqueda != null) {
+                etiquetaBusqueda.setForeground(colorTextoSecundario);
+            }
+            if (chkGuardarEnIssues != null) {
+                chkGuardarEnIssues.setOpaque(false);
+                chkGuardarEnIssues.setForeground(colorTextoPrimario);
+            }
+            repaint();
+            revalidate();
+        };
+        ejecutarEnEdt(aplicar);
     }
 
     private void actualizarOpcionesSeveridadIdioma() {

@@ -9,10 +9,13 @@ import org.junit.jupiter.api.Test;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.table.JTableHeader;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import java.awt.Color;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
 import java.lang.reflect.Field;
@@ -415,6 +418,60 @@ class PanelHallazgosFiltrosTest {
 
         assertEquals(Hallazgo.SEVERIDAD_HIGH, config.obtenerFiltroSeveridadHallazgos(),
             "La configuración debe almacenar la severidad con un valor estable");
+    }
+
+    @Test
+    @DisplayName("Modo angosto agrupa controles de hallazgos en filas lógicas")
+    void testModoAngostoAgrupaControlesEnFilasLogicas() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        JPanel panelFiltros = obtenerCampo(panel, "panelFiltros", JPanel.class);
+        JPanel panelResponsive = (JPanel) panelFiltros.getComponent(0);
+
+        SwingUtilities.invokeAndWait(() -> {
+            panel.setSize(520, 280);
+            panelFiltros.setSize(500, 160);
+            panelResponsive.setSize(460, 140);
+            panelResponsive.doLayout();
+        });
+        flushEdt();
+
+        assertEquals(3, panelResponsive.getComponentCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:364");
+        assertTrue(panelResponsive.getComponent(0) instanceof JPanel, "assertTrue failed at PanelHallazgosFiltrosTest.java:365");
+        assertTrue(panelResponsive.getComponent(1) instanceof JPanel, "assertTrue failed at PanelHallazgosFiltrosTest.java:366");
+        assertTrue(panelResponsive.getComponent(2) instanceof JPanel, "assertTrue failed at PanelHallazgosFiltrosTest.java:367");
+    }
+
+    @Test
+    @DisplayName("aplicarTema sincroniza fondos y mantiene contraste legible")
+    void testAplicarTemaSincronizaFondosYContraste() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        JPanel panelFiltros = obtenerCampo(panel, "panelFiltros", JPanel.class);
+        JPanel panelGuardarProyecto = obtenerCampo(panel, "panelGuardarProyecto", JPanel.class);
+        JLabel etiquetaBusqueda = obtenerCampo(panel, "etiquetaBusqueda", JLabel.class);
+        JCheckBox chkGuardarEnIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
+
+        SwingUtilities.invokeAndWait(panel::aplicarTema);
+        flushEdt();
+
+        Color fondoPanel = panel.getBackground();
+        assertEquals(fondoPanel, panelFiltros.getBackground(), "assertEquals failed at PanelHallazgosFiltrosTest.java:389");
+        assertEquals(fondoPanel, panelGuardarProyecto.getBackground(), "assertEquals failed at PanelHallazgosFiltrosTest.java:390");
+        assertTrue(
+            EstilosUI.ratioContraste(etiquetaBusqueda.getForeground(), fondoPanel) >= EstilosUI.CONTRASTE_AA_NORMAL,
+            "assertTrue failed at PanelHallazgosFiltrosTest.java:393");
+        assertFalse(chkGuardarEnIssues.isOpaque(), "assertFalse failed at PanelHallazgosFiltrosTest.java:394");
     }
 
     @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})

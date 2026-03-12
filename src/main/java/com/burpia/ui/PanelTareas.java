@@ -70,48 +70,30 @@ public class PanelTareas extends JPanel {
         panelControles.setBorder(UIUtils.crearBordeTitulado(
                 I18nUI.Tareas.TITULO_CONTROLES(), 12, 16));
 
-        JPanel panelTodosControles = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 5)) {
-            private boolean ultimoLayoutHorizontal = true;
-
-            @Override
-            public void doLayout() {
-                int ancho = getWidth() - 40;
-                boolean esLayoutHorizontal = ancho >= UMBRAL_RESPONSIVE;
-
-                if (esLayoutHorizontal != ultimoLayoutHorizontal) {
-                    if (esLayoutHorizontal) {
-                        setLayout(new FlowLayout(FlowLayout.LEFT, 12, 4));
-                    } else {
-                        setLayout(new GridLayout(2, 1, 0, 10));
-                    }
-                    ultimoLayoutHorizontal = esLayoutHorizontal;
-                }
-
-                super.doLayout();
-            }
-        };
-
         etiquetaEstadisticas = new JLabel(I18nUI.Tareas.ESTADISTICAS(0, 0, 0));
         etiquetaEstadisticas.setFont(EstilosUI.FUENTE_MONO);
         etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
-        panelTodosControles.add(etiquetaEstadisticas);
-
-        panelTodosControles.add(Box.createHorizontalStrut(20));
 
         botonPausarReanudar = new JButton(I18nUI.Tareas.BOTON_PAUSAR_TODO());
         botonPausarReanudar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonPausarReanudar.setToolTipText(I18nUI.Tooltips.Tareas.PAUSAR_REANUDAR());
-        panelTodosControles.add(botonPausarReanudar);
 
         botonCancelar = new JButton(I18nUI.Tareas.BOTON_CANCELAR_TODO());
         botonCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonCancelar.setToolTipText(I18nUI.Tooltips.Tareas.CANCELAR());
-        panelTodosControles.add(botonCancelar);
 
         botonLimpiarCompletadas = new JButton(I18nUI.Tareas.BOTON_LIMPIAR());
         botonLimpiarCompletadas.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonLimpiarCompletadas.setToolTipText(I18nUI.Tooltips.Tareas.LIMPIAR());
-        panelTodosControles.add(botonLimpiarCompletadas);
+        JPanel panelTodosControles = new PanelFilasResponsive(
+            UMBRAL_RESPONSIVE,
+            12,
+            8,
+            List.of(
+                List.of(etiquetaEstadisticas),
+                List.of(botonPausarReanudar, botonCancelar, botonLimpiarCompletadas)
+            )
+        );
 
         panelControles.add(panelTodosControles);
 
@@ -225,22 +207,6 @@ public class PanelTareas extends JPanel {
     }
 
     /**
-     * Crea un JMenuItem con el formato estándar del menú contextual.
-     *
-     * @param texto   Texto del item de menú
-     * @param tooltip Tooltip del item de menú
-     * @param accion  ActionListener a ejecutar
-     * @return JMenuItem configurado con el estilo estándar
-     */
-    private JMenuItem crearMenuItemContextual(String texto, String tooltip, java.awt.event.ActionListener accion) {
-        JMenuItem menuItem = new JMenuItem(texto);
-        menuItem.setFont(EstilosUI.FUENTE_ESTANDAR);
-        menuItem.setToolTipText(tooltip);
-        menuItem.addActionListener(accion);
-        return menuItem;
-    }
-
-    /**
      * Actualiza el texto y tooltip del botón Pausar/Reanudar según el estado de
      * tareas.
      *
@@ -288,7 +254,7 @@ public class PanelTareas extends JPanel {
         }
 
         if (Tarea.ESTADO_ERROR.equals(estado)) {
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_VER_DETALLES_ERROR(),
                     I18nUI.Tooltips.Tareas.MENU_VER_DETALLES_ERROR(),
                     e -> {
@@ -303,7 +269,7 @@ public class PanelTareas extends JPanel {
         }
 
         if (Tarea.ESTADO_ERROR.equals(estado) || Tarea.ESTADO_CANCELADO.equals(estado)) {
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_REINTENTAR(),
                     I18nUI.Tooltips.Tareas.MENU_REINTENTAR_UNA(),
                     e -> {
@@ -313,7 +279,7 @@ public class PanelTareas extends JPanel {
         }
 
         if (Tarea.ESTADO_EN_COLA.equals(estado) || Tarea.ESTADO_ANALIZANDO.equals(estado)) {
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_PAUSAR(),
                     I18nUI.Tooltips.Tareas.MENU_PAUSAR_UNA(),
                     e -> {
@@ -324,7 +290,7 @@ public class PanelTareas extends JPanel {
         }
 
         if (Tarea.ESTADO_PAUSADO.equals(estado)) {
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_REANUDAR(),
                     I18nUI.Tooltips.Tareas.MENU_REANUDAR_UNA(),
                     e -> {
@@ -339,7 +305,7 @@ public class PanelTareas extends JPanel {
             if (menu.getComponentCount() > 0)
                 menu.addSeparator();
 
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_CANCELAR(),
                     I18nUI.Tooltips.Tareas.MENU_CANCELAR_UNA(),
                     e -> {
@@ -358,7 +324,7 @@ public class PanelTareas extends JPanel {
             if (menu.getComponentCount() > 0)
                 menu.addSeparator();
 
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_ELIMINAR_LISTA(),
                     I18nUI.Tooltips.Tareas.MENU_ELIMINAR_UNA(),
                     e -> {
@@ -390,21 +356,21 @@ public class PanelTareas extends JPanel {
         }
 
         if (erroresCanceladas > 0) {
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_REINTENTAR_MULTIPLES(erroresCanceladas),
                     I18nUI.Tooltips.Tareas.MENU_REINTENTAR_MULTIPLES(),
                     e -> reintentarTareas(seleccion)));
         }
 
         if (activas > 0) {
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_PAUSAR_MULTIPLES(activas),
                     I18nUI.Tooltips.Tareas.MENU_PAUSAR_MULTIPLES(),
                     e -> pausarTareas(seleccion)));
         }
 
         if (pausadas > 0) {
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_REANUDAR_MULTIPLES(pausadas),
                     I18nUI.Tooltips.Tareas.MENU_REANUDAR_MULTIPLES(),
                     e -> reanudarTareas(seleccion)));
@@ -414,7 +380,7 @@ public class PanelTareas extends JPanel {
             if (menu.getComponentCount() > 0)
                 menu.addSeparator();
 
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_CANCELAR_MULTIPLES(activas + pausadas),
                     I18nUI.Tooltips.Tareas.MENU_CANCELAR_MULTIPLES(),
                     e -> cancelarTareas(seleccion)));
@@ -425,7 +391,7 @@ public class PanelTareas extends JPanel {
             if (menu.getComponentCount() > 0)
                 menu.addSeparator();
 
-            menu.add(crearMenuItemContextual(
+            menu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Tareas.MENU_ELIMINAR_MULTIPLES(totalFinalizadas),
                     I18nUI.Tooltips.Tareas.MENU_ELIMINAR_MULTIPLES(),
                     e -> eliminarTareasSeleccionadas(seleccion)));
