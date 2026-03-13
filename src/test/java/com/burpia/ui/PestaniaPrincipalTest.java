@@ -206,6 +206,32 @@ class PestaniaPrincipalTest {
         });
     }
 
+    @Test
+    @DisplayName("aplicarIdioma es seguro fuera del EDT y actualiza títulos de pestañas")
+    void testAplicarIdiomaFueraDelEdt() throws Exception {
+        AtomicReference<Throwable> error = new AtomicReference<>();
+
+        Thread hilo = new Thread(() -> {
+            try {
+                I18nUI.establecerIdioma("en");
+                pestaniaPrincipal.aplicarIdioma();
+            } catch (Throwable t) {
+                error.set(t);
+            }
+        }, "PestaniaPrincipal-AplicarIdioma-Test");
+        hilo.start();
+        hilo.join(2000);
+
+        assertNull(error.get(), "assertNull failed at PestaniaPrincipalTest.java:214");
+        SwingUtilities.invokeAndWait(() -> {
+            JTabbedPane tabs = obtenerTabbedPane(pestaniaPrincipal);
+            int indiceHallazgos = tabs.indexOfComponent(pestaniaPrincipal.obtenerPanelHallazgos());
+            assertTrue(indiceHallazgos >= 0, "assertTrue failed at PestaniaPrincipalTest.java:217");
+            assertEquals(I18nUI.Pestanias.HALLAZGOS(), tabs.getTitleAt(indiceHallazgos),
+                "assertEquals failed at PestaniaPrincipalTest.java:218");
+        });
+    }
+
     private void esperarTimerFocoAgente() throws InterruptedException {
         Thread.sleep(TIMER_FOCO_AGENTE_MS + 100);
     }

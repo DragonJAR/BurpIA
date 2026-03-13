@@ -477,6 +477,42 @@ class ProviderConfigManagerTest {
     }
 
     @Test
+    void testValidarEstadoActualPermiteHttpParaOllama() {
+        when(comboProveedor.getSelectedItem()).thenReturn("Ollama");
+        when(comboModelo.getSelectedItem()).thenReturn("llama3.2");
+        when(txtTimeoutModelo.getText()).thenReturn("60");
+        when(txtMaxTokens.getText()).thenReturn("2048");
+        when(txtUrl.getText()).thenReturn("http://192.168.1.50:11434");
+        when(txtClave.getPassword()).thenReturn(new char[0]);
+
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerConfigManager.validarEstadoActual(true, false);
+
+        assertTrue(resultado.esValido());
+        assertNotNull(resultado.obtenerEstado());
+        assertEquals("http://192.168.1.50:11434", resultado.obtenerEstado().obtenerBaseUrl());
+    }
+
+    @Test
+    void testValidarEstadoActualPermiteHttpParaProveedorCustom() {
+        when(comboProveedor.getSelectedItem()).thenReturn(ProveedorAI.PROVEEDOR_CUSTOM_02);
+        when(comboModelo.getSelectedItem()).thenReturn(I18nUI.Configuracion.OPCION_MODELO_CUSTOM());
+        when(comboModeloEditor.getItem()).thenReturn("modelo-http-custom");
+        when(txtTimeoutModelo.getText()).thenReturn("60");
+        when(txtMaxTokens.getText()).thenReturn("2048");
+        when(txtUrl.getText()).thenReturn("http://custom-gateway.local:8080/v1");
+        when(txtClave.getPassword()).thenReturn(new char[0]);
+
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerConfigManager.validarEstadoActual(true, false);
+
+        assertTrue(resultado.esValido());
+        assertNotNull(resultado.obtenerEstado());
+        assertEquals("http://custom-gateway.local:8080/v1", resultado.obtenerEstado().obtenerBaseUrl());
+        assertEquals("modelo-http-custom", resultado.obtenerEstado().obtenerModelo());
+    }
+
+    @Test
     void testValidarEstadoActualDetectaMaxTokensNoNumerico() {
         when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
         when(comboModelo.getSelectedItem()).thenReturn("gpt-4o");

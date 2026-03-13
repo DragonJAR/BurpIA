@@ -81,6 +81,40 @@ class ConfigValidatorTest {
     }
 
     @Test
+    @DisplayName("Ollama permite URL HTTP sin HTTPS")
+    void testValidarUrlApiOllamaPermiteHttp() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "http://192.168.1.50:11434",
+            "Ollama"
+        );
+
+        assertTrue(resultado.esValido(), "assertTrue failed at ConfigValidatorTest.java:82");
+    }
+
+    @Test
+    @DisplayName("Custom 01 permite URL HTTP sin HTTPS")
+    void testValidarUrlApiCustomPermiteHttp() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "http://custom-gateway.local:8080/v1",
+            ProveedorAI.PROVEEDOR_CUSTOM_01
+        );
+
+        assertTrue(resultado.esValido(), "assertTrue failed at ConfigValidatorTest.java:92");
+    }
+
+    @Test
+    @DisplayName("OpenAI mantiene requisito de HTTPS fuera de localhost")
+    void testValidarUrlApiOpenAiRequiereHttpsFueraDeLocalhost() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "http://api.openai.internal/v1",
+            "OpenAI"
+        );
+
+        assertFalse(resultado.esValido(), "assertFalse failed at ConfigValidatorTest.java:102");
+        assertEquals("url", resultado.obtenerCampo(), "assertEquals failed at ConfigValidatorTest.java:103");
+    }
+
+    @Test
     @DisplayName("Ruta de agente acepta tilde con argumentos")
     void testValidarRutaBinarioAgenteAceptaTildeConArgumentos() {
         ConfigValidator.ValidationResult resultado = ConfigValidator.validarRutaBinarioAgente(

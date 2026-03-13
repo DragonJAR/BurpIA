@@ -201,7 +201,7 @@ public class PanelHallazgos extends JPanel {
         tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
         sorter = new TableRowSorter<>(modelo);
         configurarSorters();
-        configurarColumnasTabla();
+        configurarColumnasTabla(null);
 
         JScrollPane panelDesplazable = new JScrollPane(tabla);
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -1053,39 +1053,40 @@ public class PanelHallazgos extends JPanel {
     }
 
     public void aplicarIdioma() {
-        UIUtils.actualizarTextoYTooltip(etiquetaBusqueda, I18nUI.Hallazgos.ETIQUETA_BUSCAR(),
-                                I18nUI.Tooltips.Hallazgos.BUSQUEDA());
-        UIUtils.actualizarTextoYTooltip(botonLimpiarFiltro, I18nUI.Hallazgos.BOTON_LIMPIAR(),
-                                I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
-        UIUtils.actualizarTextoYTooltip(botonExportarCSV, I18nUI.Hallazgos.BOTON_EXPORTAR_CSV(),
-                                I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
-        UIUtils.actualizarTextoYTooltip(botonExportarJSON, I18nUI.Hallazgos.BOTON_EXPORTAR_JSON(),
-                                I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
-        UIUtils.actualizarTextoYTooltip(botonLimpiarTodo, I18nUI.Hallazgos.BOTON_LIMPIAR_TODO(),
-                                I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
-        UIUtils.actualizarTextoYTooltip(chkGuardarEnIssues, obtenerEtiquetaGuardadoIssues(),
-                                obtenerTooltipGuardadoIssues());
+        UIUtils.ejecutarEnEdtYEsperar(() -> {
+            UIUtils.actualizarTextoYTooltip(etiquetaBusqueda, I18nUI.Hallazgos.ETIQUETA_BUSCAR(),
+                                    I18nUI.Tooltips.Hallazgos.BUSQUEDA());
+            UIUtils.actualizarTextoYTooltip(botonLimpiarFiltro, I18nUI.Hallazgos.BOTON_LIMPIAR(),
+                                    I18nUI.Tooltips.Hallazgos.LIMPIAR_FILTROS());
+            UIUtils.actualizarTextoYTooltip(botonExportarCSV, I18nUI.Hallazgos.BOTON_EXPORTAR_CSV(),
+                                    I18nUI.Tooltips.Hallazgos.EXPORTAR_CSV());
+            UIUtils.actualizarTextoYTooltip(botonExportarJSON, I18nUI.Hallazgos.BOTON_EXPORTAR_JSON(),
+                                    I18nUI.Tooltips.Hallazgos.EXPORTAR_JSON());
+            UIUtils.actualizarTextoYTooltip(botonLimpiarTodo, I18nUI.Hallazgos.BOTON_LIMPIAR_TODO(),
+                                    I18nUI.Tooltips.Hallazgos.LIMPIAR_TODO());
+            UIUtils.actualizarTextoYTooltip(chkGuardarEnIssues, obtenerEtiquetaGuardadoIssues(),
+                                    obtenerTooltipGuardadoIssues());
 
-        campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
-        comboSeveridad.setToolTipText(I18nUI.Tooltips.Hallazgos.FILTRO_SEVERIDAD());
-        tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
+            campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
+            comboSeveridad.setToolTipText(I18nUI.Tooltips.Hallazgos.FILTRO_SEVERIDAD());
+            tabla.setToolTipText(I18nUI.Tooltips.Hallazgos.TABLA());
 
-        actualizarOpcionesSeveridadIdioma();
+            actualizarOpcionesSeveridadIdioma();
 
-        UIUtils.actualizarTituloPanel(panelFiltros, I18nUI.Hallazgos.TITULO_FILTROS());
-        UIUtils.actualizarTituloPanel(panelGuardarProyecto, I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO());
-        UIUtils.actualizarTituloPanel(panelTablaWrapper, I18nUI.Hallazgos.TITULO_TABLA());
-        actualizarEstadoControlesIssuesPorEdicion();
+            UIUtils.actualizarTituloPanel(panelFiltros, I18nUI.Hallazgos.TITULO_FILTROS());
+            UIUtils.actualizarTituloPanel(panelGuardarProyecto, I18nUI.Hallazgos.TITULO_GUARDAR_PROYECTO());
+            UIUtils.actualizarTituloPanel(panelTablaWrapper, I18nUI.Hallazgos.TITULO_TABLA());
+            actualizarEstadoControlesIssuesPorEdicion();
 
-        modelo.refrescarColumnasIdioma();
-        ejecutarEnEdt(() -> {
+            int[] anchosActuales = UIUtils.capturarAnchosColumnasTabla(tabla);
+            modelo.refrescarColumnasIdioma();
             configurarSorters();
-            configurarColumnasTabla();
+            configurarColumnasTabla(anchosActuales);
             aplicarFiltros();
+            aplicarTema();
+            revalidate();
+            repaint();
         });
-        aplicarTema();
-        revalidate();
-        repaint();
     }
 
     public void aplicarTema() {
@@ -1121,13 +1122,13 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void actualizarOpcionesSeveridadIdioma() {
-        int indiceSeleccionado = comboSeveridad.getSelectedIndex();
+        String severidadSeleccionada = I18nUI.Hallazgos.NORMALIZAR_FILTRO_SEVERIDAD(
+            (String) comboSeveridad.getSelectedItem()
+        );
         DefaultComboBoxModel<String> nuevoModelo =
             new DefaultComboBoxModel<>(I18nUI.Hallazgos.OPCIONES_FILTRO_SEVERIDAD());
         comboSeveridad.setModel(nuevoModelo);
-
-        int indiceSeguro = Math.max(0, Math.min(indiceSeleccionado, nuevoModelo.getSize() - 1));
-        comboSeveridad.setSelectedIndex(indiceSeguro);
+        seleccionarFiltroSeveridadPersistido(severidadSeleccionada);
     }
 
     private void configurarSorters() {
@@ -1148,7 +1149,7 @@ public class PanelHallazgos extends JPanel {
         tabla.setRowSorter(sorter);
     }
 
-    private void configurarColumnasTabla() {
+    private void configurarColumnasTabla(int[] anchosPersonalizados) {
         if (tabla.getColumnModel().getColumnCount() < NUMERO_COLUMNAS) {
             return;
         }
@@ -1168,11 +1169,18 @@ public class PanelHallazgos extends JPanel {
             new RenderizadorHallazgoBorrado(new RenderizadorConfianza(), tabla, modelo)
         );
 
-        tabla.getColumnModel().getColumn(COLUMNA_HORA).setPreferredWidth(ANCHO_COLUMNA_HORA);
-        tabla.getColumnModel().getColumn(COLUMNA_URL).setPreferredWidth(ANCHO_COLUMNA_URL);
-        tabla.getColumnModel().getColumn(COLUMNA_TITULO).setPreferredWidth(ANCHO_COLUMNA_TITULO);
-        tabla.getColumnModel().getColumn(COLUMNA_SEVERIDAD).setPreferredWidth(ANCHO_COLUMNA_SEVERIDAD);
-        tabla.getColumnModel().getColumn(COLUMNA_CONFIANZA).setPreferredWidth(ANCHO_COLUMNA_CONFIANZA);
+        if (anchosPersonalizados != null && anchosPersonalizados.length == NUMERO_COLUMNAS) {
+            UIUtils.restaurarAnchosColumnasTabla(tabla, anchosPersonalizados);
+        } else {
+            UIUtils.restaurarAnchosColumnasTabla(
+                tabla,
+                ANCHO_COLUMNA_HORA,
+                ANCHO_COLUMNA_URL,
+                ANCHO_COLUMNA_TITULO,
+                ANCHO_COLUMNA_SEVERIDAD,
+                ANCHO_COLUMNA_CONFIANZA
+            );
+        }
         UIUtils.instalarTooltipsEncabezadoTabla(tabla,
                 I18nUI.Tooltips.Hallazgos.COLUMNA_HORA(),
                 I18nUI.Tooltips.Hallazgos.COLUMNA_URL(),

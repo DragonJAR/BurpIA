@@ -32,6 +32,7 @@ public final class I18nLogs {
         {"Configuracion actualizada", "Configuration updated"},
         {"Configuracion cargada", "Configuration loaded"},
         {"Configuracion cargada:", "Loaded configuration:"},
+        {"Configuracion es nula", "Configuration is null"},
         {"Ruta de configuracion", "Configuration path"},
         {"Archivo no existe, creando configuracion por defecto", "File does not exist, creating default configuration"},
         {"Archivo no es legible", "File is not readable"},

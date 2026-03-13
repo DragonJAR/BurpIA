@@ -18,6 +18,7 @@ public class PanelConsola extends JPanel {
     // DELAY_ACTUALIZACION_MS (1000ms): Intervalo de actualización del resumen de estadísticas.
     // Balance entre responsividad UI y uso de CPU. Menos de 500ms es innecesario, más de 2000ms se siente lento.
     private static final int DELAY_ACTUALIZACION_MS = 1000;
+    private static final int ANCHO_MINIMO_BOTON_NAVEGACION = 96;
 
     private final JTextPane consola;
     private final JCheckBox checkboxAutoScroll;
@@ -114,17 +115,16 @@ public class PanelConsola extends JPanel {
         etiquetaResultadosBusqueda.setFont(EstilosUI.FUENTE_MONO);
 
         // Navegación al final (solo útil si hay resultados)
-        botonAnterior = new JButton("<");
+        botonAnterior = new JButton(I18nUI.Consola.BOTON_BUSCAR_ANTERIOR());
         botonAnterior.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonAnterior.setToolTipText(I18nUI.Tooltips.Consola.ANTERIOR());
         botonAnterior.setEnabled(false);
-        botonAnterior.setPreferredSize(new Dimension(40, 25));
 
-        botonSiguiente = new JButton(">");
+        botonSiguiente = new JButton(I18nUI.Consola.BOTON_BUSCAR_SIGUIENTE());
         botonSiguiente.setFont(EstilosUI.FUENTE_ESTANDAR);
         botonSiguiente.setToolTipText(I18nUI.Tooltips.Consola.SIGUIENTE());
         botonSiguiente.setEnabled(false);
-        botonSiguiente.setPreferredSize(new Dimension(40, 25));
+        actualizarDimensionBotonesNavegacion();
 
         PanelFilasResponsive panelBotones = new PanelFilasResponsive(
             900,
@@ -402,24 +402,29 @@ public class PanelConsola extends JPanel {
      * Debe llamarse cuando se cambia el idioma de la configuración.
      */
     public void aplicarIdioma() {
-        checkboxAutoScroll.setText(I18nUI.Consola.CHECK_AUTO_SCROLL());
-        botonLimpiar.setText(I18nUI.Consola.BOTON_LIMPIAR());
-        etiquetaBuscar.setText(I18nUI.Consola.ETIQUETA_BUSCAR());
-        botonBuscar.setText(I18nUI.Consola.BOTON_BUSCAR());
-        UIUtils.actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
-        UIUtils.actualizarTituloPanel(panelConsolaWrapper, I18nUI.Consola.TITULO_LOGS());
-        checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
-        botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
-        botonBuscar.setToolTipText(I18nUI.Tooltips.Consola.BUSCAR());
-        botonAnterior.setToolTipText(I18nUI.Tooltips.Consola.ANTERIOR());
-        botonSiguiente.setToolTipText(I18nUI.Tooltips.Consola.SIGUIENTE());
-        campoBusqueda.setToolTipText(I18nUI.Tooltips.Consola.CAMPO_BUSCAR());
-        etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
-        consola.setToolTipText(I18nUI.Tooltips.Consola.AREA_LOGS());
-        aplicarTema();
-        actualizarResumen(true);
-        revalidate();
-        repaint();
+        UIUtils.ejecutarEnEdtYEsperar(() -> {
+            checkboxAutoScroll.setText(I18nUI.Consola.CHECK_AUTO_SCROLL());
+            botonLimpiar.setText(I18nUI.Consola.BOTON_LIMPIAR());
+            etiquetaBuscar.setText(I18nUI.Consola.ETIQUETA_BUSCAR());
+            botonBuscar.setText(I18nUI.Consola.BOTON_BUSCAR());
+            botonAnterior.setText(I18nUI.Consola.BOTON_BUSCAR_ANTERIOR());
+            botonSiguiente.setText(I18nUI.Consola.BOTON_BUSCAR_SIGUIENTE());
+            UIUtils.actualizarTituloPanel(panelControles, I18nUI.Consola.TITULO_CONTROLES());
+            UIUtils.actualizarTituloPanel(panelConsolaWrapper, I18nUI.Consola.TITULO_LOGS());
+            checkboxAutoScroll.setToolTipText(I18nUI.Tooltips.Consola.AUTOSCROLL());
+            botonLimpiar.setToolTipText(I18nUI.Tooltips.Consola.LIMPIAR());
+            botonBuscar.setToolTipText(I18nUI.Tooltips.Consola.BUSCAR());
+            botonAnterior.setToolTipText(I18nUI.Tooltips.Consola.ANTERIOR());
+            botonSiguiente.setToolTipText(I18nUI.Tooltips.Consola.SIGUIENTE());
+            campoBusqueda.setToolTipText(I18nUI.Tooltips.Consola.CAMPO_BUSCAR());
+            etiquetaResumen.setToolTipText(I18nUI.Tooltips.Consola.RESUMEN());
+            consola.setToolTipText(I18nUI.Tooltips.Consola.AREA_LOGS());
+            actualizarDimensionBotonesNavegacion();
+            aplicarTema();
+            actualizarResumen(true);
+            revalidate();
+            repaint();
+        });
     }
 
     /**
@@ -590,6 +595,22 @@ public class PanelConsola extends JPanel {
             return textoBusqueda;
         }
         return textoBusqueda.substring(0, 30) + "...";
+    }
+
+    private void actualizarDimensionBotonesNavegacion() {
+        ajustarDimensionBotonNavegacion(botonAnterior);
+        ajustarDimensionBotonNavegacion(botonSiguiente);
+    }
+
+    private void ajustarDimensionBotonNavegacion(JButton boton) {
+        if (boton == null) {
+            return;
+        }
+        Dimension preferido = boton.getPreferredSize();
+        boton.setPreferredSize(new Dimension(
+            Math.max(ANCHO_MINIMO_BOTON_NAVEGACION, preferido.width),
+            preferido.height
+        ));
     }
 
 }

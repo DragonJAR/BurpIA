@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JButton;
+import javax.swing.JTable;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JOptionPane;
@@ -16,6 +17,7 @@ import java.awt.BorderLayout;
 import java.awt.Insets;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -236,6 +238,34 @@ class UIUtilsTest {
             assertEquals("Reintenta la acción", item.getToolTipText(), "assertEquals failed at UIUtilsTest.java:237");
             assertNotNull(item.getFont(), "assertNotNull failed at UIUtilsTest.java:238");
             assertEquals(1, item.getActionListeners().length, "assertEquals failed at UIUtilsTest.java:239");
+        }
+    }
+
+    @Nested
+    @DisplayName("AnchosColumnasTabla")
+    class AnchosColumnasTablaTests {
+
+        @Test
+        @DisplayName("captura y restaura anchos preferidos usando helper centralizado")
+        void capturaYRestauraAnchos() {
+            JTable tabla = new JTable(1, 3);
+            tabla.getColumnModel().getColumn(0).setPreferredWidth(120);
+            tabla.getColumnModel().getColumn(1).setPreferredWidth(240);
+            tabla.getColumnModel().getColumn(2).setPreferredWidth(360);
+
+            int[] anchos = UIUtils.capturarAnchosColumnasTabla(tabla);
+
+            assertArrayEquals(new int[]{120, 240, 360}, anchos,
+                "assertArrayEquals failed at UIUtilsTest.java:254");
+
+            UIUtils.restaurarAnchosColumnasTabla(tabla, 180, -1, 420);
+
+            assertEquals(180, tabla.getColumnModel().getColumn(0).getPreferredWidth(),
+                "assertEquals failed at UIUtilsTest.java:258");
+            assertEquals(240, tabla.getColumnModel().getColumn(1).getPreferredWidth(),
+                "assertEquals failed at UIUtilsTest.java:260");
+            assertEquals(420, tabla.getColumnModel().getColumn(2).getPreferredWidth(),
+                "assertEquals failed at UIUtilsTest.java:262");
         }
     }
 

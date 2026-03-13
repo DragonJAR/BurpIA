@@ -221,6 +221,50 @@ class PanelTareasAccionesTest {
     }
 
     @Test
+    @DisplayName("aplicarIdioma conserva anchos personalizados de columnas")
+    void testAplicarIdiomaConservaAnchosColumnas() throws Exception {
+        JTable tabla = panel.obtenerTabla();
+
+        SwingUtilities.invokeAndWait(() -> {
+            tabla.getColumnModel().getColumn(0).setPreferredWidth(222);
+            tabla.getColumnModel().getColumn(1).setPreferredWidth(333);
+            I18nUI.establecerIdioma("en");
+            panel.aplicarIdioma();
+        });
+        flushEdt();
+
+        assertEquals(222, tabla.getColumnModel().getColumn(0).getPreferredWidth(),
+            "El ancho personalizado de ID debe preservarse al refrescar idioma");
+        assertEquals(333, tabla.getColumnModel().getColumn(1).getPreferredWidth(),
+            "El ancho personalizado de URL debe preservarse al refrescar idioma");
+    }
+
+    @Test
+    @DisplayName("aplicarIdioma es seguro fuera del EDT")
+    void testAplicarIdiomaFueraDelEdt() throws Exception {
+        JButton botonCancelar = obtenerBotonCancelar();
+        AtomicReference<Throwable> error = new AtomicReference<>();
+
+        Thread hilo = new Thread(() -> {
+            try {
+                I18nUI.establecerIdioma("en");
+                panel.aplicarIdioma();
+            } catch (Throwable t) {
+                error.set(t);
+            }
+        }, "PanelTareas-AplicarIdioma-Test");
+        hilo.start();
+        hilo.join(2000);
+        flushEdt();
+
+        assertNull(error.get(), "assertNull failed at PanelTareasAccionesTest.java:257");
+        assertEquals(I18nUI.Tareas.BOTON_CANCELAR_TODO(), botonCancelar.getText(),
+            "assertEquals failed at PanelTareasAccionesTest.java:258");
+        assertEquals(I18nUI.Tooltips.Tareas.TABLA(), panel.obtenerTabla().getToolTipText(),
+            "assertEquals failed at PanelTareasAccionesTest.java:259");
+    }
+
+    @Test
     @DisplayName("Encabezados de tabla muestran tooltips traducidos por columna")
     void testTooltipsEncabezadosTabla() throws Exception {
         JTable tabla = panel.obtenerTabla();
@@ -303,6 +347,12 @@ class PanelTareasAccionesTest {
 
     private JButton obtenerBotonPrincipal() throws Exception {
         Field field = PanelTareas.class.getDeclaredField("botonPausarReanudar");
+        field.setAccessible(true);
+        return (JButton) field.get(panel);
+    }
+
+    private JButton obtenerBotonCancelar() throws Exception {
+        Field field = PanelTareas.class.getDeclaredField("botonCancelar");
         field.setAccessible(true);
         return (JButton) field.get(panel);
     }

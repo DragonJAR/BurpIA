@@ -9,7 +9,6 @@ import com.burpia.util.Normalizador;
 import java.awt.Component;
 import javax.swing.JTable;
 import javax.swing.JTabbedPane;
-import javax.swing.table.TableColumn;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -218,13 +217,14 @@ public final class UIStateManager {
 
         try {
             Map<String, String> estadoActual = obtenerEstadoUIActual();
+            int[] anchosActuales = UIUtils.capturarAnchosColumnasTabla(tabla);
             StringBuilder anchos = new StringBuilder();
-            
-            for (int i = 0; i < tabla.getColumnCount(); i++) {
+
+            for (int i = 0; i < anchosActuales.length; i++) {
                 if (i > 0) {
                     anchos.append(SEPARADOR_ESTADO);
                 }
-                anchos.append(tabla.getColumnModel().getColumn(i).getWidth());
+                anchos.append(anchosActuales[i]);
             }
             
             String clave = CLAVE_ANCHOS_COLUMNAS + SEPARADOR_ESTADO + identificadorTabla;
@@ -260,19 +260,16 @@ public final class UIStateManager {
                 String[] anchos = anchosGuardados.split(SEPARADOR_ESTADO);
                 
                 if (anchos.length == tabla.getColumnCount()) {
+                    int[] anchosParseados = new int[anchos.length];
                     for (int i = 0; i < anchos.length && i < tabla.getColumnCount(); i++) {
                         try {
-                            int ancho = Integer.parseInt(anchos[i]);
-                            if (ancho > 0) {
-                                TableColumn columna = tabla.getColumnModel().getColumn(i);
-                                columna.setPreferredWidth(ancho);
-                                columna.setWidth(ancho);
-                            }
+                            anchosParseados[i] = Integer.parseInt(anchos[i]);
                         } catch (NumberFormatException e) {
                             gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Ancho inválido para columna " + i +
                                 " en tabla " + identificadorTabla + ": " + anchos[i]));
                         }
                     }
+                    UIUtils.restaurarAnchosColumnasTabla(tabla, anchosParseados);
                     
                     if (config.esDetallado()) {
                         gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Anchos de columna restaurados para " + identificadorTabla));

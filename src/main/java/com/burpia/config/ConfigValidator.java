@@ -187,10 +187,24 @@ public final class ConfigValidator {
     /**
      * Valida una URL de API verificando que sea HTTP/HTTPS y tenga formato válido.
      *
+     * <p>Por seguridad, HTTPS sigue siendo obligatorio para la mayoría de proveedores.
+     * Se permite HTTP explícitamente para Ollama, cualquier proveedor custom y localhost.</p>
+     *
      * @param url la URL a validar
      * @return resultado de la validación
      */
     public static ValidationResult validarUrlApi(String url) {
+        return validarUrlApi(url, null);
+    }
+
+    /**
+     * Valida una URL de API considerando las excepciones por proveedor.
+     *
+     * @param url la URL a validar
+     * @param proveedor el proveedor asociado a la URL
+     * @return resultado de la validación
+     */
+    public static ValidationResult validarUrlApi(String url, String proveedor) {
         if (esVacio(url)) {
             return ValidationResult.valido(); // URL puede ser vacía para usar defaults
         }
@@ -204,14 +218,30 @@ public final class ConfigValidator {
             );
         }
 
-        if (!urlTrimmed.startsWith("https://") && !urlTrimmed.startsWith("http://localhost")) {
+        if (requiereHttps(urlTrimmed, proveedor)) {
             return ValidationResult.invalido(
-                I18nUI.tr("Se requiere HTTPS para URLs de API (excepto localhost)", "HTTPS required for API URLs (except localhost)"), 
+                I18nUI.tr(
+                    "Se requiere HTTPS para URLs de API (excepto localhost, Ollama y proveedores Custom)",
+                    "HTTPS required for API URLs (except localhost, Ollama, and Custom providers)"
+                ),
                 "url"
             );
         }
 
         return ValidationResult.valido();
+    }
+
+    private static boolean requiereHttps(String url, String proveedor) {
+        if (url.startsWith("https://") || url.startsWith("http://localhost")) {
+            return false;
+        }
+
+        String proveedorNormalizado = ProveedorAI.normalizarProveedor(proveedor);
+        if ("Ollama".equals(proveedorNormalizado) || ProveedorAI.esProveedorCustom(proveedorNormalizado)) {
+            return url.startsWith("http://") ? false : true;
+        }
+
+        return true;
     }
 
     // ============ VALIDACIÓN DE CAMPOS NUMÉRICOS ============
@@ -500,7 +530,7 @@ public final class ConfigValidator {
         }
 
         String url = configuracion.obtenerUrlApi();
-        ValidationResult resultadoUrl = validarUrlApi(url);
+        ValidationResult resultadoUrl = validarUrlApi(url, proveedor);
         if (!resultadoUrl.esValido()) {
             return resultadoUrl;
         }

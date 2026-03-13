@@ -1,8 +1,10 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -36,6 +38,7 @@ class DialogStateManagerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        I18nUI.establecerIdioma("es");
         stateManager = new DialogStateManager(gestorLogging);
         
         // Setup default UI provider behavior
@@ -74,6 +77,11 @@ class DialogStateManagerTest {
         when(uiProvider.obtenerConfiguracion()).thenReturn(config);
     }
 
+    @AfterEach
+    void tearDown() {
+        I18nUI.establecerIdioma("es");
+    }
+
     @Test
     void testCapturarEstadoInicial() {
         stateManager.capturarEstadoInicial(uiProvider);
@@ -95,6 +103,21 @@ class DialogStateManagerTest {
         assertEquals("120", estado.timeoutTexto());
         assertTrue(estado.detallado());
         assertTrue(estado.multiProveedorHabilitado());
+    }
+
+    @Test
+    void testCapturarEstadoInicialConUiProviderNuloNoLanza() {
+        assertDoesNotThrow(() -> stateManager.capturarEstadoInicial(null));
+        assertNull(stateManager.obtenerProveedorActual());
+        verify(gestorLogging).error(eq("DialogStateManager"), eq("UIProvider es nulo"));
+    }
+
+    @Test
+    void testCapturarEstadoActualConConfiguracionNula() {
+        when(uiProvider.obtenerConfiguracion()).thenReturn(null);
+
+        assertNull(stateManager.capturarEstadoActual(uiProvider));
+        verify(gestorLogging).error(eq("DialogStateManager"), eq("Configuracion es nula"));
     }
 
     @Test
@@ -143,8 +166,22 @@ class DialogStateManagerTest {
         List<String> cambios = stateManager.obtenerCambiosDetectados(uiProvider);
         
         assertEquals(2, cambios.size());
-        assertTrue(cambios.contains("Modelo"));
-        assertTrue(cambios.contains("Modo detallado"));
+        assertTrue(cambios.contains(I18nUI.Configuracion.CAMBIO_MODELO()));
+        assertTrue(cambios.contains(I18nUI.Configuracion.CAMBIO_MODO_DETALLADO()));
+    }
+
+    @Test
+    void testObtenerCambiosDetectadosRespetaIdiomaActual() {
+        I18nUI.establecerIdioma("en");
+        stateManager.capturarEstadoInicial(uiProvider);
+
+        when(uiProvider.obtenerModeloSeleccionado()).thenReturn("gpt-3.5-turbo");
+        when(uiProvider.esDetalladoSeleccionado()).thenReturn(false);
+
+        List<String> cambios = stateManager.obtenerCambiosDetectados(uiProvider);
+
+        assertTrue(cambios.contains("Model"));
+        assertTrue(cambios.contains("Verbose mode"));
     }
 
     @Test

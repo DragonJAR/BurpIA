@@ -106,7 +106,7 @@ public class PanelTareas extends JPanel {
         tabla.setRowHeight(EstilosUI.ALTURA_FILA_TABLA);
         tabla.setFont(EstilosUI.FUENTE_TABLA);
         tabla.setToolTipText(I18nUI.Tooltips.Tareas.TABLA());
-        configurarColumnasTabla();
+        configurarColumnasTabla(null);
 
         JScrollPane panelDesplazable = new JScrollPane(tabla);
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
@@ -571,19 +571,22 @@ public class PanelTareas extends JPanel {
     }
 
     public void aplicarIdioma() {
-        botonCancelar.setText(I18nUI.Tareas.BOTON_CANCELAR_TODO());
-        botonLimpiarCompletadas.setText(I18nUI.Tareas.BOTON_LIMPIAR());
-        botonCancelar.setToolTipText(I18nUI.Tooltips.Tareas.CANCELAR());
-        botonLimpiarCompletadas.setToolTipText(I18nUI.Tooltips.Tareas.LIMPIAR());
-        etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
-        tabla.setToolTipText(I18nUI.Tooltips.Tareas.TABLA());
-        UIUtils.actualizarTituloPanel(panelControles, I18nUI.Tareas.TITULO_CONTROLES());
-        UIUtils.actualizarTituloPanel(panelTablaWrapper, I18nUI.Tareas.TITULO_LISTA());
-        modelo.refrescarColumnasIdioma();
-        ejecutarEnEdt(this::configurarColumnasTabla);
-        actualizarEstadisticas(true);
-        revalidate();
-        repaint();
+        UIUtils.ejecutarEnEdtYEsperar(() -> {
+            botonCancelar.setText(I18nUI.Tareas.BOTON_CANCELAR_TODO());
+            botonLimpiarCompletadas.setText(I18nUI.Tareas.BOTON_LIMPIAR());
+            botonCancelar.setToolTipText(I18nUI.Tooltips.Tareas.CANCELAR());
+            botonLimpiarCompletadas.setToolTipText(I18nUI.Tooltips.Tareas.LIMPIAR());
+            etiquetaEstadisticas.setToolTipText(I18nUI.Tooltips.Tareas.ESTADISTICAS());
+            tabla.setToolTipText(I18nUI.Tooltips.Tareas.TABLA());
+            UIUtils.actualizarTituloPanel(panelControles, I18nUI.Tareas.TITULO_CONTROLES());
+            UIUtils.actualizarTituloPanel(panelTablaWrapper, I18nUI.Tareas.TITULO_LISTA());
+            int[] anchosActuales = UIUtils.capturarAnchosColumnasTabla(tabla);
+            modelo.refrescarColumnasIdioma();
+            configurarColumnasTabla(anchosActuales);
+            actualizarEstadisticas(true);
+            revalidate();
+            repaint();
+        });
     }
 
     public void aplicarTema() {
@@ -607,17 +610,23 @@ public class PanelTareas extends JPanel {
         ejecutarEnEdt(aplicar);
     }
 
-    private void configurarColumnasTabla() {
+    private void configurarColumnasTabla(int[] anchosPersonalizados) {
         if (tabla.getColumnModel().getColumnCount() < NUMERO_COLUMNAS) {
             return;
         }
         tabla.getColumnModel().getColumn(COLUMNA_ESTADO).setCellRenderer(new RenderizadorEstado());
         tabla.getColumnModel().getColumn(COLUMNA_DURACION).setCellRenderer(new RenderizadorCentrado());
-
-        tabla.getColumnModel().getColumn(COLUMNA_ID).setPreferredWidth(ANCHO_COLUMNA_ID);
-        tabla.getColumnModel().getColumn(COLUMNA_URL).setPreferredWidth(ANCHO_COLUMNA_URL);
-        tabla.getColumnModel().getColumn(COLUMNA_ESTADO).setPreferredWidth(ANCHO_COLUMNA_ESTADO);
-        tabla.getColumnModel().getColumn(COLUMNA_DURACION).setPreferredWidth(ANCHO_COLUMNA_DURACION);
+        if (anchosPersonalizados != null && anchosPersonalizados.length == NUMERO_COLUMNAS) {
+            UIUtils.restaurarAnchosColumnasTabla(tabla, anchosPersonalizados);
+        } else {
+            UIUtils.restaurarAnchosColumnasTabla(
+                tabla,
+                ANCHO_COLUMNA_ID,
+                ANCHO_COLUMNA_URL,
+                ANCHO_COLUMNA_ESTADO,
+                ANCHO_COLUMNA_DURACION
+            );
+        }
         UIUtils.instalarTooltipsEncabezadoTabla(tabla,
                 I18nUI.Tooltips.Tareas.COLUMNA_TIPO(),
                 I18nUI.Tooltips.Tareas.COLUMNA_URL(),

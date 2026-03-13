@@ -13,6 +13,7 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.JTableHeader;
+import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
@@ -139,6 +140,37 @@ public final class UIUtils {
         encabezado.addMouseMotionListener(listener);
         encabezado.addMouseListener(listener);
         encabezado.putClientProperty(PROPIEDAD_LISTENER_ENCABEZADO, listener);
+    }
+
+    public static int[] capturarAnchosColumnasTabla(JTable tabla) {
+        if (tabla == null || tabla.getColumnModel() == null) {
+            return new int[0];
+        }
+
+        int totalColumnas = tabla.getColumnModel().getColumnCount();
+        int[] anchos = new int[totalColumnas];
+        for (int i = 0; i < totalColumnas; i++) {
+            TableColumn columna = tabla.getColumnModel().getColumn(i);
+            int anchoPreferido = columna.getPreferredWidth();
+            anchos[i] = anchoPreferido > 0 ? anchoPreferido : columna.getWidth();
+        }
+        return anchos;
+    }
+
+    public static void restaurarAnchosColumnasTabla(JTable tabla, int... anchos) {
+        if (tabla == null || anchos == null || tabla.getColumnModel() == null) {
+            return;
+        }
+
+        int totalColumnas = Math.min(tabla.getColumnModel().getColumnCount(), anchos.length);
+        for (int i = 0; i < totalColumnas; i++) {
+            int ancho = anchos[i];
+            if (ancho <= 0) {
+                continue;
+            }
+            tabla.getColumnModel().getColumn(i).setPreferredWidth(ancho);
+            tabla.getColumnModel().getColumn(i).setWidth(ancho);
+        }
     }
 
     private static void actualizarTooltipEncabezado(JTableHeader encabezado, MouseEvent evento) {

@@ -478,7 +478,7 @@ public final class ProviderConfigManager {
                     I18nUI.Configuracion.MSG_URL_VACIA(),
                     "url");
         }
-        ConfigValidator.ValidationResult validacionUrl = ConfigValidator.validarUrlApi(baseUrl);
+        ConfigValidator.ValidationResult validacionUrl = ConfigValidator.validarUrlApi(baseUrl, proveedor);
         if (!validacionUrl.esValido()) {
             return ValidationResultEstadoProveedor.invalido(
                     validacionUrl.obtenerMensajeError(),

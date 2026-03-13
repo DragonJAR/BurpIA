@@ -480,25 +480,29 @@ public class PestaniaPrincipal extends JPanel {
      * Aplica el idioma configurado a todos los componentes de la interfaz.
      */
     public void aplicarIdioma() {
-        panelEstadisticas.aplicarIdioma();
-        panelTareas.aplicarIdioma();
-        panelHallazgos.aplicarIdioma();
-        panelConsola.aplicarIdioma();
-        panelAgente.aplicarIdioma();
-        actualizarMetadatosPestaniasVisibles();
+        UIUtils.ejecutarEnEdtYEsperar(() -> {
+            panelEstadisticas.aplicarIdioma();
+            panelTareas.aplicarIdioma();
+            panelHallazgos.aplicarIdioma();
+            panelConsola.aplicarIdioma();
+            panelAgente.aplicarIdioma();
+            actualizarMetadatosPestaniasVisibles();
+        });
     }
 
     /**
      * Aplica el tema visual a todos los componentes de la interfaz.
      */
     public void aplicarTema() {
-        panelEstadisticas.aplicarTema();
-        panelConsola.aplicarTema();
-        panelAgente.aplicarTema();
-        panelTareas.aplicarTema();
-        panelHallazgos.aplicarTema();
-        tabbedPane.repaint();
-        repaint();
+        UIUtils.ejecutarEnEdtYEsperar(() -> {
+            panelEstadisticas.aplicarTema();
+            panelConsola.aplicarTema();
+            panelAgente.aplicarTema();
+            panelTareas.aplicarTema();
+            panelHallazgos.aplicarTema();
+            tabbedPane.repaint();
+            repaint();
+        });
     }
 
     /**

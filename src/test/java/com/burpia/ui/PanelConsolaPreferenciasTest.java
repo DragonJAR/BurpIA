@@ -152,8 +152,38 @@ class PanelConsolaPreferenciasTest {
 
             assertEquals(I18nUI.Consola.ETIQUETA_BUSCAR(), etiquetaBuscar.getText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:154");
             assertEquals(I18nUI.Consola.BOTON_BUSCAR(), botonBuscar.getText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:155");
+            assertEquals(I18nUI.Consola.BOTON_BUSCAR_ANTERIOR(), botonAnterior.getText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:156");
+            assertEquals(I18nUI.Consola.BOTON_BUSCAR_SIGUIENTE(), botonSiguiente.getText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:157");
             assertEquals(I18nUI.Tooltips.Consola.ANTERIOR(), botonAnterior.getToolTipText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:156");
             assertEquals(I18nUI.Tooltips.Consola.SIGUIENTE(), botonSiguiente.getToolTipText(), "assertEquals failed at PanelConsolaPreferenciasTest.java:157");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("aplicarIdioma es seguro fuera del EDT")
+    void testAplicarIdiomaFueraDelEdt() throws Exception {
+        PanelConsola panel = crearPanel();
+        try {
+            AtomicReference<Throwable> error = new AtomicReference<>();
+            Thread hilo = new Thread(() -> {
+                try {
+                    I18nUI.establecerIdioma("en");
+                    panel.aplicarIdioma();
+                } catch (Throwable t) {
+                    error.set(t);
+                }
+            }, "PanelConsola-AplicarIdioma-Test");
+            hilo.start();
+            hilo.join(2000);
+            flushEdt();
+
+            assertNull(error.get(), "assertNull failed at PanelConsolaPreferenciasTest.java:179");
+            assertEquals(I18nUI.Consola.BOTON_BUSCAR(), obtenerBotonBuscar(panel).getText(),
+                "assertEquals failed at PanelConsolaPreferenciasTest.java:180");
+            assertEquals(I18nUI.Consola.BOTON_BUSCAR_SIGUIENTE(), obtenerBotonSiguiente(panel).getText(),
+                "assertEquals failed at PanelConsolaPreferenciasTest.java:181");
         } finally {
             panel.destruir();
         }

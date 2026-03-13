@@ -1708,6 +1708,34 @@ public final class I18nUI {
             return tr("Guardar filtro de severidad:", "Save severity filter:");
         }
 
+        public static String CAMBIO_PROVEEDOR_AI() {
+            return tr("Proveedor AI", "AI Provider");
+        }
+
+        public static String CAMBIO_MODELO() {
+            return tr("Modelo", "Model");
+        }
+
+        public static String CAMBIO_API_KEY() {
+            return tr("API Key", "API Key");
+        }
+
+        public static String CAMBIO_URL_API() {
+            return tr("URL API", "API URL");
+        }
+
+        public static String CAMBIO_PROMPT() {
+            return tr("Prompt", "Prompt");
+        }
+
+        public static String CAMBIO_MODO_DETALLADO() {
+            return tr("Modo detallado", "Verbose mode");
+        }
+
+        public static String CAMBIO_MULTI_PROVEEDOR() {
+            return tr("Multi-proveedor", "Multi-provider");
+        }
+
         public static String TITULO_LIMITES_SEGURIDAD() {
             return tr("🔒 LÍMITES Y SEGURIDAD", "🔒 LIMITS AND SECURITY");
         }

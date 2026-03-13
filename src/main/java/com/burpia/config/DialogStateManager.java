@@ -1,6 +1,7 @@
 package com.burpia.config;
 
 import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
@@ -40,7 +41,7 @@ public final class DialogStateManager {
      */
     public void capturarEstadoInicial(EstadoUIProvider uiProvider) {
         this.estadoInicial = capturarEstadoActual(uiProvider);
-        this.proveedorActualUi = uiProvider.obtenerProveedorSeleccionado();
+        this.proveedorActualUi = estadoInicial != null ? estadoInicial.proveedorSeleccionado() : null;
         
         if (estadoInicial != null) {
             gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado inicial capturado para proveedor: " + proveedorActualUi));
@@ -53,6 +54,12 @@ public final class DialogStateManager {
     public EstadoEdicionDialogo capturarEstadoActual(EstadoUIProvider uiProvider) {
         if (uiProvider == null) {
             gestorLogging.error("DialogStateManager", I18nLogs.tr("UIProvider es nulo"));
+            return null;
+        }
+
+        ConfiguracionAPI configuracion = uiProvider.obtenerConfiguracion();
+        if (configuracion == null) {
+            gestorLogging.error("DialogStateManager", I18nLogs.tr("Configuracion es nula"));
             return null;
         }
 
@@ -72,7 +79,7 @@ public final class DialogStateManager {
         }
 
         Map<String, Boolean> estadosHabilitacionAgentes = new HashMap<>(
-                uiProvider.obtenerConfiguracion().obtenerEstadosHabilitacionAgentes());
+                configuracion.obtenerEstadosHabilitacionAgentes());
         Map<String, Boolean> estadosTemporalesAgentes = uiProvider.obtenerEstadosHabilitacionAgentesTemporales();
         if (estadosTemporalesAgentes != null) {
             estadosHabilitacionAgentes.putAll(estadosTemporalesAgentes);
@@ -96,7 +103,7 @@ public final class DialogStateManager {
         Map<String, EstadoProveedorSnapshot> estadosProveedor = new HashMap<>();
         for (String proveedor : ProveedorAI.obtenerNombresProveedores()) {
             EstadoProveedorUI borrador = borradores.get(proveedor);
-            estadosProveedor.put(proveedor, crearEstadoProveedorSnapshot(proveedor, borrador, uiProvider));
+            estadosProveedor.put(proveedor, crearEstadoProveedorSnapshot(proveedor, borrador, configuracion));
         }
 
         List<String> proveedoresSeleccionados = uiProvider.obtenerProveedoresMultiSeleccionados();
@@ -166,31 +173,31 @@ public final class DialogStateManager {
         }
         
         if (!Objects.equals(estadoInicial.proveedorSeleccionado(), estadoActual.proveedorSeleccionado())) {
-            cambios.add("Proveedor AI");
+            cambios.add(I18nUI.Configuracion.CAMBIO_PROVEEDOR_AI());
         }
-        
+
         if (!Objects.equals(estadoInicial.modeloSeleccionado(), estadoActual.modeloSeleccionado())) {
-            cambios.add("Modelo");
+            cambios.add(I18nUI.Configuracion.CAMBIO_MODELO());
         }
-        
+
         if (!Objects.equals(estadoInicial.apiKeyActual(), estadoActual.apiKeyActual())) {
-            cambios.add("API Key");
+            cambios.add(I18nUI.Configuracion.CAMBIO_API_KEY());
         }
-        
+
         if (!Objects.equals(estadoInicial.urlActual(), estadoActual.urlActual())) {
-            cambios.add("URL API");
+            cambios.add(I18nUI.Configuracion.CAMBIO_URL_API());
         }
-        
+
         if (!Objects.equals(estadoInicial.prompt(), estadoActual.prompt())) {
-            cambios.add("Prompt");
+            cambios.add(I18nUI.Configuracion.CAMBIO_PROMPT());
         }
-        
+
         if (estadoInicial.detallado() != estadoActual.detallado()) {
-            cambios.add("Modo detallado");
+            cambios.add(I18nUI.Configuracion.CAMBIO_MODO_DETALLADO());
         }
-        
+
         if (estadoInicial.multiProveedorHabilitado() != estadoActual.multiProveedorHabilitado()) {
-            cambios.add("Multi-proveedor");
+            cambios.add(I18nUI.Configuracion.CAMBIO_MULTI_PROVEEDOR());
         }
         
         return cambios;
@@ -288,9 +295,9 @@ public final class DialogStateManager {
     /**
      * Crea un snapshot del estado de un proveedor.
      */
-    private EstadoProveedorSnapshot crearEstadoProveedorSnapshot(String proveedor, 
-                                                                EstadoProveedorUI borrador, 
-                                                                EstadoUIProvider uiProvider) {
+    private EstadoProveedorSnapshot crearEstadoProveedorSnapshot(String proveedor,
+                                                                EstadoProveedorUI borrador,
+                                                                ConfiguracionAPI configuracion) {
         if (borrador != null) {
             return new EstadoProveedorSnapshot(
                     textoSeguro(borrador.obtenerApiKey()),
@@ -302,22 +309,21 @@ public final class DialogStateManager {
                     borrador.obtenerTimeout());
         }
 
-        ConfiguracionAPI config = uiProvider.obtenerConfiguracion();
-        String apiKey = config.obtenerApiKeyParaProveedor(proveedor);
-        String modelo = config.obtenerModeloParaProveedor(proveedor);
+        String apiKey = configuracion.obtenerApiKeyParaProveedor(proveedor);
+        String modelo = configuracion.obtenerModeloParaProveedor(proveedor);
         ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedor);
         if (Normalizador.esVacio(modelo) && configProveedor != null) {
             modelo = configProveedor.obtenerModeloPorDefecto();
         }
 
-        Integer maxTokensConfigurado = config.obtenerMaxTokensConfiguradoParaProveedor(proveedor);
-        int timeoutConfigurado = config.obtenerTiempoEsperaParaModelo(proveedor, modelo);
+        Integer maxTokensConfigurado = configuracion.obtenerMaxTokensConfiguradoParaProveedor(proveedor);
+        int timeoutConfigurado = configuracion.obtenerTiempoEsperaParaModelo(proveedor, modelo);
 
         int maxTokens = maxTokensConfigurado != null ? maxTokensConfigurado : 
                         configProveedor != null ? configProveedor.obtenerMaxTokensPorDefecto() : 0;
         int timeout = timeoutConfigurado > 0 ? timeoutConfigurado : 120;
 
-        String baseUrl = config.obtenerUrlBaseParaProveedor(proveedor);
+        String baseUrl = configuracion.obtenerUrlBaseParaProveedor(proveedor);
         if (Normalizador.esVacio(baseUrl) && configProveedor != null) {
             baseUrl = configProveedor.obtenerUrlApi();
         }

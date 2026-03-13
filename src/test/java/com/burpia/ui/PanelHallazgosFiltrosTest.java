@@ -21,9 +21,11 @@ import java.awt.event.MouseEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -204,6 +206,66 @@ class PanelHallazgosFiltrosTest {
         assertEquals("Low", comboSeveridad.getItemAt(4), "assertEquals failed at PanelHallazgosFiltrosTest.java:171");
         assertEquals("Info", comboSeveridad.getItemAt(5), "assertEquals failed at PanelHallazgosFiltrosTest.java:172");
         assertEquals(2, comboSeveridad.getSelectedIndex(), "assertEquals failed at PanelHallazgosFiltrosTest.java:173");
+    }
+
+    @Test
+    @DisplayName("aplicarIdioma conserva anchos personalizados de la tabla")
+    void testAplicarIdiomaConservaAnchosColumnas() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
+
+        SwingUtilities.invokeAndWait(() -> {
+            tabla.getColumnModel().getColumn(0).setPreferredWidth(141);
+            tabla.getColumnModel().getColumn(2).setPreferredWidth(412);
+            I18nUI.establecerIdioma("en");
+            panel.aplicarIdioma();
+        });
+        flushEdt();
+
+        assertEquals(141, tabla.getColumnModel().getColumn(0).getPreferredWidth(),
+            "El ancho personalizado de hora debe preservarse al refrescar idioma");
+        assertEquals(412, tabla.getColumnModel().getColumn(2).getPreferredWidth(),
+            "El ancho personalizado de título debe preservarse al refrescar idioma");
+    }
+
+    @Test
+    @DisplayName("aplicarIdioma es seguro fuera del EDT y conserva severidad seleccionada")
+    void testAplicarIdiomaFueraDelEdt() throws Exception {
+        ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+
+        final PanelHallazgos[] holder = new PanelHallazgos[1];
+        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
+        PanelHallazgos panel = holder[0];
+
+        JComboBox<?> comboSeveridad = obtenerCampo(panel, "comboSeveridad", JComboBox.class);
+        AtomicReference<Throwable> error = new AtomicReference<>();
+
+        SwingUtilities.invokeAndWait(() -> comboSeveridad.setSelectedItem(I18nUI.Hallazgos.SEVERIDAD_HIGH()));
+        flushEdt();
+
+        Thread hilo = new Thread(() -> {
+            try {
+                I18nUI.establecerIdioma("en");
+                panel.aplicarIdioma();
+            } catch (Throwable t) {
+                error.set(t);
+            }
+        }, "PanelHallazgos-AplicarIdioma-Test");
+        hilo.start();
+        hilo.join(2000);
+        flushEdt();
+
+        assertNull(error.get(), "assertNull failed at PanelHallazgosFiltrosTest.java:206");
+        assertEquals("High", comboSeveridad.getSelectedItem(), "assertEquals failed at PanelHallazgosFiltrosTest.java:207");
+        assertEquals(I18nUI.Tooltips.Hallazgos.FILTRO_SEVERIDAD(), comboSeveridad.getToolTipText(),
+            "assertEquals failed at PanelHallazgosFiltrosTest.java:208");
     }
 
     @Test
