@@ -126,6 +126,59 @@ class ConfiguracionAPITest {
     }
 
     @Test
+    @DisplayName("Snapshot preserva estado UI y niveles de logging")
+    void testSnapshotPreservaEstadoUiYNivelesLogging() {
+        Map<String, String> estadoUi = new HashMap<>();
+        estadoUi.put("tab", "hallazgos");
+        estadoUi.put("filtro", "csrf");
+
+        config.establecerDetallado(true);
+        config.establecerNivelWarnHabilitado(false);
+        config.establecerNivelInfoHabilitado(false);
+        config.establecerNivelDebugHabilitado(true);
+        config.establecerNivelTraceHabilitado(true);
+        config.establecerEstadoUI(estadoUi);
+
+        ConfiguracionAPI snapshot = config.crearSnapshot();
+
+        assertEquals(estadoUi, snapshot.obtenerEstadoUI(), "assertEquals failed at ConfiguracionAPITest.java:snapshot:estadoUI");
+        assertTrue(snapshot.esNivelErrorHabilitado(), "assertTrue failed at ConfiguracionAPITest.java:snapshot:error");
+        assertFalse(snapshot.esNivelWarnHabilitado(), "assertFalse failed at ConfiguracionAPITest.java:snapshot:warn");
+        assertFalse(snapshot.esNivelInfoHabilitado(), "assertFalse failed at ConfiguracionAPITest.java:snapshot:info");
+        assertTrue(snapshot.esNivelDebugHabilitado(), "assertTrue failed at ConfiguracionAPITest.java:snapshot:debug");
+        assertTrue(snapshot.esNivelTraceHabilitado(), "assertTrue failed at ConfiguracionAPITest.java:snapshot:trace");
+    }
+
+    @Test
+    @DisplayName("AplicarDesde restaura estado UI y niveles de logging")
+    void testAplicarDesdeRestauraEstadoUiYNivelesLogging() {
+        ConfiguracionAPI origen = new ConfiguracionAPI();
+        Map<String, String> estadoUi = new HashMap<>();
+        estadoUi.put("tab", "agente");
+        estadoUi.put("busqueda", "token");
+
+        origen.establecerDetallado(true);
+        origen.establecerNivelErrorHabilitado(false);
+        origen.establecerNivelWarnHabilitado(false);
+        origen.establecerNivelInfoHabilitado(true);
+        origen.establecerNivelDebugHabilitado(true);
+        origen.establecerNivelTraceHabilitado(true);
+        origen.establecerEstadoUI(estadoUi);
+
+        config.establecerDetallado(false);
+        config.establecerEstadoUI(Map.of("tab", "tareas"));
+
+        config.aplicarDesde(origen);
+
+        assertEquals(estadoUi, config.obtenerEstadoUI(), "assertEquals failed at ConfiguracionAPITest.java:aplicar:estadoUI");
+        assertFalse(config.esNivelErrorHabilitado(), "assertFalse failed at ConfiguracionAPITest.java:aplicar:error");
+        assertFalse(config.esNivelWarnHabilitado(), "assertFalse failed at ConfiguracionAPITest.java:aplicar:warn");
+        assertTrue(config.esNivelInfoHabilitado(), "assertTrue failed at ConfiguracionAPITest.java:aplicar:info");
+        assertTrue(config.esNivelDebugHabilitado(), "assertTrue failed at ConfiguracionAPITest.java:aplicar:debug");
+        assertTrue(config.esNivelTraceHabilitado(), "assertTrue failed at ConfiguracionAPITest.java:aplicar:trace");
+    }
+
+    @Test
     @DisplayName("Estado de configuración se determina con validar()")
     void testEstadoConfiguracionConValidar() {
         ConfiguracionAPI valida = new ConfiguracionAPI();

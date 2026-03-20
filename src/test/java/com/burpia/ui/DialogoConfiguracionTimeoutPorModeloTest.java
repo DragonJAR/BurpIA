@@ -847,10 +847,10 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                     "La fuente estándar elegida debe persistirse");
             assertEquals(fuenteMonoEsperadaHolder[0], comboFuenteMono.getSelectedItem(),
                     "La fuente mono elegida debe persistirse");
-            assertEquals(fuenteEstandarEsperadaHolder[0], configRecargada.obtenerNombreFuenteEstandar(),
-                    "La configuración recargada debe conservar la fuente estándar");
-            assertEquals(fuenteMonoEsperadaHolder[0], configRecargada.obtenerNombreFuenteMono(),
-                    "La configuración recargada debe conservar la fuente mono");
+            assertEquals(ConfiguracionAPI.FUENTE_ESTANDAR_DEFECTO, configRecargada.obtenerNombreFuenteEstandar(),
+                    "Abrir el diálogo no debe mutar la configuración viva antes de guardar");
+            assertEquals(ConfiguracionAPI.FUENTE_MONO_DEFECTO, configRecargada.obtenerNombreFuenteMono(),
+                    "Abrir el diálogo no debe mutar la configuración viva antes de guardar");
         } finally {
             destruirDialogo(dialogoReabierto);
         }

@@ -36,6 +36,7 @@ public class ConfigDialogController {
 
     private final DialogoConfiguracion dialogo;
     private final ConfiguracionAPI config;
+    private final ConfiguracionAPI configDialogo;
     private final GestorConfiguracion gestorConfig;
     private final ConfigPersistenceManager persistenceManager;
     private final ProviderConfigManager providerManager;
@@ -161,11 +162,12 @@ public class ConfigDialogController {
 
         this.dialogo = dialogo;
         this.config = config;
+        this.configDialogo = config.crearSnapshot();
         this.gestorConfig = gestorConfig;
         // Usar gestorLogging sin PrintWriter - usa Logger interno en lugar de System.out/System.err
         this.gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
         this.persistenceManager = new ConfigPersistenceManager(gestorConfig, gestorLogging);
-        this.providerManager = new ProviderConfigManager(config, gestorLogging);
+        this.providerManager = new ProviderConfigManager(configDialogo, gestorLogging);
         this.dialogStateManager = new DialogStateManager(gestorLogging);
         this.connectionTester = new ConnectionTester();
         this.rutasBinarioAgenteTemporal = new HashMap<>();
@@ -287,7 +289,7 @@ public class ConfigDialogController {
         
         ConfiguracionAPI configCargada = persistenceManager.cargarConfiguracion();
         if (configCargada != null) {
-            config.aplicarDesde(configCargada);
+            configDialogo.aplicarDesde(configCargada);
         }
 
         // Nota: providerManager.inicializarComponentesUI() ya se llamó en inicializarEventHandlers()
@@ -296,9 +298,9 @@ public class ConfigDialogController {
         providerManager.cargarConfiguracionInicial();
         
         rutasBinarioAgenteTemporal.clear();
-        rutasBinarioAgenteTemporal.putAll(new HashMap<>(config.obtenerTodasLasRutasBinario()));
+        rutasBinarioAgenteTemporal.putAll(new HashMap<>(configDialogo.obtenerTodasLasRutasBinario()));
         estadosHabilitacionAgenteTemporal.clear();
-        estadosHabilitacionAgenteTemporal.putAll(new HashMap<>(config.obtenerEstadosHabilitacionAgentes()));
+        estadosHabilitacionAgenteTemporal.putAll(new HashMap<>(configDialogo.obtenerEstadosHabilitacionAgentes()));
         ultimoAgenteSeleccionado = null;
 
         cargarConfiguracionGeneral();
@@ -313,63 +315,63 @@ public class ConfigDialogController {
     private void cargarConfiguracionGeneral() {
         JComboBox<IdiomaUI> comboIdioma = dialogo.obtenerComboIdioma();
         if (comboIdioma != null) {
-            comboIdioma.setSelectedItem(IdiomaUI.desdeCodigo(config.obtenerIdiomaUi()));
+            comboIdioma.setSelectedItem(IdiomaUI.desdeCodigo(configDialogo.obtenerIdiomaUi()));
         }
 
         JTextField txtRetraso = dialogo.obtenerTxtRetraso();
         if (txtRetraso != null) {
-            txtRetraso.setText(String.valueOf(config.obtenerRetrasoSegundos()));
+            txtRetraso.setText(String.valueOf(configDialogo.obtenerRetrasoSegundos()));
         }
 
         JTextField txtMaximoConcurrente = dialogo.obtenerTxtMaximoConcurrente();
         if (txtMaximoConcurrente != null) {
-            txtMaximoConcurrente.setText(String.valueOf(config.obtenerMaximoConcurrente()));
+            txtMaximoConcurrente.setText(String.valueOf(configDialogo.obtenerMaximoConcurrente()));
         }
 
         JTextField txtMaximoHallazgosTabla = dialogo.obtenerTxtMaximoHallazgosTabla();
         if (txtMaximoHallazgosTabla != null) {
-            txtMaximoHallazgosTabla.setText(String.valueOf(config.obtenerMaximoHallazgosTabla()));
+            txtMaximoHallazgosTabla.setText(String.valueOf(configDialogo.obtenerMaximoHallazgosTabla()));
         }
 
         JTextField txtMaximoTareas = dialogo.obtenerTxtMaximoTareas();
         if (txtMaximoTareas != null) {
-            txtMaximoTareas.setText(String.valueOf(config.obtenerMaximoTareasTabla()));
+            txtMaximoTareas.setText(String.valueOf(configDialogo.obtenerMaximoTareasTabla()));
         }
 
         JCheckBox chkDetallado = dialogo.obtenerChkDetallado();
         if (chkDetallado != null) {
-            chkDetallado.setSelected(config.esDetallado());
+            chkDetallado.setSelected(configDialogo.esDetallado());
         }
 
         JCheckBox chkIgnorarSSL = dialogo.obtenerChkIgnorarSSL();
         if (chkIgnorarSSL != null) {
-            chkIgnorarSSL.setSelected(config.ignorarErroresSSL());
+            chkIgnorarSSL.setSelected(configDialogo.ignorarErroresSSL());
         }
 
         JCheckBox chkSoloProxy = dialogo.obtenerChkSoloProxy();
         if (chkSoloProxy != null) {
-            chkSoloProxy.setSelected(config.soloProxy());
+            chkSoloProxy.setSelected(configDialogo.soloProxy());
         }
 
         JCheckBox chkAlertasHabilitadas = dialogo.obtenerChkAlertasHabilitadas();
         if (chkAlertasHabilitadas != null) {
-            chkAlertasHabilitadas.setSelected(config.alertasHabilitadas());
+            chkAlertasHabilitadas.setSelected(configDialogo.alertasHabilitadas());
         }
 
         JCheckBox chkPersistirBusqueda = dialogo.obtenerChkPersistirBusqueda();
         if (chkPersistirBusqueda != null) {
-            chkPersistirBusqueda.setSelected(config.persistirFiltroBusquedaHallazgos());
+            chkPersistirBusqueda.setSelected(configDialogo.persistirFiltroBusquedaHallazgos());
         }
 
         JCheckBox chkPersistirSeveridad = dialogo.obtenerChkPersistirSeveridad();
         if (chkPersistirSeveridad != null) {
-            chkPersistirSeveridad.setSelected(config.persistirFiltroSeveridadHallazgos());
+            chkPersistirSeveridad.setSelected(configDialogo.persistirFiltroSeveridadHallazgos());
         }
 
         JTextArea txtPrompt = dialogo.obtenerTxtPrompt();
         if (txtPrompt != null) {
-            if (config.esPromptModificado()) {
-                txtPrompt.setText(config.obtenerPromptConfigurable());
+            if (configDialogo.esPromptModificado()) {
+                txtPrompt.setText(configDialogo.obtenerPromptConfigurable());
             } else {
                 txtPrompt.setText(ConfiguracionAPI.obtenerPromptPorDefecto());
             }
@@ -382,7 +384,7 @@ public class ConfigDialogController {
         if (comboAgente != null) {
             cargarAgentesConfigurables(comboAgente);
             
-            String tipoAgente = config.obtenerTipoAgente();
+            String tipoAgente = configDialogo.obtenerTipoAgente();
             if (Normalizador.noEsVacio(tipoAgente)) {
                 boolean existeOpcion = false;
                 for (int i = 0; i < comboAgente.getItemCount(); i++) {
@@ -403,17 +405,17 @@ public class ConfigDialogController {
 
         JCheckBox chkAgenteHabilitado = dialogo.obtenerChkAgenteHabilitado();
         if (chkAgenteHabilitado != null) {
-            chkAgenteHabilitado.setSelected(resolverEstadoHabilitacionAgente(config.obtenerTipoAgente()));
+            chkAgenteHabilitado.setSelected(resolverEstadoHabilitacionAgente(configDialogo.obtenerTipoAgente()));
         }
 
         JTextArea txtAgentePromptInicial = dialogo.obtenerTxtAgentePromptInicial();
         if (txtAgentePromptInicial != null) {
-            txtAgentePromptInicial.setText(config.obtenerAgentePreflightPrompt());
+            txtAgentePromptInicial.setText(configDialogo.obtenerAgentePreflightPrompt());
         }
 
         JTextArea txtAgentePrompt = dialogo.obtenerTxtAgentePrompt();
         if (txtAgentePrompt != null) {
-            txtAgentePrompt.setText(config.obtenerAgentePrompt());
+            txtAgentePrompt.setText(configDialogo.obtenerAgentePrompt());
         }
 
         manejarCambioAgente();
@@ -437,28 +439,28 @@ public class ConfigDialogController {
     }
     
     private boolean esAgenteDisponible(String codigoAgente) {
-        return config.tieneBinarioAgenteDisponible(codigoAgente);
+        return configDialogo.tieneBinarioAgenteDisponible(codigoAgente);
     }
 
     private void cargarConfiguracionFuentes() {
         JComboBox<String> comboFuenteEstandar = dialogo.obtenerComboFuenteEstandar();
         if (comboFuenteEstandar != null) {
-            comboFuenteEstandar.setSelectedItem(config.obtenerNombreFuenteEstandar());
+            comboFuenteEstandar.setSelectedItem(configDialogo.obtenerNombreFuenteEstandar());
         }
 
         JSpinner spinnerTamanioEstandar = dialogo.obtenerSpinnerTamanioEstandar();
         if (spinnerTamanioEstandar != null) {
-            spinnerTamanioEstandar.setValue(config.obtenerTamanioFuenteEstandar());
+            spinnerTamanioEstandar.setValue(configDialogo.obtenerTamanioFuenteEstandar());
         }
 
         JComboBox<String> comboFuenteMono = dialogo.obtenerComboFuenteMono();
         if (comboFuenteMono != null) {
-            comboFuenteMono.setSelectedItem(config.obtenerNombreFuenteMono());
+            comboFuenteMono.setSelectedItem(configDialogo.obtenerNombreFuenteMono());
         }
 
         JSpinner spinnerTamanioMono = dialogo.obtenerSpinnerTamanioMono();
         if (spinnerTamanioMono != null) {
-            spinnerTamanioMono.setValue(config.obtenerTamanioFuenteMono());
+            spinnerTamanioMono.setValue(configDialogo.obtenerTamanioFuenteMono());
         }
     }
 
@@ -525,7 +527,7 @@ public class ConfigDialogController {
         if (estadosHabilitacionAgenteTemporal.containsKey(agenteSeleccionado)) {
             return Boolean.TRUE.equals(estadosHabilitacionAgenteTemporal.get(agenteSeleccionado));
         }
-        return config.agenteHabilitado(agenteSeleccionado);
+        return configDialogo.agenteHabilitado(agenteSeleccionado);
     }
 
     private void guardarEstadoHabilitacionAgenteActual(String agente) {
@@ -748,7 +750,7 @@ public class ConfigDialogController {
                         return false;
                     }
 
-                    snapshot = config.crearSnapshot();
+                    snapshot = configDialogo.crearSnapshot();
                     aplicarConfiguracionASnapshot(
                             snapshot,
                             estadoUI,
@@ -785,6 +787,7 @@ public class ConfigDialogController {
             protected void done() {
                 try {
                     if (get()) {
+                        configDialogo.aplicarDesde(snapshot);
                         config.aplicarDesde(snapshot);
                         EstilosUI.actualizarFuentes(config);
                         persistenceManager.actualizarEstadoReferencia();
@@ -1099,6 +1102,10 @@ public class ConfigDialogController {
         String rutaTemporal = rutasBinarioAgenteTemporal.get(agenteSeleccionado);
         if (Normalizador.noEsVacio(rutaTemporal)) {
             return rutaTemporal;
+        }
+        String rutaGuardadaDialogo = configDialogo.obtenerRutaBinarioAgente(agenteSeleccionado);
+        if (Normalizador.noEsVacio(rutaGuardadaDialogo)) {
+            return rutaGuardadaDialogo;
         }
         String rutaGuardada = config.obtenerRutaBinarioAgente(agenteSeleccionado);
         if (Normalizador.noEsVacio(rutaGuardada)) {
@@ -1445,7 +1452,7 @@ public class ConfigDialogController {
         @Override
         public String obtenerCodigoIdiomaSeleccionado() {
             IdiomaUI idioma = obtenerValorSeleccionado(dialogo.obtenerComboIdioma(), IdiomaUI.class);
-            return idioma != null ? idioma.codigo() : config.obtenerIdiomaUi();
+            return idioma != null ? idioma.codigo() : configDialogo.obtenerIdiomaUi();
         }
 
         @Override
@@ -1554,7 +1561,7 @@ public class ConfigDialogController {
 
         @Override
         public int obtenerTamanioFuenteEstandar() {
-            return obtenerValorSpinner(dialogo.obtenerSpinnerTamanioEstandar(), config.obtenerTamanioFuenteEstandar());
+            return obtenerValorSpinner(dialogo.obtenerSpinnerTamanioEstandar(), configDialogo.obtenerTamanioFuenteEstandar());
         }
 
         @Override
@@ -1564,7 +1571,7 @@ public class ConfigDialogController {
 
         @Override
         public int obtenerTamanioFuenteMono() {
-            return obtenerValorSpinner(dialogo.obtenerSpinnerTamanioMono(), config.obtenerTamanioFuenteMono());
+            return obtenerValorSpinner(dialogo.obtenerSpinnerTamanioMono(), configDialogo.obtenerTamanioFuenteMono());
         }
 
         @Override
@@ -1574,7 +1581,7 @@ public class ConfigDialogController {
 
         @Override
         public ConfiguracionAPI obtenerConfiguracion() {
-            return config;
+            return configDialogo;
         }
 
         @Override

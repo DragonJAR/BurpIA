@@ -1583,12 +1583,18 @@ public class ConfiguracionAPI {
         snapshot.filtroSeveridadHallazgos = this.filtroSeveridadHallazgos;
         snapshot.persistirFiltroBusquedaHallazgos = this.persistirFiltroBusquedaHallazgos;
         snapshot.persistirFiltroSeveridadHallazgos = this.persistirFiltroSeveridadHallazgos;
+        snapshot.estadoUI = new HashMap<>(this.estadoUI);
 
         snapshot.apiKeysPorProveedor = new HashMap<>(this.apiKeysPorProveedor);
         snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
         snapshot.modelosPorProveedor = new HashMap<>(this.modelosPorProveedor);
         snapshot.maxTokensPorProveedor = new HashMap<>(this.maxTokensPorProveedor);
         snapshot.tiempoEsperaPorModelo = new HashMap<>(this.tiempoEsperaPorModelo);
+        snapshot.nivelErrorHabilitado = this.nivelErrorHabilitado;
+        snapshot.nivelWarnHabilitado = this.nivelWarnHabilitado;
+        snapshot.nivelInfoHabilitado = this.nivelInfoHabilitado;
+        snapshot.nivelDebugHabilitado = this.nivelDebugHabilitado;
+        snapshot.nivelTraceHabilitado = this.nivelTraceHabilitado;
 
         snapshot.maximoTareasTabla = this.maximoTareasTabla;
         snapshot.multiProveedorHabilitado = this.multiProveedorHabilitado;
@@ -1647,8 +1653,14 @@ public class ConfiguracionAPI {
         this.filtroSeveridadHallazgos = origen.filtroSeveridadHallazgos;
         this.persistirFiltroBusquedaHallazgos = origen.persistirFiltroBusquedaHallazgos;
         this.persistirFiltroSeveridadHallazgos = origen.persistirFiltroSeveridadHallazgos;
+        this.estadoUI = new HashMap<>(origen.estadoUI);
         this.multiProveedorHabilitado = origen.multiProveedorHabilitado;
         this.proveedoresMultiConsulta = new ArrayList<>(origen.proveedoresMultiConsulta);
+        this.nivelErrorHabilitado = origen.nivelErrorHabilitado;
+        this.nivelWarnHabilitado = origen.nivelWarnHabilitado;
+        this.nivelInfoHabilitado = origen.nivelInfoHabilitado;
+        this.nivelDebugHabilitado = origen.nivelDebugHabilitado;
+        this.nivelTraceHabilitado = origen.nivelTraceHabilitado;
 
         asegurarMapas();
     }

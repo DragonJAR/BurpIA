@@ -105,19 +105,21 @@ public class GestorTareas {
     }
 
     public void pausarTodasActivas() {
-        int pausadas = actualizarEstadosMasivo(
+        List<String> idsPausadas = actualizarEstadosMasivoConIds(
             tarea -> Tarea.esEstadoPausable(tarea.obtenerEstado()),
             Tarea.ESTADO_PAUSADO
         );
-        registrar("Tareas pausadas: " + pausadas);
+        registrar("Tareas pausadas: " + idsPausadas.size());
+        notificarOperaciones(idsPausadas, manejadorPausa, "pausa");
     }
 
     public void reanudarTodasPausadas() {
-        int reanudadas = actualizarEstadosMasivo(
+        List<String> idsReanudadas = actualizarEstadosMasivoConIds(
             tarea -> Tarea.esEstadoReanudable(tarea.obtenerEstado()),
             Tarea.ESTADO_EN_COLA
         );
-        registrar("Tareas reanudadas: " + reanudadas);
+        registrar("Tareas reanudadas: " + idsReanudadas.size());
+        notificarOperaciones(idsReanudadas, manejadorReanudar, "reanudar");
     }
 
     public int obtenerNumeroTareasPausadas() {
@@ -429,6 +431,17 @@ public class GestorTareas {
 
     private void notificarCancelacion(String id) {
         notificarManejador(this.manejadorCancelacion, id, "cancelacion");
+    }
+
+    private void notificarOperaciones(List<String> ids, Consumer<String> manejador, String tipoOperacion) {
+        if (Normalizador.esVacia(ids)) {
+            return;
+        }
+        for (String id : ids) {
+            if (Normalizador.noEsVacio(id)) {
+                notificarManejador(manejador, id, tipoOperacion);
+            }
+        }
     }
 
     private void aplicarRetencionFinalizadas() {

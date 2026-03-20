@@ -3,6 +3,7 @@ package com.burpia.ui;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.i18n.IdiomaUI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.OSUtils;
 import com.burpia.util.RutasBurpIA;
@@ -317,6 +318,51 @@ class ConfigDialogControllerAgentesTest {
                 config.obtenerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name()),
                 "assertEquals failed at ConfigDialogControllerAgentesTest.java:273"
             );
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
+    @Test
+    @DisplayName("Abrir dialogo no muta la configuracion viva hasta guardar")
+    void testAbrirDialogoNoMutaConfiguracionVivaHastaGuardar() throws Exception {
+        ConfiguracionAPI configPersistida = new ConfiguracionAPI();
+        configPersistida.establecerIdiomaUi("en");
+        configPersistida.establecerDetallado(true);
+        configPersistida.establecerProveedorAI("OpenAI");
+        configPersistida.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        configPersistida.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        configPersistida.establecerApiKeyParaProveedor("OpenAI", "persisted-key");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        assertTrue(gestor.guardarConfiguracion(configPersistida),
+            "assertTrue failed at ConfigDialogControllerAgentesTest.java:configPersistida:guardar");
+
+        ConfiguracionAPI configViva = new ConfiguracionAPI();
+        configViva.establecerIdiomaUi("es");
+        configViva.establecerDetallado(false);
+        configViva.establecerProveedorAI("Z.ai");
+        configViva.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(null, configViva, gestor, () -> {});
+
+        try {
+            JComboBox<IdiomaUI> comboIdioma = dialogo.obtenerComboIdioma();
+            assertNotNull(comboIdioma, "assertNotNull failed at ConfigDialogControllerAgentesTest.java:dialogo:comboIdioma");
+
+            IdiomaUI idiomaSeleccionado = (IdiomaUI) comboIdioma.getSelectedItem();
+
+            assertNotNull(idiomaSeleccionado, "assertNotNull failed at ConfigDialogControllerAgentesTest.java:dialogo:idioma");
+            assertEquals("en", idiomaSeleccionado.codigo(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:dialogo:idiomaPersistido");
+            assertEquals("OpenAI", dialogo.obtenerComboProveedor().getSelectedItem(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:dialogo:proveedorPersistido");
+            assertEquals("es", configViva.obtenerIdiomaUi(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:configViva:idioma");
+            assertFalse(configViva.esDetallado(),
+                "assertFalse failed at ConfigDialogControllerAgentesTest.java:configViva:detallado");
+            assertEquals("Z.ai", configViva.obtenerProveedorAI(),
+                "assertEquals failed at ConfigDialogControllerAgentesTest.java:configViva:proveedor");
         } finally {
             dialogo.dispose();
         }

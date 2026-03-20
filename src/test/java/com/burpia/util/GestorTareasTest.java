@@ -156,6 +156,42 @@ class GestorTareasTest {
     }
 
     @Test
+    @DisplayName("Pausar todas activas notifica cada pausa al backend")
+    void testPausarTodasActivasNotificaManejador() throws Exception {
+        List<String> pausadas = new ArrayList<>();
+        gestor.establecerManejadorPausa(pausadas::add);
+
+        Tarea enCola = gestor.crearTarea("A", "https://example.com/cola-masiva", Tarea.ESTADO_EN_COLA, "");
+        Tarea analizando = gestor.crearTarea("B", "https://example.com/run-masiva", Tarea.ESTADO_ANALIZANDO, "");
+        gestor.crearTarea("C", "https://example.com/pausada", Tarea.ESTADO_PAUSADO, "");
+        flushEdt();
+
+        gestor.pausarTodasActivas();
+        flushEdt();
+
+        assertEquals(Set.of(enCola.obtenerId(), analizando.obtenerId()), new HashSet<>(pausadas),
+            "assertEquals failed at GestorTareasTest.java:pausarTodas:notifica");
+    }
+
+    @Test
+    @DisplayName("Reanudar todas pausadas notifica cada reencolado al backend")
+    void testReanudarTodasPausadasNotificaManejador() throws Exception {
+        List<String> reanudadas = new ArrayList<>();
+        gestor.establecerManejadorReanudar(reanudadas::add);
+
+        Tarea pausada1 = gestor.crearTarea("A", "https://example.com/p1-masiva", Tarea.ESTADO_PAUSADO, "");
+        Tarea pausada2 = gestor.crearTarea("B", "https://example.com/p2-masiva", Tarea.ESTADO_PAUSADO, "");
+        gestor.crearTarea("C", "https://example.com/error", Tarea.ESTADO_ERROR, "");
+        flushEdt();
+
+        gestor.reanudarTodasPausadas();
+        flushEdt();
+
+        assertEquals(Set.of(pausada1.obtenerId(), pausada2.obtenerId()), new HashSet<>(reanudadas),
+            "assertEquals failed at GestorTareasTest.java:reanudarTodas:notifica");
+    }
+
+    @Test
     @DisplayName("Logger nulo no rompe operaciones")
     void testLoggerNuloNoRompe() throws Exception {
         GestorTareas gestorSinLogger = new GestorTareas(new ModeloTablaTareas(), null);

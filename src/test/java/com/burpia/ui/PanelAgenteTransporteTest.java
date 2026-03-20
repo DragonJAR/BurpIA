@@ -187,6 +187,40 @@ class PanelAgenteTransporteTest {
     }
 
     @Test
+    @DisplayName("Preflight manual en cola no se duplica al arrancar la terminal")
+    void testPreflightManualPendienteNoSeDuplicaEnArranque() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+        config.establecerAgentePreflightPrompt("PROMPT_PREFLIGHT_CUSTOM");
+        config.establecerAgenteDelay(0);
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), "droid-test");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            marcarConsolaArrancando(panel, true);
+            panel.inyectarPayloadInicialManual();
+
+            TtyConnector connector = mock(TtyConnector.class);
+            when(connector.isConnected()).thenReturn(true);
+            inyectarTtyConnector(panel, connector);
+            establecerCampoLong(panel, "sesionActivaId", 146L);
+
+            Method method = PanelAgente.class.getDeclaredMethod("programarInyeccionInicial", long.class);
+            method.setAccessible(true);
+            method.invoke(panel, 146L);
+
+            verify(connector, timeout(3500).times(1))
+                .write(org.mockito.ArgumentMatchers.<String>argThat(
+                    cmd -> cmd != null && cmd.contains("PROMPT_PREFLIGHT_CUSTOM")
+                ));
+            assertTrue(obtenerBandera(panel, "promptInicialEnviado"),
+                "assertTrue failed at PanelAgenteTransporteTest.java:manual:promptInicialEnviado");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
     @DisplayName("Forzar prompt inicial no marca envio si el preflight esta vacio")
     void testForzarPromptInicialIgnoraPreflightVacioSinConsumirBandera() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();

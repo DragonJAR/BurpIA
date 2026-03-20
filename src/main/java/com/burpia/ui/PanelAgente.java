@@ -1302,14 +1302,12 @@ public class PanelAgente extends JPanel {
         solicitarFocoPestaniaAgente();
 
         String prompt = obtenerPromptPreflightDisponible();
-
-        promptInicialEnviado.set(false);
-        inicializacionPendiente.set(false);
-
         if (prompt == null) {
             return;
         }
 
+        promptInicialEnviado.set(true);
+        inicializacionPendiente.set(false);
         inyectarComando(prompt, 0);
         gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Payload inicial encolado para inyeccion manual por el usuario"));
     }

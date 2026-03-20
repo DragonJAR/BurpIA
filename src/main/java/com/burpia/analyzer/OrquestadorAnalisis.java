@@ -1,10 +1,8 @@
 package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
-import com.burpia.config.ProveedorAI;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
-import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
@@ -15,10 +13,7 @@ import com.burpia.util.PromptTruncador;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Collections;
-import java.util.Map;
 import java.util.function.BooleanSupplier;
 
 public class OrquestadorAnalisis {
@@ -27,8 +22,6 @@ public class OrquestadorAnalisis {
     private static final int MAX_TRUNCADOS = 3;
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
-    private static final long DELAY_ENTRE_PROVEEDORES_MS = 2000L;
-    private static final String LINEA_SEPARADORA_PROVEEDOR = "========================================";
 
     private final SolicitudAnalisis solicitud;
     private ConfiguracionAPI config;
@@ -299,31 +292,6 @@ public class OrquestadorAnalisis {
         return 4000;
     }
 
-    private String llamarAPIAIConRetriesConConfig(ConfiguracionAPI configProveedor) throws IOException {
-        AnalizadorHTTP analizadorHTTPProveedor = new AnalizadorHTTP(configProveedor, 
-            this.tareaCancelada, this.tareaPausada, this.gestorLogging);
-
-        try {
-            verificarCancelacion();
-            esperarSiPausada();
-            
-            String prompt = construirPromptAnalisis();
-            String respuesta = analizadorHTTPProveedor.llamarAPI(prompt);
-            
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Longitud de respuesta de API: " + respuesta.length() + " caracteres"));
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Respuesta de API (preview):\n" + resumirParaLog(respuesta)));
-            return respuesta;
-            
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException(I18nUI.Tareas.ERROR_RETRY_INTERRUPPIDO(), e);
-        } catch (ContextExceededException e) {
-            // Para multi-proveedor, no implementamos truncado complejo por ahora
-            // Simplemente propagamos el error
-            throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO(), e);
-        }
-    }
-
     private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
         return parsearRespuesta(respuestaJson, config != null ? config.obtenerProveedorAI() : "");
     }
@@ -333,118 +301,16 @@ public class OrquestadorAnalisis {
     }
 
     private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {
-        List<String> proveedores = config.obtenerProveedoresMultiConsulta();
-        if (Normalizador.esVacia(proveedores)) {
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Multi-consulta: No hay proveedores seleccionados, usando proveedor único"));
-            return ejecutarAnalisisProveedorUnico();
-        }
-
-        if (proveedores.size() == 1) {
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Multi-consulta: Solo 1 proveedor seleccionado, usando proveedor único"));
-            return ejecutarAnalisisProveedorUnico();
-        }
-
-        List<Hallazgo> todosHallazgos = new ArrayList<>();
-        List<String> proveedoresFallidos = new ArrayList<>();
-        ConfiguracionAPI configOriginal = config;
-
-        try {
-            for (String proveedor : proveedores) {
-                verificarCancelacion();
-                esperarSiPausada();
-
-                if (Normalizador.esVacio(proveedor)) {
-                    continue;
-                }
-                if (!ProveedorAI.existeProveedor(proveedor)) {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Proveedor no existe: " + proveedor + ", omitiendo"));
-                    continue;
-                }
-
-                String modelo = config.obtenerModeloParaProveedor(proveedor);
-                if (Normalizador.esVacio(modelo)) {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo"));
-                    continue;
-                }
-
-                if (!todosHallazgos.isEmpty()) {
-                    long delaySegundos = DELAY_ENTRE_PROVEEDORES_MS / 1000L;
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Esperando " + delaySegundos + " segundos antes del siguiente proveedor"));
-                    esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
-                }
-
-                gestorLogging.info(ORIGEN_LOG, LINEA_SEPARADORA_PROVEEDOR);
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: " + proveedor + " (" + modelo + ")"));
-
-                try {
-                    ConfiguracionAPI configProveedor = new ConfiguracionAPI();
-                    configProveedor.aplicarDesde(configOriginal);
-                    configProveedor.establecerProveedorAI(proveedor);
-
-                    String respuesta = llamarAPIAIConRetriesConConfig(configProveedor);
-                    ResultadoAnalisisMultiple resultado = parsearRespuestaConEtiqueta(respuesta, proveedor, modelo);
-
-                    List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: " + proveedor + " completado - " + hallazgosProveedor.size()
-                            + " hallazgo(s) encontrado(s)"));
-                    todosHallazgos.addAll(hallazgosProveedor);
-
-                } catch (Exception e) {
-                    gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Error con " + proveedor), e);
-                    proveedoresFallidos.add(proveedor);
-                }
-            }
-
-            if (!proveedoresFallidos.isEmpty()) {
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: " + proveedoresFallidos.size() +
-                        " proveedor(es) fallaron: " + String.join(", ", proveedoresFallidos)));
-            }
-
-            gestorLogging.info(ORIGEN_LOG, LINEA_SEPARADORA_PROVEEDOR);
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size()));
-
-            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
-                    solicitud.obtenerSolicitudHttp(), proveedoresFallidos);
-
-        } finally {
-            this.config = configOriginal;
-        }
-    }
-
-    private ResultadoAnalisisMultiple ejecutarAnalisisProveedorUnico() throws IOException {
-        String respuesta = llamarAPIAIConRetries();
-        return parsearRespuesta(respuesta);
-    }
-
-    private ResultadoAnalisisMultiple parsearRespuestaConEtiqueta(String respuestaJson,
-            String proveedor,
-            String modelo) {
-        ResultadoAnalisisMultiple resultado = parsearRespuesta(respuestaJson, proveedor);
-        List<Hallazgo> hallazgos = resultado.obtenerHallazgos();
-        List<Hallazgo> hallazgosConEtiqueta = new ArrayList<>();
-
-        for (Hallazgo hallazgo : hallazgos) {
-            String descripcionOriginal = hallazgo.obtenerHallazgo();
-            String etiqueta = I18nUI.Configuracion.TXT_DESCUBIERTO_CON(proveedor, modelo);
-            String descripcionConEtiqueta = descripcionOriginal + etiqueta;
-
-            Hallazgo hallazgoEtiquetado = new Hallazgo(
-                    hallazgo.obtenerUrl(),
-                    hallazgo.obtenerTitulo(),
-                    descripcionConEtiqueta,
-                    hallazgo.obtenerSeveridad(),
-                    hallazgo.obtenerConfianza(),
-                    hallazgo.obtenerSolicitudHttp(),
-                    hallazgo.obtenerEvidenciaHttp());
-
-            hallazgosConEtiqueta.add(hallazgoEtiquetado);
-        }
-
-        return new ResultadoAnalisisMultiple(
-                solicitud.obtenerUrl(),
-                hallazgosConEtiqueta,
-                solicitud.obtenerSolicitudHttp(),
-                Collections.emptyList());
+        GestorMultiProveedor gestorMultiProveedor = new GestorMultiProveedor(
+                solicitud,
+                config,
+                stdout,
+                stderr,
+                gestorConsola,
+                tareaCancelada,
+                tareaPausada,
+                gestorLogging);
+        return gestorMultiProveedor.ejecutarAnalisisMultiProveedor();
     }
 
 

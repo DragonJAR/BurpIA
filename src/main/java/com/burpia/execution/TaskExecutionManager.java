@@ -144,6 +144,11 @@ public class TaskExecutionManager {
             return false;
         }
 
+        if (tieneEjecucionActivaOPendiente(tareaId)) {
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Se ignoró reencolado duplicado para tarea activa: " + tareaId));
+            return false;
+        }
+
         if (gestorTareas != null) {
             gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_EN_COLA, I18nUI.Tareas.MSG_REINTENTANDO());
         }
@@ -179,6 +184,11 @@ public class TaskExecutionManager {
 
     private void ejecutarAnalisisExistente(String tareaId, SolicitudAnalisis solicitudAnalisis, String evidenciaId) {
         if (Normalizador.esVacio(tareaId) || solicitudAnalisis == null) {
+            return;
+        }
+
+        if (tieneEjecucionActivaOPendiente(tareaId)) {
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Se omitió iniciar una ejecución duplicada para tarea: " + tareaId));
             return;
         }
 
@@ -254,6 +264,24 @@ public class TaskExecutionManager {
         }
         ejecucionesActivas.remove(tareaId);
         analizadoresActivos.remove(tareaId);
+    }
+
+    private boolean tieneEjecucionActivaOPendiente(String tareaId) {
+        if (Normalizador.esVacio(tareaId)) {
+            return false;
+        }
+
+        Future<?> future = ejecucionesActivas.get(tareaId);
+        if (future == null) {
+            return false;
+        }
+
+        if (future.isDone() || future.isCancelled()) {
+            finalizarEjecucionActiva(tareaId);
+            return false;
+        }
+
+        return true;
     }
 
     private void depurarContextosHuerfanos() {
@@ -473,7 +501,8 @@ public class TaskExecutionManager {
                 // Agregar hallazgos al modelo de la tabla
                 if (resultado != null && resultado.obtenerHallazgos() != null 
                         && !resultado.obtenerHallazgos().isEmpty()) {
-                    List<com.burpia.model.Hallazgo> hallazgos = resultado.obtenerHallazgos();
+                    List<com.burpia.model.Hallazgo> hallazgos =
+                            enriquecerHallazgosConEvidencia(resultado.obtenerHallazgos(), evidenciaId);
                     ejecutarEnEdt(() -> {
                         if (pestaniaPrincipal != null) {
                             pestaniaPrincipal.agregarHallazgos(hallazgos);
@@ -496,6 +525,30 @@ public class TaskExecutionManager {
             } finally {
                 limpiarRecursosTarea(id);
             }
+        }
+
+        private List<com.burpia.model.Hallazgo> enriquecerHallazgosConEvidencia(
+                List<com.burpia.model.Hallazgo> hallazgos,
+                String evidenciaId) {
+            if (Normalizador.esVacia(hallazgos) || Normalizador.esVacio(evidenciaId)) {
+                return hallazgos;
+            }
+
+            List<com.burpia.model.Hallazgo> hallazgosEnriquecidos = new ArrayList<>(hallazgos.size());
+            for (com.burpia.model.Hallazgo hallazgo : hallazgos) {
+                hallazgosEnriquecidos.add(asociarEvidencia(hallazgo, evidenciaId));
+            }
+            return hallazgosEnriquecidos;
+        }
+
+        private com.burpia.model.Hallazgo asociarEvidencia(com.burpia.model.Hallazgo hallazgo, String evidenciaId) {
+            if (hallazgo == null || Normalizador.esVacio(evidenciaId)) {
+                return hallazgo;
+            }
+
+            HttpRequestResponse evidenciaExistente = hallazgo.obtenerEvidenciaHttp();
+            com.burpia.model.Hallazgo hallazgoConId = hallazgo.conEvidenciaId(evidenciaId);
+            return evidenciaExistente != null ? hallazgoConId.conEvidenciaHttp(evidenciaExistente) : hallazgoConId;
         }
 
         @Override

@@ -11,6 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -202,6 +203,31 @@ class HttpUtilsTest {
             String hash1 = HttpUtils.generarHashRapido(request, response);
             String hash2 = HttpUtils.generarHashRapido(request, response);
             assertEquals(hash1, hash2, "assertEquals failed at HttpUtilsTest.java:204");
+        }
+
+        @Test
+        @DisplayName("Distingue cuerpos distintos aunque tengan la misma longitud")
+        void distingueCuerposDistintosConMismaLongitud() {
+            HttpRequest requestA = mock(HttpRequest.class, RETURNS_DEEP_STUBS);
+            HttpRequest requestB = mock(HttpRequest.class, RETURNS_DEEP_STUBS);
+            HttpResponse responseA = mock(HttpResponse.class, RETURNS_DEEP_STUBS);
+            HttpResponse responseB = mock(HttpResponse.class, RETURNS_DEEP_STUBS);
+
+            when(requestA.method()).thenReturn("POST");
+            when(requestB.method()).thenReturn("POST");
+            when(requestA.url()).thenReturn("http://api.example.com/users");
+            when(requestB.url()).thenReturn("http://api.example.com/users");
+            when(requestA.toByteArray().getBytes()).thenReturn("POST /users\nalpha=1".getBytes(StandardCharsets.UTF_8));
+            when(requestB.toByteArray().getBytes()).thenReturn("POST /users\nbravo=2".getBytes(StandardCharsets.UTF_8));
+            when(responseA.statusCode()).thenReturn((short) 200);
+            when(responseB.statusCode()).thenReturn((short) 200);
+            when(responseA.body().getBytes()).thenReturn("ok".getBytes(StandardCharsets.UTF_8));
+            when(responseB.body().getBytes()).thenReturn("ko".getBytes(StandardCharsets.UTF_8));
+
+            String hashA = HttpUtils.generarHashRapido(requestA, responseA);
+            String hashB = HttpUtils.generarHashRapido(requestB, responseB);
+
+            assertNotEquals(hashA, hashB, "assertNotEquals failed at HttpUtilsTest.java:hashRapido:cuerposDistintos");
         }
 
         @Test

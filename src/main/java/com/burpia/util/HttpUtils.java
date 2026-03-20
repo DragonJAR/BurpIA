@@ -134,17 +134,51 @@ public final class HttpUtils {
         actualizarDigest(md, solicitud.url());
         actualizarDigest(md, respuesta.statusCode());
 
-        long longitudSolicitud = obtenerLongitudCuerpoSeguro(solicitud);
-        if (longitudSolicitud >= 0L) {
-            actualizarDigest(md, longitudSolicitud);
+        byte[] bytesSolicitud = obtenerBytesSolicitudSeguros(solicitud);
+        if (bytesSolicitud.length > 0) {
+            actualizarDigest(md, bytesSolicitud);
+        } else {
+            long longitudSolicitud = obtenerLongitudCuerpoSeguro(solicitud);
+            if (longitudSolicitud >= 0L) {
+                actualizarDigest(md, longitudSolicitud);
+            }
         }
 
-        long longitudRespuesta = obtenerLongitudCuerpoSeguro(respuesta);
-        if (longitudRespuesta >= 0L) {
-            actualizarDigest(md, longitudRespuesta);
+        byte[] bytesRespuesta = obtenerBytesRespuestaSeguros(respuesta);
+        if (bytesRespuesta.length > 0) {
+            actualizarDigest(md, bytesRespuesta);
+        } else {
+            long longitudRespuesta = obtenerLongitudCuerpoSeguro(respuesta);
+            if (longitudRespuesta >= 0L) {
+                actualizarDigest(md, longitudRespuesta);
+            }
         }
 
         return convertirDigestHex(md.digest());
+    }
+
+    private static byte[] obtenerBytesSolicitudSeguros(HttpRequest solicitud) {
+        try {
+            if (solicitud == null || solicitud.toByteArray() == null) {
+                return new byte[0];
+            }
+            byte[] bytes = solicitud.toByteArray().getBytes();
+            return bytes != null ? bytes : new byte[0];
+        } catch (Exception e) {
+            return new byte[0];
+        }
+    }
+
+    private static byte[] obtenerBytesRespuestaSeguros(HttpResponse respuesta) {
+        try {
+            if (respuesta == null || respuesta.body() == null) {
+                return new byte[0];
+            }
+            byte[] bytes = respuesta.body().getBytes();
+            return bytes != null ? bytes : new byte[0];
+        } catch (Exception e) {
+            return new byte[0];
+        }
     }
 
     private static long obtenerLongitudCuerpoSeguro(HttpRequest solicitud) {
@@ -174,6 +208,13 @@ public final class HttpUtils {
 
     private static void actualizarDigest(MessageDigest md, long valor) {
         md.update(String.valueOf(valor).getBytes(StandardCharsets.UTF_8));
+        md.update((byte) 0);
+    }
+
+    private static void actualizarDigest(MessageDigest md, byte[] valor) {
+        if (valor != null && valor.length > 0) {
+            md.update(valor);
+        }
         md.update((byte) 0);
     }
 
