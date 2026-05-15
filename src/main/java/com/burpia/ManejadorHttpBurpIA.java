@@ -10,6 +10,7 @@ import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.analyzer.AnalizadorAI;
+import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.flow.FlowAnalysisConstraints;
 import com.burpia.flow.FlowAnalysisRequestBuilder;
@@ -57,7 +58,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private static final long TTL_CONTEXTO_ACTIVO_MS = Long.MAX_VALUE; // Mantener hasta cambio de estado
     private static final int MAX_CONTEXTO_REINTENTO = 1000;
     private final MontoyaApi api;
-    private final ConfiguracionAPI config;
+    private final ConfiguracionAPIRef configRef;
     private final PestaniaPrincipal pestaniaPrincipal;
     private volatile LimitadorTasa limitador;
     private final DeduplicadorSolicitudes deduplicador;
@@ -65,7 +66,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final PrintWriter stderr;
     private final Object logLock;
     private final boolean esBurpProfessional;
-    private volatile boolean capturaActiva;
     private final Estadisticas estadisticas;
     private final GestorTareas gestorTareas;
     private final GestorConsolaGUI gestorConsola;
@@ -76,13 +76,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final TaskExecutionManager taskExecutionManager;
     private final Map<ConfiguracionAPI.CodigoValidacionConsulta, Long> alertasConfiguracionEmitidas;
 
-    public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
+    public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPIRef configRef, PestaniaPrincipal pestaniaPrincipal,
             PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
             Estadisticas estadisticas, GestorTareas gestorTareas,
-            GestorConsolaGUI gestorConsola, ModeloTablaHallazgos modeloTablaHallazgos) {
-        ConfiguracionAPI configSegura = config != null ? config : new ConfiguracionAPI();
+            GestorConsolaGUI gestorConsola, ModeloTablaHallazgos modeloTablaHallazgos,
+            HttpRequestProcessor httpRequestProcessor) {
+        ConfiguracionAPIRef configRefSegura = configRef != null ? configRef : new ConfiguracionAPIRef(new ConfiguracionAPI());
         this.api = api;
-        this.config = configSegura;
+        this.configRef = configRefSegura;
         this.pestaniaPrincipal = pestaniaPrincipal;
         this.stdout = stdout;
         this.stderr = stderr;
@@ -94,22 +95,22 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.controlBackpressure = new ControlBackpressureGlobal();
         this.evidenceManager = new EvidenceManager(api);
         GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, api, null);
-        this.httpRequestProcessor = new HttpRequestProcessor(api, configSegura, gestorLogging);
-        this.taskExecutionManager = new TaskExecutionManager(configSegura, gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador, controlBackpressure);
+        this.httpRequestProcessor = httpRequestProcessor != null ? httpRequestProcessor : new HttpRequestProcessor(api, configRefSegura.obtener(), gestorLogging);
+        ConfiguracionAPI configSnapshot = configRefSegura.obtener();
+        this.taskExecutionManager = new TaskExecutionManager(configRefSegura.obtener(), gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador, controlBackpressure);
         this.alertasConfiguracionEmitidas = new ConcurrentHashMap<>();
         Hallazgo.establecerResolutorEvidencia(evidenceManager::obtenerEvidencia);
         this.esBurpProfessional = ExtensionBurpIA.esBurpProfessional(api);
-        this.capturaActiva = configSegura.escaneoPasivoHabilitado();
-        int maxThreads = configSegura.obtenerMaximoConcurrente() > 0 ? configSegura.obtenerMaximoConcurrente() : 10;
+        int maxThreads = configSnapshot.obtenerMaximoConcurrente() > 0 ? configSnapshot.obtenerMaximoConcurrente() : 10;
         this.limitador = limitador != null ? limitador : new LimitadorTasa(maxThreads);
         this.logLock = new Object();
 
         registrar(I18nUI.Consola.LOG_MANEJADOR_INICIALIZADO(
-                configSegura.obtenerMaximoConcurrente(),
-                configSegura.obtenerRetrasoSegundos(),
-                configSegura.esDetallado()));
+                configSnapshot.obtenerMaximoConcurrente(),
+                configSnapshot.obtenerRetrasoSegundos(),
+                configSnapshot.esDetallado()));
         // EFICIENCIA: Solo registrar notas de scope en modo detallado
-        if (configSegura.esDetallado()) {
+        if (configSnapshot.esDetallado()) {
             registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS());
             registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS_ACCION());
         }
@@ -118,8 +119,16 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
             PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador) {
-        this(api, config, pestaniaPrincipal, stdout, stderr, limitador,
-                null, null, null, null);
+        this(api, new ConfiguracionAPIRef(config != null ? config : new ConfiguracionAPI()), pestaniaPrincipal, 
+                stdout, stderr, limitador, null, null, null, null, null);
+    }
+
+    public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPI config, PestaniaPrincipal pestaniaPrincipal,
+            PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
+            Estadisticas estadisticas, GestorTareas gestorTareas,
+            GestorConsolaGUI gestorConsola, ModeloTablaHallazgos modeloTablaHallazgos) {
+        this(api, new ConfiguracionAPIRef(config != null ? config : new ConfiguracionAPI()), pestaniaPrincipal, 
+                stdout, stderr, limitador, estadisticas, gestorTareas, gestorConsola, modeloTablaHallazgos, null);
     }
 
     public void actualizarConfiguracion(ConfiguracionAPI nuevaConfig) {
@@ -128,9 +137,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return;
         }
 
-        if (nuevaConfig != this.config) {
-            this.config.aplicarDesde(nuevaConfig);
-        }
+        this.configRef.reemplazar(nuevaConfig);
 
         int nuevoMaximoConcurrente = nuevaConfig.obtenerMaximoConcurrente() > 0
                 ? nuevaConfig.obtenerMaximoConcurrente()
@@ -156,7 +163,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent solicitudAEnviar) {
-        if (capturaActiva && config.esDetallado()) {
+        ConfiguracionAPI config = configRef.obtener();
+        if (config.escaneoPasivoHabilitado() && config.esDetallado()) {
             rastrear("Solicitud a enviar: " + solicitudAEnviar.method() + " " + solicitudAEnviar.url());
         }
         return RequestToBeSentAction.continueWith(solicitudAEnviar);
@@ -164,7 +172,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     @Override
     public ResponseReceivedAction handleHttpResponseReceived(HttpResponseReceived respuestaRecibida) {
-        if (!capturaActiva) {
+        ConfiguracionAPI config = configRef.obtener();
+        if (!config.escaneoPasivoHabilitado()) {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -349,7 +358,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return;
         }
 
-        SolicitudAnalisis solicitudFlujo = FlowAnalysisRequestBuilder.crearSolicitudFlujo(config, solicitudesFlujo);
+        SolicitudAnalisis solicitudFlujo = FlowAnalysisRequestBuilder.crearSolicitudFlujo(configRef.obtener(), solicitudesFlujo);
         if (solicitudFlujo == null) {
             registrarError("No se pudo crear solicitud de análisis de flujo");
             return;
@@ -403,6 +412,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void registrarEstadoInicialLlM() {
+        ConfiguracionAPI config = configRef.obtener();
         ConfiguracionAPI.CodigoValidacionConsulta codigo = codigoValidacionConsulta();
         if (codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK) {
             // Verificar si multi-proveedor está habilitado
@@ -460,6 +470,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private ConfiguracionAPI.CodigoValidacionConsulta codigoValidacionConsulta() {
+        ConfiguracionAPI config = configRef.obtener();
         if (config == null) {
             return ConfiguracionAPI.CodigoValidacionConsulta.CONFIGURACION_NULA;
         }
@@ -483,8 +494,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             alertasConfiguracionEmitidas.put(codigo, ahora);
         }
 
-        String razon = config != null ? config.validarParaConsultaModelo()
-                : I18nUI.Configuracion.MSG_CONFIGURACION_NULA();
+        String razon = configRef.obtener().validarParaConsultaModelo();
         String origenSeguro = Normalizador.noEsVacio(origen) ? origen : "desconocido";
         String urlSegura = Normalizador.noEsVacio(url) ? url : "[URL NULL]";
         registrarError(I18nUI.Consola.ANALISIS_BLOQUEADO_CONFIG(razon, origenSeguro, urlSegura));
@@ -501,13 +511,15 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void rastrear(String mensaje) {
-        if (config.esDetallado()) {
+        ConfiguracionAPI config = configRef.obtener();
+        if (config != null && config.esDetallado()) {
             registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
         }
     }
 
     private void rastrear(Supplier<String> proveedorMensaje) {
-        if (!config.esDetallado()) {
+        ConfiguracionAPI config = configRef.obtener();
+        if (config == null || !config.esDetallado()) {
             return;
         }
         if (proveedorMensaje == null) {
@@ -557,7 +569,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void rastrear(String mensaje, Throwable e) {
-        if (config.esDetallado()) {
+        ConfiguracionAPI config = configRef.obtener();
+        if (config != null && config.esDetallado()) {
             java.io.StringWriter sw = new java.io.StringWriter();
             java.io.PrintWriter pw = new java.io.PrintWriter(sw);
             e.printStackTrace(pw);
@@ -579,6 +592,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void registrarResumenSeleccionContextualDetallado(List<HttpRequestResponse> solicitudes) {
+        ConfiguracionAPI config = configRef.obtener();
         if (config == null || !config.esDetallado()) {
             return;
         }
@@ -590,6 +604,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void registrarSolicitudesContextualesDetalladas(List<HttpRequestResponse> solicitudes) {
+        ConfiguracionAPI config = configRef.obtener();
         if (config == null || !config.esDetallado() || Normalizador.esVacia(solicitudes)) {
             return;
         }
@@ -599,6 +614,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void registrarSolicitudContextualDetallada(HttpRequestResponse solicitud) {
+        ConfiguracionAPI config = configRef.obtener();
         if (config == null || !config.esDetallado() || solicitud == null) {
             return;
         }
@@ -613,12 +629,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void registrarBypassContextualDetallado(String mensaje) {
+        ConfiguracionAPI config = configRef.obtener();
         if (config != null && config.esDetallado() && Normalizador.noEsVacio(mensaje)) {
             rastrearContextual(mensaje);
         }
     }
 
     private boolean debeRegistrarContextoDetallado(FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
+        ConfiguracionAPI config = configRef.obtener();
         return config != null && config.esDetallado() && contextoInvocacion != null;
     }
 
@@ -633,17 +651,23 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void pausarCaptura() {
-        capturaActiva = false;
+        ConfiguracionAPI actual = configRef.obtener();
+        ConfiguracionAPI modificada = actual.crearSnapshot();
+        modificada.establecerEscaneoPasivoHabilitado(false);
+        configRef.reemplazar(modificada);
         registrar("Captura pausada por usuario");
     }
 
     public void reanudarCaptura() {
-        capturaActiva = true;
+        ConfiguracionAPI actual = configRef.obtener();
+        ConfiguracionAPI modificada = actual.crearSnapshot();
+        modificada.establecerEscaneoPasivoHabilitado(true);
+        configRef.reemplazar(modificada);
         registrar("Captura reanudada por usuario");
     }
 
     public boolean estaCapturaActiva() {
-        return capturaActiva;
+        return configRef.obtener().escaneoPasivoHabilitado();
     }
 
 

@@ -30,6 +30,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
@@ -40,6 +41,7 @@ public class TaskExecutionManager {
     private static final long TTL_CONTEXTO_REINTENTABLE_MS = 15 * 60 * 1000L;
     private static final long TTL_CONTEXTO_ACTIVO_MS = Long.MAX_VALUE;
     private static final int MAX_CONTEXTO_REINTENTO = 1000;
+    private static final AtomicInteger contadorHilos = new AtomicInteger(0);
 
     private final ConfiguracionAPI config;
     private final GestorTareas gestorTareas;
@@ -99,7 +101,7 @@ public class TaskExecutionManager {
                 r -> {
                     Thread thread = new Thread(r);
                     thread.setDaemon(true);
-                    thread.setName("BurpIA-Task-" + UUID.randomUUID().toString().substring(0, 8));
+                    thread.setName("BurpIA-Task-" + contadorHilos.incrementAndGet());
                     return thread;
                 },
                 new ThreadPoolExecutor.AbortPolicy());
@@ -285,24 +287,21 @@ public class TaskExecutionManager {
     }
 
     private void depurarContextosHuerfanos() {
-        if (gestorTareas == null || Normalizador.esVacia(contextosReintento)) {
+        if (gestorTareas == null || contextosReintento.isEmpty()) {
             return;
         }
         long ahora = System.currentTimeMillis();
-        Iterator<Map.Entry<String, ContextoReintento>> it = contextosReintento.entrySet().iterator();
 
-        while (it.hasNext()) {
-            Map.Entry<String, ContextoReintento> entry = it.next();
+        contextosReintento.entrySet().removeIf(entry -> {
             if (entry == null) {
-                continue;
+                return true;
             }
 
             String tareaId = entry.getKey();
             ContextoReintento contexto = entry.getValue();
 
             if (Normalizador.esVacio(tareaId) || contexto == null) {
-                it.remove();
-                continue;
+                return true;
             }
 
             String estado = null;
@@ -320,9 +319,10 @@ public class TaskExecutionManager {
 
             if (debePurgar) {
                 eliminarEvidenciaSiDisponible(contexto.evidenciaId);
-                it.remove();
             }
-        }
+
+            return debePurgar;
+        });
 
         if (contextosReintento.size() <= MAX_CONTEXTO_REINTENTO) {
             return;

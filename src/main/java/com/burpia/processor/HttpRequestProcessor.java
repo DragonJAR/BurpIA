@@ -8,6 +8,7 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.FiltroContenidoAnalizable;
@@ -24,17 +25,21 @@ public final class HttpRequestProcessor {
     private static final String ORIGEN_LOG = "HttpRequestProcessor";
     
     private final MontoyaApi api;
-    private final ConfiguracionAPI config;
+    private final ConfiguracionAPIRef configRef;
     private final GestorLoggingUnificado gestorLogging;
     
-    public HttpRequestProcessor(MontoyaApi api, ConfiguracionAPI config, GestorLoggingUnificado gestorLogging) {
+    public HttpRequestProcessor(MontoyaApi api, ConfiguracionAPIRef configRef, GestorLoggingUnificado gestorLogging) {
         this.api = api;
-        this.config = config != null ? config : new ConfiguracionAPI();
+        this.configRef = configRef != null ? configRef : new ConfiguracionAPIRef(null);
         this.gestorLogging = gestorLogging;
     }
     
+    public HttpRequestProcessor(MontoyaApi api, ConfiguracionAPI config, GestorLoggingUnificado gestorLogging) {
+        this(api, new ConfiguracionAPIRef(config), gestorLogging);
+    }
+    
     public HttpRequestProcessor(MontoyaApi api, ConfiguracionAPI config) {
-        this(api, config, null);
+        this(api, new ConfiguracionAPIRef(config), null);
     }
     
     public boolean estaEnScope(HttpRequest solicitud) {
@@ -69,8 +74,11 @@ public final class HttpRequestProcessor {
 
         boolean esEstatico = HttpUtils.esRecursoEstatico(url);
 
-        if (esEstatico && config.esDetallado() && gestorLogging != null) {
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Recurso coincidio con filtro estatico: " + url));
+        if (esEstatico) {
+            ConfiguracionAPI config = configRef.obtener();
+            if (config.esDetallado() && gestorLogging != null) {
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Recurso coincidio con filtro estatico: " + url));
+            }
         }
 
         return esEstatico;
@@ -80,7 +88,7 @@ public final class HttpRequestProcessor {
         if (respuestaRecibida == null) {
             return false;
         }
-        
+        ConfiguracionAPI config = configRef.obtener();
         return config.soloProxy() && !respuestaRecibida.toolSource().isFromTool(ToolType.PROXY);
     }
     
@@ -261,9 +269,7 @@ public final class HttpRequestProcessor {
     }
     
     private ConfiguracionAPI.CodigoValidacionConsulta obtenerCodigoValidacionConsulta() {
-        if (config == null) {
-            return ConfiguracionAPI.CodigoValidacionConsulta.CONFIGURACION_NULA;
-        }
+        ConfiguracionAPI config = configRef.obtener();
         ConfiguracionAPI.CodigoValidacionConsulta codigo = config.validarCodigoParaConsultaModelo();
         return codigo != null ? codigo : ConfiguracionAPI.CodigoValidacionConsulta.CONFIGURACION_NULA;
     }

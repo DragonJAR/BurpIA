@@ -4,6 +4,7 @@ import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
+import com.burpia.util.ControlCancelacionPausa;
 import com.burpia.util.LimitadorTasa;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,8 +50,7 @@ class OrquestadorAnalisisTest {
             null,
             null,
             null,
-            null,
-            null
+            new ControlCancelacionPausa(() -> false, () -> false)
         );
     }
 

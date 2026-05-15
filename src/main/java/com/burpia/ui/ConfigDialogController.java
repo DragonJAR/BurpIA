@@ -700,7 +700,7 @@ public class ConfigDialogController {
 
         JTextArea txtPrompt = dialogo.obtenerTxtPrompt();
         String textoPrompt = txtPrompt != null ? txtPrompt.getText() : "";
-        if (Normalizador.noEsVacio(textoPrompt) && !textoPrompt.contains("{REQUEST}")) {
+        if (Normalizador.noEsVacio(textoPrompt) && !ProcesadorPromptHTTP.contieneMarcadoresRequest(textoPrompt)) {
             UIUtils.mostrarError(dialogo, I18nUI.Configuracion.TITULO_ERROR_VALIDACION(),
                 I18nUI.Configuracion.MSG_ERROR_PROMPT_SIN_REQUEST());
             return;
@@ -1070,7 +1070,7 @@ public class ConfigDialogController {
         int longitud = textoPrompt.length();
         lblContadorPrompt.setText(I18nUI.Configuracion.CONTADOR_CARACTERES(longitud));
 
-        if (Normalizador.noEsVacio(textoPrompt) && !textoPrompt.contains("{REQUEST}")) {
+        if (Normalizador.noEsVacio(textoPrompt) && !ProcesadorPromptHTTP.contieneMarcadoresRequest(textoPrompt)) {
             lblContadorPrompt.setText(I18nUI.Configuracion.CONTADOR_FALTA_REQUEST(longitud));
             lblContadorPrompt.setForeground(EstilosUI.colorErrorAccesible(EstilosUI.obtenerFondoPanel()));
         } else {
@@ -1648,24 +1648,35 @@ public class ConfigDialogController {
                 continue;
             }
 
-            ProveedorAI.ConfiguracionProveedor configProveedor = 
-                    ProveedorAI.obtenerProveedor(proveedor);
+            ConfigValidator.ValidationResult validacionApiKey =
+                    ConfigValidator.validarApiKey(snapshot.obtenerApiKeyParaProveedor(proveedor), proveedor);
+            agregarErrorValidacionProveedor(erroresMultiProveedor, proveedor, validacionApiKey);
 
-            if (configProveedor != null && configProveedor.requiereClaveApi()) {
-                String apiKey = snapshot.obtenerApiKeyParaProveedor(proveedor);
-                if (Normalizador.esVacio(apiKey)) {
-                    erroresMultiProveedor.put("multiProveedor",
-                            I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_SIN_API_KEY(proveedor));
-                }
-            }
+            ConfigValidator.ValidationResult validacionUrl =
+                    ConfigValidator.validarUrlApi(snapshot.obtenerUrlBaseParaProveedor(proveedor), proveedor);
+            agregarErrorValidacionProveedor(erroresMultiProveedor, proveedor, validacionUrl);
 
             String modelo = snapshot.obtenerModeloParaProveedor(proveedor);
-            if (Normalizador.esVacio(modelo)) {
-                erroresMultiProveedor.put("multiProveedor",
+            ConfigValidator.ValidationResult validacionModelo =
+                    ConfigValidator.validarModelo(modelo, proveedor);
+            if (!validacionModelo.esValido() && Normalizador.esVacio(modelo)) {
+                erroresMultiProveedor.put("multiProveedor." + proveedor + ".modelo",
                         I18nUI.Configuracion.ALERTA_MULTI_PROVEEDOR_SIN_MODELO(proveedor));
+            } else {
+                agregarErrorValidacionProveedor(erroresMultiProveedor, proveedor, validacionModelo);
             }
         }
 
         return erroresMultiProveedor;
+    }
+
+    private void agregarErrorValidacionProveedor(Map<String, String> errores,
+                                                 String proveedor,
+                                                 ConfigValidator.ValidationResult validacion) {
+        if (validacion.esValido()) {
+            return;
+        }
+        errores.put("multiProveedor." + proveedor + "." + validacion.obtenerCampo(),
+                validacion.obtenerMensajeError());
     }
 }

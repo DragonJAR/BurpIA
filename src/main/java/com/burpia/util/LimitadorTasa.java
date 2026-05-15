@@ -128,10 +128,11 @@ public class LimitadorTasa {
      */
     public synchronized void ajustarMaximoConcurrente(int nuevoMaximoConcurrente) {
         int objetivo = Math.max(MINIMO_CONCURRENTE, nuevoMaximoConcurrente);
-        int disponibles = semaforo.availablePermits();
-        int enUso = Math.max(0, maximoConcurrenteActual - disponibles);
-        int nuevoDisponible = objetivo - enUso;
-        int delta = nuevoDisponible - disponibles;
+        if (objetivo == maximoConcurrenteActual) {
+            return;
+        }
+
+        int delta = objetivo - maximoConcurrenteActual;
         if (delta > 0) {
             semaforo.release(delta);
         } else if (delta < 0) {

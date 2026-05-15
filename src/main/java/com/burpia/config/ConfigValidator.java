@@ -5,6 +5,8 @@ import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -232,16 +234,28 @@ public final class ConfigValidator {
     }
 
     private static boolean requiereHttps(String url, String proveedor) {
-        if (url.startsWith("https://") || url.startsWith("http://localhost")) {
+        if (url.startsWith("https://") || esUrlLocalhostHttp(url)) {
             return false;
         }
 
         String proveedorNormalizado = ProveedorAI.normalizarProveedor(proveedor);
         if ("Ollama".equals(proveedorNormalizado) || ProveedorAI.esProveedorCustom(proveedorNormalizado)) {
-            return url.startsWith("http://") ? false : true;
+            return !url.startsWith("http://");
         }
 
         return true;
+    }
+
+    private static boolean esUrlLocalhostHttp(String url) {
+        if (!url.startsWith("http://")) {
+            return false;
+        }
+        try {
+            String host = new URI(url).getHost();
+            return "localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host) || "::1".equals(host);
+        } catch (URISyntaxException e) {
+            return false;
+        }
     }
 
     // ============ VALIDACIÓN DE CAMPOS NUMÉRICOS ============

@@ -103,6 +103,29 @@ class ConfigValidatorTest {
     }
 
     @Test
+    @DisplayName("OpenAI permite HTTP solo para host localhost real")
+    void testValidarUrlApiOpenAiPermiteHttpLocalhostReal() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "http://localhost:8080/v1",
+            "OpenAI"
+        );
+
+        assertTrue(resultado.esValido(), "assertTrue failed at ConfigValidatorTest.java:localhost");
+    }
+
+    @Test
+    @DisplayName("OpenAI rechaza hosts que solo empiezan por localhost")
+    void testValidarUrlApiOpenAiRechazaHostConPrefijoLocalhost() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "http://localhost.evil.com/v1",
+            "OpenAI"
+        );
+
+        assertFalse(resultado.esValido(), "assertFalse failed at ConfigValidatorTest.java:localhost-prefijo");
+        assertEquals("url", resultado.obtenerCampo(), "assertEquals failed at ConfigValidatorTest.java:localhost-prefijo");
+    }
+
+    @Test
     @DisplayName("OpenAI mantiene requisito de HTTPS fuera de localhost")
     void testValidarUrlApiOpenAiRequiereHttpsFueraDeLocalhost() {
         ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(

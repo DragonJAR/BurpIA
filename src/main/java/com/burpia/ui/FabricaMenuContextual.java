@@ -31,6 +31,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private final Runnable manejadorCambioAlertasEnviarA;
     private final Frame parentFrame;
     private final AtomicReference<RegistroClic> ultimoClic;
+    private volatile boolean descargado = false;
     private static final long VENTANA_DEBOUNCE_MS = 500L;
 
     public interface ConsumerSolicitudSinContexto {
@@ -102,8 +103,21 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             parentFrame
         );
     }
+    /**
+     * Marca esta fábrica como descargada para que ignore futuras invocaciones.
+     * La Montoya API no permite desregistrar un ContextMenuItemsProvider,
+     * por lo que este flag evita invocaciones sobre recursos ya liberados.
+     */
+    public void marcarDescargado() {
+        descargado = true;
+    }
+
     @Override
     public List<Component> provideMenuItems(ContextMenuEvent evento) {
+        if (descargado) {
+            return List.of();
+        }
+
         List<Component> itemsMenu = new ArrayList<>();
         if (evento == null || Normalizador.esVacia(evento.selectedRequestResponses())) {
             return itemsMenu;

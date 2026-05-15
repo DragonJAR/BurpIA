@@ -13,6 +13,14 @@ if (!matcherVersion.find()) {
     throw new GradleException("No se pudo extraer VERSION_ACTUAL desde ${fuenteVersion}")
 }
 def versionCentral = matcherVersion.group(1)
+def archivoVersionRelease = file('VERSION.txt')
+if (!archivoVersionRelease.exists()) {
+    throw new GradleException("No se encontro VERSION.txt, fuente de verdad de release")
+}
+def versionRelease = archivoVersionRelease.getText('UTF-8').trim()
+if (versionRelease != versionCentral) {
+    throw new GradleException("VERSION.txt (${versionRelease}) no coincide con VersionBurpIA.VERSION_ACTUAL (${versionCentral})")
+}
 
 pmd {
     consoleOutput = true

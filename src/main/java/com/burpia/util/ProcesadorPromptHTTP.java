@@ -118,6 +118,8 @@ public final class ProcesadorPromptHTTP {
             return prompt;
         }
 
+        boolean teniaMarcadorRequest = contieneMarcadoresRequest(prompt);
+        boolean teniaMarcadorResponse = contieneMarcadoresResponse(prompt);
         String resultado = reemplazarMarcadoresNumerados(prompt, requests, responses);
 
         if (resultado.contains(TOKEN_REQUEST)) {
@@ -126,6 +128,9 @@ public final class ProcesadorPromptHTTP {
         if (resultado.contains(TOKEN_RESPONSE)) {
             resultado = resultado.replace(TOKEN_RESPONSE, construirBloquesEnumerados("RESPONSE", responses));
         }
+
+        resultado = agregarBloqueFallbackSiFalta(resultado, "REQUEST", requests, teniaMarcadorRequest);
+        resultado = agregarBloqueFallbackSiFalta(resultado, "RESPONSE", responses, teniaMarcadorResponse);
 
         return resultado;
     }
@@ -195,6 +200,23 @@ public final class ProcesadorPromptHTTP {
         }
 
         return resultado;
+    }
+
+
+    private static String agregarBloqueFallbackSiFalta(String prompt,
+                                                       String etiqueta,
+                                                       List<String> contenidos,
+                                                       boolean marcadorPresente) {
+        if (marcadorPresente) {
+            return prompt;
+        }
+
+        String bloques = construirBloquesEnumerados(etiqueta, contenidos);
+        if (esVacio(bloques)) {
+            return prompt;
+        }
+
+        return prompt + "\n\n" + etiqueta + ":\n" + bloques;
     }
 
     private static String construirBloquesEnumerados(String etiqueta, List<String> contenidos) {

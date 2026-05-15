@@ -5,6 +5,7 @@ import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
@@ -1738,5 +1739,37 @@ public class ConfiguracionAPI {
     // Método helper para verificar si algún nivel de logging está habilitado
     public boolean hayAlgúnNivelLoggingHabilitado() {
         return nivelErrorHabilitado || nivelWarnHabilitado || nivelInfoHabilitado;
+    }
+
+    /**
+     * Estima el context window (tokens) de un modelo de AI conocido.
+     * Datos centralizados para evitar duplicación y facilitar actualización.
+     *
+     * @param modelo nombre del modelo (case-insensitive)
+     * @return número estimado de tokens del context window
+     */
+    public static int estimarContextWindow(String modelo) {
+        if (Normalizador.esVacio(modelo)) {
+            return 4000;
+        }
+        String m = modelo.toLowerCase(Locale.ROOT);
+        if (m.contains("gpt-4o") || m.contains("gpt-4-32k")) return 128000;
+        if (m.contains("gpt-4-turbo")) return 128000;
+        if (m.contains("gpt-4")) return 8192;
+        if (m.contains("gpt-3.5-turbo-16k")) return 16384;
+        if (m.contains("gpt-3.5")) return 4096;
+        if (m.contains("claude-3-5-sonnet") || m.contains("claude-3-opus")) return 200000;
+        if (m.contains("claude-3-haiku")) return 200000;
+        if (m.contains("claude-3")) return 100000;
+        if (m.contains("claude")) return 100000;
+        if (m.contains("gemini-2")) return 1000000;
+        if (m.contains("gemini-1.5-pro")) return 2000000;
+        if (m.contains("gemini-1.5-flash")) return 1000000;
+        if (m.contains("gemini")) return 32000;
+        if (m.contains("llama-3") || m.contains("llama3")) return 8000;
+        if (m.contains("llama")) return 4096;
+        if (m.contains("mistral-large")) return 128000;
+        if (m.contains("mistral")) return 32000;
+        return 4000;
     }
 }

@@ -136,17 +136,25 @@ public class Hallazgo {
         if (evidenciaActual != null) {
             return evidenciaActual;
         }
-        String id = evidenciaId;
-        ResolutorEvidencia resolutor = resolutorEvidencia;
-        if (Normalizador.esVacio(id) || resolutor == null) {
-            return null;
-        }
-        try {
-            evidenciaActual = resolutor.resolver(id);
-            evidenciaHttp = evidenciaActual;
-            return evidenciaActual;
-        } catch (Exception e) {
-            return null;
+
+        synchronized (this) {
+            evidenciaActual = evidenciaHttp;
+            if (evidenciaActual != null) {
+                return evidenciaActual;
+            }
+
+            String id = evidenciaId;
+            ResolutorEvidencia resolutor = resolutorEvidencia;
+            if (Normalizador.esVacio(id) || resolutor == null) {
+                return null;
+            }
+            try {
+                evidenciaActual = resolutor.resolver(id);
+                evidenciaHttp = evidenciaActual;
+                return evidenciaActual;
+            } catch (Exception e) {
+                return null;
+            }
         }
     }
 

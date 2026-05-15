@@ -7,19 +7,31 @@ cd "$PROJECT_DIR"
 export GRADLE_USER_HOME="${GRADLE_USER_HOME:-$PROJECT_DIR/.gradle-local}"
 
 resolver_version_actual() {
+    local archivo_version="$PROJECT_DIR/VERSION.txt"
     local fuente_version="$PROJECT_DIR/src/main/java/com/burpia/util/VersionBurpIA.java"
-    if [[ ! -f "$fuente_version" ]]; then
-        echo "desconocida"
-        return 0
+    if [[ ! -f "$archivo_version" ]]; then
+        echo "ERROR: No se encontró VERSION.txt" >&2
+        return 1
     fi
+    if [[ ! -f "$fuente_version" ]]; then
+        echo "ERROR: No se encontró VersionBurpIA.java" >&2
+        return 1
+    fi
+
+    local version_release
+    version_release=$(tr -d '[:space:]' < "$archivo_version")
 
     local extraida
     extraida=$(sed -n 's/.*VERSION_ACTUAL[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$fuente_version" | head -n 1)
-    if [[ -z "$extraida" ]]; then
-        echo "desconocida"
-        return 0
+    if [[ -z "$version_release" || -z "$extraida" ]]; then
+        echo "ERROR: No se pudo resolver la versión de release" >&2
+        return 1
     fi
-    echo "$extraida"
+    if [[ "$version_release" != "$extraida" ]]; then
+        echo "ERROR: VERSION.txt ($version_release) no coincide con VersionBurpIA.VERSION_ACTUAL ($extraida)" >&2
+        return 1
+    fi
+    echo "$version_release"
 }
 
 resolver_java_home() {
@@ -72,7 +84,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
-VERSION_ACTUAL="$(resolver_version_actual)"
+if ! VERSION_ACTUAL="$(resolver_version_actual)"; then
+    exit 1
+fi
 
 echo -e "${BLUE}================================================${NC}"
 echo -e "${BLUE}  BurpIA v${VERSION_ACTUAL} - Constructor de JAR${NC}"

@@ -5,6 +5,7 @@ import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
+import com.burpia.util.ControlCancelacionPausa;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.LimitadorTasa;
@@ -14,7 +15,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.List;
-import java.util.function.BooleanSupplier;
 
 public class OrquestadorAnalisis {
     private static final String ORIGEN_LOG = "OrquestadorAnalisis";
@@ -31,8 +31,7 @@ public class OrquestadorAnalisis {
     private final Callback callback;
     private final Runnable alInicioAnalisis;
     private final GestorConsolaGUI gestorConsola;
-    private final BooleanSupplier tareaCancelada;
-    private final BooleanSupplier tareaPausada;
+    private final ControlCancelacionPausa controlCancelacionPausa;
     private final ConstructorPrompts constructorPrompt;
     private final GestorLoggingUnificado gestorLogging;
     private final AnalizadorHTTP analizadorHTTP;
@@ -53,8 +52,7 @@ public class OrquestadorAnalisis {
                               Callback callback, 
                               Runnable alInicioAnalisis,
                               GestorConsolaGUI gestorConsola, 
-                              BooleanSupplier tareaCancelada, 
-                              BooleanSupplier tareaPausada) {
+                              ControlCancelacionPausa controlCancelacionPausa) {
         this.solicitud = solicitud;
         this.config = config != null ? config : new ConfiguracionAPI();
         this.stdout = stdout != null ? stdout : new PrintWriter(OutputStream.nullOutputStream(), true);
@@ -68,11 +66,13 @@ public class OrquestadorAnalisis {
         };
         this.alInicioAnalisis = alInicioAnalisis;
         this.gestorConsola = gestorConsola;
-        this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
-        this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
+        this.controlCancelacionPausa = controlCancelacionPausa != null ? controlCancelacionPausa : new ControlCancelacionPausa(null, null);
         this.constructorPrompt = new ConstructorPrompts(this.config);
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
-        this.analizadorHTTP = new AnalizadorHTTP(this.config, this.tareaCancelada, this.tareaPausada, this.gestorLogging);
+        // Extraer suppliers para AnalizadorHTTP (API legacy)
+        java.util.function.BooleanSupplier cancelada = this.controlCancelacionPausa::esCancelada;
+        java.util.function.BooleanSupplier pausada = this.controlCancelacionPausa::esPausada;
+        this.analizadorHTTP = new AnalizadorHTTP(this.config, cancelada, pausada, this.gestorLogging);
         this.parseador = new ParseadorRespuestasAI(this.gestorLogging, this.config.obtenerIdiomaUi());
         this.promptTruncador = new PromptTruncador();
     }
@@ -163,27 +163,15 @@ public class OrquestadorAnalisis {
     }
 
     private void verificarCancelacion() throws InterruptedException {
-        if (tareaCancelada.getAsBoolean()) {
-            throw new InterruptedException(I18nUI.Tareas.MSG_CANCELADO_USUARIO());
-        }
+        controlCancelacionPausa.verificarCancelacion();
     }
 
     private void esperarSiPausada() throws InterruptedException {
-        while (tareaPausada.getAsBoolean() && !tareaCancelada.getAsBoolean()) {
-            Thread.sleep(250);
-        }
-        verificarCancelacion();
+        controlCancelacionPausa.esperarSiPausada();
     }
 
     private void esperarConControl(long milisegundos) throws InterruptedException {
-        long restante = milisegundos;
-        while (restante > 0) {
-            verificarCancelacion();
-            esperarSiPausada();
-            long espera = Math.min(restante, 250);
-            Thread.sleep(espera);
-            restante -= espera;
-        }
+        controlCancelacionPausa.esperarConControl(milisegundos);
     }
 
     private String construirPromptAnalisis() {
@@ -270,26 +258,10 @@ public class OrquestadorAnalisis {
     
     /**
      * Estima el context window de un modelo conocido.
-     * DRY - datos centralizados.
+     * Delegado a ConfiguracionAPI.estimarContextWindow() para centralización.
      */
     private int estimarContextWindow(String modelo) {
-        if (Normalizador.esVacio(modelo)) {
-            return 4000;
-        }
-        String m = modelo.toLowerCase();
-        if (m.contains("gpt-4o") || m.contains("gpt-4-32k")) return 128000;
-        if (m.contains("gpt-4")) return 8192;
-        if (m.contains("gpt-3.5-turbo-16k")) return 16384;
-        if (m.contains("gpt-3.5")) return 4096;
-        if (m.contains("claude-3-5-sonnet") || m.contains("claude-3-opus")) return 200000;
-        if (m.contains("claude-3")) return 100000;
-        if (m.contains("claude")) return 100000;
-        if (m.contains("gemini-1.5-pro")) return 1000000;
-        if (m.contains("gemini")) return 32000;
-        if (m.contains("llama-3") || m.contains("llama3")) return 8000;
-        if (m.contains("llama")) return 4096;
-        if (m.contains("mistral")) return 32000;
-        return 4000;
+        return ConfiguracionAPI.estimarContextWindow(modelo);
     }
 
     private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
@@ -301,14 +273,16 @@ public class OrquestadorAnalisis {
     }
 
     private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {
+        java.util.function.BooleanSupplier cancelada = controlCancelacionPausa::esCancelada;
+        java.util.function.BooleanSupplier pausada = controlCancelacionPausa::esPausada;
         GestorMultiProveedor gestorMultiProveedor = new GestorMultiProveedor(
                 solicitud,
                 config,
                 stdout,
                 stderr,
                 gestorConsola,
-                tareaCancelada,
-                tareaPausada,
+                cancelada,
+                pausada,
                 gestorLogging);
         return gestorMultiProveedor.ejecutarAnalisisMultiProveedor();
     }

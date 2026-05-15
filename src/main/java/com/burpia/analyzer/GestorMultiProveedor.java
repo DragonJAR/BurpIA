@@ -77,63 +77,62 @@ public class GestorMultiProveedor {
         
         List<Hallazgo> todosHallazgos = new ArrayList<>();
         List<String> proveedoresFallidos = new ArrayList<>();
+        boolean proveedorEjecutadoPreviamente = false;
 
-        try {
-            for (String proveedor : proveedores) {
-                verificarCancelacion();
-                esperarSiPausada();
+        for (String proveedor : proveedores) {
+            verificarCancelacion();
+            esperarSiPausada();
 
-                if (Normalizador.esVacio(proveedor)) {
-                    continue;
-                }
-                
-                if (!ProveedorAI.existeProveedor(proveedor)) {
-                    registrar("PROVEEDOR: Proveedor no existe: " + proveedor + ", omitiendo");
-                    continue;
-                }
-
-                String modelo = config.obtenerModeloParaProveedor(proveedor);
-                if (Normalizador.esVacio(modelo)) {
-                    registrar("PROVEEDOR: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo");
-                    continue;
-                }
-
-                if (!todosHallazgos.isEmpty()) {
-                    long delaySegundos = DELAY_ENTRE_PROVEEDORES_MS / 1000L;
-                    registrar("PROVEEDOR: Esperando " + delaySegundos + " segundos antes del siguiente proveedor");
-                    esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
-                }
-
-                registrar(LINEA_SEPARADORA_PROVEEDOR);
-                registrar("PROVEEDOR: " + proveedor + " (" + modelo + ")");
-
-                try {
-                    ResultadoAnalisisMultiple resultado = ejecutarAnalisisProveedor(proveedor, modelo);
-                    List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
-                    
-                    registrar("PROVEEDOR: " + proveedor + " completado - " + hallazgosProveedor.size()
-                            + " hallazgo(s) encontrado(s)");
-                    todosHallazgos.addAll(hallazgosProveedor);
-
-                } catch (Exception e) {
-                    registrar("PROVEEDOR: Error con " + proveedor + ": " + e.getMessage());
-                    proveedoresFallidos.add(proveedor);
-                }
+            if (Normalizador.esVacio(proveedor)) {
+                continue;
+            }
+            
+            if (!ProveedorAI.existeProveedor(proveedor)) {
+                registrar("PROVEEDOR: Proveedor no existe: " + proveedor + ", omitiendo");
+                continue;
             }
 
-            if (!proveedoresFallidos.isEmpty()) {
-                registrarError("PROVEEDOR: " + proveedoresFallidos.size() +
-                        " proveedor(es) fallaron: " + String.join(", ", proveedoresFallidos));
+            String modelo = config.obtenerModeloParaProveedor(proveedor);
+            if (Normalizador.esVacio(modelo)) {
+                registrar("PROVEEDOR: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo");
+                continue;
+            }
+
+            if (proveedorEjecutadoPreviamente) {
+                long delaySegundos = DELAY_ENTRE_PROVEEDORES_MS / 1000L;
+                registrar("PROVEEDOR: Esperando " + delaySegundos + " segundos antes del siguiente proveedor");
+                esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
             }
 
             registrar(LINEA_SEPARADORA_PROVEEDOR);
-            registrar("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
+            registrar("PROVEEDOR: " + proveedor + " (" + modelo + ")");
 
-            return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
-                    solicitud.obtenerSolicitudHttp(), proveedoresFallidos);
+            try {
+                ResultadoAnalisisMultiple resultado = ejecutarAnalisisProveedor(proveedor, modelo);
+                List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
+                
+                registrar("PROVEEDOR: " + proveedor + " completado - " + hallazgosProveedor.size()
+                        + " hallazgo(s) encontrado(s)");
+                todosHallazgos.addAll(hallazgosProveedor);
 
-        } finally {
+            } catch (Exception e) {
+                registrar("PROVEEDOR: Error con " + proveedor + ": " + e.getMessage());
+                proveedoresFallidos.add(proveedor);
+            } finally {
+                proveedorEjecutadoPreviamente = true;
+            }
         }
+
+        if (!proveedoresFallidos.isEmpty()) {
+            registrarError("PROVEEDOR: " + proveedoresFallidos.size() +
+                    " proveedor(es) fallaron: " + String.join(", ", proveedoresFallidos));
+        }
+
+        registrar(LINEA_SEPARADORA_PROVEEDOR);
+        registrar("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
+
+        return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
+                solicitud.obtenerSolicitudHttp(), proveedoresFallidos);
     }
 
     private ResultadoAnalisisMultiple ejecutarAnalisisProveedorUnico() throws IOException, InterruptedException {

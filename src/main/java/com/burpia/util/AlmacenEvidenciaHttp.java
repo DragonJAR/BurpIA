@@ -99,9 +99,10 @@ public class AlmacenEvidenciaHttp {
         String evidenciaId = UUID.randomUUID().toString();
         Path rutaArchivo = rutaArchivo(evidenciaId);
 
+        lock.lock();
         try {
             escribirArchivo(rutaArchivo, requestBytes, responseBytes);
-            agregarACache(evidenciaId, evidencia, requestBytes.length + responseBytes.length);
+            agregarACacheDentroDeLock(evidenciaId, evidencia, requestBytes.length + responseBytes.length);
             int totalEscrituras = escrituras.incrementAndGet();
             if (totalEscrituras % PoliticaMemoria.FRECUENCIA_DEPURACION_EVIDENCIA == 0) {
                 depurarArchivosDisco();
@@ -111,6 +112,8 @@ public class AlmacenEvidenciaHttp {
             registrarError(I18nLogs.AlmacenEvidencia.ERROR_GUARDAR_LIMPIAR() + rutaArchivo, e);
             eliminarArchivoSilencioso(rutaArchivo);
             return null;
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -147,7 +150,12 @@ public class AlmacenEvidenciaHttp {
             if (evidencia == null) {
                 return null;
             }
-            agregarACache(evidenciaId, evidencia, registro.requestBytes.length + registro.responseBytes.length);
+            lock.lock();
+            try {
+                agregarACacheDentroDeLock(evidenciaId, evidencia, registro.requestBytes.length + registro.responseBytes.length);
+            } finally {
+                lock.unlock();
+            }
             return evidencia;
         } catch (Exception e) {
             registrarError(I18nLogs.AlmacenEvidencia.ERROR_RECONSTRUIR() + evidenciaId, e);
@@ -210,21 +218,16 @@ public class AlmacenEvidenciaHttp {
         }
     }
 
-    private void agregarACache(String evidenciaId, HttpRequestResponse evidencia, long pesoBytes) {
+    private void agregarACacheDentroDeLock(String evidenciaId, HttpRequestResponse evidencia, long pesoBytes) {
         if (evidenciaId == null || evidencia == null) {
             return;
         }
-        lock.lock();
-        try {
-            EntradaCache previa = cache.put(evidenciaId, new EntradaCache(evidencia, Math.max(0L, pesoBytes)));
-            if (previa != null) {
-                bytesCache = Math.max(0L, bytesCache - previa.pesoBytes);
-            }
-            bytesCache += Math.max(0L, pesoBytes);
-            aplicarLimitesCache();
-        } finally {
-            lock.unlock();
+        EntradaCache previa = cache.put(evidenciaId, new EntradaCache(evidencia, Math.max(0L, pesoBytes)));
+        if (previa != null) {
+            bytesCache = Math.max(0L, bytesCache - previa.pesoBytes);
         }
+        bytesCache += Math.max(0L, pesoBytes);
+        aplicarLimitesCache();
     }
 
     private void aplicarLimitesCache() {

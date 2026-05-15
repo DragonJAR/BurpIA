@@ -280,7 +280,7 @@ class HttpRequestProcessorTest {
 
     @Test
     void testPuedeIniciarAnalisis_ConConfigNull_UsaConfiguracionPorDefectoValida() {
-        processor = new HttpRequestProcessor(api, null, gestorLogging);
+        processor = new HttpRequestProcessor(api, (ConfiguracionAPI) null, gestorLogging);
         boolean resultado = processor.puedeIniciarAnalisis();
         assertTrue(resultado);
     }

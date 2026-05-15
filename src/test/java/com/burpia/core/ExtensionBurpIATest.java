@@ -10,6 +10,7 @@ import burp.api.montoya.ui.contextmenu.InvocationType;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.ui.FabricaMenuContextual;
@@ -363,7 +364,7 @@ class ExtensionBurpIATest {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(false);
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
             enviarAAgente.setAccessible(true);
@@ -380,7 +381,7 @@ class ExtensionBurpIATest {
             when(config.agenteHabilitado()).thenReturn(false);
             when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(config.obtenerAgentePrompt()).thenReturn("PROMPT_OPERATIVO");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             Method metodo = ExtensionBurpIA.class.getDeclaredMethod("obtenerPromptAgenteDisponible");
             metodo.setAccessible(true);
@@ -400,7 +401,7 @@ class ExtensionBurpIATest {
             when(config.agenteHabilitado()).thenReturn(false);
             when(config.hayAlgunAgenteHabilitado()).thenReturn(true);
             when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
             establecerCampo(extension, "pestaniaPrincipal", pestania);
 
             Method metodo = ExtensionBurpIA.class.getDeclaredMethod("inicializarAgenteSiHabilitado");
@@ -416,7 +417,7 @@ class ExtensionBurpIATest {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
             enviarAAgente.setAccessible(true);
@@ -431,7 +432,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("REQ={REQUEST}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
             enviarAAgente.setAccessible(true);
@@ -468,7 +469,7 @@ class ExtensionBurpIATest {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             Method enviarHallazgo = ExtensionBurpIA.class.getDeclaredMethod("enviarHallazgoAAgente", Hallazgo.class);
             enviarHallazgo.setAccessible(true);
@@ -483,7 +484,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("Analiza la vulnerabilidad y responde en {OUTPUT_LANGUAGE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
@@ -515,7 +516,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
@@ -547,7 +548,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}\\nTITLE={TITLE}\\nDESC={DESCRIPTION}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
@@ -592,7 +593,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
@@ -628,7 +629,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("URL={URL}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
@@ -670,7 +671,7 @@ class ExtensionBurpIATest {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(false);
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
             enviarFlujoAAgente.setAccessible(true);
@@ -685,7 +686,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             HttpRequestResponse invalida = mock(HttpRequestResponse.class);
             when(invalida.request()).thenReturn(null);
@@ -703,7 +704,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("PROMPT USUARIO\\nREQ={REQUEST}\\nRES={RESPONSE}\\nLANG={OUTPUT_LANGUAGE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
@@ -745,7 +746,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("UNO={REQUEST_1}\\nDOS={REQUEST_2}\\nR1={RESPONSE_1}\\nR2={RESPONSE_2}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
@@ -785,7 +786,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("Analiza el flujo y responde en {OUTPUT_LANGUAGE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
@@ -817,7 +818,7 @@ class ExtensionBurpIATest {
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
             config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
             enviarFlujoAAgente.setAccessible(true);
@@ -842,7 +843,7 @@ class ExtensionBurpIATest {
             config.establecerAgenteHabilitado(true);
             config.establecerDetallado(true);
             config.establecerAgentePrompt("REQ={REQUEST}\\nRES={RESPONSE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             StringWriter stdoutBuffer = new StringWriter();
             establecerCampo(extension, "stdout", new PrintWriter(stdoutBuffer, true));
@@ -888,7 +889,7 @@ class ExtensionBurpIATest {
             config.establecerAgenteHabilitado(true);
             config.establecerDetallado(true);
             config.establecerAgentePrompt("PROMPT\\nREQ={REQUEST}\\nRES={RESPONSE}");
-            establecerCampo(extension, "config", config);
+            establecerCampoConfigConRef(extension, config);
 
             StringWriter stdoutBuffer = new StringWriter();
             establecerCampo(extension, "stdout", new PrintWriter(stdoutBuffer, true));
@@ -934,6 +935,21 @@ class ExtensionBurpIATest {
             assertTrue(logs.contains("Response omitida en serialización de agente"), logs);
             assertTrue(logs.contains("Longitud de payload a agente"), logs);
         }
+    }
+
+    /**
+     * Establece el campo 'config' Y también 'configRef' envolviendo el config en un ConfiguracionAPIRef.
+     * Este método debe usarse en lugar de establecerCampo(extension, "config", config) directamente
+     * para mantener configRef sincronizado con config.
+     */
+    private static void establecerCampoConfigConRef(Object objetivo, ConfiguracionAPI config) throws Exception {
+        Field fieldConfig = ExtensionBurpIA.class.getDeclaredField("config");
+        fieldConfig.setAccessible(true);
+        fieldConfig.set(objetivo, config);
+
+        Field fieldConfigRef = ExtensionBurpIA.class.getDeclaredField("configRef");
+        fieldConfigRef.setAccessible(true);
+        fieldConfigRef.set(objetivo, new ConfiguracionAPIRef(config));
     }
 
     @SuppressWarnings("unchecked")

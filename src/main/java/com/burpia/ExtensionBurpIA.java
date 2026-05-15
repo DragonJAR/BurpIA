@@ -6,6 +6,7 @@ import burp.api.montoya.core.BurpSuiteEdition;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.config.GestorConfiguracion;
 import com.burpia.flow.FlowAnalysisConstraints;
 import com.burpia.i18n.I18nLogs;
@@ -52,6 +53,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private MontoyaApi api;
     private ConfiguracionAPI config;
+    private ConfiguracionAPIRef configRef;
     private GestorConfiguracion gestorConfig;
     private PestaniaPrincipal pestaniaPrincipal;
     private LimitadorTasa limitador;
@@ -86,6 +88,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
         gestorConfig = new GestorConfiguracion(stdout, stderr);
         config = gestorConfig.cargarConfiguracion();
+        configRef = new ConfiguracionAPIRef(config);
         EstilosUI.actualizarFuentes(config);
         I18nUI.establecerIdioma(config.obtenerIdiomaUi());
         gestorConsola = new GestorConsolaGUI();
@@ -120,8 +123,8 @@ public class ExtensionBurpIA implements BurpExtension {
         inicializarAgenteSiHabilitado();
 
         manejadorHttp = new ManejadorHttpBurpIA(
-                api, config, pestaniaPrincipal, stdout, stderr, limitador,
-                estadisticas, gestorTareas, gestorConsola, modeloTablaHallazgos);
+                api, configRef, pestaniaPrincipal, stdout, stderr, limitador,
+                estadisticas, gestorTareas, gestorConsola, modeloTablaHallazgos, httpRequestProcessor);
         if (gestorTareas != null) {
             gestorTareas.establecerManejadorCancelacion(manejadorHttp::cancelarEjecucionActiva);
             gestorTareas.establecerManejadorPausa(manejadorHttp::cancelarEjecucionActiva);
@@ -206,7 +209,7 @@ public class ExtensionBurpIA implements BurpExtension {
                     api,
                     this::analizarSolicitudManual,
                     this::analizarFlujoManual,
-                    config,
+                    configRef.obtener(),
                     this::enviarAAgente,
                     this::enviarFlujoAAgente,
                     () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto"),
@@ -315,19 +318,21 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private boolean hayAgenteOperativoDisponible() {
-        return config != null && config.hayAlgunAgenteHabilitado();
+        ConfiguracionAPI cfg = configRef.obtener();
+        return cfg != null && cfg.hayAlgunAgenteHabilitado();
     }
 
     private String obtenerTipoAgenteOperativoActual() {
-        if (config == null) {
+        ConfiguracionAPI cfg = configRef.obtener();
+        if (cfg == null) {
             return null;
         }
-        String tipoAgenteOperativo = config.obtenerTipoAgenteOperativo();
-        return Normalizador.noEsVacio(tipoAgenteOperativo) ? tipoAgenteOperativo : config.obtenerTipoAgente();
+        String tipoAgenteOperativo = cfg.obtenerTipoAgenteOperativo();
+        return Normalizador.noEsVacio(tipoAgenteOperativo) ? tipoAgenteOperativo : cfg.obtenerTipoAgente();
     }
 
     private boolean enviarHallazgoAAgente(Hallazgo hallazgo) {
-        if (config == null) {
+        if (configRef == null || configRef.obtener() == null) {
             registrarError("No se puede usar el Agente: configuracion no inicializada");
             return false;
         }
@@ -357,7 +362,7 @@ public class ExtensionBurpIA implements BurpExtension {
             String titulo = usaTitulo && tieneContenido(tituloValor) ? tituloValor : "";
             String resumen = usaResumen && tieneContenido(resumenValor) ? resumenValor : "";
             String urlContext = usaUrl && tieneContenido(urlContextValor) ? urlContextValor : "";
-            String lang = config.obtenerIdiomaUi();
+            String lang = configRef.obtener().obtenerIdiomaUi();
 
             StringBuilder inputBuilder = new StringBuilder();
             agregarLineaSiHayContenido(inputBuilder, !usaTitulo, "Title", tituloValor);
@@ -434,7 +439,8 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private String obtenerPromptAgenteDisponible() {
-        if (config == null) {
+        ConfiguracionAPI cfg = configRef.obtener();
+        if (cfg == null) {
             registrarError("No se puede usar el Agente: configuracion no inicializada");
             return null;
         }
@@ -442,7 +448,7 @@ public class ExtensionBurpIA implements BurpExtension {
             registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
             return null;
         }
-        return normalizarPromptAgente(config.obtenerAgentePrompt());
+        return normalizarPromptAgente(cfg.obtenerAgentePrompt());
     }
 
     private String serializarSolicitudSiNecesario(String prompt, HttpRequestResponse evidencia) {
@@ -510,7 +516,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private String construirPromptFlujoAgente(String prompt, List<HttpRequestResponse> evidencias) {
         if (!ProcesadorPromptHTTP.contieneMarcadoresHttp(prompt) || Normalizador.esVacia(evidencias)) {
-            return aplicarTokensPromptAgente(prompt, "", "", config.obtenerIdiomaUi());
+            return aplicarTokensPromptAgente(prompt, "", "", configRef.obtener().obtenerIdiomaUi());
         }
 
         List<String> requests = ProcesadorPromptHTTP.contieneMarcadoresRequest(prompt)
@@ -521,7 +527,7 @@ public class ExtensionBurpIA implements BurpExtension {
             : List.of();
 
         String promptConHttp = ProcesadorPromptHTTP.reemplazarContenidoFlujo(prompt, requests, responses);
-        return aplicarTokensPromptAgente(promptConHttp, "", "", config.obtenerIdiomaUi());
+        return aplicarTokensPromptAgente(promptConHttp, "", "", configRef.obtener().obtenerIdiomaUi());
     }
 
     private List<String> serializarSolicitudesFlujo(List<HttpRequestResponse> evidencias) {
@@ -935,7 +941,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private HttpRequestProcessor obtenerProcesadorSolicitudes() {
         if (httpRequestProcessor == null) {
-            httpRequestProcessor = new HttpRequestProcessor(api, config, gestorLogging);
+            httpRequestProcessor = new HttpRequestProcessor(api, configRef.obtener(), gestorLogging);
         }
         return httpRequestProcessor;
     }
@@ -949,7 +955,9 @@ public class ExtensionBurpIA implements BurpExtension {
         } else {
             manejadorHttp.reanudarCaptura();
         }
-        config.establecerEscaneoPasivoHabilitado(manejadorHttp.estaCapturaActiva());
+        ConfiguracionAPI snapshot = configRef.obtener();
+        snapshot.establecerEscaneoPasivoHabilitado(manejadorHttp.estaCapturaActiva());
+        configRef.reemplazar(snapshot);
         guardarConfiguracionSilenciosa("captura");
         pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
         registrar("Estado de captura actualizado: " + (manejadorHttp.estaCapturaActiva() ? "ACTIVA" : "PAUSADA"));
@@ -1062,6 +1070,12 @@ public class ExtensionBurpIA implements BurpExtension {
 
     public void unload() {
         registrar("Descargando extensión BurpIA...");
+
+        this.httpRequestProcessor = null;
+
+        if (fabricaMenuContextual != null) {
+            fabricaMenuContextual.marcarDescargado();
+        }
 
         if (manejadorHttp != null) {
             manejadorHttp.shutdown();

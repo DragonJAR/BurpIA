@@ -413,6 +413,45 @@ class ProcesadorPromptHTTPTest {
         }
 
         @Test
+        @DisplayName("Agrega respuestas de flujo cuando el prompt solo contiene REQUEST")
+        void agregaResponsesFallbackCuandoPromptSoloTieneRequest() {
+            String prompt = "Analiza el flujo completo: {REQUEST}";
+            List<SolicitudAnalisis> solicitudes = List.of(
+                crearSolicitud("https://example.com/api1", METODO_GET, "req1", "resp1"),
+                crearSolicitudSinRespuesta("https://example.com/api2", METODO_POST, "req2")
+            );
+
+            String resultado = ProcesadorPromptHTTP.procesarFlujo(prompt, solicitudes, configEn);
+
+            assertTrue(resultado.contains("Analiza el flujo completo:"),
+                "Debe preservar el texto del usuario");
+            assertTrue(resultado.contains("=== REQUEST 1 ==="),
+                "Debe reemplazar el marcador REQUEST existente");
+            assertTrue(resultado.contains("RESPONSE:\n=== RESPONSE 1 ==="),
+                "Debe agregar las respuestas disponibles cuando falta el marcador RESPONSE");
+            assertFalse(resultado.contains("=== RESPONSE 2 ==="),
+                "No debe inventar respuestas faltantes");
+        }
+
+        @Test
+        @DisplayName("Agrega respuestas de flujo cuando el prompt usa REQUEST numerado")
+        void agregaResponsesFallbackConRequestNumerado() {
+            String prompt = "Paso inicial: {REQUEST_1}";
+            List<SolicitudAnalisis> solicitudes = List.of(
+                crearSolicitud("https://example.com/api1", METODO_GET, "req1", "resp1")
+            );
+
+            String resultado = ProcesadorPromptHTTP.procesarFlujo(prompt, solicitudes, configEn);
+
+            assertTrue(resultado.contains("Paso inicial:"),
+                "Debe preservar el texto del usuario");
+            assertFalse(resultado.contains("{REQUEST_1}"),
+                "Debe reemplazar el marcador numerado");
+            assertTrue(resultado.contains("RESPONSE:\n=== RESPONSE 1 ==="),
+                "Debe agregar respuestas aunque el marcador de request sea numerado");
+        }
+
+        @Test
         @DisplayName("Reemplaza OUTPUT_LANGUAGE en flujo")
         void reemplazaIdiomaEnFlujo() {
             String prompt = "Language: {OUTPUT_LANGUAGE}";

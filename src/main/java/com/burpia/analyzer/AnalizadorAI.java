@@ -8,6 +8,7 @@ import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.ControlBackpressureGlobal;
+import com.burpia.util.ControlCancelacionPausa;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
@@ -28,8 +29,7 @@ public class AnalizadorAI implements Runnable {
     private final Callback callback;
     private final Runnable alInicioAnalisis;
     private final GestorConsolaGUI gestorConsola;
-    private final BooleanSupplier tareaCancelada;
-    private final BooleanSupplier tareaPausada;
+    private final ControlCancelacionPausa controlCancelacionPausa;
     private final ControlBackpressureGlobal controlBackpressure;
     private final GestorLoggingUnificado gestorLogging;
     private final OrquestadorAnalisis orquestador;
@@ -111,8 +111,7 @@ public class AnalizadorAI implements Runnable {
         };
         this.alInicioAnalisis = alInicioAnalisis;
         this.gestorConsola = gestorConsola;
-        this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
-        this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
+        this.controlCancelacionPausa = new ControlCancelacionPausa(tareaCancelada, tareaPausada);
         this.controlBackpressure = controlBackpressure;
         
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
@@ -132,7 +131,7 @@ public class AnalizadorAI implements Runnable {
         
         this.orquestador = new OrquestadorAnalisis(
             solicitud, config, stdout, stderr, limitador, callbackOrquestador,
-            alInicioAnalisis, gestorConsola, tareaCancelada, tareaPausada);
+            alInicioAnalisis, gestorConsola, this.controlCancelacionPausa);
             
         this.parseador = new ParseadorRespuestasAI(gestorLogging, 
             config != null ? config.obtenerIdiomaUi() : "es");
@@ -305,35 +304,23 @@ public class AnalizadorAI implements Runnable {
     }
 
     private boolean esCancelada() {
-        return tareaCancelada.getAsBoolean();
+        return controlCancelacionPausa.esCancelada();
     }
 
     private boolean esPausada() {
-        return tareaPausada.getAsBoolean();
+        return controlCancelacionPausa.esPausada();
     }
 
     private void verificarCancelacion() throws InterruptedException {
-        if (esCancelada()) {
-            throw new InterruptedException(I18nUI.Tareas.MSG_CANCELADO_USUARIO());
-        }
+        controlCancelacionPausa.verificarCancelacion();
     }
 
     private void esperarSiPausada() throws InterruptedException {
-        while (esPausada() && !esCancelada()) {
-            Thread.sleep(250);
-        }
-        verificarCancelacion();
+        controlCancelacionPausa.esperarSiPausada();
     }
 
     private void esperarConControl(long milisegundos) throws InterruptedException {
-        long restante = milisegundos;
-        while (restante > 0) {
-            verificarCancelacion();
-            esperarSiPausada();
-            long espera = Math.min(restante, 250);
-            Thread.sleep(espera);
-            restante -= espera;
-        }
+        controlCancelacionPausa.esperarConControl(milisegundos);
     }
 
     private static String mensajeErrorSolicitudNoDisponible() {

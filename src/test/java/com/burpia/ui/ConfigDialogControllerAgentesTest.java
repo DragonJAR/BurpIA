@@ -19,6 +19,8 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -519,6 +521,74 @@ class ConfigDialogControllerAgentesTest {
                 "assertFalse failed at ConfigDialogControllerAgentesTest.java:441");
             assertEquals(comandoGeminiInvalido, recargada.obtenerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name()),
                 "assertEquals failed at ConfigDialogControllerAgentesTest.java:443");
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
+
+    @Test
+    @DisplayName("Guardar acepta prompts con marcadores REQUEST numerados")
+    void testGuardarAceptaPromptConRequestNumerado() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("Z.ai");
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        AtomicBoolean guardadoCallback = new AtomicBoolean(false);
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(null, config, gestor, () -> guardadoCallback.set(true));
+
+        try {
+            completarFormularioMinimoGuardado(dialogo, "claude", false);
+            SwingUtilities.invokeAndWait(() -> dialogo.obtenerTxtPrompt().setText("Paso 1: {REQUEST_1}"));
+            flushEdt();
+
+            TestDialogUtils.reiniciarDialogosMensajeCapturados();
+            ejecutarGuardado(dialogo, guardadoCallback);
+
+            assertTrue(guardadoCallback.get(),
+                "El guardado debe aceptar marcadores REQUEST numerados soportados por el procesador");
+            assertFalse(TestDialogUtils.seCapturoDialogoMensaje(),
+                "No debe mostrar error de validación para {REQUEST_1}");
+            assertEquals("Paso 1: {REQUEST_1}", config.obtenerPromptConfigurable(),
+                "Debe persistir el prompt numerado sin modificarlo");
+        } finally {
+            dialogo.dispose();
+        }
+    }
+
+    @Test
+    @DisplayName("Validación multi-proveedor reutiliza validadores de API key y URL")
+    @SuppressWarnings("unchecked")
+    void testValidacionMultiProveedorReutilizaValidadoresApiKeyYUrl() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        DialogoConfiguracion dialogo = new DialogoConfiguracion(null, config, gestor, () -> {});
+
+        try {
+            ConfiguracionAPI snapshot = new ConfiguracionAPI();
+            snapshot.establecerMultiProveedorHabilitado(true);
+            snapshot.establecerProveedoresMultiConsulta(java.util.List.of("OpenAI", "Gemini"));
+            snapshot.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+            snapshot.establecerApiKeyParaProveedor("OpenAI", "sk-valid");
+            snapshot.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+            snapshot.establecerModeloParaProveedor("Gemini", "gemini-2.5-pro");
+            snapshot.establecerApiKeyParaProveedor("Gemini", "clave-sin-prefijo");
+            snapshot.establecerUrlBaseParaProveedor("Gemini", "http://localhost.evil.com/v1");
+
+            Field campoController = DialogoConfiguracion.class.getDeclaredField("controller");
+            campoController.setAccessible(true);
+            Object controller = campoController.get(dialogo);
+            Method validar = ConfigDialogController.class.getDeclaredMethod(
+                "validarMultiProveedor", ConfiguracionAPI.class);
+            validar.setAccessible(true);
+
+            Map<String, String> errores = (Map<String, String>) validar.invoke(controller, snapshot);
+
+            assertTrue(errores.keySet().stream().anyMatch(k -> k.contains("Gemini") && k.endsWith("apiKey")),
+                "Debe reportar API key inválida del proveedor seleccionado");
+            assertTrue(errores.keySet().stream().anyMatch(k -> k.contains("Gemini") && k.endsWith("url")),
+                "Debe reportar URL inválida del proveedor seleccionado");
         } finally {
             dialogo.dispose();
         }

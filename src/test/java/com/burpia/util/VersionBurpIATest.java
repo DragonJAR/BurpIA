@@ -7,6 +7,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -181,6 +185,15 @@ class VersionBurpIATest {
         @DisplayName("La versión actual coincide con formato semver")
         void versionActualCoincideConFormatoSemver() {
             assertTrue(VersionBurpIA.VERSION_ACTUAL.matches("\\d+\\.\\d+\\.\\d+"), "assertTrue failed at VersionBurpIATest.java:183");
+        }
+
+        @Test
+        @DisplayName("La versión actual coincide con VERSION.txt")
+        void versionActualCoincideConVersionTxt() throws IOException {
+            String versionRelease = Files.readString(Path.of("VERSION.txt")).trim();
+
+            assertEquals(versionRelease, VersionBurpIA.VERSION_ACTUAL,
+                "VERSION.txt debe permanecer alineado con VersionBurpIA.VERSION_ACTUAL");
         }
 
         @Test

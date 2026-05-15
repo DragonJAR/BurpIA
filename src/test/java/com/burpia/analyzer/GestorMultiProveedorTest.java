@@ -11,8 +11,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedConstruction;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
@@ -21,7 +23,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mockConstruction;
 
 @DisplayName("GestorMultiProveedor Tests")
 @ExtendWith(MockitoExtension.class)
@@ -116,6 +121,44 @@ class GestorMultiProveedorTest {
 
         assertThrows(InterruptedException.class, gestorCancelado::ejecutarAnalisisMultiProveedor,
             "La cancelación inmediata debe interrumpir el análisis multi proveedor");
+    }
+
+
+    @Test
+    @DisplayName("Aplica delay entre proveedores aunque el primero no produzca hallazgos")
+    void testAplicaDelayEntreProveedoresConPrimerResultadoVacio() throws Exception {
+        ConfiguracionAPI config = crearConfiguracionValida(PROVEEDOR_OPENAI, MODELO_OPENAI);
+        config.establecerProveedorAI(PROVEEDOR_OPENAI);
+        config.establecerProveedoresMultiConsulta(List.of(PROVEEDOR_OPENAI, "Z.ai"));
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+        config.establecerApiKeyParaProveedor("Z.ai", "z-ai-key");
+        config.establecerUrlBaseParaProveedor("Z.ai", "https://api.z.ai/api/paas/v4");
+
+        ByteArrayOutputStream salida = new ByteArrayOutputStream();
+        PrintWriter stdoutCapturado = new PrintWriter(salida, true);
+        SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com/multi", "GET", "hash-multi-delay");
+
+        try (MockedConstruction<AnalizadorHTTP> mocked = mockConstruction(
+                AnalizadorHTTP.class,
+                (mock, context) -> lenient().when(mock.llamarAPI(anyString())).thenReturn("{\"hallazgos\":[]}"))) {
+            GestorMultiProveedor gestor = new GestorMultiProveedor(
+                solicitud,
+                config,
+                stdoutCapturado,
+                stderr,
+                null,
+                () -> false,
+                () -> false,
+                null
+            );
+
+            gestor.ejecutarAnalisisMultiProveedor();
+
+            assertEquals(2, mocked.constructed().size(),
+                "Deben ejecutarse ambos proveedores configurados");
+            assertTrue(salida.toString().contains("Esperando 2 segundos antes del siguiente proveedor"),
+                "Debe aplicar delay antes del segundo proveedor aunque el primero retorne cero hallazgos");
+        }
     }
 
     @Test
