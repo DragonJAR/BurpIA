@@ -2,6 +2,7 @@ package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.config.ConfiguracionAPI;
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,6 +56,7 @@ class PanelHallazgosSendTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        TestDialogUtils.registrarCapturaDialogos();
         api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         panel = crearPanel(api, true);
     }
@@ -64,6 +67,8 @@ class PanelHallazgosSendTest {
             panel.destruir();
             panel = null;
         }
+        Hallazgo.establecerResolutorEvidencia(null);
+        TestDialogUtils.desregistrarCapturaDialogos();
     }
 
     @Test
@@ -116,8 +121,8 @@ class PanelHallazgosSendTest {
     }
 
     @Test
-    @DisplayName("Enviar a Issues ejecuta la ruta sin lanzar errores")
-    void testEnviarAIssues() throws Exception {
+    @DisplayName("Enviar a Issues usa el manejador centralizado con evidencia directa")
+    void testEnviarAIssuesUsaManejadorCentralizadoConEvidenciaDirecta() throws Exception {
         burp.api.montoya.sitemap.SiteMap siteMap = mock(burp.api.montoya.sitemap.SiteMap.class);
         when(api.burpSuite().version().edition()).thenReturn(BurpSuiteEdition.PROFESSIONAL);
         when(api.ai().isEnabled()).thenReturn(true);
@@ -127,11 +132,170 @@ class PanelHallazgosSendTest {
         SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
 
         HttpRequest request = mock(HttpRequest.class);
+        HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
         when(request.url()).thenReturn("https://example.com/issues");
-        agregarHallazgoConRequest(panel, request, "https://example.com/issues");
+        agregarHallazgo(panel, new Hallazgo(
+            "https://example.com/issues",
+            "Titulo",
+            "Descripcion",
+            "High",
+            "High",
+            request,
+            evidencia
+        ));
         assertTrue(panel.obtenerModelo().getRowCount() >= 1, "assertTrue failed at PanelHallazgosSendTest.java:131");
 
+        CountDownLatch latch = new CountDownLatch(1);
+        panel.establecerManejadorGuardarIssue(hallazgo -> {
+            assertEquals(evidencia, hallazgo.obtenerEvidenciaHttp(),
+                "El flujo manual debe entregar la evidencia directa al manejador centralizado");
+            latch.countDown();
+            return true;
+        });
+
         assertDoesNotThrow(() -> invocarMetodoPrivado(panel, "enviarAIssues", new int[]{0}));
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
+            "El manejador centralizado de Issues debe ejecutarse");
+    }
+
+    @Test
+    @DisplayName("Enviar a Issues permite resolver evidencia lazy por evidenciaId")
+    void testEnviarAIssuesPermiteResolverEvidenciaPorId() throws Exception {
+        HttpRequest request = mock(HttpRequest.class);
+        HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
+        when(request.url()).thenReturn("https://example.com/issues-id");
+        Hallazgo hallazgo = new Hallazgo(
+            "https://example.com/issues-id",
+            "Titulo",
+            "Descripcion",
+            "High",
+            "High",
+            request
+        ).conEvidenciaId("evidencia-issues-id");
+        Hallazgo.establecerResolutorEvidencia(id -> "evidencia-issues-id".equals(id) ? evidencia : null);
+        agregarHallazgo(panel, hallazgo);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        panel.establecerManejadorGuardarIssue(h -> {
+            assertEquals("evidencia-issues-id", h.obtenerEvidenciaId(),
+                "El hallazgo debe conservar el evidenciaId");
+            assertEquals(evidencia, h.obtenerEvidenciaHttp(),
+                "El manejador centralizado debe poder resolver evidencia lazy");
+            latch.countDown();
+            return true;
+        });
+
+        invocarMetodoPrivado(panel, "enviarAIssues", new int[]{0});
+
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
+            "El manejador debe ejecutarse para hallazgos con evidenciaId");
+    }
+
+    @Test
+    @DisplayName("Enviar a Issues reporta fallo cuando el manejador no puede guardar")
+    void testEnviarAIssuesReportaFalloSinGuardar() throws Exception {
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/issues-fail");
+        agregarHallazgoConRequest(panel, request, "https://example.com/issues-fail");
+
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicInteger intentos = new AtomicInteger(0);
+        panel.establecerManejadorGuardarIssue(hallazgo -> {
+            intentos.incrementAndGet();
+            latch.countDown();
+            return false;
+        });
+
+        invocarMetodoPrivado(panel, "enviarAIssues", new int[]{0});
+
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
+            "Debe intentar guardar antes de reportar fallo");
+        assertEquals(1, intentos.get(), "No debe reintentar ni duplicar el guardado fallido");
+    }
+
+    @Test
+    @DisplayName("Auto-guardado de Issues no se ejecuta cuando esta desactivado")
+    void testAutoGuardadoIssuesDesactivadoNoGuarda() throws Exception {
+        AtomicInteger guardados = new AtomicInteger(0);
+        panel.establecerManejadorGuardarIssue(hallazgo -> {
+            guardados.incrementAndGet();
+            return true;
+        });
+        SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
+
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/auto-off");
+        agregarHallazgo(panel, new Hallazgo(
+            "https://example.com/auto-off",
+            "Titulo",
+            "Descripcion",
+            "High",
+            "High",
+            request
+        ));
+        Thread.sleep(DELAY_ESPERA_FILAS_MS * 2L);
+
+        assertEquals(0, guardados.get(), "El auto-guardado desactivado no debe guardar Issues");
+    }
+
+    @Test
+    @DisplayName("Auto-guardado de Issues usa el manejador centralizado cuando esta activo")
+    void testAutoGuardadoIssuesActivoGuardaConManejadorCentralizado() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicInteger guardados = new AtomicInteger(0);
+        panel.establecerManejadorGuardarIssue(hallazgo -> {
+            guardados.incrementAndGet();
+            latch.countDown();
+            return true;
+        });
+        SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(true));
+
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/auto-on");
+        agregarHallazgo(panel, new Hallazgo(
+            "https://example.com/auto-on",
+            "Titulo",
+            "Descripcion",
+            "High",
+            "High",
+            request
+        ));
+
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
+            "El auto-guardado activo debe invocar el manejador centralizado");
+        assertEquals(1, guardados.get(), "Debe guardar exactamente una vez");
+    }
+
+    @Test
+    @DisplayName("Community no activa auto-guardado de Issues")
+    void testCommunityNoActivaAutoGuardadoIssues() throws Exception {
+        PanelHallazgos panelCommunity = crearPanel(api, false);
+        try {
+            AtomicInteger guardados = new AtomicInteger(0);
+            panelCommunity.establecerManejadorGuardarIssue(hallazgo -> {
+                guardados.incrementAndGet();
+                return true;
+            });
+            SwingUtilities.invokeAndWait(() -> panelCommunity.establecerGuardadoAutomaticoIssuesActivo(true));
+            assertFalse(panelCommunity.isGuardadoAutomaticoIssuesActivo(),
+                "Community no debe activar el auto-guardado de Issues");
+
+            HttpRequest request = mock(HttpRequest.class);
+            when(request.url()).thenReturn("https://example.com/community");
+            agregarHallazgo(panelCommunity, new Hallazgo(
+                "https://example.com/community",
+                "Titulo",
+                "Descripcion",
+                "High",
+                "High",
+                request
+            ));
+            Thread.sleep(DELAY_ESPERA_FILAS_MS * 2L);
+
+            assertEquals(0, guardados.get(), "Community no debe intentar guardar Issues");
+        } finally {
+            panelCommunity.destruir();
+        }
     }
 
     @Test
@@ -282,7 +446,12 @@ class PanelHallazgosSendTest {
         assertNotNull(panel, "El panel no puede ser null");
         assertNotNull(request, "El request no puede ser null");
         Hallazgo hallazgo = new Hallazgo(url, "Titulo", "Descripcion", "High", "High", request);
-        panel.obtenerModelo().agregarHallazgo(hallazgo);
+        agregarHallazgo(panel, hallazgo);
+    }
+
+    private void agregarHallazgo(PanelHallazgos panel, Hallazgo hallazgo) throws Exception {
+        assertNotNull(panel, "El panel no puede ser null");
+        SwingUtilities.invokeAndWait(() -> panel.agregarHallazgo(hallazgo));
         esperarFilas(panel, 1);
     }
 

@@ -132,6 +132,7 @@ public class ExtensionBurpIA implements BurpExtension {
         }
         if (pestaniaPrincipal != null) {
             pestaniaPrincipal.establecerManejadorReintentoTareas(manejadorHttp::reencolarTarea);
+            pestaniaPrincipal.establecerManejadorGuardarIssue(manejadorHttp::guardarHallazgoComoIssue);
         }
         pestaniaPrincipal.establecerManejadorToggleCaptura(this::alternarCapturaDesdeUI);
         pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());

@@ -196,14 +196,12 @@ public class GestorMultiProveedor {
             String etiqueta = I18nUI.Configuracion.TXT_DESCUBIERTO_CON(proveedor, modelo);
             String descripcionConEtiqueta = descripcionOriginal + etiqueta;
 
-            Hallazgo hallazgoEtiquetado = new Hallazgo(
+            Hallazgo hallazgoEtiquetado = hallazgo.editar(
                     hallazgo.obtenerUrl(),
                     hallazgo.obtenerTitulo(),
                     descripcionConEtiqueta,
                     hallazgo.obtenerSeveridad(),
-                    hallazgo.obtenerConfianza(),
-                    hallazgo.obtenerSolicitudHttp(),
-                    hallazgo.obtenerEvidenciaHttp());
+                    hallazgo.obtenerConfianza());
 
             hallazgosConEtiqueta.add(hallazgoEtiquetado);
         }

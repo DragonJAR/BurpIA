@@ -1,11 +1,9 @@
 package com.burpia.ui;
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.scanner.AuditConfiguration;
 import burp.api.montoya.scanner.BuiltInAuditConfiguration;
 import burp.api.montoya.scanner.audit.Audit;
-import com.burpia.ExtensionBurpIA;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
@@ -77,6 +75,7 @@ public class PanelHallazgos extends JPanel {
 
     private com.burpia.config.ConfiguracionAPI config;
     private Predicate<Hallazgo> manejadorEnviarAAgente;
+    private Predicate<Hallazgo> manejadorGuardarIssue;
     private Runnable manejadorCambioAlertasEnviarA;
     private Runnable manejadorCambioFiltros;
     private Runnable manejadorFiltrosAplicados;
@@ -551,6 +550,9 @@ public class PanelHallazgos extends JPanel {
 
     public void agregarHallazgo(Hallazgo hallazgo) {
         modelo.agregarHallazgo(hallazgo);
+        if (hallazgo != null) {
+            guardarAutomaticamenteEnIssues(List.of(hallazgo));
+        }
     }
 
     /**
@@ -560,6 +562,7 @@ public class PanelHallazgos extends JPanel {
      */
     public void agregarHallazgos(List<Hallazgo> hallazgos) {
         modelo.agregarHallazgos(hallazgos);
+        guardarAutomaticamenteEnIssues(hallazgos);
     }
 
     public void limpiar() {
@@ -863,11 +866,10 @@ public class PanelHallazgos extends JPanel {
                 if (hallazgo == null) {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_HALLAZGO_NO_DISPONIBLE());
                 }
-                if (api == null || api.siteMap() == null) {
-                    throw new IllegalStateException(I18nUI.Hallazgos.ERROR_SITEMAP_NO_DISPONIBLE());
+                if (manejadorGuardarIssue == null) {
+                    throw new IllegalStateException(I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE());
                 }
-                HttpRequestResponse evidencia = hallazgo.obtenerEvidenciaHttp();
-                boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidencia);
+                boolean guardado = manejadorGuardarIssue.test(hallazgo);
                 if (!guardado) {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE());
                 }
@@ -878,6 +880,27 @@ public class PanelHallazgos extends JPanel {
                 );
             }
         );
+    }
+
+    private void guardarAutomaticamenteEnIssues(List<Hallazgo> hallazgos) {
+        if (!guardadoAutomaticoIssuesActivo || manejadorGuardarIssue == null || Normalizador.esVacia(hallazgos)) {
+            return;
+        }
+        List<Hallazgo> hallazgosPendientes = new ArrayList<>(hallazgos);
+        try {
+            ejecutorAcciones.submit(() -> {
+                for (Hallazgo hallazgo : hallazgosPendientes) {
+                    if (hallazgo != null) {
+                        manejadorGuardarIssue.test(hallazgo);
+                    }
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            mostrarAdvertenciaEnviarA(
+                I18nUI.Hallazgos.TITULO_ACCION_ISSUES(),
+                I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE()
+            );
+        }
     }
 
     private void ejecutarAccionBurp(int[] filas,
@@ -1375,6 +1398,10 @@ public class PanelHallazgos extends JPanel {
 
     public void establecerManejadorEnviarAAgente(Predicate<Hallazgo> manejador) {
         this.manejadorEnviarAAgente = manejador;
+    }
+
+    public void establecerManejadorGuardarIssue(Predicate<Hallazgo> manejador) {
+        this.manejadorGuardarIssue = manejador;
     }
 
     public void establecerManejadorCambioAlertasEnviarA(Runnable manejador) {

@@ -666,6 +666,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         registrar("Captura reanudada por usuario");
     }
 
+    public boolean guardarHallazgoComoIssue(Hallazgo hallazgo) {
+        return evidenceManager.guardarHallazgoComoIssue(api, hallazgo,
+                hallazgo != null ? hallazgo.obtenerEvidenciaId() : null);
+    }
+
     public boolean estaCapturaActiva() {
         return configRef.obtener().escaneoPasivoHabilitado();
     }

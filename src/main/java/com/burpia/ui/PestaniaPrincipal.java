@@ -459,6 +459,15 @@ public class PestaniaPrincipal extends JPanel {
     }
 
     /**
+     * Establece el manejador centralizado para guardar hallazgos en Issues de Burp.
+     *
+     * @param manejador El predicado que recibe el hallazgo y devuelve true si se guardó exitosamente
+     */
+    public void establecerManejadorGuardarIssue(Predicate<Hallazgo> manejador) {
+        panelHallazgos.establecerManejadorGuardarIssue(manejador);
+    }
+
+    /**
      * Establece el manejador para cambios en las alertas de envío.
      *
      * @param manejador El manejador a ejecutar cuando cambian las alertas

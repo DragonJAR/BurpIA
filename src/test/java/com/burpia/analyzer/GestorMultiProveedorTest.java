@@ -1,10 +1,12 @@
 package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +24,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -84,6 +87,20 @@ class GestorMultiProveedorTest {
         Method metodoParseo = GestorMultiProveedor.class.getDeclaredMethod("parsearRespuesta", String.class, String.class);
         metodoParseo.setAccessible(true);
         return (ResultadoAnalisisMultiple) metodoParseo.invoke(gestor, respuesta, proveedor);
+    }
+
+    private ResultadoAnalisisMultiple invocarEtiquetarResultado(GestorMultiProveedor gestor,
+            ResultadoAnalisisMultiple resultado,
+            String proveedor,
+            String modelo) throws Exception {
+        Method metodo = GestorMultiProveedor.class.getDeclaredMethod(
+            "etiquetarResultado",
+            ResultadoAnalisisMultiple.class,
+            String.class,
+            String.class
+        );
+        metodo.setAccessible(true);
+        return (ResultadoAnalisisMultiple) metodo.invoke(gestor, resultado, proveedor, modelo);
     }
 
     @Test
@@ -185,5 +202,54 @@ class GestorMultiProveedorTest {
             "El gestor multi proveedor debe extraer el contenido usando el proveedor que realmente respondió");
         assertEquals("Header inseguro", resultado.obtenerHallazgos().get(0).obtenerTitulo(),
             "El título debe provenir del payload con formato Claude");
+    }
+
+    @Test
+    @DisplayName("Etiquetar resultado multi proveedor conserva evidencia HTTP e ID")
+    void testEtiquetarResultadoConservaEvidenciaHttpEId() throws Exception {
+        ConfiguracionAPI config = crearConfiguracionValida(PROVEEDOR_OPENAI, MODELO_OPENAI);
+        HttpRequestResponse evidencia = org.mockito.Mockito.mock(HttpRequestResponse.class);
+        Hallazgo hallazgo = new Hallazgo(
+            "12:00:00",
+            "https://example.com/evidencia",
+            "Titulo",
+            "Descripcion",
+            Hallazgo.SEVERIDAD_HIGH,
+            Hallazgo.CONFIANZA_ALTA,
+            solicitudHttp,
+            evidencia,
+            "evidencia-multi"
+        );
+        ResultadoAnalisisMultiple resultado = new ResultadoAnalisisMultiple(
+            "https://example.com/evidencia",
+            List.of(hallazgo),
+            solicitudHttp,
+            List.of()
+        );
+        GestorMultiProveedor gestor = new GestorMultiProveedor(
+            solicitudMock,
+            config,
+            stdout,
+            stderr,
+            gestorConsola,
+            () -> false,
+            () -> false,
+            gestorLogging
+        );
+
+        ResultadoAnalisisMultiple etiquetado = invocarEtiquetarResultado(
+            gestor,
+            resultado,
+            PROVEEDOR_OPENAI,
+            MODELO_OPENAI
+        );
+
+        Hallazgo hallazgoEtiquetado = etiquetado.obtenerHallazgos().get(0);
+        assertEquals("evidencia-multi", hallazgoEtiquetado.obtenerEvidenciaId(),
+            "El etiquetado multi proveedor debe conservar evidenciaId");
+        assertSame(evidencia, hallazgoEtiquetado.obtenerEvidenciaHttp(),
+            "El etiquetado multi proveedor debe conservar evidencia directa");
+        assertSame(solicitudHttp, hallazgoEtiquetado.obtenerSolicitudHttp(),
+            "El etiquetado multi proveedor debe conservar la solicitud HTTP");
     }
 }
