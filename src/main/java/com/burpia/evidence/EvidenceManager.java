@@ -1,7 +1,10 @@
 package com.burpia.evidence;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.model.Hallazgo;
@@ -154,7 +157,16 @@ public class EvidenceManager {
         }
         
         if (Normalizador.noEsVacio(evidenciaId)) {
-            return obtenerEvidencia(evidenciaId);
+            HttpRequestResponse desdeAlmacen = obtenerEvidencia(evidenciaId);
+            if (desdeAlmacen != null) {
+                return desdeAlmacen;
+            }
+        }
+        
+        HttpRequest solicitudHttp = hallazgo.obtenerSolicitudHttp();
+        if (solicitudHttp != null) {
+            HttpResponse respuestaVacia = HttpResponse.httpResponse(ByteArray.byteArray(new byte[0]));
+            return HttpRequestResponse.httpRequestResponse(solicitudHttp, respuestaVacia);
         }
         
         return null;

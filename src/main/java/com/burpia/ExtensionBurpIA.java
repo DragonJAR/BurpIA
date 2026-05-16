@@ -1114,6 +1114,12 @@ public class ExtensionBurpIA implements BurpExtension {
             return null;
         }
 
+        if (Normalizador.esVacio(hallazgo.obtenerUrl())) {
+            GestorLoggingUnificado.crearMinimal(null, null).warning(
+                    "ExtensionBurpIA", I18nLogs.Evidence.HALLAZGO_SIN_EVIDENCIA());
+            return null;
+        }
+
         burp.api.montoya.scanner.audit.issues.AuditIssueSeverity severity = convertirSeveridad(
                 hallazgo.obtenerSeveridad());
         burp.api.montoya.scanner.audit.issues.AuditIssueConfidence confidence = convertirConfianza(
@@ -1154,15 +1160,35 @@ public class ExtensionBurpIA implements BurpExtension {
             MontoyaApi api,
             Hallazgo hallazgo,
             HttpRequestResponse solicitudRespuestaEvidencia) {
-        if (api == null || !esBurpProfessional(api) || api.siteMap() == null) {
+        if (api == null) {
+            GestorLoggingUnificado.crearMinimal(null, null).warning(
+                    "ExtensionBurpIA", I18nLogs.Evidence.HALLAZGO_SIN_EVIDENCIA());
+            return false;
+        }
+        if (!esBurpProfessional(api)) {
+            GestorLoggingUnificado.crearMinimal(null, null).info(
+                    "ExtensionBurpIA", I18nLogs.Evidence.ISSUES_SOLO_PRO());
+            return false;
+        }
+        if (api.siteMap() == null) {
+            GestorLoggingUnificado.crearMinimal(null, null).warning(
+                    "ExtensionBurpIA", "SiteMap no disponible");
             return false;
         }
         burp.api.montoya.scanner.audit.issues.AuditIssue issue = crearAuditIssueDesdeHallazgo(hallazgo,
                 solicitudRespuestaEvidencia);
         if (issue == null) {
+            GestorLoggingUnificado.crearMinimal(null, null).warning(
+                    "ExtensionBurpIA", I18nLogs.Evidence.AUDIT_ISSUE_NO_CREADO());
             return false;
         }
-        api.siteMap().add(issue);
+        try {
+            api.siteMap().add(issue);
+        } catch (Exception e) {
+            GestorLoggingUnificado.crearMinimal(null, null).error(
+                    "ExtensionBurpIA", "Error al agregar Issue al SiteMap", e);
+            return false;
+        }
         return true;
     }
 
