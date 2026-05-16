@@ -6,6 +6,18 @@ import javax.swing.UIManager;
 import java.awt.Color;
 import java.awt.Font;
 
+/**
+ * Gestión centralizada de estilos UI para BurpIA.
+ *
+ * <p>Los campos FUENTE_* no siguen la convención UPPER_SNAKE_CASE a pesar de ser
+ * "constantes conceptuales" porque son mutables — se reasignan en {@link #actualizarFuentes}
+ * para permitir cambio dinámico de fuentes desde el diálogo de configuración.
+ * PMD los detecta como "constant names" pero no son constantes inmutables.</p>
+ *
+ * @see #actualizarFuentes
+ */
+// PMD suppress: estos campos son mutables por diseño, no true constants
+@SuppressWarnings("PMD.FieldNamingConventions")
 public class EstilosUI {
     // Constantes de validación
     private static final int TAMANIO_FUENTE_MIN = 6;

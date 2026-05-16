@@ -16,7 +16,7 @@ import java.util.List;
  * <ul>
  *   <li>Ejecutar código que muestra diálogos</li>
  *   <li>Validar el comportamiento del diálogo</li>
-   *   <li>Cerrar automáticamente todos los diálogos abiertos después</li>
+    *   <li>Cerrar automáticamente todos los diálogos abiertos después</li>
  * </ul>
  *
  * <p>Uso típico:</p>
@@ -34,12 +34,14 @@ import java.util.List;
  * TestDialogUtils.desregistrarCapturaDialogos();
  * }</pre>
  */
+// PMD suppress: fields are tracking state across test runs, naming follows test convention
+@SuppressWarnings("PMD.FieldNamingConventions")
 public class TestDialogUtils {
 
-    private static final List<Window> ventanasCapturadas = new CopyOnWriteArrayList<>();
-    private static final List<Window> dialogosMensajeProcesados = new CopyOnWriteArrayList<>();
-    private static final List<DialogoMensajeCapturado> dialogosMensajeCapturados = new CopyOnWriteArrayList<>();
-    private static final AtomicBoolean capturaActiva = new AtomicBoolean(false);
+    private static final List<Window> VENTANAS_CAPTURADAS = new CopyOnWriteArrayList<>();
+    private static final List<Window> DIALOGOS_MENSAJE_PROCESADOS = new CopyOnWriteArrayList<>();
+    private static final List<DialogoMensajeCapturado> DIALOGOS_MENSAJE_CAPTURADOS = new CopyOnWriteArrayList<>();
+    private static final AtomicBoolean CAPTURA_ACTIVA = new AtomicBoolean(false);
     private static volatile Thread backgroundCleaner;
 
     /**
@@ -47,13 +49,13 @@ public class TestDialogUtils {
      * Debe llamarse en @BeforeEach.
      */
     public static void registrarCapturaDialogos() {
-        if (capturaActiva.get()) {
+        if (CAPTURA_ACTIVA.get()) {
             return;
         }
-        capturaActiva.set(true);
-        ventanasCapturadas.clear();
-        dialogosMensajeProcesados.clear();
-        dialogosMensajeCapturados.clear();
+        CAPTURA_ACTIVA.set(true);
+        VENTANAS_CAPTURADAS.clear();
+        DIALOGOS_MENSAJE_PROCESADOS.clear();
+        DIALOGOS_MENSAJE_CAPTURADOS.clear();
 
         // Iniciar thread en background que cierra diálogos automáticamente
         iniciarBackgroundCleaner();
@@ -64,15 +66,15 @@ public class TestDialogUtils {
      */
     private static void iniciarBackgroundCleaner() {
         backgroundCleaner = new Thread(() -> {
-            while (capturaActiva.get()) {
+            while (CAPTURA_ACTIVA.get()) {
                 try {
                     SwingUtilities.invokeAndWait(() -> {
                         Window[] ventanas = Window.getWindows();
                         for (Window ventana : ventanas) {
                             if (ventana.isVisible() && ventana instanceof JDialog) {
                                 // Rastrear ventana capturada
-                                if (!ventanasCapturadas.contains(ventana)) {
-                                    ventanasCapturadas.add(ventana);
+                                if (!VENTANAS_CAPTURADAS.contains(ventana)) {
+                                    VENTANAS_CAPTURADAS.add(ventana);
                                 }
                                 capturarDialogoMensajeSiAplica((JDialog) ventana);
                                 // Cerrar diálogos modales automáticamente
@@ -99,7 +101,7 @@ public class TestDialogUtils {
      * Debe llamarse en @AfterEach.
      */
     public static void desregistrarCapturaDialogos() {
-        capturaActiva.set(false);
+        CAPTURA_ACTIVA.set(false);
 
         // Detener thread background
         if (backgroundCleaner != null) {
@@ -113,9 +115,9 @@ public class TestDialogUtils {
         }
 
         limpiarDialogosPendientes();
-        ventanasCapturadas.clear();
-        dialogosMensajeProcesados.clear();
-        dialogosMensajeCapturados.clear();
+        VENTANAS_CAPTURADAS.clear();
+        DIALOGOS_MENSAJE_PROCESADOS.clear();
+        DIALOGOS_MENSAJE_CAPTURADOS.clear();
     }
 
     /**
@@ -126,7 +128,7 @@ public class TestDialogUtils {
      * @param delayMs Milisegundos a esperar antes de cerrar dialogos (default: 100ms)
      */
     public static void ejecutarConDialogoAutoCerrado(Runnable accion, long delayMs) {
-        if (!capturaActiva.get()) {
+        if (!CAPTURA_ACTIVA.get()) {
             throw new IllegalStateException("Debe llamar registrarCapturaDialogos() primero en @BeforeEach");
         }
 
@@ -187,29 +189,29 @@ public class TestDialogUtils {
             // Ignorar errores en cierre, pero registrar
             System.err.println("TestDialogUtils: Error cerrando ventanas: " + e.getMessage());
         } finally {
-            ventanasCapturadas.clear();
-            dialogosMensajeProcesados.clear();
+            VENTANAS_CAPTURADAS.clear();
+            DIALOGOS_MENSAJE_PROCESADOS.clear();
         }
     }
 
     public static void reiniciarDialogosMensajeCapturados() {
-        dialogosMensajeProcesados.clear();
-        dialogosMensajeCapturados.clear();
+        DIALOGOS_MENSAJE_PROCESADOS.clear();
+        DIALOGOS_MENSAJE_CAPTURADOS.clear();
     }
 
     public static boolean seCapturoDialogoMensaje() {
-        return !dialogosMensajeCapturados.isEmpty();
+        return !DIALOGOS_MENSAJE_CAPTURADOS.isEmpty();
     }
 
     public static int contarDialogosMensajeCapturados() {
-        return dialogosMensajeCapturados.size();
+        return DIALOGOS_MENSAJE_CAPTURADOS.size();
     }
 
     public static DialogoMensajeCapturado obtenerUltimoDialogoMensajeCapturado() {
-        if (dialogosMensajeCapturados.isEmpty()) {
+        if (DIALOGOS_MENSAJE_CAPTURADOS.isEmpty()) {
             return null;
         }
-        return dialogosMensajeCapturados.get(dialogosMensajeCapturados.size() - 1);
+        return DIALOGOS_MENSAJE_CAPTURADOS.get(DIALOGOS_MENSAJE_CAPTURADOS.size() - 1);
     }
 
     /**
@@ -219,7 +221,7 @@ public class TestDialogUtils {
      * @return Numero de ventanas capturadas durante el test
      */
     public static int contarVentanasPendientes() {
-        return ventanasCapturadas.size();
+        return VENTANAS_CAPTURADAS.size();
     }
 
     /**
@@ -239,7 +241,7 @@ public class TestDialogUtils {
     }
 
     private static void capturarDialogoMensajeSiAplica(JDialog dialogo) {
-        if (dialogo == null || dialogosMensajeProcesados.contains(dialogo)) {
+        if (dialogo == null || DIALOGOS_MENSAJE_PROCESADOS.contains(dialogo)) {
             return;
         }
 
@@ -248,10 +250,10 @@ public class TestDialogUtils {
             return;
         }
 
-        dialogosMensajeCapturados.add(
+        DIALOGOS_MENSAJE_CAPTURADOS.add(
             new DialogoMensajeCapturado(dialogo.getTitle(), extraerTextoMensaje(optionPane.getMessage()))
         );
-        dialogosMensajeProcesados.add(dialogo);
+        DIALOGOS_MENSAJE_PROCESADOS.add(dialogo);
     }
 
     private static JOptionPane buscarOptionPane(Component componente) {

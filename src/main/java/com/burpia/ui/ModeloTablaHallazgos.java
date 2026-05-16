@@ -18,7 +18,7 @@ import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class ModeloTablaHallazgos extends DefaultTableModel {
     private static final String ORIGEN_LOG = "ModeloTablaHallazgos";
-    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
+    private static final GestorLoggingUnificado GESTOR_LOGGING = GestorLoggingUnificado.crearMinimal(null, null);
     private static final int TOTAL_COLUMNAS = 5;
     private final List<Hallazgo> datos;
     private int limiteFilas;
@@ -503,7 +503,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     private static void registrarErrorEscucha(Exception e) {
-        gestorLogging.error(ORIGEN_LOG, I18nLogs.Hallazgos.ERROR_ESCUCHA_CAMBIOS() + e.getMessage(), e);
+        GESTOR_LOGGING.error(ORIGEN_LOG, I18nLogs.Hallazgos.ERROR_ESCUCHA_CAMBIOS() + e.getMessage(), e);
     }
 
     @Override

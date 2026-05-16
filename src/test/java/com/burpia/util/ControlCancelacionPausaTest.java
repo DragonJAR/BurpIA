@@ -99,7 +99,7 @@ class ControlCancelacionPausaTest {
             Thread worker = new Thread(() -> {
                 try {
                     ctrl.esperarSiPausada();
-                } catch (InterruptedException e) {
+                } catch (InterruptedException e) { // NOPMD
                     // Esperado cuando se forcefully interrupts
                 }
             });
@@ -138,7 +138,7 @@ class ControlCancelacionPausaTest {
         Thread worker = new Thread(() -> {
             try {
                 ctrl.esperarSiPausada();
-            } catch (InterruptedException e) {
+            } catch (InterruptedException e) { // NOPMD
                 // No es error - el test lo interrumpe
             }
         });

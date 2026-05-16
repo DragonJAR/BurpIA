@@ -19,7 +19,7 @@ import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class GestorConsolaGUI {
     private static final String ORIGEN_LOG = "GestorConsolaGUI";
-    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
+    private static final GestorLoggingUnificado GESTOR_LOGGING = GestorLoggingUnificado.crearMinimal(null, null);
     public enum TipoLog {
         INFO,
         VERBOSE,
@@ -597,7 +597,7 @@ public class GestorConsolaGUI {
             stderrOriginal.flush();
             return;
         }
-        gestorLogging.error(ORIGEN_LOG, mensajeFinal);
+        GESTOR_LOGGING.error(ORIGEN_LOG, mensajeFinal);
     }
 
     private static final class EntradaLog {

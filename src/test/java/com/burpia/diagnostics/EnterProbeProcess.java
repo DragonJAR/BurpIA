@@ -45,7 +45,7 @@ public final class EnterProbeProcess {
         System.out.println("ENTER_PROBE_READY os=" + normalizarOs(System.getProperty("os.name")) + " pid=" + ProcessHandle.current().pid());
 
         int value;
-        while ((value = input.read()) != -1) {
+        while ((value = input.read()) != -1) { // NOPMD
             int byteValue = value & 0xFF;
             String hex = String.format(Locale.ROOT, "%02X", byteValue);
             if (byteValue == ASCII_CR || byteValue == ASCII_LF) {

@@ -41,7 +41,7 @@ public class TaskExecutionManager {
     private static final long TTL_CONTEXTO_REINTENTABLE_MS = 15 * 60 * 1000L;
     private static final long TTL_CONTEXTO_ACTIVO_MS = Long.MAX_VALUE;
     private static final int MAX_CONTEXTO_REINTENTO = 1000;
-    private static final AtomicInteger contadorHilos = new AtomicInteger(0);
+    private static final AtomicInteger CONTADOR_HILOS = new AtomicInteger(0);
 
     private final ConfiguracionAPI config;
     private final GestorTareas gestorTareas;
@@ -101,7 +101,7 @@ public class TaskExecutionManager {
                 r -> {
                     Thread thread = new Thread(r);
                     thread.setDaemon(true);
-                    thread.setName("BurpIA-Task-" + contadorHilos.incrementAndGet());
+                    thread.setName("BurpIA-Task-" + CONTADOR_HILOS.incrementAndGet());
                     return thread;
                 },
                 new ThreadPoolExecutor.AbortPolicy());

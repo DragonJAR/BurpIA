@@ -6,7 +6,6 @@ import com.burpia.i18n.I18nLogs;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
-import com.burpia.util.ConstantesJsonAI;
 import com.burpia.util.ExtractorCamposRobusto;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GsonProvider;
@@ -70,18 +69,18 @@ public class ParseadorRespuestasAI {
                 String contenidoSanitizado = sanitizarComillasEscapadas(contenido);
                 String contenidoLimpio = limpiarBloquesMarkdownJson(contenidoSanitizado);
                 JsonElement raiz = gson.fromJson(contenidoLimpio, JsonElement.class);
-                List<JsonObject> objetosHallazgos = JsonParserUtil.extraerObjetosHallazgos(raiz, ConstantesJsonAI.CAMPOS_HALLAZGOS);
+                List<JsonObject> objetosHallazgos = JsonParserUtil.extraerObjetosHallazgos(raiz, JsonParserUtil.CAMPOS_HALLAZGOS);
 
                 if (!objetosHallazgos.isEmpty()) {
                     rastrear("Se encontraron " + objetosHallazgos.size() + " hallazgos en JSON");
                     for (JsonObject obj : objetosHallazgos) {
                         agregarHallazgoNormalizado(
                                 hallazgos,
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO),
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION),
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD),
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA),
-                                JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA),
+                                JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_TITULO),
+                                JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_DESCRIPCION),
+                                JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_SEVERIDAD),
+                                JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_CONFIANZA),
+                                JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_EVIDENCIA),
                                 solicitud);
                     }
                 } else {
@@ -164,11 +163,11 @@ public class ParseadorRespuestasAI {
                 JsonObject obj = item.getAsJsonObject();
                 agregarHallazgoNormalizado(
                         hallazgos,
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_TITULO),
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_DESCRIPCION),
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_SEVERIDAD),
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_CONFIANZA),
-                        JsonParserUtil.extraerCampoFlexible(obj, ConstantesJsonAI.CAMPOS_EVIDENCIA),
+                        JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_TITULO),
+                        JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_DESCRIPCION),
+                        JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_SEVERIDAD),
+                        JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_CONFIANZA),
+                        JsonParserUtil.extraerCampoFlexible(obj, JsonParserUtil.CAMPOS_EVIDENCIA),
                         solicitud);
             }
         }
@@ -197,11 +196,11 @@ public class ParseadorRespuestasAI {
                 continue;
             }
 
-            String titulo = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_TITULO, bloqueHallazgo);
-            String descripcion = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_DESCRIPCION, bloqueHallazgo);
-            String severidad = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_SEVERIDAD, bloqueHallazgo);
-            String confianza = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_CONFIANZA, bloqueHallazgo);
-            String evidencia = extraerCampoConFallback(ConstantesJsonAI.CAMPOS_EVIDENCIA, bloqueHallazgo);
+            String titulo = extraerCampoConFallback(JsonParserUtil.CAMPOS_TITULO, bloqueHallazgo);
+            String descripcion = extraerCampoConFallback(JsonParserUtil.CAMPOS_DESCRIPCION, bloqueHallazgo);
+            String severidad = extraerCampoConFallback(JsonParserUtil.CAMPOS_SEVERIDAD, bloqueHallazgo);
+            String confianza = extraerCampoConFallback(JsonParserUtil.CAMPOS_CONFIANZA, bloqueHallazgo);
+            String evidencia = extraerCampoConFallback(JsonParserUtil.CAMPOS_EVIDENCIA, bloqueHallazgo);
 
             agregarHallazgoNormalizado(hallazgos, titulo, descripcion, severidad, confianza, evidencia, solicitud);
         }

@@ -45,7 +45,7 @@ import java.util.zip.GZIPOutputStream;
 public class AlmacenEvidenciaHttp {
 
     private static final String ORIGEN_LOG = "AlmacenEvidenciaHttp";
-    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
+    private static final GestorLoggingUnificado GESTOR_LOGGING = GestorLoggingUnificado.crearMinimal(null, null);
 
     /** Tamaño máximo permitido para request o response (10 MB) para prevenir OOM */
     private static final int MAXIMO_BYTES_PARTE = 10 * 1024 * 1024;
@@ -387,15 +387,15 @@ public class AlmacenEvidenciaHttp {
     }
 
     private static void registrarError(String mensaje, Exception e) {
-        gestorLogging.error(ORIGEN_LOG, mensaje, e);
+        GESTOR_LOGGING.error(ORIGEN_LOG, mensaje, e);
     }
 
     private static void registrarAdvertencia(String mensaje) {
-        gestorLogging.warning(ORIGEN_LOG, mensaje);
+        GESTOR_LOGGING.warning(ORIGEN_LOG, mensaje);
     }
 
     private static void registrarVerbose(String mensaje) {
-        gestorLogging.verbose(ORIGEN_LOG, mensaje);
+        GESTOR_LOGGING.verbose(ORIGEN_LOG, mensaje);
     }
 
     private void eliminarArchivoSilencioso(Path archivo) {
@@ -405,7 +405,7 @@ public class AlmacenEvidenciaHttp {
         try {
             Files.deleteIfExists(archivo);
         } catch (Exception e) {
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.AlmacenEvidencia.ERROR_ELIMINAR_ARCHIVO() + archivo);
+            GESTOR_LOGGING.verbose(ORIGEN_LOG, I18nLogs.AlmacenEvidencia.ERROR_ELIMINAR_ARCHIVO() + archivo);
         }
     }
 

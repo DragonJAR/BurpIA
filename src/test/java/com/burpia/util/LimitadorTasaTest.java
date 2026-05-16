@@ -271,7 +271,7 @@ class LimitadorTasaTest {
             try {
                 // Simular operación que podría fallar
                 throw new RuntimeException("Error simulado");
-            } catch (RuntimeException e) {
+            } catch (RuntimeException e) { // NOPMD
                 // Capturar excepción
             } finally {
                 limitador.liberar();

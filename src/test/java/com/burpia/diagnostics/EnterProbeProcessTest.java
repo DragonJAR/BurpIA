@@ -133,7 +133,7 @@ class EnterProbeProcessTest {
         Thread stdoutThread = new Thread(() -> {
             try {
                 stdoutBytes[0] = process.getInputStream().readAllBytes();
-            } catch (IOException e) {
+            } catch (IOException e) { // NOPMD
                 // Mantener array vacio si hay error
             }
         });
@@ -141,7 +141,7 @@ class EnterProbeProcessTest {
         Thread stderrThread = new Thread(() -> {
             try {
                 stderrBytes[0] = process.getErrorStream().readAllBytes();
-            } catch (IOException e) {
+            } catch (IOException e) { // NOPMD
                 // Mantener array vacio si hay error
             }
         });

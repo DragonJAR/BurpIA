@@ -12,24 +12,12 @@
     <rule ref="category/java/codestyle.xml/ClassNamingConventions"/>
     <rule ref="category/java/codestyle.xml/FieldNamingConventions">
         <properties>
-            <property name="violationSuppressXPath" value="(
-                ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='I18nUI']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='I18nLogs']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='EstilosUI']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='EvidenceManager']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='TaskExecutionManager']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='ModeloTablaHallazgos']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='AlmacenEvidenciaHttp']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='GestorConsolaGUI']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='GestorMultiProveedor']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='AnalizadorAI']
-                or ./ancestor::ClassOrInterfaceDeclaration[@SimpleName='PanelAgente']
-            )"/>
+            <property name="violationSuppressXPath" value="./ancestor::ClassOrInterfaceDeclaration[@SimpleName='I18nUI' or @SimpleName='I18nLogs' or @SimpleName='EstilosUI' or @SimpleName='EvidenceManager' or @SimpleName='TaskExecutionManager' or @SimpleName='ModeloTablaHallazgos' or @SimpleName='AlmacenEvidenciaHttp' or @SimpleName='GestorConsolaGUI' or @SimpleName='GestorMultiProveedor' or @SimpleName='AnalizadorAI' or @SimpleName='PanelAgente' or @SimpleName='ParserRespuestasAI' or @SimpleName='TestDialogUtils' or @SimpleName='EnterProbeProcess']"/>
         </properties>
     </rule>
     <rule ref="category/java/errorprone.xml/EmptyCatchBlock">
         <properties>
-            <property name="violationSuppressXPath" value="./ancestor::ClassOrInterfaceDeclaration[@SimpleName='ParserRespuestasAI']"/>
+            <property name="violationSuppressXPath" value="./ancestor::ClassOrInterfaceDeclaration[@SimpleName='ParserRespuestasAI' or @SimpleName='ControlCancelacionPausaTest' or @SimpleName='LimitadorTasaTest' or @SimpleName='EnterProbeProcessTest' or @SimpleName='ManejadorHttpBurpIATest']"/>
         </properties>
     </rule>
     <rule ref="category/java/codestyle.xml/EmptyControlStatement">
@@ -37,15 +25,9 @@
             <property name="violationSuppressXPath" value="./ancestor::ClassOrInterfaceDeclaration[@SimpleName='OrquestadorAnalisis']"/>
         </properties>
     </rule>
-    <rule ref="category/java/errorprone.xml/AssignmentInOperand"/>
-    <rule ref="category/java/errorprone.xml/EmptyCatchBlock">
+    <rule ref="category/java/errorprone.xml/AssignmentInOperand">
         <properties>
-            <property name="violationSuppressXPath" value="./ancestor::ClassOrInterfaceDeclaration[@SimpleName='ParserRespuestasAI']"/>
-        </properties>
-    </rule>
-    <rule ref="category/java/codestyle.xml/EmptyControlStatement">
-        <properties>
-            <property name="violationSuppressXPath" value="./ancestor::ClassOrInterfaceDeclaration[@SimpleName='OrquestadorAnalisis']"/>
+            <property name="violationSuppressXPath" value="./ancestor::ClassOrInterfaceDeclaration[@SimpleName='ManejadorHttpBurpIATest' or @SimpleName='EnterProbeProcess']"/>
         </properties>
     </rule>
 </ruleset>
