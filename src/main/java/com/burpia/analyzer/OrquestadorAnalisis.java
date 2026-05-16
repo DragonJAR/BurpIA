@@ -24,7 +24,9 @@ public class OrquestadorAnalisis {
     private static final long BACKOFF_MAXIMO_MS = 8000L;
 
     private final SolicitudAnalisis solicitud;
-    private ConfiguracionAPI config;
+    // Snapshot inmutable: el llamador crea una copia via crearSnapshot() antes de pasarla.
+    // No se reasigna ni muta después del constructor; 'final' garantiza visibilidad entre hilos.
+    private final ConfiguracionAPI config;
     private final PrintWriter stdout;
     private final PrintWriter stderr;
     private final LimitadorTasa limitador;

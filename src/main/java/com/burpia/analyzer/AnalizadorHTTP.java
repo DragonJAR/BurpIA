@@ -6,6 +6,7 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
+import com.burpia.util.ControlCancelacionPausa;
 import com.burpia.util.Normalizador;
 import okhttp3.*;
 import java.io.IOException;
@@ -23,7 +24,6 @@ import javax.net.ssl.X509TrustManager;
 
 public class AnalizadorHTTP {
     private static final String ORIGEN_LOG = "AnalizadorHTTP";
-    private static final int MAX_CLIENTES_HTTP_CACHE = 8;
     private static final int MAX_INTENTOS_RETRY = 5;
     private static final long BACKOFF_INICIAL_MS = 1000L;
     private static final long BACKOFF_MAXIMO_MS = 8000L;
@@ -31,25 +31,13 @@ public class AnalizadorHTTP {
     private final ConfiguracionAPI config;
     private final BooleanSupplier tareaCancelada;
     private final BooleanSupplier tareaPausada;
+    private final ControlCancelacionPausa control;
     private final GestorLoggingUnificado gestorLogging;
     private final ContextExceededDetector detectorContexto;
     private volatile Call llamadaHttpActiva;
     
     private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = Collections
-            .synchronizedMap(new LinkedHashMap<String, OkHttpClient>(16, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, OkHttpClient> eldest) {
-                    if (size() > MAX_CLIENTES_HTTP_CACHE) {
-                        OkHttpClient cliente = eldest.getValue();
-                        if (cliente != null) {
-                            cliente.dispatcher().executorService().shutdown();
-                            cliente.connectionPool().evictAll();
-                        }
-                        return true;
-                    }
-                    return false;
-                }
-            });
+            .synchronizedMap(new LinkedHashMap<>(128));
 
     public AnalizadorHTTP(ConfiguracionAPI config, 
                          BooleanSupplier tareaCancelada, 
@@ -58,6 +46,7 @@ public class AnalizadorHTTP {
         this.config = config != null ? config : new ConfiguracionAPI();
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
+        this.control = new ControlCancelacionPausa(tareaCancelada, tareaPausada);
         this.gestorLogging = gestorLogging != null ? gestorLogging : 
             GestorLoggingUnificado.crearMinimal(null, null);
         this.detectorContexto = new ContextExceededDetector();
@@ -82,8 +71,8 @@ public class AnalizadorHTTP {
                           " intentos con backoff exponencial"));
 
         for (int intento = 1; intento <= MAX_INTENTOS_RETRY; intento++) {
-            verificarCancelacion();
-            esperarSiPausada();
+            control.verificarCancelacion();
+            control.esperarSiPausada();
             
             gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Intento #" + intento + " de " + MAX_INTENTOS_RETRY));
             
@@ -116,7 +105,7 @@ public class AnalizadorHTTP {
                 long esperaSegundos = Math.max(1L, (esperaMs + 999L) / 1000L);
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando " + esperaSegundos +
                                  " segundos antes del próximo reintento"));
-                esperarReintento(esperaMs);
+                control.esperarConControl(esperaMs);
                 backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
             } catch (IOException e) {
                 ultimaExcepcion = e;
@@ -131,7 +120,7 @@ public class AnalizadorHTTP {
                 long esperaSegundos = Math.max(1L, (esperaMs + 999L) / 1000L);
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando " + esperaSegundos +
                                  " segundos antes del próximo reintento"));
-                esperarReintento(esperaMs);
+                control.esperarConControl(esperaMs);
                 backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
             }
         }
@@ -155,8 +144,8 @@ public class AnalizadorHTTP {
             throws IOException, InterruptedException {
         OkHttpClient clienteHttp = obtenerClienteHttp();
         
-        verificarCancelacion();
-        esperarSiPausada();
+        control.verificarCancelacion();
+        control.esperarSiPausada();
 
         ConstructorSolicitudesProveedor.SolicitudPreparada preparada = ConstructorSolicitudesProveedor
                 .construirSolicitud(config, prompt, clienteHttp);
@@ -305,30 +294,6 @@ public class AnalizadorHTTP {
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG,
                 I18nUI.Conexion.LOG_SSL_INSECURE_ERROR(e.getClass().getSimpleName()));
-        }
-    }
-
-    private void verificarCancelacion() throws InterruptedException {
-        if (tareaCancelada.getAsBoolean()) {
-            throw new InterruptedException(I18nUI.Tareas.MSG_CANCELADO_USUARIO());
-        }
-    }
-
-    private void esperarSiPausada() throws InterruptedException {
-        while (tareaPausada.getAsBoolean() && !tareaCancelada.getAsBoolean()) {
-            Thread.sleep(250);
-        }
-        verificarCancelacion();
-    }
-
-    private void esperarReintento(long esperaMs) throws InterruptedException {
-        long restante = esperaMs;
-        while (restante > 0) {
-            verificarCancelacion();
-            esperarSiPausada();
-            long espera = Math.min(restante, 250);
-            Thread.sleep(espera);
-            restante -= espera;
         }
     }
 

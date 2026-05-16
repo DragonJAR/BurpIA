@@ -6,6 +6,7 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
+import com.burpia.util.ControlCancelacionPausa;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
@@ -30,6 +31,7 @@ public class GestorMultiProveedor {
     private final GestorConsolaGUI gestorConsola;
     private final BooleanSupplier tareaCancelada;
     private final BooleanSupplier tareaPausada;
+    private final ControlCancelacionPausa control;
     private final GestorLoggingUnificado gestorLogging;
     private final Object logLock;
     private final ConstructorPrompts constructorPrompt;
@@ -50,6 +52,7 @@ public class GestorMultiProveedor {
         this.gestorConsola = gestorConsola;
         this.tareaCancelada = tareaCancelada != null ? tareaCancelada : () -> false;
         this.tareaPausada = tareaPausada != null ? tareaPausada : () -> false;
+        this.control = new ControlCancelacionPausa(tareaCancelada, tareaPausada);
         this.gestorLogging = gestorLogging;
         this.logLock = new Object();
         this.constructorPrompt = new ConstructorPrompts(this.config);
@@ -80,8 +83,8 @@ public class GestorMultiProveedor {
         boolean proveedorEjecutadoPreviamente = false;
 
         for (String proveedor : proveedores) {
-            verificarCancelacion();
-            esperarSiPausada();
+            control.verificarCancelacion();
+            control.esperarSiPausada();
 
             if (Normalizador.esVacio(proveedor)) {
                 continue;
@@ -101,7 +104,7 @@ public class GestorMultiProveedor {
             if (proveedorEjecutadoPreviamente) {
                 long delaySegundos = DELAY_ENTRE_PROVEEDORES_MS / 1000L;
                 registrar("PROVEEDOR: Esperando " + delaySegundos + " segundos antes del siguiente proveedor");
-                esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
+                control.esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
             }
 
             registrar(LINEA_SEPARADORA_PROVEEDOR);
@@ -162,8 +165,8 @@ public class GestorMultiProveedor {
     private String llamarAPIAIConRetries(AnalizadorHTTP analizadorHTTP, ConfiguracionAPI configActual)
             throws IOException, InterruptedException {
         
-        verificarCancelacion();
-        esperarSiPausada();
+        control.verificarCancelacion();
+        control.esperarSiPausada();
         
         String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
         
@@ -211,30 +214,6 @@ public class GestorMultiProveedor {
                 hallazgosConEtiqueta,
                 solicitud.obtenerSolicitudHttp(),
                 Collections.emptyList());
-    }
-
-    private void verificarCancelacion() throws InterruptedException {
-        if (tareaCancelada.getAsBoolean()) {
-            throw new InterruptedException(I18nUI.Tareas.MSG_CANCELADO_USUARIO());
-        }
-    }
-
-    private void esperarSiPausada() throws InterruptedException {
-        while (tareaPausada.getAsBoolean() && !tareaCancelada.getAsBoolean()) {
-            Thread.sleep(250);
-        }
-        verificarCancelacion();
-    }
-
-    private void esperarConControl(long milisegundos) throws InterruptedException {
-        long restante = milisegundos;
-        while (restante > 0) {
-            verificarCancelacion();
-            esperarSiPausada();
-            long espera = Math.min(restante, 250);
-            Thread.sleep(espera);
-            restante -= espera;
-        }
     }
 
     private void registrar(String mensaje) {
