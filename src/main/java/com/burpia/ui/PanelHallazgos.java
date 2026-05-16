@@ -6,6 +6,7 @@ import burp.api.montoya.scanner.BuiltInAuditConfiguration;
 import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.config.AgenteTipo;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.util.Normalizador;
@@ -863,17 +864,7 @@ public class PanelHallazgos extends JPanel {
             false,
             false,
             (solicitud, hallazgo) -> {
-                if (hallazgo == null) {
-                    throw new IllegalStateException(I18nUI.Hallazgos.ERROR_HALLAZGO_NO_DISPONIBLE());
-                }
-                if (manejadorGuardarIssue == null) {
-                    throw new IllegalStateException(I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE());
-                }
-                boolean guardado = manejadorGuardarIssue.test(hallazgo);
-                if (!guardado) {
-                    throw new IllegalStateException(I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE());
-                }
-
+                guardarIssueOReportar(hallazgo);
                 String url = resolverUrlReferencia(hallazgo);
                 return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
                     url + " " + I18nUI.Hallazgos.SUFIJO_ISSUE_GUARDADO()
@@ -889,11 +880,8 @@ public class PanelHallazgos extends JPanel {
         List<Hallazgo> hallazgosPendientes = new ArrayList<>(hallazgos);
         try {
             ejecutorAcciones.submit(() -> {
-                for (Hallazgo hallazgo : hallazgosPendientes) {
-                    if (hallazgo != null) {
-                        manejadorGuardarIssue.test(hallazgo);
-                    }
-                }
+                ResultadoGuardadoIssues resultado = guardarIssues(hallazgosPendientes);
+                registrarResultadoGuardadoAutomatico(resultado);
             });
         } catch (RejectedExecutionException e) {
             mostrarAdvertenciaEnviarA(
@@ -901,6 +889,52 @@ public class PanelHallazgos extends JPanel {
                 I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE()
             );
         }
+    }
+
+    private void guardarIssueOReportar(Hallazgo hallazgo) {
+        if (hallazgo == null) {
+            throw new IllegalStateException(I18nUI.Hallazgos.ERROR_HALLAZGO_NO_DISPONIBLE());
+        }
+        if (manejadorGuardarIssue == null || !manejadorGuardarIssue.test(hallazgo)) {
+            throw new IllegalStateException(I18nUI.Hallazgos.ERROR_GUARDAR_ISSUE());
+        }
+    }
+
+    private ResultadoGuardadoIssues guardarIssues(List<Hallazgo> hallazgos) {
+        if (manejadorGuardarIssue == null || Normalizador.esVacia(hallazgos)) {
+            return new ResultadoGuardadoIssues(0, 0, 0);
+        }
+        int procesados = 0;
+        int exitosos = 0;
+        int fallidos = 0;
+        for (Hallazgo hallazgo : hallazgos) {
+            if (hallazgo == null) {
+                continue;
+            }
+            procesados++;
+            if (guardarIssueSilencioso(hallazgo)) {
+                exitosos++;
+            } else {
+                fallidos++;
+            }
+        }
+        return new ResultadoGuardadoIssues(procesados, exitosos, fallidos);
+    }
+
+    private boolean guardarIssueSilencioso(Hallazgo hallazgo) {
+        try {
+            return manejadorGuardarIssue.test(hallazgo);
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    private void registrarResultadoGuardadoAutomatico(ResultadoGuardadoIssues resultado) {
+        if (resultado.totalProcesados == 0 || resultado.fallidos == 0 || api == null || api.logging() == null) {
+            return;
+        }
+        api.logging().logToError(I18nLogs.Evidence.AUDIT_ISSUES_AUTO_GUARDADO_INCOMPLETO(
+                resultado.exitosos, resultado.totalProcesados));
     }
 
     private void ejecutarAccionBurp(int[] filas,
@@ -1072,6 +1106,18 @@ public class PanelHallazgos extends JPanel {
             this.entradas = entradas;
             this.totalSeleccionados = totalSeleccionados;
             this.totalIgnorados = totalIgnorados;
+        }
+    }
+
+    private static final class ResultadoGuardadoIssues {
+        private final int totalProcesados;
+        private final int exitosos;
+        private final int fallidos;
+
+        private ResultadoGuardadoIssues(int totalProcesados, int exitosos, int fallidos) {
+            this.totalProcesados = totalProcesados;
+            this.exitosos = exitosos;
+            this.fallidos = fallidos;
         }
     }
 

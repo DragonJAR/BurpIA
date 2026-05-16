@@ -326,6 +326,28 @@ class I18nLogsTest {
     }
 
     @Nested
+    @DisplayName("Clase interna Evidence")
+    class EvidenceTests {
+
+        @Test
+        @DisplayName("mensajes de Issues distinguen causas de fallo")
+        void mensajesIssuesDistinguenCausasFallo() {
+            assertEquals("API Montoya no disponible: no se puede guardar AuditIssue",
+                    I18nLogs.Evidence.API_MONTOYA_NO_DISPONIBLE(),
+                    "assertEquals failed at I18nLogsTest.java: Evidence API");
+            assertEquals("No se pudo guardar AuditIssue: SiteMap API no disponible",
+                    I18nLogs.Evidence.SITEMAP_NO_DISPONIBLE(),
+                    "assertEquals failed at I18nLogsTest.java: Evidence SiteMap");
+            assertEquals("Hallazgo sin URL: no se puede crear AuditIssue",
+                    I18nLogs.Evidence.HALLAZGO_SIN_URL(),
+                    "assertEquals failed at I18nLogsTest.java: Evidence URL");
+            assertEquals("Error al crear AuditIssue en Burp Suite",
+                    I18nLogs.Evidence.ERROR_AGREGAR_ISSUE_SITEMAP(),
+                    "assertEquals failed at I18nLogsTest.java: Evidence add");
+        }
+    }
+
+    @Nested
     @DisplayName("Clase interna ContextoMenu")
     class ContextoMenuTests {
 

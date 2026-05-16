@@ -4,6 +4,7 @@ import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.logging.Logging;
 import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.Hallazgo;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -264,6 +266,67 @@ class PanelHallazgosSendTest {
         assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
             "El auto-guardado activo debe invocar el manejador centralizado");
         assertEquals(1, guardados.get(), "Debe guardar exactamente una vez");
+    }
+
+    @Test
+    @DisplayName("Auto-guardado de Issues registra fallos del manejador centralizado")
+    void testAutoGuardadoIssuesActivoRegistraFallosDelManejador() throws Exception {
+        Logging logging = mock(Logging.class);
+        when(api.logging()).thenReturn(logging);
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicInteger intentos = new AtomicInteger(0);
+        panel.establecerManejadorGuardarIssue(hallazgo -> {
+            intentos.incrementAndGet();
+            latch.countDown();
+            return false;
+        });
+        SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(true));
+
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/auto-fail");
+        agregarHallazgo(panel, new Hallazgo(
+            "https://example.com/auto-fail",
+            "Titulo",
+            "Descripcion",
+            "High",
+            "High",
+            request
+        ));
+
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
+            "El auto-guardado debe intentar guardar el hallazgo");
+        assertEquals(1, intentos.get(), "El auto-guardado fallido no debe duplicar intentos");
+        verify(logging, timeout(TIMEOUT_VERIFICACION_MS))
+            .logToError(contains("Auto-guardado de Issues incompleto"));
+    }
+
+    @Test
+    @DisplayName("Auto-guardado de Issues convierte excepciones del manejador en fallo agregado")
+    void testAutoGuardadoIssuesActivoCapturaExcepcionesDelManejador() throws Exception {
+        Logging logging = mock(Logging.class);
+        when(api.logging()).thenReturn(logging);
+        CountDownLatch latch = new CountDownLatch(1);
+        panel.establecerManejadorGuardarIssue(hallazgo -> {
+            latch.countDown();
+            throw new IllegalStateException("fallo controlado");
+        });
+        SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(true));
+
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/auto-exception");
+        agregarHallazgo(panel, new Hallazgo(
+            "https://example.com/auto-exception",
+            "Titulo",
+            "Descripcion",
+            "High",
+            "High",
+            request
+        ));
+
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
+            "El auto-guardado debe ejecutar el manejador aunque falle");
+        verify(logging, timeout(TIMEOUT_VERIFICACION_MS))
+            .logToError(contains("Auto-guardado de Issues incompleto"));
     }
 
     @Test

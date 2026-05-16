@@ -973,6 +973,18 @@ public final class I18nLogs {
             return tr("Integración con Issues solo disponible en Burp Professional");
         }
 
+        public static String API_MONTOYA_NO_DISPONIBLE() {
+            return tr("API Montoya no disponible: no se puede guardar AuditIssue");
+        }
+
+        public static String SITEMAP_NO_DISPONIBLE() {
+            return tr("No se pudo guardar AuditIssue: SiteMap API no disponible");
+        }
+
+        public static String HALLAZGO_SIN_URL() {
+            return tr("Hallazgo sin URL: no se puede crear AuditIssue");
+        }
+
         public static String HALLAZGO_SIN_EVIDENCIA() {
             return tr("Hallazgo sin evidencia HTTP: no se puede crear AuditIssue");
         }
@@ -989,8 +1001,17 @@ public final class I18nLogs {
             return tr("Error al guardar hallazgo como Issue");
         }
 
+        public static String ERROR_AGREGAR_ISSUE_SITEMAP() {
+            return tr("Error al crear AuditIssue en Burp Suite");
+        }
+
         public static String AUDIT_ISSUES_CREADOS(int creados, int total) {
             return tr("Se crearon " + creados + " AuditIssues de " + total + " hallazgos");
+        }
+
+        public static String AUDIT_ISSUES_AUTO_GUARDADO_INCOMPLETO(int creados, int total) {
+            return tr("Auto-guardado de Issues incompleto: se crearon "
+                    + creados + " AuditIssues de " + total + " hallazgos");
         }
 
         public static String EVIDENCIA_NO_ALMACENADA() {

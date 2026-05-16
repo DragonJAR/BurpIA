@@ -1116,7 +1116,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
         if (Normalizador.esVacio(hallazgo.obtenerUrl())) {
             GestorLoggingUnificado.crearMinimal(null, null).warning(
-                    "ExtensionBurpIA", I18nLogs.Evidence.HALLAZGO_SIN_EVIDENCIA());
+                    "ExtensionBurpIA", I18nLogs.Evidence.HALLAZGO_SIN_URL());
             return null;
         }
 
@@ -1162,7 +1162,7 @@ public class ExtensionBurpIA implements BurpExtension {
             HttpRequestResponse solicitudRespuestaEvidencia) {
         if (api == null) {
             GestorLoggingUnificado.crearMinimal(null, null).warning(
-                    "ExtensionBurpIA", I18nLogs.Evidence.HALLAZGO_SIN_EVIDENCIA());
+                    "ExtensionBurpIA", I18nLogs.Evidence.API_MONTOYA_NO_DISPONIBLE());
             return false;
         }
         if (!esBurpProfessional(api)) {
@@ -1172,7 +1172,7 @@ public class ExtensionBurpIA implements BurpExtension {
         }
         if (api.siteMap() == null) {
             GestorLoggingUnificado.crearMinimal(null, null).warning(
-                    "ExtensionBurpIA", "SiteMap no disponible");
+                    "ExtensionBurpIA", I18nLogs.Evidence.SITEMAP_NO_DISPONIBLE());
             return false;
         }
         burp.api.montoya.scanner.audit.issues.AuditIssue issue = crearAuditIssueDesdeHallazgo(hallazgo,
@@ -1186,7 +1186,7 @@ public class ExtensionBurpIA implements BurpExtension {
             api.siteMap().add(issue);
         } catch (Exception e) {
             GestorLoggingUnificado.crearMinimal(null, null).error(
-                    "ExtensionBurpIA", "Error al agregar Issue al SiteMap", e);
+                    "ExtensionBurpIA", I18nLogs.Evidence.ERROR_AGREGAR_ISSUE_SITEMAP(), e);
             return false;
         }
         return true;
