@@ -1737,7 +1737,7 @@ public class ConfiguracionAPI {
     }
 
     // Método helper para verificar si algún nivel de logging está habilitado
-    public boolean hayAlgúnNivelLoggingHabilitado() {
+    public boolean hayAlgunNivelLoggingHabilitado() {
         return nivelErrorHabilitado || nivelWarnHabilitado || nivelInfoHabilitado;
     }
 

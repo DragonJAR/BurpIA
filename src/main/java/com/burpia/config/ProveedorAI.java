@@ -393,6 +393,11 @@ public final class ProveedorAI {
             return "";
         }
         String limpio = nombreProveedor.trim();
+        for (String clave : PROVEEDORES.keySet()) {
+            if (clave.equalsIgnoreCase(limpio)) {
+                return clave;
+            }
+        }
         return limpio;
     }
 }

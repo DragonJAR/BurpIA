@@ -987,6 +987,18 @@ public final class I18nUI {
                     "Review HTTP request headers and body to confirm the vulnerability. This finding is saved automatically so it is not lost when Burp closes, but it requires manual validation. Right-click on the findings tab to send the request to Repeater or Intruder, and never blindly trust AI results.");
         }
 
+        public static String BACKGROUND_ISSUE() {
+            return tr(
+                    "Hallazgo generado por análisis de IA. Requiere validación manual antes de confirmar.",
+                    "AI-generated finding. Manual validation required before confirmation.");
+        }
+
+        public static String REMEDIACION_BACKGROUND_ISSUE() {
+            return tr(
+                    "Verifica siempre los resultados automatizados con pruebas manuales antes de reportar.",
+                    "Always verify automated results with manual testing before reporting.");
+        }
+
         public static String MENU_ENVIAR_AGENTE_ROCKET() {
             return tr("🚀 Enviar al Agente", "🚀 Send to Agent");
         }

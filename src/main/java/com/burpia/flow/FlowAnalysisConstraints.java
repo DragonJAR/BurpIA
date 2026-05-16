@@ -38,6 +38,15 @@ public final class FlowAnalysisConstraints {
     }
 
     public static int contarSolicitudesValidas(List<HttpRequestResponse> seleccion) {
-        return filtrarSolicitudesValidas(seleccion).size();
+        if (Normalizador.esVacia(seleccion)) {
+            return 0;
+        }
+        int count = 0;
+        for (HttpRequestResponse rr : seleccion) {
+            if (rr != null && rr.request() != null) {
+                count++;
+            }
+        }
+        return count;
     }
 }

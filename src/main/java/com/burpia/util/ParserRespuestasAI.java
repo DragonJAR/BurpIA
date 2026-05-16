@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Locale;
 
 public final class ParserRespuestasAI {
+    private static final GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
+
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
         java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
 
@@ -645,7 +647,8 @@ public final class ParserRespuestasAI {
                 return buscarPrimerArrayEnObjeto(elemento.getAsJsonObject());
             }
         } catch (Exception e) {
-            // No es JSON válido, retornar null
+            gestorLogging.warning("ParserRespuestasAI",
+                I18nLogs.tr("No se pudo parsear respuesta como JSON directo") + ": " + e.getMessage());
         }
         return null;
     }
@@ -696,7 +699,8 @@ public final class ParserRespuestasAI {
                 return elemento.getAsJsonArray();
             }
         } catch (Exception e) {
-            // JSON inválido, retornar null
+            gestorLogging.warning("ParserRespuestasAI",
+                I18nLogs.tr("JSON extraído de texto libre es inválido") + ": " + e.getMessage());
         }
 
         return null;
@@ -726,7 +730,8 @@ public final class ParserRespuestasAI {
                                 return elemento.getAsJsonArray();
                             }
                         } catch (Exception e) {
-                            // Continuar con siguiente clave
+                            gestorLogging.warning("ParserRespuestasAI",
+                                I18nLogs.tr("JSON para clave común es inválido: " + clave) + ": " + e.getMessage());
                         }
                     }
                 }

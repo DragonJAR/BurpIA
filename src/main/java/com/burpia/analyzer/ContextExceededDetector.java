@@ -27,10 +27,12 @@ import java.util.regex.Pattern;
  */
 public class ContextExceededDetector {
 
-    /** HTTP status code típico para errores de contexto */
     private static final int HTTP_BAD_REQUEST = 400;
 
-    /** HTTP status code para errores de recursos agotados (Gemini) */
+    private static final int HTTP_PAYLOAD_TOO_LARGE = 413;
+
+    private static final int HTTP_UNPROCESSABLE_ENTITY = 422;
+
     private static final int HTTP_RESOURCE_EXHAUSTED = 429;
 
     /** Patrones comunes para proveedores custom (DRY - reutilizados) */
@@ -123,8 +125,9 @@ public class ContextExceededDetector {
             return false;
         }
 
-        // Verificar status code (típicamente 400 o 429)
-        if (statusCode != HTTP_BAD_REQUEST && statusCode != HTTP_RESOURCE_EXHAUSTED) {
+        // Verificar status code (400, 413, 422 o 429)
+        if (statusCode != HTTP_BAD_REQUEST && statusCode != HTTP_RESOURCE_EXHAUSTED
+                && statusCode != HTTP_PAYLOAD_TOO_LARGE && statusCode != HTTP_UNPROCESSABLE_ENTITY) {
             return false;
         }
 
@@ -255,6 +258,19 @@ public class ContextExceededDetector {
         if (Normalizador.esVacio(texto)) {
             return texto;
         }
-        return texto.substring(0, 1).toUpperCase() + texto.substring(1);
+        String[] palabras = texto.split("\\s+");
+        StringBuilder resultado = new StringBuilder();
+        for (int i = 0; i < palabras.length; i++) {
+            if (i > 0) {
+                resultado.append(' ');
+            }
+            if (!palabras[i].isEmpty()) {
+                resultado.append(Character.toUpperCase(palabras[i].charAt(0)));
+                if (palabras[i].length() > 1) {
+                    resultado.append(palabras[i].substring(1).toLowerCase());
+                }
+            }
+        }
+        return resultado.toString();
     }
 }

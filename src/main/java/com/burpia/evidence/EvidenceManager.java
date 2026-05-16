@@ -67,9 +67,11 @@ public class EvidenceManager {
         }
         
         try {
-            almacenEvidencia.eliminar(evidenciaId);
-            contadorEvidencias.decrementAndGet();
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.Evidence.EVIDENCIA_ELIMINADA() + abreviarId(evidenciaId));
+            boolean eliminada = almacenEvidencia.eliminar(evidenciaId);
+            if (eliminada) {
+                contadorEvidencias.decrementAndGet();
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.Evidence.EVIDENCIA_ELIMINADA() + abreviarId(evidenciaId));
+            }
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG, I18nLogs.Evidence.ERROR_ELIMINAR() + abreviarId(evidenciaId), e);
         }
@@ -89,7 +91,7 @@ public class EvidenceManager {
         try {
             HttpRequestResponse evidencia = obtenerEvidenciaParaIssue(hallazgo, evidenciaId);
             if (evidencia == null) {
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.Evidence.HALLAZGO_SIN_EVIDENCIA());
+                gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.HALLAZGO_SIN_EVIDENCIA());
                 return false;
             }
             
@@ -97,7 +99,7 @@ public class EvidenceManager {
             if (guardado) {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.Evidence.AUDIT_ISSUE_CREADO() + hallazgo.obtenerTitulo());
             } else {
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.Evidence.AUDIT_ISSUE_NO_CREADO());
+                gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.AUDIT_ISSUE_NO_CREADO());
             }
             return guardado;
         } catch (Exception e) {

@@ -138,6 +138,7 @@ public class AlmacenEvidenciaHttp {
 
         Path ruta = rutaArchivo(evidenciaId);
         if (!Files.exists(ruta)) {
+            registrarAdvertencia(I18nLogs.Evidence.ARCHIVO_EVIDENCIA_NO_ENCONTRADO(evidenciaId));
             return null;
         }
 
@@ -148,6 +149,7 @@ public class AlmacenEvidenciaHttp {
             }
             HttpRequestResponse evidencia = reconstruir(registro.requestBytes, registro.responseBytes);
             if (evidencia == null) {
+                registrarAdvertencia(I18nLogs.Evidence.ARCHIVO_EVIDENCIA_CORRUPTO(evidenciaId));
                 return null;
             }
             lock.lock();
@@ -167,21 +169,27 @@ public class AlmacenEvidenciaHttp {
      * Elimina una evidencia del almacén (tanto de memoria como de disco).
      *
      * @param evidenciaId El ID único de la evidencia a eliminar
+     * @return {@code true} si la evidencia existía y fue eliminada, {@code false} en caso contrario
      */
-    public void eliminar(String evidenciaId) {
+    public boolean eliminar(String evidenciaId) {
         if (Normalizador.esVacio(evidenciaId)) {
-            return;
+            return false;
         }
+        boolean estabaEnCache = false;
         lock.lock();
         try {
             EntradaCache removida = cache.remove(evidenciaId);
             if (removida != null) {
                 bytesCache = Math.max(0L, bytesCache - removida.pesoBytes);
+                estabaEnCache = true;
             }
         } finally {
             lock.unlock();
         }
-        eliminarArchivoSilencioso(rutaArchivo(evidenciaId));
+        Path ruta = rutaArchivo(evidenciaId);
+        boolean existiaEnDisco = Files.exists(ruta);
+        eliminarArchivoSilencioso(ruta);
+        return estabaEnCache || existiaEnDisco;
     }
 
     /**
@@ -280,10 +288,8 @@ public class AlmacenEvidenciaHttp {
     private HttpRequestResponse reconstruir(byte[] requestBytes, byte[] responseBytes) {
         try {
             HttpRequest request = HttpRequest.httpRequest(ByteArray.byteArray(requestBytes));
-            if (responseBytes == null || responseBytes.length == 0) {
-                return null;
-            }
-            HttpResponse response = HttpResponse.httpResponse(ByteArray.byteArray(responseBytes));
+            HttpResponse response = HttpResponse.httpResponse(ByteArray.byteArray(
+                    responseBytes != null ? responseBytes : new byte[0]));
             return HttpRequestResponse.httpRequestResponse(request, response);
         } catch (Exception e) {
             registrarError(I18nLogs.AlmacenEvidencia.ERROR_RECONSTRUIR_BYTES(), e);

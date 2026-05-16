@@ -6,6 +6,7 @@ import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.Normalizador;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Construye una {@link SolicitudAnalisis} única para analizar un flujo completo
@@ -51,7 +52,7 @@ public final class FlowAnalysisRequestBuilder {
             "FLOW",
             encabezadosBuilder.toString(),
             cuerpoBuilder.toString(),
-            "flow-" + System.currentTimeMillis(),
+            "flow-" + UUID.randomUUID(),
             primera.obtenerSolicitudHttp(),
             -1,
             "",

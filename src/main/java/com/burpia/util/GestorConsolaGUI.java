@@ -454,10 +454,11 @@ public class GestorConsolaGUI {
                 return;
             }
 
-            EntradaLog entrada;
-            while ((entrada = colaPendiente.poll()) != null) {
+            EntradaLog entrada = colaPendiente.poll();
+            while (entrada != null) {
                 logsPendientes.updateAndGet(actual -> actual > 0 ? actual - 1 : 0);
                 insertarConEtiquetasDestacadas(entrada);
+                entrada = colaPendiente.poll();
             }
 
             trimDocumentoSiEsNecesario();

@@ -137,9 +137,9 @@ public class OrquestadorAnalisis {
 
             return resultadoMultiple;
 
-        } finally {
-            // NOTA: El limitador es liberado por el llamador (AnalizadorAI o FlowAnalysisManager)
-            // No liberamos aquí para evitar doble liberación que causaría permisos negativos
+        } finally { // NOPMD EmptyFinallyBlock
+            // El limitador es liberado por el llamador (AnalizadorAI o FlowAnalysisManager).
+            // No liberamos aquí para evitar doble liberación que causaría permisos negativos.
         }
     }
 

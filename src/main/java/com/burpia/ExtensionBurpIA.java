@@ -133,13 +133,13 @@ public class ExtensionBurpIA implements BurpExtension {
         if (pestaniaPrincipal != null) {
             pestaniaPrincipal.establecerManejadorReintentoTareas(manejadorHttp::reencolarTarea);
             pestaniaPrincipal.establecerManejadorGuardarIssue(manejadorHttp::guardarHallazgoComoIssue);
-        }
-        pestaniaPrincipal.establecerManejadorToggleCaptura(this::alternarCapturaDesdeUI);
-        pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
+            pestaniaPrincipal.establecerManejadorToggleCaptura(this::alternarCapturaDesdeUI);
+            pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
 
-        pestaniaPrincipal.establecerManejadorCambioFiltros(
-            () -> guardarConfiguracionSilenciosa("cambio-filtros-hallazgos")
-        );
+            pestaniaPrincipal.establecerManejadorCambioFiltros(
+                () -> guardarConfiguracionSilenciosa("cambio-filtros-hallazgos")
+            );
+        }
         api.http().registerHttpHandler(manejadorHttp);
         if (config.esDetallado()) {
             registrar("Manejador HTTP registrado exitosamente");
@@ -1125,19 +1125,20 @@ public class ExtensionBurpIA implements BurpExtension {
                 ? new HttpRequestResponse[] { evidenciaFinal }
                 : new HttpRequestResponse[0];
 
-        String detalleIssue = I18nUI.Hallazgos.DETALLE_ISSUE();
-        String remediation = I18nUI.Hallazgos.REMEDIACION_ISSUE();
+        String remediationDetail = I18nUI.Hallazgos.REMEDIACION_ISSUE();
+        String background = I18nUI.Hallazgos.BACKGROUND_ISSUE();
+        String remediationBackground = I18nUI.Hallazgos.REMEDIACION_BACKGROUND_ISSUE();
 
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
                 hallazgo.obtenerTitulo(),
                 hallazgo.obtenerHallazgo() + "\n\nURL: " + hallazgo.obtenerUrl(),
-                detalleIssue,
+                remediationDetail,
                 hallazgo.obtenerUrl(),
                 severity,
                 confidence,
-                null,
-                remediation,
-                null,
+                background,
+                remediationBackground,
+                severity,
                 evidencias);
     }
 
@@ -1153,7 +1154,7 @@ public class ExtensionBurpIA implements BurpExtension {
             MontoyaApi api,
             Hallazgo hallazgo,
             HttpRequestResponse solicitudRespuestaEvidencia) {
-        if (!esBurpProfessional(api) || api == null || api.siteMap() == null) {
+        if (api == null || !esBurpProfessional(api) || api.siteMap() == null) {
             return false;
         }
         burp.api.montoya.scanner.audit.issues.AuditIssue issue = crearAuditIssueDesdeHallazgo(hallazgo,

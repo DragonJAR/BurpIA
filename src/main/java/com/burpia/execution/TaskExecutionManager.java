@@ -232,7 +232,11 @@ public class TaskExecutionManager {
         String id = tareaIdFinal;
 
         try {
-            analizadoresActivos.put(id, analizador);
+            AnalizadorAI existente = analizadoresActivos.putIfAbsent(id, analizador); // NOPMD
+            if (existente != null) {
+                gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Se omitió iniciar una ejecución duplicada para tarea: " + tareaId));
+                return;
+            }
 
             Future<?> future = executorService.submit(analizador);
             ejecucionesActivas.put(id, future);
@@ -372,6 +376,7 @@ public class TaskExecutionManager {
 
     private String almacenarEvidenciaSiDisponible(HttpRequestResponse evidenciaHttp) {
         if (evidenciaHttp == null) {
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.EVIDENCIA_NO_ALMACENADA());
             return null;
         }
         try {
@@ -531,6 +536,9 @@ public class TaskExecutionManager {
                 List<com.burpia.model.Hallazgo> hallazgos,
                 String evidenciaId) {
             if (Normalizador.esVacia(hallazgos) || Normalizador.esVacio(evidenciaId)) {
+                if (!Normalizador.esVacia(hallazgos)) {
+                    gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.HALLAZGOS_SIN_EVIDENCIA(hallazgos.size()));
+                }
                 return hallazgos;
             }
 

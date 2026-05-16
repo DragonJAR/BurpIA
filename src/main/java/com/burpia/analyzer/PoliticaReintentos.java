@@ -142,7 +142,7 @@ public final class PoliticaReintentos {
      *   <li>Timeouts (SocketTimeoutException)</li>
      *   <li>Conexiones rechazadas o reseteadas</li>
      *   <li>Servicios temporalmente no disponibles</li>
-     *   <li>Excepciones genéricas sin mensaje (posibles problemas de red)</li>
+     *   <li>Excepciones con mensajes que indican problemas transitorios (timeout, connection reset, etc.)</li>
      * </ul>
      *
      * @param excepcion excepción de I/O, puede ser {@code null}
@@ -156,9 +156,9 @@ public final class PoliticaReintentos {
             return true;
         }
         String mensaje = excepcion.getMessage();
-        // Excepciones sin mensaje se asumen como problemas de red transitorios
+        // NOPMD - Empty message is ambiguous; only retry if message indicates a specific transient condition
         if (Normalizador.esVacio(mensaje)) {
-            return true;
+            return false;
         }
         String normalizado = mensaje.toLowerCase(Locale.ROOT);
         return normalizado.contains("timeout")

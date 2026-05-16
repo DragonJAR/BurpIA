@@ -310,16 +310,16 @@ class PoliticaReintentosTest {
         }
 
         @Test
-        @DisplayName("IOException sin mensaje es reintentable (asume problema de red)")
-        void ioExceptionSinMensaje_esReintentable() {
-            assertTrue(PoliticaReintentos.esExcepcionReintentable(new IOException()), "assertTrue failed at PoliticaReintentosTest.java:315");
+        @DisplayName("IOException sin mensaje no es reintentable (mensaje vacío es ambiguo)")
+        void ioExceptionSinMensaje_noEsReintentable() {
+            assertFalse(PoliticaReintentos.esExcepcionReintentable(new IOException()), "assertFalse failed at PoliticaReintentosTest.java:315");
         }
 
         @Test
-        @DisplayName("IOException con mensaje null es reintentable")
-        void ioExceptionConMensajeNull_esReintentable() {
+        @DisplayName("IOException con mensaje null no es reintentable (mensaje vacío es ambiguo)")
+        void ioExceptionConMensajeNull_noEsReintentable() {
             IOException e = new IOException();
-            assertTrue(PoliticaReintentos.esExcepcionReintentable(e), "assertTrue failed at PoliticaReintentosTest.java:322");
+            assertFalse(PoliticaReintentos.esExcepcionReintentable(e), "assertFalse failed at PoliticaReintentosTest.java:322");
         }
 
         @Test

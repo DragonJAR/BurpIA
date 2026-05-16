@@ -993,6 +993,33 @@ public final class I18nLogs {
             return tr("Se crearon " + creados + " AuditIssues de " + total + " hallazgos");
         }
 
+        public static String EVIDENCIA_NO_ALMACENADA() {
+            return I18nUI.tr(
+                    "Evidencia HTTP no disponible: los hallazgos se registraran sin Issue asociado",
+                    "HTTP evidence not available: findings will be recorded without associated Issue");
+        }
+
+        public static String HALLAZGOS_SIN_EVIDENCIA(int cantidad) {
+            return I18nUI.trf(
+                    "%d hallazgos sin evidencia HTTP: no se crearan Issues automaticamente",
+                    "%d findings without HTTP evidence: Issues will not be created automatically",
+                    cantidad);
+        }
+
+        public static String ARCHIVO_EVIDENCIA_NO_ENCONTRADO(String id) {
+            return I18nUI.trf(
+                    "Archivo de evidencia no encontrado en disco: %s",
+                    "Evidence file not found on disk: %s",
+                    id);
+        }
+
+        public static String ARCHIVO_EVIDENCIA_CORRUPTO(String id) {
+            return I18nUI.trf(
+                    "Archivo de evidencia corrupto o incompleto: %s",
+                    "Evidence file corrupt or incomplete: %s",
+                    id);
+        }
+
         public static String CACHE_LIMPIADO() {
             return tr("Cache de memoria de evidencias limpiado");
         }
