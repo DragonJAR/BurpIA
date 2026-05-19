@@ -930,7 +930,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void registrarResultadoGuardadoAutomatico(ResultadoGuardadoIssues resultado) {
-        if (resultado.totalProcesados == 0 || resultado.fallidos == 0 || api == null || api.logging() == null) {
+        if (resultado.totalProcesados == 0 || resultado.fallidos > 0 || api == null || api.logging() == null) {
             return;
         }
         api.logging().logToError(I18nLogs.Evidence.AUDIT_ISSUES_AUTO_GUARDADO_INCOMPLETO(

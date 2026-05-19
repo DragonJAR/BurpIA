@@ -43,7 +43,7 @@ public final class DialogStateManager {
         this.proveedorActualUi = estadoInicial != null ? estadoInicial.proveedorSeleccionado() : null;
         
         if (estadoInicial != null) {
-            gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado inicial capturado para proveedor: " + proveedorActualUi));
+            gestorLogging.info("DialogStateManager", I18nLogs.Configuracion.ESTADO_INICIAL_CAPTURADO(proveedorActualUi));
         }
     }
 
@@ -219,9 +219,9 @@ public final class DialogStateManager {
         proveedorActualUi = nuevoProveedor;
 
         gestorLogging.info("DialogStateManager",
-            I18nLogs.tr(String.format("Cambiando proveedor: %s -> %s",
+            I18nLogs.Configuracion.CAMBIANDO_PROVEEDOR(
                 proveedorAnterior != null ? proveedorAnterior : "null",
-                nuevoProveedor)));
+                nuevoProveedor));
 
         uiProvider.actualizarProveedorEnUI(nuevoProveedor);
     }
@@ -236,10 +236,10 @@ public final class DialogStateManager {
         
         if (estado != null) {
             estadoProveedorTemporal.put(proveedor, estado);
-            gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado temporal guardado para proveedor: " + proveedor));
+            gestorLogging.info("DialogStateManager", I18nLogs.Configuracion.ESTADO_TEMPORAL_GUARDADO(proveedor));
         } else {
             estadoProveedorTemporal.remove(proveedor);
-            gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado temporal eliminado para proveedor: " + proveedor));
+            gestorLogging.info("DialogStateManager", I18nLogs.Configuracion.ESTADO_TEMPORAL_ELIMINADO(proveedor));
         }
     }
 
@@ -254,10 +254,10 @@ public final class DialogStateManager {
         if (Normalizador.noEsVacio(ruta)) {
             rutasBinarioAgenteTemporal.put(agente, ruta);
             gestorLogging.info("DialogStateManager",
-                I18nLogs.tr(String.format("Ruta binaria guardada para agente %s: %s", agente, ruta)));
+                I18nLogs.Configuracion.RUTA_BINARIO_GUARDADA(agente, ruta));
         } else {
             rutasBinarioAgenteTemporal.remove(agente);
-            gestorLogging.info("DialogStateManager", I18nLogs.tr("Ruta binaria eliminada para agente: " + agente));
+            gestorLogging.info("DialogStateManager", I18nLogs.Configuracion.RUTA_BINARIO_ELIMINADA(agente));
         }
     }
 

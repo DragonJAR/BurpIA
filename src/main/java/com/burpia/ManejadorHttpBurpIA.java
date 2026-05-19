@@ -44,12 +44,6 @@ import java.util.function.Supplier;
 public class ManejadorHttpBurpIA implements HttpHandler {
     private static final String ORIGEN_LOG = "BurpIA";
     private static final long INTERVALO_ALERTA_CONFIG_MS = 120000L;
-    // TTL específicos por estado de tarea (state-aware retention policy)
-    private static final long TTL_CONTEXTO_COMPLETADO_MS = 0L; // Purga inmediata para tareas exitosas
-    private static final long TTL_CONTEXTO_REINTENTABLE_MS = 15 * 60 * 1000L; // 15 minutos (aumentado según
-                                                                              // recomendación) para ERROR/CANCELADO
-    private static final long TTL_CONTEXTO_ACTIVO_MS = Long.MAX_VALUE; // Mantener hasta cambio de estado
-    private static final int MAX_CONTEXTO_REINTENTO = 1000;
     private final MontoyaApi api;
     private final ConfiguracionAPIRef configRef;
     private final PestaniaPrincipal pestaniaPrincipal;
@@ -126,7 +120,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     public void actualizarConfiguracion(ConfiguracionAPI nuevaConfig) {
         if (nuevaConfig == null) {
-            registrarError("No se pudo actualizar configuracion: objeto de configuracion nulo");
+            registrarError(I18nLogs.Configuracion.NO_ACTUALIZAR_CONFIG_NULA());
             return;
         }
 
@@ -272,7 +266,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     public void analizarSolicitudForzada(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal,
             FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         if (solicitud == null) {
-            registrarError("No se pudo analizar solicitud forzada: request null");
+            registrarError(I18nLogs.Manejador.ERROR_SOLICITUD_NULA());
             return;
         }
 
@@ -353,7 +347,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         SolicitudAnalisis solicitudFlujo = FlowAnalysisRequestBuilder.crearSolicitudFlujo(configRef.obtener(), solicitudesFlujo);
         if (solicitudFlujo == null) {
-            registrarError("No se pudo crear solicitud de análisis de flujo");
+            registrarError(I18nLogs.Manejador.ERROR_CREAR_SOLICITUD_FLUJO());
             return;
         }
 
@@ -380,7 +374,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             HttpRequestResponse evidenciaHttp,
             String tipoTarea) {
         if (solicitudAnalisis == null) {
-            registrarError("No se pudo programar analisis: solicitud null");
+            registrarError(I18nLogs.Manejador.ERROR_PROGRAMAR_ANALISIS());
             return null;
         }
         if (!puedeIniciarAnalisis(tipoTarea, solicitudAnalisis.obtenerUrl())) {
@@ -645,18 +639,22 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void pausarCaptura() {
-        ConfiguracionAPI actual = configRef.obtener();
-        ConfiguracionAPI modificada = actual.crearSnapshot();
-        modificada.establecerEscaneoPasivoHabilitado(false);
-        configRef.reemplazar(modificada);
+        synchronized (logLock) {
+            ConfiguracionAPI actual = configRef.obtener();
+            ConfiguracionAPI modificada = actual.crearSnapshot();
+            modificada.establecerEscaneoPasivoHabilitado(false);
+            configRef.reemplazar(modificada);
+        }
         registrar("Captura pausada por usuario");
     }
 
     public void reanudarCaptura() {
-        ConfiguracionAPI actual = configRef.obtener();
-        ConfiguracionAPI modificada = actual.crearSnapshot();
-        modificada.establecerEscaneoPasivoHabilitado(true);
-        configRef.reemplazar(modificada);
+        synchronized (logLock) {
+            ConfiguracionAPI actual = configRef.obtener();
+            ConfiguracionAPI modificada = actual.crearSnapshot();
+            modificada.establecerEscaneoPasivoHabilitado(true);
+            configRef.reemplazar(modificada);
+        }
         registrar("Captura reanudada por usuario");
     }
 

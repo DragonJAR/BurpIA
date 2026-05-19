@@ -71,20 +71,20 @@ public final class UIStateManager {
         }
 
         try {
-            Map<String, String> estadoActual = obtenerEstadoUIActual();
+            Map<String, String> estadoGuardado = obtenerEstadoUIGuardado();
             
             if (config.persistirFiltroBusquedaHallazgos()) {
-                estadoActual.put(CLAVE_FILTRO_BUSQUEDA, textoBusqueda != null ? textoBusqueda : "");
+                estadoGuardado.put(CLAVE_FILTRO_BUSQUEDA, textoBusqueda != null ? textoBusqueda : "");
             }
             
             if (config.persistirFiltroSeveridadHallazgos()) {
-                estadoActual.put(
+                estadoGuardado.put(
                     CLAVE_FILTRO_SEVERIDAD,
                     I18nUI.Hallazgos.NORMALIZAR_FILTRO_SEVERIDAD(severidadSeleccionada)
                 );
             }
             
-            guardarEstadoUI(estadoActual);
+            guardarEstadoUI(estadoGuardado);
             
             if (config.esDetallado()) {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Estado de filtros guardado: búsqueda='" + textoBusqueda +
@@ -149,9 +149,9 @@ public final class UIStateManager {
         }
 
         try {
-            Map<String, String> estadoActual = obtenerEstadoUIActual();
-            estadoActual.put(CLAVE_PESTANIA_ACTUAL, identificadorPestania);
-            guardarEstadoUI(estadoActual);
+            Map<String, String> estadoGuardado = obtenerEstadoUIGuardado();
+            estadoGuardado.put(CLAVE_PESTANIA_ACTUAL, identificadorPestania);
+            guardarEstadoUI(estadoGuardado);
             
             if (config.esDetallado()) {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Última pestaña guardada: " + identificadorPestania));
@@ -216,7 +216,7 @@ public final class UIStateManager {
         }
 
         try {
-            Map<String, String> estadoActual = obtenerEstadoUIActual();
+            Map<String, String> estadoGuardado = obtenerEstadoUIGuardado();
             int[] anchosActuales = UIUtils.capturarAnchosColumnasTabla(tabla);
             StringBuilder anchos = new StringBuilder();
 
@@ -228,8 +228,8 @@ public final class UIStateManager {
             }
             
             String clave = CLAVE_ANCHOS_COLUMNAS + SEPARADOR_ESTADO + identificadorTabla;
-            estadoActual.put(clave, anchos.toString());
-            guardarEstadoUI(estadoActual);
+            estadoGuardado.put(clave, anchos.toString());
+            guardarEstadoUI(estadoGuardado);
             
             if (config.esDetallado()) {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Anchos de columna guardados para " + identificadorTabla +
@@ -279,16 +279,6 @@ public final class UIStateManager {
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al restaurar anchos de columna para " + identificadorTabla), e);
         }
-    }
-
-    /**
-     * Obtiene el estado UI actual desde la configuración.
-     *
-     * @return Mapa con estado UI actual
-     */
-    private Map<String, String> obtenerEstadoUIActual() {
-        Map<String, String> estado = config.obtenerEstadoUI();
-        return estado != null ? new HashMap<>(estado) : new HashMap<>();
     }
 
     /**

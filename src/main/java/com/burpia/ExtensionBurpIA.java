@@ -227,7 +227,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta,
             FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         if (solicitudRespuesta == null) {
-            registrarError("No se puede enviar al Agente: solicitud/respuesta nula");
+            registrarError(I18nLogs.Agente.ERROR_SOLICITUD_NULA());
             return false;
         }
         try {
@@ -259,7 +259,7 @@ public class ExtensionBurpIA implements BurpExtension {
             rastrearContextual(I18nLogs.ContextoMenu.RESULTADO_INYECCION_AGENTE(enviado));
             return enviado;
         } catch (Exception e) {
-            registrarError("No se pudo enviar al Agente: " + e.getMessage());
+            registrarError(I18nLogs.Agente.ERROR_ENVIO(e.getMessage()));
             return false;
         }
     }
@@ -305,7 +305,7 @@ public class ExtensionBurpIA implements BurpExtension {
             rastrearContextual(I18nLogs.ContextoMenu.RESULTADO_INYECCION_AGENTE(enviado));
             return enviado;
         } catch (Exception e) {
-            registrarError("No se pudo enviar flujo al Agente: " + e.getMessage());
+            registrarError(I18nLogs.Agente.ERROR_FLUJO(e.getMessage()));
             return false;
         }
     }
@@ -334,7 +334,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private boolean enviarHallazgoAAgente(Hallazgo hallazgo) {
         if (configRef == null || configRef.obtener() == null) {
-            registrarError("No se puede usar el Agente: configuracion no inicializada");
+            registrarError(I18nLogs.Agente.ERROR_CONFIGURACION_NULA());
             return false;
         }
         if (!hayAgenteOperativoDisponible()) {
@@ -342,7 +342,7 @@ public class ExtensionBurpIA implements BurpExtension {
             return false;
         }
         if (hallazgo == null) {
-            registrarError("No se puede enviar al Agente: hallazgo nulo");
+            registrarError(I18nLogs.Agente.ERROR_HALLAZGO_NULO());
             return false;
         }
         try {
@@ -354,15 +354,15 @@ public class ExtensionBurpIA implements BurpExtension {
             HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
             String request = serializarSolicitudSiNecesario(prompt, evidencia, hallazgo.obtenerUrl());
             String response = serializarRespuestaSiNecesario(prompt, evidencia);
-            String tituloValor = valorSeguro(hallazgo.obtenerTitulo());
-            String resumenValor = valorSeguro(hallazgo.obtenerHallazgo());
-            String urlContextValor = valorSeguro(hallazgo.obtenerUrl());
+            String tituloValor = Normalizador.valorSeguro(hallazgo.obtenerTitulo());
+            String resumenValor = Normalizador.valorSeguro(hallazgo.obtenerHallazgo());
+            String urlContextValor = Normalizador.valorSeguro(hallazgo.obtenerUrl());
             boolean usaTitulo = contieneToken(prompt, TOKEN_TITLE);
             boolean usaResumen = contieneAlgunToken(prompt, TOKEN_SUMMARY, TOKEN_DESCRIPTION);
             boolean usaUrl = contieneToken(prompt, TOKEN_URL);
-            String titulo = usaTitulo && tieneContenido(tituloValor) ? tituloValor : "";
-            String resumen = usaResumen && tieneContenido(resumenValor) ? resumenValor : "";
-            String urlContext = usaUrl && tieneContenido(urlContextValor) ? urlContextValor : "";
+        String titulo = usaTitulo && Normalizador.noEsVacio(tituloValor) ? tituloValor : "";
+        String resumen = usaResumen && Normalizador.noEsVacio(resumenValor) ? resumenValor : "";
+        String urlContext = usaUrl && Normalizador.noEsVacio(urlContextValor) ? urlContextValor : "";
             String lang = configRef.obtener().obtenerIdiomaUi();
 
             StringBuilder inputBuilder = new StringBuilder();
@@ -378,7 +378,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
             return enviarPayloadAgente(inputFinal);
         } catch (Exception e) {
-            registrarError("No se pudo enviar hallazgo al Agente: " + e.getMessage());
+            registrarError(I18nLogs.Agente.ERROR_HALLAZGO_ENVIO(e.getMessage()));
             return false;
         }
     }
@@ -442,7 +442,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private String obtenerPromptAgenteDisponible() {
         ConfiguracionAPI cfg = configRef.obtener();
         if (cfg == null) {
-            registrarError("No se puede usar el Agente: configuracion no inicializada");
+            registrarError(I18nLogs.Agente.ERROR_CONFIGURACION_NULA());
             return null;
         }
         if (!hayAgenteOperativoDisponible()) {
@@ -464,7 +464,7 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private String serializarSolicitudFallbackDesdeUrl(String prompt, String urlFallback) {
-        if (!contieneToken(prompt, TOKEN_REQUEST) || !tieneContenido(urlFallback)) {
+        if (!contieneToken(prompt, TOKEN_REQUEST) || !Normalizador.noEsVacio(urlFallback)) {
             return "";
         }
         try {
@@ -475,7 +475,7 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private String construirSolicitudGetDesdeUrl(String url) {
-        if (!tieneContenido(url)) {
+        if (!Normalizador.noEsVacio(url)) {
             return "";
         }
         URI uri;
@@ -485,15 +485,15 @@ public class ExtensionBurpIA implements BurpExtension {
             return "";
         }
         String host = uri.getHost();
-        if (!tieneContenido(host)) {
+        if (!Normalizador.noEsVacio(host)) {
             return "";
         }
         String path = uri.getRawPath();
-        if (!tieneContenido(path)) {
+        if (!Normalizador.noEsVacio(path)) {
             path = "/";
         }
         String query = uri.getRawQuery();
-        String objetivo = tieneContenido(query) ? path + "?" + query : path;
+        String objetivo = Normalizador.noEsVacio(query) ? path + "?" + query : path;
         String hostHeader = host;
         int port = uri.getPort();
         String scheme = uri.getScheme() != null ? uri.getScheme().toLowerCase() : "";
@@ -560,7 +560,7 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void agregarLineaSiHayContenido(StringBuilder builder, boolean habilitado, String etiqueta, String valor) {
-        if (!habilitado || !tieneContenido(valor)) {
+        if (!habilitado || !Normalizador.noEsVacio(valor)) {
             return;
         }
         builder.append(etiqueta).append(": ").append(valor).append("\n");
@@ -568,6 +568,10 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private boolean contieneToken(String prompt, String token) {
         return prompt != null && token != null && prompt.contains(token);
+    }
+
+    private boolean tieneResponseDisponible(HttpRequestResponse evidencia) {
+        return obtenerProcesadorSolicitudes().tieneResponseDisponible(evidencia);
     }
 
     private boolean contieneAlgunToken(String prompt, String... tokens) {
@@ -582,36 +586,24 @@ public class ExtensionBurpIA implements BurpExtension {
         return false;
     }
 
-    private boolean tieneContenido(String texto) {
-        return Normalizador.noEsVacio(texto);
-    }
-
-    private boolean tieneResponseDisponible(HttpRequestResponse evidencia) {
-        return obtenerProcesadorSolicitudes().tieneResponseDisponible(evidencia);
-    }
-
-    private String valorSeguro(String texto) {
-        return texto != null ? texto : "";
-    }
-
     private PanelAgente obtenerPanelAgenteDisponible() {
         if (pestaniaPrincipal == null) {
-            registrarError("No se puede usar el Agente: pestaña principal no disponible");
+            registrarError(I18nLogs.Agente.ERROR_PESTANA_NO_DISPONIBLE());
             return null;
         }
         PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
         if (panelAgente == null) {
-            registrarError("No se puede usar el Agente: panel no disponible");
+            registrarError(I18nLogs.Agente.ERROR_PANEL_NO_DISPONIBLE());
             return null;
         }
         return panelAgente;
     }
 
     private void abrirConfiguracion() {
-        registrar("Abriendo dialogo de configuracion");
+        registrar(I18nLogs.Extension.ABRIENDO_DIALOGO());
 
         if (pestaniaPrincipal == null || config == null || gestorConfig == null) {
-            registrarError("No se pudo abrir configuracion: dependencias no inicializadas");
+            registrarError(I18nLogs.Extension.ERROR_ABRIR_DIALOGO());
             return;
         }
 
@@ -673,7 +665,7 @@ public class ExtensionBurpIA implements BurpExtension {
                 }
                 pestaniaPrincipal.actualizarVisibilidadAgentes();
                 pestaniaPrincipal.aplicarIdioma();
-                registrar("Agente cambiado rápidamente a: " + obtenerTipoAgenteOperativoActual());
+                registrar(I18nLogs.Agente.LOG_AGENTE_CAMBIADO(obtenerTipoAgenteOperativoActual()));
             });
 
             api.userInterface().registerSuiteTab("BurpIA", pestaniaPrincipal.obtenerPanel());
@@ -1035,18 +1027,18 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private void inicializarAgenteSiHabilitado() {
         if (!hayAgenteOperativoDisponible()) {
-            registrar("Agente deshabilitado en configuración");
+            registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
             return;
         }
 
         if (pestaniaPrincipal == null) {
-            registrarError("No se puede inicializar el Agente: pestaniaPrincipal es null");
+            registrarError(I18nLogs.Agente.ERROR_INICIALIZACION_PESTANA());
             return;
         }
 
         PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
         if (panelAgente == null) {
-            registrarError("No se puede inicializar el Agente: panel no disponible");
+            registrarError(I18nLogs.Agente.ERROR_INICIALIZACION_PANEL());
             return;
         }
 

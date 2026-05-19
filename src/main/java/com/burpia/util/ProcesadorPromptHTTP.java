@@ -260,8 +260,8 @@ public final class ProcesadorPromptHTTP {
             return "[REQUEST NOT AVAILABLE]";
         }
 
-        String encabezados = valorSeguro(solicitud.obtenerEncabezados());
-        String cuerpo = valorSeguro(solicitud.obtenerCuerpo());
+        String encabezados = Normalizador.valorSeguro(solicitud.obtenerEncabezados());
+        String cuerpo = Normalizador.valorSeguro(solicitud.obtenerCuerpo());
         String lineaInicial = construirLineaRequest(solicitud);
         StringBuilder request = new StringBuilder();
 
@@ -287,8 +287,8 @@ public final class ProcesadorPromptHTTP {
             return "HTTP/1.1 0";
         }
 
-        String encabezadosRespuesta = valorSeguro(solicitud.obtenerEncabezadosRespuesta());
-        String cuerpoRespuesta = valorSeguro(solicitud.obtenerCuerpoRespuesta());
+        String encabezadosRespuesta = Normalizador.valorSeguro(solicitud.obtenerEncabezadosRespuesta());
+        String cuerpoRespuesta = Normalizador.valorSeguro(solicitud.obtenerCuerpoRespuesta());
         String lineaEstado = construirLineaEstado(solicitud.obtenerCodigoEstadoRespuesta());
         StringBuilder response = new StringBuilder();
 
@@ -315,8 +315,8 @@ public final class ProcesadorPromptHTTP {
             return "";
         }
 
-        String encabezadosRespuesta = valorSeguro(solicitud.obtenerEncabezadosRespuesta());
-        String cuerpoRespuesta = valorSeguro(solicitud.obtenerCuerpoRespuesta());
+        String encabezadosRespuesta = Normalizador.valorSeguro(solicitud.obtenerEncabezadosRespuesta());
+        String cuerpoRespuesta = Normalizador.valorSeguro(solicitud.obtenerCuerpoRespuesta());
         int codigoEstado = solicitud.obtenerCodigoEstadoRespuesta();
         if (esVacio(encabezadosRespuesta) && esVacio(cuerpoRespuesta) && codigoEstado < 0) {
             return "";
@@ -352,16 +352,12 @@ public final class ProcesadorPromptHTTP {
         return contenido != null ? contenido : "";
     }
 
-    private static String valorSeguro(String valor) {
-        return valor != null ? valor : "";
-    }
-
     private static String construirLineaRequest(SolicitudAnalisis solicitud) {
         return obtenerPrefijoRequest(solicitud) + " HTTP/1.1";
     }
 
     private static String obtenerPrefijoRequest(SolicitudAnalisis solicitud) {
-        return valorSeguro(solicitud.obtenerMetodo()) + " " + valorSeguro(solicitud.obtenerUrl());
+        return Normalizador.valorSeguro(solicitud.obtenerMetodo()) + " " + Normalizador.valorSeguro(solicitud.obtenerUrl());
     }
 
     private static String construirLineaEstado(int codigoEstado) {

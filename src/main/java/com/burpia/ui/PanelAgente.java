@@ -73,8 +73,8 @@ public class PanelAgente extends JPanel {
     private JButton btnCambiarAgente;
     private JButton btnAyudaAgente;
 
-    private PtyProcess process;
-    private TtyConnector ttyConnector;
+    private volatile PtyProcess process;
+    private volatile TtyConnector ttyConnector;
 
     private final AtomicReference<Runnable> manejadorFocoPestania;
     private final AtomicReference<Runnable> manejadorCambioConfiguracion;

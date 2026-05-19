@@ -179,6 +179,15 @@ public final class Normalizador {
     }
 
     /**
+     * Retorna el valor si no es null, o cadena vacía en caso contrario.
+     * @param valor el valor a verificar
+     * @return el valor original o cadena vacía si es null
+     */
+    public static String valorSeguro(String valor) {
+        return valor != null ? valor : "";
+    }
+
+    /**
      * Desescapa secuencias de escape básicas en un texto.
      * <p>
      * Secuencias soportadas: {@code \n}, {@code \r}, {@code \t}, {@code \"}, {@code \\}

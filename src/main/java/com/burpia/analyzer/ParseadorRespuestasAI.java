@@ -380,7 +380,7 @@ public class ParseadorRespuestasAI {
     }
 
     private String etiquetaEvidencia() {
-        return "en".equalsIgnoreCase(idiomaUi) ? "Evidence" : "Evidencia";
+        return I18nUI.tr("Evidencia", "Evidence");
     }
 
     private String limpiarBloquesMarkdownJson(String contenido) {

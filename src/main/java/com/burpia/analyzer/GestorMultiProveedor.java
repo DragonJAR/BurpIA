@@ -2,6 +2,7 @@ package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ProveedorAI;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
@@ -63,12 +64,12 @@ public class GestorMultiProveedor {
         List<String> proveedores = config.obtenerProveedoresMultiConsulta();
         
         if (Normalizador.esVacia(proveedores)) {
-            registrar("Multi-consulta: No hay proveedores seleccionados, usando proveedor único");
+            registrar(I18nLogs.MultiProveedor.SIN_PROVEEDORES());
             return ejecutarAnalisisProveedorUnico();
         }
 
         if (proveedores.size() == 1) {
-            registrar("Multi-consulta: Solo 1 proveedor seleccionado, usando proveedor único");
+            registrar(I18nLogs.MultiProveedor.UN_PROVEEDOR());
             return ejecutarAnalisisProveedorUnico();
         }
 
@@ -91,35 +92,34 @@ public class GestorMultiProveedor {
             }
             
             if (!ProveedorAI.existeProveedor(proveedor)) {
-                registrar("PROVEEDOR: Proveedor no existe: " + proveedor + ", omitiendo");
+                registrar(I18nLogs.MultiProveedor.PROVEEDOR_NO_EXISTE(proveedor));
                 continue;
             }
 
             String modelo = config.obtenerModeloParaProveedor(proveedor);
             if (Normalizador.esVacio(modelo)) {
-                registrar("PROVEEDOR: Proveedor " + proveedor + " no tiene modelo configurado, omitiendo");
+                registrar(I18nLogs.MultiProveedor.PROVEEDOR_SIN_MODELO(proveedor));
                 continue;
             }
 
             if (proveedorEjecutadoPreviamente) {
                 long delaySegundos = DELAY_ENTRE_PROVEEDORES_MS / 1000L;
-                registrar("PROVEEDOR: Esperando " + delaySegundos + " segundos antes del siguiente proveedor");
+                registrar(I18nLogs.MultiProveedor.ESPERANDO_SIGUIENTE(delaySegundos));
                 control.esperarConControl(DELAY_ENTRE_PROVEEDORES_MS);
             }
 
             registrar(LINEA_SEPARADORA_PROVEEDOR);
-            registrar("PROVEEDOR: " + proveedor + " (" + modelo + ")");
+            registrar(I18nLogs.MultiProveedor.PROVEEDOR_EJECUTANDO(proveedor, modelo));
 
             try {
                 ResultadoAnalisisMultiple resultado = ejecutarAnalisisProveedor(proveedor, modelo);
                 List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
                 
-                registrar("PROVEEDOR: " + proveedor + " completado - " + hallazgosProveedor.size()
-                        + " hallazgo(s) encontrado(s)");
+                registrar(I18nLogs.MultiProveedor.PROVEEDOR_COMPLETADO(proveedor, hallazgosProveedor.size()));
                 todosHallazgos.addAll(hallazgosProveedor);
 
             } catch (Exception e) {
-                registrar("PROVEEDOR: Error con " + proveedor + ": " + e.getMessage());
+                registrar(I18nLogs.MultiProveedor.PROVEEDOR_ERROR(proveedor, e.getMessage()));
                 proveedoresFallidos.add(proveedor);
             } finally {
                 proveedorEjecutadoPreviamente = true;
@@ -127,12 +127,12 @@ public class GestorMultiProveedor {
         }
 
         if (!proveedoresFallidos.isEmpty()) {
-            registrarError("PROVEEDOR: " + proveedoresFallidos.size() +
-                    " proveedor(es) fallaron: " + String.join(", ", proveedoresFallidos));
+            registrarError(I18nLogs.MultiProveedor.PROVEEDORES_FALLIDOS(
+                    proveedoresFallidos.size(), String.join(", ", proveedoresFallidos)));
         }
 
         registrar(LINEA_SEPARADORA_PROVEEDOR);
-        registrar("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: " + todosHallazgos.size());
+        registrar(I18nLogs.MultiProveedor.MULTI_CONSULTA_COMPLETADA(todosHallazgos.size()));
 
         return new ResultadoAnalisisMultiple(solicitud.obtenerUrl(), todosHallazgos,
                 solicitud.obtenerSolicitudHttp(), proveedoresFallidos);
@@ -172,7 +172,7 @@ public class GestorMultiProveedor {
         
         try {
             String respuesta = analizadorHTTP.llamarAPI(prompt);
-            registrar("Longitud de respuesta de API: " + respuesta.length() + " caracteres");
+            registrar(I18nLogs.MultiProveedor.LONGITUD_RESPUESTA_API(respuesta.length()));
             return respuesta;
         } catch (ContextExceededException e) {
             // Para multi-proveedor, propagar como IOException

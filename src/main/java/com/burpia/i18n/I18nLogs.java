@@ -400,7 +400,14 @@ public final class I18nLogs {
             "NOTE: Only analyzes traffic in Scope. Add targets in Target > Scope"},
         {"Manejador HTTP inicializado (max concurrente=", "HTTP handler initialized (max concurrent="},
         {"Agente deshabilitado en ajustes.", "Agent disabled in settings."},
-        {"Inicialización completada exitosamente", "Initialization completed successfully"}
+        {"Inicialización completada exitosamente", "Initialization completed successfully"},
+        {"Contenido extraído", "Content extracted"},
+        {"hallazgos en JSON", "findings in JSON"},
+        {"Fallback JSON no estricto recuperó", "Non-strict JSON fallback recovered"},
+        {"Se detectó pérdida de contenido", "Content loss detected"},
+        {"Recuperación extrema", "Extreme recovery"},
+        {"Array JSON convertido a", "JSON array converted to"},
+        {"Parseo campo por campo recuperó", "Field-by-field parsing recovered"}
     };
 
     /**
@@ -412,6 +419,147 @@ public final class I18nLogs {
 
         public static String ERROR_DESHABILITADO() {
             return tr("Agente deshabilitado en ajustes.");
+        }
+
+        public static String ERROR_SOLICITUD_NULA() {
+            return I18nUI.tr("No se puede enviar al Agente: solicitud/respuesta nula",
+                    "Cannot send to Agent: null request/response");
+        }
+
+        public static String ERROR_ENVIO(String detalle) {
+            return I18nUI.trf("No se pudo enviar al Agente: %s", "Could not send to Agent: %s", detalle);
+        }
+
+        public static String ERROR_FLUJO(String detalle) {
+            return I18nUI.trf("No se pudo enviar flujo al Agente: %s", "Could not send flow to Agent: %s", detalle);
+        }
+
+        public static String ERROR_HALLAZGO_NULO() {
+            return I18nUI.tr("No se puede enviar al Agente: hallazgo nulo",
+                    "Cannot send to Agent: null finding");
+        }
+
+        public static String ERROR_CONFIGURACION_NULA() {
+            return I18nUI.tr("No se puede usar el Agente: configuracion no inicializada",
+                    "Cannot use Agent: configuration not initialized");
+        }
+
+        public static String ERROR_PESTANA_NO_DISPONIBLE() {
+            return I18nUI.tr("No se puede usar el Agente: pestaña principal no disponible",
+                    "Cannot use Agent: main tab not available");
+        }
+
+        public static String ERROR_PANEL_NO_DISPONIBLE() {
+            return I18nUI.tr("No se puede usar el Agente: panel no disponible",
+                    "Cannot use Agent: panel not available");
+        }
+
+        public static String ERROR_INICIALIZACION_PESTANA() {
+            return I18nUI.tr("No se puede inicializar el Agente: pestaniaPrincipal es null",
+                    "Cannot initialize Agent: pestaniaPrincipal is null");
+        }
+
+        public static String ERROR_INICIALIZACION_PANEL() {
+            return I18nUI.tr("No se puede inicializar el Agente: panel no disponible",
+                    "Cannot initialize Agent: panel not available");
+        }
+
+        public static String ERROR_HALLAZGO_ENVIO(String detalle) {
+            return I18nUI.trf("No se pudo enviar hallazgo al Agente: %s", "Could not send finding to Agent: %s", detalle);
+        }
+
+        public static String LOG_AGENTE_CAMBIADO(String tipoAgente) {
+            return I18nUI.trf("Agente cambiado rápidamente a: %s", "Agent quickly changed to: %s", tipoAgente);
+        }
+
+        public static String LOG_INICIALIZAR_AGENTE() {
+            return tr("Inicializando Agente...");
+        }
+    }
+
+    /**
+     * Mensajes de logging relacionados con el ManejadorHttpBurpIA.
+     */
+    public static final class Manejador {
+        private Manejador() {
+        }
+
+        public static String ERROR_SOLICITUD_NULA() {
+            return I18nUI.tr("No se pudo analizar solicitud forzada: request null",
+                    "Could not analyze forced request: null request");
+        }
+
+        public static String ERROR_PROGRAMAR_ANALISIS() {
+            return I18nUI.tr("No se pudo programar analisis: solicitud null",
+                    "Could not schedule analysis: null request");
+        }
+
+        public static String ERROR_CREAR_SOLICITUD_FLUJO() {
+            return I18nUI.tr("No se pudo crear solicitud de análisis de flujo",
+                    "Could not create flow analysis request");
+        }
+    }
+
+    /**
+     * Mensajes de logging relacionados con el gestor multi-proveedor.
+     */
+    public static final class MultiProveedor {
+        private MultiProveedor() {
+        }
+
+        public static String SIN_PROVEEDORES() {
+            return I18nUI.tr("Multi-consulta: No hay proveedores seleccionados, usando proveedor único",
+                    "Multi-query: No providers selected, using single provider");
+        }
+
+        public static String UN_PROVEEDOR() {
+            return I18nUI.tr("Multi-consulta: Solo 1 proveedor seleccionado, usando proveedor único",
+                    "Multi-query: Only 1 provider selected, using single provider");
+        }
+
+        public static String PROVEEDOR_NO_EXISTE(String proveedor) {
+            return I18nUI.trf("PROVEEDOR: Proveedor no existe: %s, omitiendo",
+                    "PROVIDER: Provider does not exist: %s, skipping", proveedor);
+        }
+
+        public static String PROVEEDOR_SIN_MODELO(String proveedor) {
+            return I18nUI.trf("PROVEEDOR: Proveedor %s no tiene modelo configurado, omitiendo",
+                    "PROVIDER: Provider %s has no configured model, skipping", proveedor);
+        }
+
+        public static String ESPERANDO_SIGUIENTE(long segundos) {
+            return I18nUI.trf("PROVEEDOR: Esperando %d segundos antes del siguiente proveedor",
+                    "PROVIDER: Waiting %d seconds before next provider", segundos);
+        }
+
+        public static String PROVEEDOR_EJECUTANDO(String proveedor, String modelo) {
+            return I18nUI.trf("PROVEEDOR: %s (%s)",
+                    "PROVIDER: %s (%s)", proveedor, modelo);
+        }
+
+        public static String PROVEEDOR_COMPLETADO(String proveedor, int hallazgos) {
+            return I18nUI.trf("PROVEEDOR: %s completado - %d hallazgo(s) encontrado(s)",
+                    "PROVIDER: %s completed - %d finding(s) found", proveedor, hallazgos);
+        }
+
+        public static String PROVEEDOR_ERROR(String proveedor, String error) {
+            return I18nUI.trf("PROVEEDOR: Error con %s: %s",
+                    "PROVIDER: Error with %s: %s", proveedor, error);
+        }
+
+        public static String PROVEEDORES_FALLIDOS(int cantidad, String lista) {
+            return I18nUI.trf("PROVEEDOR: %d proveedor(es) fallaron: %s",
+                    "PROVIDER: %d provider(s) failed: %s", cantidad, lista);
+        }
+
+        public static String MULTI_CONSULTA_COMPLETADA(int total) {
+            return I18nUI.trf("PROVEEDOR: Multi-consulta completada. Total de hallazgos combinados: %d",
+                    "PROVIDER: Multi-query completed. Total combined findings: %d", total);
+        }
+
+        public static String LONGITUD_RESPUESTA_API(int longitud) {
+            return I18nUI.trf("Longitud de respuesta de API: %d caracteres",
+                    "API response length: %d characters", longitud);
         }
     }
 
@@ -829,19 +977,19 @@ public final class I18nLogs {
         }
 
         public static String TRUNCANDO(int intento) {
-            return String.format(tr("Truncando prompt (intento %d)"), intento);
+            return I18nUI.trf("Truncando prompt (intento %d)", "Truncating prompt (attempt %d)", intento);
         }
 
         public static String TRUNCADO(int original, int nuevo) {
-            return String.format(tr("Prompt truncado de %d a %d caracteres"), original, nuevo);
+            return I18nUI.trf("Prompt truncado de %d a %d caracteres", "Prompt truncated from %d to %d characters", original, nuevo);
         }
 
         public static String MAX_INTENTOS(int max) {
-            return String.format(tr("Prompt excede límite después de %d truncados"), max);
+            return I18nUI.trf("Prompt excede límite después de %d truncados", "Prompt exceeds limit after %d truncations", max);
         }
 
         public static String LIMITE_EXTRAIDO(int tokens) {
-            return String.format(tr("Límite de tokens extraído del error: %d"), tokens);
+            return I18nUI.trf("Límite de tokens extraído del error: %d", "Token limit extracted from error: %d", tokens);
         }
 
         public static String RETRY_CON_TRUNCADO() {
@@ -869,7 +1017,7 @@ public final class I18nLogs {
         }
 
         public static String LOG_ERROR_MANEJADOR(String tipoOperacion) {
-            return tr("Error en manejador de " + tipoOperacion + ": ");
+            return I18nUI.trf("Error en manejador de %s: ", "Error in %s handler: ", tipoOperacion);
         }
     }
 
@@ -901,7 +1049,7 @@ public final class I18nLogs {
         }
 
         public static String ERRORES_VALIDACION(int cantidad) {
-            return tr("Errores de validación encontrados: " + cantidad);
+            return I18nUI.trf("Errores de validación encontrados: %d", "Validation errors found: %d", cantidad);
         }
 
         public static String GUARDANDO_EN_GESTOR() {
@@ -921,7 +1069,7 @@ public final class I18nLogs {
         }
 
         public static String VALIDACION_FALLIDA(int cantidad) {
-            return tr("Se encontraron " + cantidad + " errores de validación");
+            return I18nUI.trf("Se encontraron %d errores de validación", "%d validation errors found", cantidad);
         }
 
         public static String VALIDADA_OK() {
@@ -930,6 +1078,35 @@ public final class I18nLogs {
 
         public static String ESTADO_REFERENCIA_ACTUALIZADO() {
             return tr("Estado de referencia actualizado");
+        }
+
+        public static String ESTADO_INICIAL_CAPTURADO(String proveedor) {
+            return I18nUI.trf("Estado inicial capturado para proveedor: %s", "Initial state captured for provider: %s", proveedor);
+        }
+
+        public static String CAMBIANDO_PROVEEDOR(String anterior, String nuevo) {
+            return I18nUI.trf("Cambiando proveedor: %s -> %s", "Changing provider: %s -> %s", anterior, nuevo);
+        }
+
+        public static String ESTADO_TEMPORAL_GUARDADO(String proveedor) {
+            return I18nUI.trf("Estado temporal guardado para proveedor: %s", "Temporary state saved for provider: %s", proveedor);
+        }
+
+        public static String ESTADO_TEMPORAL_ELIMINADO(String proveedor) {
+            return I18nUI.trf("Estado temporal eliminado para proveedor: %s", "Temporary state removed for provider: %s", proveedor);
+        }
+
+        public static String RUTA_BINARIO_GUARDADA(String agente, String ruta) {
+            return I18nUI.trf("Ruta binaria guardada para agente %s: %s", "Binary path saved for agent %s: %s", agente, ruta);
+        }
+
+        public static String NO_ACTUALIZAR_CONFIG_NULA() {
+            return I18nUI.tr("No se puede actualizar configuración: objeto nulo",
+                    "Cannot update configuration: null object");
+        }
+
+        public static String RUTA_BINARIO_ELIMINADA(String agente) {
+            return I18nUI.trf("Ruta binaria eliminada para agente: %s", "Binary path removed for agent: %s", agente);
         }
     }
 
@@ -961,6 +1138,15 @@ public final class I18nLogs {
 
         public static String EXECUTOR_CERRADO() {
             return I18nUI.tr("ExecutorService cerrado", "ExecutorService closed");
+        }
+
+        public static String ABRIENDO_DIALOGO() {
+            return I18nUI.tr("Abriendo dialogo de configuracion", "Opening configuration dialog");
+        }
+
+        public static String ERROR_ABRIR_DIALOGO() {
+            return I18nUI.tr("No se pudo abrir configuracion: dependencias no inicializadas",
+                    "Could not open configuration: dependencies not initialized");
         }
     }
 
@@ -1036,12 +1222,12 @@ public final class I18nLogs {
         }
 
         public static String AUDIT_ISSUES_CREADOS(int creados, int total) {
-            return tr("Se crearon " + creados + " AuditIssues de " + total + " hallazgos");
+            return I18nUI.trf("Se crearon %d AuditIssues de %d hallazgos", "Created %d AuditIssues from %d findings", creados, total);
         }
 
         public static String AUDIT_ISSUES_AUTO_GUARDADO_INCOMPLETO(int creados, int total) {
-            return tr("Auto-guardado de Issues incompleto: se crearon "
-                    + creados + " AuditIssues de " + total + " hallazgos");
+            return I18nUI.trf("Auto-guardado de Issues incompleto: se crearon %d AuditIssues de %d hallazgos",
+                    "Auto-save of Issues incomplete: created %d AuditIssues from %d findings", creados, total);
         }
 
         public static String EVIDENCIA_NO_ALMACENADA() {

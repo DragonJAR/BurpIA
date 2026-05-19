@@ -39,7 +39,7 @@ public class TaskExecutionManager {
     private static final int MAX_CONTEXTO_REINTENTO = 1000;
     private static final AtomicInteger CONTADOR_HILOS = new AtomicInteger(0);
 
-    private final ConfiguracionAPI config;
+    private volatile ConfiguracionAPI config;
     private final GestorTareas gestorTareas;
     private final GestorConsolaGUI gestorConsola;
     private final PestaniaPrincipal pestaniaPrincipal;
@@ -95,9 +95,8 @@ public class TaskExecutionManager {
                 TimeUnit.SECONDS,
                 new ArrayBlockingQueue<>(capacidadCola),
                 r -> {
-                    Thread thread = new Thread(r);
+                    Thread thread = new Thread(r, "BurpIA-Task-" + CONTADOR_HILOS.incrementAndGet());
                     thread.setDaemon(true);
-                    thread.setName("BurpIA-Task-" + CONTADOR_HILOS.incrementAndGet());
                     return thread;
                 },
                 new ThreadPoolExecutor.AbortPolicy());
@@ -432,6 +431,8 @@ public class TaskExecutionManager {
             gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo actualizar configuración: objeto nulo"));
             return;
         }
+
+        this.config = nuevaConfig;
 
         int nuevoMaximoConcurrente = nuevaConfig.obtenerMaximoConcurrente() > 0
                 ? nuevaConfig.obtenerMaximoConcurrente()

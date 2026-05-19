@@ -32,10 +32,6 @@ public class AnalizadorAI implements Runnable {
     private final OrquestadorAnalisis orquestador;
     private final ParseadorRespuestasAI parseador;
     private final GestorMultiProveedor gestorMulti;
-    
-    // Campos para compatibilidad con tests
-    @SuppressWarnings("unused")
-    private final AnalizadorHTTP analizadorHTTP;
 
     /**
      * Interfaz de callback para recibir notificaciones del análisis.
@@ -136,9 +132,6 @@ public class AnalizadorAI implements Runnable {
         this.gestorMulti = new GestorMultiProveedor(
             solicitud, config, stdout, stderr, gestorConsola,
             tareaCancelada, tareaPausada, gestorLogging);
-            
-        // Crear analizadorHTTP para compatibilidad con tests
-        this.analizadorHTTP = new AnalizadorHTTP(config, tareaCancelada, tareaPausada, gestorLogging);
 
         int timeoutEfectivo = this.config.obtenerTiempoEsperaParaModelo(
                 this.config.obtenerProveedorAI(),
