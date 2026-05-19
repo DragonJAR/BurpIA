@@ -6,6 +6,10 @@
 *.iml
 .vscode/
 .claude/
+.factory/
+.classpath
+.project
+.settings/
 
 # Build
 build/
@@ -35,9 +39,19 @@ BurpIA.zip
 
 # Documentation (generated)
 docs/
+
+# Agent / local config
+AGENTS.md
+
+# Shell scripts (build-jar.sh is the exception)
 *.sh
+!build-jar.sh
+
+# Markdown — only these are public
 *.md
 !README.md
 !README.en.md
+!CONTRIBUTING.md
 !AGENT-*.md
 !AGENTE-*.md
+!VERSION.txt.md

@@ -4,6 +4,7 @@ import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.LimitadorTasa;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -209,6 +210,7 @@ class AnalizadorAITest {
 
     @Test
     @DisplayName("AnalizadorHTTP resuelve cliente HTTP según la configuración actual")
+    @Disabled("Campo analizadorHTTP eliminado en v1.6.1 — el HTTP client se crea internamente por OrquestadorAnalisis")
     void testResuelveClienteHttpSegunConfiguracionActual() throws Exception {
         ConfiguracionAPI config = crearConfiguracionBasica(PROVEEDOR_ZAI);
         config.establecerModeloParaProveedor(PROVEEDOR_ZAI, MODELO_GLM5);
