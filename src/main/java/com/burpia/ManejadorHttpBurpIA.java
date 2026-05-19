@@ -131,7 +131,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 : 1;
 
         this.limitador.ajustarMaximoConcurrente(nuevoMaximoConcurrente);
-        
+
+        if (httpRequestProcessor != null) {
+            httpRequestProcessor.actualizarConfiguracion(nuevaConfig);
+        }
+
         // Usar TaskExecutionManager para actualizar configuración
         taskExecutionManager.actualizarConfiguracion(nuevaConfig);
 

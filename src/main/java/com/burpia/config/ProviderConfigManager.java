@@ -721,8 +721,7 @@ public final class ProviderConfigManager {
             if (indiceActual != 0) {
                 String proveedor = modeloListaSeleccionados.remove(indiceActual);
                 modeloListaSeleccionados.add(0, proveedor);
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor '" + proveedorActualUi +
-                    "' movido a la primera posición en lista multi-proveedor"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.Configuracion.PROVEEDOR_MOVIDO_PRIMERA_POSICION(proveedorActualUi));
             }
             actualizarEstadoMultiProveedor();
             actualizarBotonesMultiProveedor();
@@ -743,8 +742,7 @@ public final class ProviderConfigManager {
             modeloListaDisponibles.removeElement(proveedorActualUi);
         }
 
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor '" + proveedorActualUi +
-            "' agregado a la primera posición en lista multi-proveedor"));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.Configuracion.PROVEEDOR_AGREGADO_PRIMERA_POSICION(proveedorActualUi));
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
     }

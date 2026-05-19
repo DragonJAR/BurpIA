@@ -95,7 +95,7 @@ public class ExtensionBurpIA implements BurpExtension {
         gestorConsola.capturarStreamsOriginales(stdout, stderr);
 
         gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, api, null);
-        httpRequestProcessor = new HttpRequestProcessor(api, config, gestorLogging);
+        httpRequestProcessor = new HttpRequestProcessor(api, configRef, gestorLogging);
 
         registrarResumenInicio();
 

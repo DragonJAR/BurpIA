@@ -263,6 +263,13 @@ public final class HttpRequestProcessor {
         return tempMetodo != null ? tempMetodo : "[METHOD NULL]";
     }
     
+    public void actualizarConfiguracion(ConfiguracionAPI nuevaConfig) {
+        if (nuevaConfig == null) {
+            return;
+        }
+        configRef.reemplazar(nuevaConfig);
+    }
+
     public boolean puedeIniciarAnalisis() {
         ConfiguracionAPI.CodigoValidacionConsulta codigo = obtenerCodigoValidacionConsulta();
         return codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK;

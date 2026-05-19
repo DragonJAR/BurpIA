@@ -165,43 +165,46 @@ public class GestorTareas {
     }
 
     private void verificarTareasAtascadas() {
-        List<Tarea> tareasAtascadas = new ArrayList<>();
-        List<String> idsAInterrumpir = new ArrayList<>();
-
-        candado.lock();
         try {
-            for (Tarea tarea : tareas.values()) {
-                String estado = tarea.obtenerEstado();
-                if (Tarea.ESTADO_ANALIZANDO.equals(estado)) {
-                    long duracion = tarea.obtenerDuracionMilisegundos();
-                    if (duracion > TAREA_ATASCADA_MS) {
-                        tareasAtascadas.add(tarea);
+            List<Tarea> tareasAtascadas = new ArrayList<>();
+            List<String> idsAInterrumpir = new ArrayList<>();
+
+            candado.lock();
+            try {
+                for (Tarea tarea : tareas.values()) {
+                    String estado = tarea.obtenerEstado();
+                    if (Tarea.ESTADO_ANALIZANDO.equals(estado)) {
+                        long duracion = tarea.obtenerDuracionMilisegundos();
+                        if (duracion > TAREA_ATASCADA_MS) {
+                            tareasAtascadas.add(tarea);
+                        }
                     }
                 }
+
+                for (Tarea tarea : tareasAtascadas) {
+                    tarea.establecerEstado(Tarea.ESTADO_ERROR);
+                    tarea.establecerMensajeInfo(
+                        I18nLogs.Tareas.ESTADO_ATASCADA()
+                    );
+                    String id = tarea.obtenerId();
+                    if (Normalizador.noEsVacio(id)) {
+                        idsAInterrumpir.add(id);
+                    }
+                }
+            } finally {
+                candado.unlock();
             }
 
             for (Tarea tarea : tareasAtascadas) {
-                tarea.establecerEstado(Tarea.ESTADO_ERROR);
-                tarea.establecerMensajeInfo(
-                    I18nLogs.Tareas.ESTADO_ATASCADA()
-                );
-                String id = tarea.obtenerId();
-                if (Normalizador.noEsVacio(id)) {
-                    idsAInterrumpir.add(id);
-                }
+                actualizarFilaTabla(tarea);
+                registrar(I18nLogs.Tareas.LOG_ATASCADA_DETECTADA() + tarea.obtenerId());
             }
-        } finally {
-            candado.unlock();
-        }
+            notificarCancelaciones(idsAInterrumpir);
 
-        for (Tarea tarea : tareasAtascadas) {
-            actualizarFilaTabla(tarea);
-            registrar(I18nLogs.Tareas.LOG_ATASCADA_DETECTADA() + tarea.obtenerId());
+            aplicarRetencionFinalizadas();
+        } catch (Exception ex) {
+            registrar("Error en monitor de tareas atascadas: " + ex.getMessage());
         }
-        notificarCancelaciones(idsAInterrumpir);
-        
-
-        aplicarRetencionFinalizadas();
     }
 
     private void actualizarFilaTabla(Tarea tarea) {

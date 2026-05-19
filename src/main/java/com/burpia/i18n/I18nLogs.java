@@ -1108,6 +1108,30 @@ public final class I18nLogs {
         public static String RUTA_BINARIO_ELIMINADA(String agente) {
             return I18nUI.trf("Ruta binaria eliminada para agente: %s", "Binary path removed for agent: %s", agente);
         }
+
+        public static String PROVEEDOR_MOVIDO_PRIMERA_POSICION(String proveedor) {
+            return I18nUI.trf("Proveedor '%s' movido a la primera posición en lista multi-proveedor",
+                    "Provider '%s' moved to first position in multi-provider list", proveedor);
+        }
+
+        public static String PROVEEDOR_AGREGADO_PRIMERA_POSICION(String proveedor) {
+            return I18nUI.trf("Proveedor '%s' agregado a la primera posición en lista multi-proveedor",
+                    "Provider '%s' added to first position in multi-provider list", proveedor);
+        }
+
+        public static String ERROR_VALIDACION_API_KEY(String proveedor, String prefijo) {
+            return I18nUI.trf(
+                    "Formato de API key inválido para %s. Debe comenzar con '%s' y no contener espacios",
+                    "Invalid API key format for %s. Must start with '%s' and contain no spaces",
+                    proveedor, prefijo);
+        }
+
+        public static String ERROR_BINARIO_SEGMENTOS_INVALIDOS() {
+            return I18nUI.tr(
+                    "El ejecutable contiene segmentos inválidos (..)",
+                    "Executable contains invalid segments (..)"
+            );
+        }
     }
 
     /**

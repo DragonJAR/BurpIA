@@ -4,12 +4,14 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class ConfiguracionAPI {
     public enum CodigoValidacionConsulta {
@@ -74,17 +76,17 @@ public class ConfiguracionAPI {
     private int tamanioFuenteMono;
 
     private String tipoAgente;
-    private Map<String, Boolean> agentesHabilitadosPorTipo;
-    private Map<String, String> rutasBinarioPorAgente;
+    private ConcurrentMap<String, Boolean> agentesHabilitadosPorTipo;
+    private ConcurrentMap<String, String> rutasBinarioPorAgente;
     private String agentePreflightPrompt;
     private String agentePrompt;
     private int agenteDelay;
 
-    private Map<String, String> apiKeysPorProveedor;
-    private Map<String, String> urlsBasePorProveedor;
-    private Map<String, String> modelosPorProveedor;
-    private Map<String, Integer> maxTokensPorProveedor;
-    private Map<String, Integer> tiempoEsperaPorModelo;
+    private ConcurrentMap<String, String> apiKeysPorProveedor;
+    private ConcurrentMap<String, String> urlsBasePorProveedor;
+    private ConcurrentMap<String, String> modelosPorProveedor;
+    private ConcurrentMap<String, Integer> maxTokensPorProveedor;
+    private ConcurrentMap<String, Integer> tiempoEsperaPorModelo;
     private boolean promptModificado;
 
     // Multi-Proveedor Configuration
@@ -100,10 +102,10 @@ public class ConfiguracionAPI {
     private boolean persistirFiltroSeveridadHallazgos;
 
     // UI State Persistence - Estado general
-    private Map<String, String> estadoUI;
+    private ConcurrentMap<String, String> estadoUI;
 
     // Alertas opt-out — Map<claveAlerta, true> indica que la alerta fue desactivada por el usuario
-    private Map<String, Boolean> alertasDeshabilitadas;
+    private ConcurrentMap<String, Boolean> alertasDeshabilitadas;
 
     public ConfiguracionAPI() {
         this.proveedorAI = "Ollama";
@@ -124,18 +126,18 @@ public class ConfiguracionAPI {
         this.soloProxy = true;
         this.tipoAgente = AgenteTipo.porDefecto().name();
         this.agentesHabilitadosPorTipo = crearEstadosHabilitacionAgentesPorDefecto();
-        this.rutasBinarioPorAgente = new HashMap<>();
+        this.rutasBinarioPorAgente = new ConcurrentHashMap<>();
         this.agentePreflightPrompt = obtenerAgentePreflightPromptPorDefecto();
         this.agentePrompt = obtenerAgentePromptPorDefecto();
         this.agenteDelay = AGENTE_DELAY_DEFECTO_MS;
 
         this.promptConfigurable = obtenerPromptPorDefecto();
 
-        this.apiKeysPorProveedor = new HashMap<>();
-        this.urlsBasePorProveedor = new HashMap<>();
-        this.modelosPorProveedor = new HashMap<>();
-        this.maxTokensPorProveedor = new HashMap<>();
-        this.tiempoEsperaPorModelo = new HashMap<>();
+        this.apiKeysPorProveedor = new ConcurrentHashMap<>();
+        this.urlsBasePorProveedor = new ConcurrentHashMap<>();
+        this.modelosPorProveedor = new ConcurrentHashMap<>();
+        this.maxTokensPorProveedor = new ConcurrentHashMap<>();
+        this.tiempoEsperaPorModelo = new ConcurrentHashMap<>();
 
         // Valores por defecto para fuentes
         this.nombreFuenteEstandar = FUENTE_ESTANDAR_DEFECTO;
@@ -146,10 +148,10 @@ public class ConfiguracionAPI {
         // Valores por defecto para estado UI
         this.textoFiltroHallazgos = "";
         this.filtroSeveridadHallazgos = "";
-        this.estadoUI = new HashMap<>();
+        this.estadoUI = new ConcurrentHashMap<>();
 
         // Valores por defecto para alertas opt-out
-        this.alertasDeshabilitadas = new HashMap<>();
+        this.alertasDeshabilitadas = new ConcurrentHashMap<>();
 
         // Valores por defecto para flags de persistencia UI
         this.persistirFiltroBusquedaHallazgos = true;
@@ -405,7 +407,7 @@ public class ConfiguracionAPI {
 
     public String obtenerRutaBinarioAgente(String agente) {
         if (rutasBinarioPorAgente == null)
-            rutasBinarioPorAgente = new HashMap<>();
+            rutasBinarioPorAgente = new ConcurrentHashMap<>();
         if (agente == null)
             return null;
         String ruta = rutasBinarioPorAgente.get(agente);
@@ -418,7 +420,7 @@ public class ConfiguracionAPI {
 
     public void establecerRutaBinarioAgente(String agente, String ruta) {
         if (rutasBinarioPorAgente == null)
-            rutasBinarioPorAgente = new HashMap<>();
+            rutasBinarioPorAgente = new ConcurrentHashMap<>();
         if (agente != null) {
             rutasBinarioPorAgente.put(agente, ruta);
         }
@@ -434,12 +436,12 @@ public class ConfiguracionAPI {
 
     public Map<String, String> obtenerTodasLasRutasBinario() {
         if (rutasBinarioPorAgente == null)
-            rutasBinarioPorAgente = new HashMap<>();
-        return rutasBinarioPorAgente;
+            rutasBinarioPorAgente = new ConcurrentHashMap<>();
+        return new HashMap<>(rutasBinarioPorAgente);
     }
 
     public void establecerTodasLasRutasBinario(Map<String, String> rutas) {
-        this.rutasBinarioPorAgente = rutas != null ? new HashMap<>(rutas) : new HashMap<>();
+        this.rutasBinarioPorAgente = rutas != null ? new ConcurrentHashMap<>(rutas) : new ConcurrentHashMap<>();
     }
 
     public String obtenerAgentePreflightPrompt() {
@@ -547,7 +549,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerEstadoUI(Map<String, String> estado) {
-        this.estadoUI = estado != null ? new HashMap<>(estado) : new HashMap<>();
+        this.estadoUI = estado != null ? new ConcurrentHashMap<>(estado) : new ConcurrentHashMap<>();
     }
 
     public static String obtenerAgentePromptPorDefecto() {
@@ -769,7 +771,11 @@ public class ConfiguracionAPI {
             return;
         }
         String p = prov.get();
-        apiKeysPorProveedor.put(p, apiKey);
+        if (apiKey == null) {
+            apiKeysPorProveedor.remove(p);
+        } else {
+            apiKeysPorProveedor.put(p, apiKey);
+        }
     }
 
     public String obtenerUrlBaseParaProveedor(String proveedor) {
@@ -794,7 +800,11 @@ public class ConfiguracionAPI {
             return;
         }
         String p = prov.get();
-        urlsBasePorProveedor.put(p, urlBase);
+        if (urlBase == null) {
+            urlsBasePorProveedor.remove(p);
+        } else {
+            urlsBasePorProveedor.put(p, urlBase);
+        }
     }
 
     public String obtenerModeloParaProveedor(String proveedor) {
@@ -1188,7 +1198,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerApiKeysPorProveedor(Map<String, String> apiKeysPorProveedor) {
-        this.apiKeysPorProveedor = normalizarMapaStringPorProveedor(apiKeysPorProveedor);
+        this.apiKeysPorProveedor = new ConcurrentHashMap<>(normalizarMapaStringPorProveedor(apiKeysPorProveedor));
     }
 
     public Map<String, String> obtenerUrlsBasePorProveedor() {
@@ -1197,7 +1207,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerUrlsBasePorProveedor(Map<String, String> urlsBasePorProveedor) {
-        this.urlsBasePorProveedor = normalizarMapaStringPorProveedor(urlsBasePorProveedor);
+        this.urlsBasePorProveedor = new ConcurrentHashMap<>(normalizarMapaStringPorProveedor(urlsBasePorProveedor));
     }
 
     public Map<String, String> obtenerModelosPorProveedor() {
@@ -1206,7 +1216,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerModelosPorProveedor(Map<String, String> modelosPorProveedor) {
-        this.modelosPorProveedor = normalizarMapaStringPorProveedor(modelosPorProveedor);
+        this.modelosPorProveedor = new ConcurrentHashMap<>(normalizarMapaStringPorProveedor(modelosPorProveedor));
     }
 
     public Map<String, Integer> obtenerMaxTokensPorProveedor() {
@@ -1215,7 +1225,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerMaxTokensPorProveedor(Map<String, Integer> maxTokensPorProveedor) {
-        this.maxTokensPorProveedor = normalizarMapaIntPorProveedor(maxTokensPorProveedor);
+        this.maxTokensPorProveedor = new ConcurrentHashMap<>(normalizarMapaIntPorProveedor(maxTokensPorProveedor));
     }
 
     public Map<String, Integer> obtenerTiempoEsperaPorModelo() {
@@ -1224,7 +1234,7 @@ public class ConfiguracionAPI {
     }
 
     public void establecerTiempoEsperaPorModelo(Map<String, Integer> tiempoEsperaPorModelo) {
-        this.tiempoEsperaPorModelo = normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo);
+        this.tiempoEsperaPorModelo = new ConcurrentHashMap<>(normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo));
     }
 
     public boolean esMultiProveedorHabilitado() {
@@ -1286,23 +1296,23 @@ public class ConfiguracionAPI {
             agentesHabilitadosPorTipo = crearEstadosHabilitacionAgentesPorDefecto();
         }
         if (apiKeysPorProveedor == null) {
-            apiKeysPorProveedor = new HashMap<>();
+            apiKeysPorProveedor = new ConcurrentHashMap<>();
         }
         if (urlsBasePorProveedor == null) {
-            urlsBasePorProveedor = new HashMap<>();
+            urlsBasePorProveedor = new ConcurrentHashMap<>();
         }
         if (modelosPorProveedor == null) {
-            modelosPorProveedor = new HashMap<>();
+            modelosPorProveedor = new ConcurrentHashMap<>();
         }
         if (maxTokensPorProveedor == null) {
-            maxTokensPorProveedor = new HashMap<>();
+            maxTokensPorProveedor = new ConcurrentHashMap<>();
         }
         agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(agentesHabilitadosPorTipo);
-        apiKeysPorProveedor = normalizarMapaStringPorProveedor(apiKeysPorProveedor);
-        urlsBasePorProveedor = normalizarMapaStringPorProveedor(urlsBasePorProveedor);
-        modelosPorProveedor = normalizarMapaStringPorProveedor(modelosPorProveedor);
-        maxTokensPorProveedor = normalizarMapaIntPorProveedor(maxTokensPorProveedor);
-        tiempoEsperaPorModelo = normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo);
+        apiKeysPorProveedor = new ConcurrentHashMap<>(normalizarMapaStringPorProveedor(apiKeysPorProveedor));
+        urlsBasePorProveedor = new ConcurrentHashMap<>(normalizarMapaStringPorProveedor(urlsBasePorProveedor));
+        modelosPorProveedor = new ConcurrentHashMap<>(normalizarMapaStringPorProveedor(modelosPorProveedor));
+        maxTokensPorProveedor = new ConcurrentHashMap<>(normalizarMapaIntPorProveedor(maxTokensPorProveedor));
+        tiempoEsperaPorModelo = new ConcurrentHashMap<>(normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo));
         proveedorAI = normalizarProveedor(proveedorAI);
         if (Normalizador.esVacio(proveedorAI) || !ProveedorAI.existeProveedor(proveedorAI)) {
             proveedorAI = "Z.ai";
@@ -1347,8 +1357,8 @@ public class ConfiguracionAPI {
         return normalizarRango(valor, TIEMPO_ESPERA_MIN_SEGUNDOS, TIEMPO_ESPERA_MAX_SEGUNDOS);
     }
 
-    private static Map<String, Integer> normalizarMapaTiempoEsperaPorModelo(Map<String, Integer> mapa) {
-        Map<String, Integer> limpio = new HashMap<>();
+    private static ConcurrentMap<String, Integer> normalizarMapaTiempoEsperaPorModelo(Map<String, Integer> mapa) {
+        ConcurrentMap<String, Integer> limpio = new ConcurrentHashMap<>();
         if (mapa == null) {
             return limpio;
         }
@@ -1433,16 +1443,16 @@ public class ConfiguracionAPI {
                 "rutaBinario");
     }
 
-    private static Map<String, Boolean> crearEstadosHabilitacionAgentesPorDefecto() {
-        Map<String, Boolean> estados = new HashMap<>();
+    private static ConcurrentMap<String, Boolean> crearEstadosHabilitacionAgentesPorDefecto() {
+        ConcurrentMap<String, Boolean> estados = new ConcurrentHashMap<>();
         for (AgenteTipo tipo : AgenteTipo.values()) {
             estados.put(tipo.name(), false);
         }
         return estados;
     }
 
-    private static Map<String, Boolean> normalizarMapaHabilitacionAgentes(Map<String, Boolean> estados) {
-        Map<String, Boolean> normalizados = crearEstadosHabilitacionAgentesPorDefecto();
+    private static ConcurrentMap<String, Boolean> normalizarMapaHabilitacionAgentes(Map<String, Boolean> estados) {
+        ConcurrentMap<String, Boolean> normalizados = crearEstadosHabilitacionAgentesPorDefecto();
         if (estados == null) {
             return normalizados;
         }
@@ -1518,7 +1528,6 @@ public class ConfiguracionAPI {
     }
 
     public ConfiguracionAPI crearSnapshot() {
-        asegurarMapas();
         ConfiguracionAPI snapshot = new ConfiguracionAPI();
         snapshot.retrasoSegundos = this.retrasoSegundos;
         snapshot.maximoConcurrente = this.maximoConcurrente;
@@ -1538,7 +1547,7 @@ public class ConfiguracionAPI {
         snapshot.soloProxy = this.soloProxy;
         snapshot.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(this.agentesHabilitadosPorTipo);
         snapshot.establecerTipoAgente(this.tipoAgente);
-        snapshot.rutasBinarioPorAgente = new HashMap<>();
+        snapshot.rutasBinarioPorAgente = new ConcurrentHashMap<>();
         if (this.rutasBinarioPorAgente != null) {
             snapshot.rutasBinarioPorAgente.putAll(this.rutasBinarioPorAgente);
         }
@@ -1555,14 +1564,14 @@ public class ConfiguracionAPI {
         snapshot.filtroSeveridadHallazgos = this.filtroSeveridadHallazgos;
         snapshot.persistirFiltroBusquedaHallazgos = this.persistirFiltroBusquedaHallazgos;
         snapshot.persistirFiltroSeveridadHallazgos = this.persistirFiltroSeveridadHallazgos;
-        snapshot.estadoUI = new HashMap<>(this.estadoUI);
-        snapshot.alertasDeshabilitadas = new HashMap<>(this.alertasDeshabilitadas);
+        snapshot.estadoUI = new ConcurrentHashMap<>(this.estadoUI);
+        snapshot.alertasDeshabilitadas = new ConcurrentHashMap<>(this.alertasDeshabilitadas);
 
-        snapshot.apiKeysPorProveedor = new HashMap<>(this.apiKeysPorProveedor);
-        snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
-        snapshot.modelosPorProveedor = new HashMap<>(this.modelosPorProveedor);
-        snapshot.maxTokensPorProveedor = new HashMap<>(this.maxTokensPorProveedor);
-        snapshot.tiempoEsperaPorModelo = new HashMap<>(this.tiempoEsperaPorModelo);
+        snapshot.apiKeysPorProveedor = new ConcurrentHashMap<>(this.apiKeysPorProveedor);
+        snapshot.urlsBasePorProveedor = new ConcurrentHashMap<>(this.urlsBasePorProveedor);
+        snapshot.modelosPorProveedor = new ConcurrentHashMap<>(this.modelosPorProveedor);
+        snapshot.maxTokensPorProveedor = new ConcurrentHashMap<>(this.maxTokensPorProveedor);
+        snapshot.tiempoEsperaPorModelo = new ConcurrentHashMap<>(this.tiempoEsperaPorModelo);
         snapshot.nivelErrorHabilitado = this.nivelErrorHabilitado;
         snapshot.nivelWarnHabilitado = this.nivelWarnHabilitado;
         snapshot.nivelInfoHabilitado = this.nivelInfoHabilitado;
@@ -1575,6 +1584,7 @@ public class ConfiguracionAPI {
             snapshot.proveedoresMultiConsulta = new ArrayList<>(this.proveedoresMultiConsulta);
         }
 
+        snapshot.asegurarMapas();
         return snapshot;
     }
 
@@ -1603,7 +1613,7 @@ public class ConfiguracionAPI {
         this.soloProxy = origen.soloProxy;
         this.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(origen.agentesHabilitadosPorTipo);
         establecerTipoAgente(origen.tipoAgente);
-        this.rutasBinarioPorAgente = new HashMap<>();
+        this.rutasBinarioPorAgente = new ConcurrentHashMap<>();
         if (origen.rutasBinarioPorAgente != null) {
             this.rutasBinarioPorAgente.putAll(origen.rutasBinarioPorAgente);
         }
@@ -1611,11 +1621,11 @@ public class ConfiguracionAPI {
         this.agentePrompt = normalizarPromptAgente(origen.agentePrompt);
         establecerAgenteDelay(origen.agenteDelay);
 
-        this.apiKeysPorProveedor = new HashMap<>(origen.apiKeysPorProveedor);
-        this.urlsBasePorProveedor = new HashMap<>(origen.urlsBasePorProveedor);
-        this.modelosPorProveedor = new HashMap<>(origen.modelosPorProveedor);
-        this.maxTokensPorProveedor = new HashMap<>(origen.maxTokensPorProveedor);
-        this.tiempoEsperaPorModelo = new HashMap<>(origen.tiempoEsperaPorModelo);
+        this.apiKeysPorProveedor = new ConcurrentHashMap<>(origen.apiKeysPorProveedor);
+        this.urlsBasePorProveedor = new ConcurrentHashMap<>(origen.urlsBasePorProveedor);
+        this.modelosPorProveedor = new ConcurrentHashMap<>(origen.modelosPorProveedor);
+        this.maxTokensPorProveedor = new ConcurrentHashMap<>(origen.maxTokensPorProveedor);
+        this.tiempoEsperaPorModelo = new ConcurrentHashMap<>(origen.tiempoEsperaPorModelo);
 
         this.nombreFuenteEstandar = origen.nombreFuenteEstandar;
         this.tamanioFuenteEstandar = origen.tamanioFuenteEstandar;
@@ -1626,8 +1636,8 @@ public class ConfiguracionAPI {
         this.filtroSeveridadHallazgos = origen.filtroSeveridadHallazgos;
         this.persistirFiltroBusquedaHallazgos = origen.persistirFiltroBusquedaHallazgos;
         this.persistirFiltroSeveridadHallazgos = origen.persistirFiltroSeveridadHallazgos;
-        this.estadoUI = new HashMap<>(origen.estadoUI);
-        this.alertasDeshabilitadas = new HashMap<>(origen.alertasDeshabilitadas);
+        this.estadoUI = new ConcurrentHashMap<>(origen.estadoUI);
+        this.alertasDeshabilitadas = new ConcurrentHashMap<>(origen.alertasDeshabilitadas);
         this.multiProveedorHabilitado = origen.multiProveedorHabilitado;
         this.proveedoresMultiConsulta = new ArrayList<>(origen.proveedoresMultiConsulta);
         this.nivelErrorHabilitado = origen.nivelErrorHabilitado;
@@ -1723,7 +1733,7 @@ public class ConfiguracionAPI {
      */
     public Map<String, Boolean> obtenerAlertasDeshabilitadas() {
         if (alertasDeshabilitadas == null) {
-            alertasDeshabilitadas = new HashMap<>();
+            alertasDeshabilitadas = new ConcurrentHashMap<>();
         }
         return new HashMap<>(alertasDeshabilitadas);
     }
@@ -1744,7 +1754,7 @@ public class ConfiguracionAPI {
      */
     public void agregarAlertaDeshabilitada(String claveAlerta) {
         if (alertasDeshabilitadas == null) {
-            alertasDeshabilitadas = new HashMap<>();
+            alertasDeshabilitadas = new ConcurrentHashMap<>();
         }
         if (Normalizador.esVacio(claveAlerta)) {
             return;
@@ -1764,8 +1774,8 @@ public class ConfiguracionAPI {
         alertasDeshabilitadas.remove(claveAlerta);
     }
 
-    private Map<String, Boolean> normalizarAlertasDeshabilitadas(Map<String, Boolean> alertas) {
-        Map<String, Boolean> limpio = new HashMap<>();
+    private ConcurrentMap<String, Boolean> normalizarAlertasDeshabilitadas(Map<String, Boolean> alertas) {
+        ConcurrentMap<String, Boolean> limpio = new ConcurrentHashMap<>();
         if (alertas == null) {
             return limpio;
         }

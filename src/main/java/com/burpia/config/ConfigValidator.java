@@ -1,5 +1,6 @@
 package com.burpia.config;
 
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
@@ -167,11 +168,7 @@ public final class ConfigValidator {
         }
 
         return ValidationResult.invalido(
-            I18nUI.trf(
-                "Formato de API key inválido para %s. Debe comenzar con '%s' y no contener espacios",
-                "Invalid API key format for %s. Must start with '%s' and contain no spaces",
-                proveedor,
-                prefijoEsperado),
+            I18nLogs.Configuracion.ERROR_VALIDACION_API_KEY(proveedor, prefijoEsperado),
             "apiKey"
         );
     }
@@ -489,10 +486,7 @@ public final class ConfigValidator {
 
         if (contieneSegmentoTraversal(ejecutable) || contieneSegmentoTraversal(ejecutableResuelto)) {
             return ValidationResult.invalido(
-                I18nUI.tr(
-                    "El ejecutable contiene segmentos inválidos (..)",
-                    "Executable contains invalid segments (..)"
-                ),
+                I18nLogs.Configuracion.ERROR_BINARIO_SEGMENTOS_INVALIDOS(),
                 "rutaBinario"
             );
         }

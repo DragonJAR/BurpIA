@@ -208,6 +208,15 @@ public class AlmacenEvidenciaHttp {
         }
     }
 
+    /**
+     * Cuenta las evidencias almacenadas en disco.
+     *
+     * @return cantidad de archivos de evidencia en el directorio
+     */
+    public int contar() {
+        return listarArchivosEvidencia().size();
+    }
+
     private void inicializarDirectorio() {
         try {
             Files.createDirectories(directorioEvidencia);

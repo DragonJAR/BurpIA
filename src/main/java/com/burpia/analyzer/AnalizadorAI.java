@@ -200,6 +200,18 @@ public class AnalizadorAI implements Runnable {
                 return;
             }
 
+            if (controlBackpressure != null && controlBackpressure.estaEnCooldown()) {
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Backpressure activo, esperando cooldown..."));
+                while (controlBackpressure.estaEnCooldown()) {
+                    if (controlCancelacionPausa.esCancelada()) {
+                        callback.alCanceladoAnalisis();
+                        return;
+                    }
+                    Thread.sleep(500);
+                }
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Backpressure expirado, continuando"));
+            }
+
             gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Adquiriendo permiso del limitador (disponibles: " +
                     limitador.permisosDisponibles() + ")"));
             limitador.adquirir();
