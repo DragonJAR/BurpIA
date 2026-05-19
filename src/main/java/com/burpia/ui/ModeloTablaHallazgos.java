@@ -218,17 +218,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     public int obtenerFilasVisibles() {
         lock.lock();
         try {
-            if (Normalizador.esVacia(filasIgnoradas)) {
-                return datos.size();
-            }
-
-            int visibles = 0;
-            for (int i = 0; i < datos.size(); i++) {
-                if (!filasIgnoradas.contains(i)) {
-                    visibles++;
-                }
-            }
-            return visibles;
+            return datos.size() - filasIgnoradas.size();
         } finally {
             lock.unlock();
         }

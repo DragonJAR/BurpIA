@@ -52,6 +52,8 @@ public class TaskExecutionManager {
 
     private final ThreadPoolExecutor executorService;
     private final Map<String, ContextoReintento> contextosReintento;
+    private volatile long ultimaDepuracionContextosMs = 0;
+    private static final long INTERVALO_DEPURACION_CONTEXTOS_MS = 30_000L;
     private final Map<String, Future<?>> ejecucionesActivas;
     private final Map<String, AnalizadorAI> analizadoresActivos;
     private final Object poolLock = new Object();
@@ -290,6 +292,10 @@ public class TaskExecutionManager {
             return;
         }
         long ahora = System.currentTimeMillis();
+        if (ahora - ultimaDepuracionContextosMs < INTERVALO_DEPURACION_CONTEXTOS_MS) {
+            return;
+        }
+        ultimaDepuracionContextosMs = ahora;
 
         contextosReintento.entrySet().removeIf(entry -> {
             if (entry == null) {

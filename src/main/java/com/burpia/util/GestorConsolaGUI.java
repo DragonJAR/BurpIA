@@ -480,8 +480,9 @@ public class GestorConsolaGUI {
         if (longitud <= MAXIMO_CARACTERES) {
             return;
         }
-        int exceso = longitud - MAXIMO_CARACTERES;
-        documento.remove(0, exceso);
+        int objetivo = MAXIMO_CARACTERES / 2;
+        int aEliminar = longitud - objetivo;
+        documento.remove(0, aEliminar);
     }
 
     private void insertarConEtiquetasDestacadas(EntradaLog entrada) throws BadLocationException {

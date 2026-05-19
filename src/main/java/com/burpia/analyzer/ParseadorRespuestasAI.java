@@ -25,6 +25,10 @@ import java.util.List;
 public class ParseadorRespuestasAI {
     private static final String ORIGEN_LOG = "ParseadorRespuestasAI";
 
+    private static final java.util.regex.Pattern PATRON_ETIQUETA_TITULO = java.util.regex.Pattern.compile("(?i)(título:|title:)");
+    private static final java.util.regex.Pattern PATRON_ETIQUETA_SEVERIDAD = java.util.regex.Pattern.compile("(?i)(severidad:|severity:)");
+    private static final java.util.regex.Pattern PATRON_ETIQUETA_DESCRIPCION = java.util.regex.Pattern.compile("(?i)(vulnerabilidad|descripcion:|description:)");
+
     private final GestorLoggingUnificado gestorLogging;
     private final Gson gson;
     private final String idiomaUi;
@@ -59,6 +63,11 @@ public class ParseadorRespuestasAI {
             String contenido = ParserRespuestasAI.extraerContenido(respuestaProcesada, proveedorNormalizado);
             if (Normalizador.esVacio(contenido)) {
                 contenido = ParserRespuestasAI.limpiarContenidoModelo(respuestaProcesada);
+            }
+
+            String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedorNormalizado);
+            if (Normalizador.esVacio(contenidoOriginal)) {
+                contenidoOriginal = ParserRespuestasAI.limpiarContenidoModelo(respuestaOriginal);
             }
 
             rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
@@ -99,11 +108,6 @@ public class ParseadorRespuestasAI {
             }
 
             if (!respuestaProcesada.equals(respuestaOriginal)) {
-                String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedorNormalizado);
-                if (Normalizador.esVacio(contenidoOriginal)) {
-                    contenidoOriginal = ParserRespuestasAI.limpiarContenidoModelo(respuestaOriginal);
-                }
-
                 List<Hallazgo> hallazgosOriginalesNoEstrictos = parsearHallazgosJsonNoEstricto(contenidoOriginal, solicitud);
                 if (debePreferirHallazgosOriginales(hallazgosOriginalesNoEstrictos, hallazgos)) {
                     rastrear(
@@ -614,10 +618,7 @@ public class ParseadorRespuestasAI {
             String severidad = Hallazgo.SEVERIDAD_INFO;
             String confianza = Hallazgo.CONFIANZA_BAJA;
             final int MAX_LONGITUD_TITULO_RESUMIDO = 30;
-            final java.util.regex.Pattern PATRON_ETIQUETA_TITULO = java.util.regex.Pattern.compile("(?i)(título:|title:)");
-            final java.util.regex.Pattern PATRON_ETIQUETA_SEVERIDAD = java.util.regex.Pattern.compile("(?i)(severidad:|severity:)");
-            final java.util.regex.Pattern PATRON_ETIQUETA_DESCRIPCION = java.util.regex.Pattern
-                    .compile("(?i)(vulnerabilidad|descripcion:|description:)");
+
 
             for (String linea : lineas) {
                 String lineaNormalizada = linea.trim();

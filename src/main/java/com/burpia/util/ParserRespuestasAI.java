@@ -603,20 +603,19 @@ public final class ParserRespuestasAI {
             return null;
         }
 
-        // ESTRATEGIA 1: Parseo directo con limpieza interna
-        JsonArray resultado = intentarParseoDirectoConLimpieza(contenido, gson);
+        String contenidoLimpio = limpiarBloquesPensamiento(contenido);
+
+        JsonArray resultado = intentarParseoDirecto(contenidoLimpio, gson);
         if (resultado != null) {
             return resultado;
         }
 
-        // ESTRATEGIA 2: JSON de texto libre con limpieza interna (thinking models)
-        resultado = extraerJsonDeTextoLibreConLimpieza(contenido, gson);
+        resultado = extraerJsonDeTextoLibre(contenidoLimpio, gson);
         if (resultado != null) {
             return resultado;
         }
 
-        // ESTRATEGIA 3: Arrays con claves comunes con limpieza interna
-        resultado = extraerArrayConClavesComunesConLimpieza(contenido, gson);
+        resultado = extraerArrayConClavesComunes(contenidoLimpio, gson);
         if (resultado != null) {
             return resultado;
         }
@@ -625,14 +624,11 @@ public final class ParserRespuestasAI {
     }
 
     /**
-     * Estrategia 1: Parseo directo con limpieza propia.
-     * Limpia bloques de pensamiento antes de intentar parsear.
+     * Estrategia 1: Parseo directo.
      */
-    private static JsonArray intentarParseoDirectoConLimpieza(String contenido, com.google.gson.Gson gson) {
-        String limpio = limpiarBloquesPensamiento(contenido);
-
+    private static JsonArray intentarParseoDirecto(String contenidoLimpio, com.google.gson.Gson gson) {
         try {
-            JsonElement elemento = gson.fromJson(limpio, JsonElement.class);
+            JsonElement elemento = gson.fromJson(contenidoLimpio, JsonElement.class);
             if (elemento == null) {
                 return null;
             }
@@ -673,25 +669,21 @@ public final class ParserRespuestasAI {
     }
 
     /**
-     * Estrategia 2: Extraer JSON de texto libre con limpieza propia.
-     * Para modelos con "thinking process" antes del JSON.
+     * Estrategia 2: Extraer JSON de texto libre.
      */
-    private static JsonArray extraerJsonDeTextoLibreConLimpieza(String contenido, com.google.gson.Gson gson) {
-        String limpio = limpiarBloquesPensamiento(contenido);
-
-        // Buscar el primer '[' que inicia un array JSON
-        int inicioArray = limpio.indexOf('[');
+    private static JsonArray extraerJsonDeTextoLibre(String contenidoLimpio, com.google.gson.Gson gson) {
+        int inicioArray = contenidoLimpio.indexOf('[');
         if (inicioArray == -1) {
             return null;
         }
 
         // Buscar el cierre del array JSON
-        int finArray = encontrarCierreJson(limpio, inicioArray);
+        int finArray = encontrarCierreJson(contenidoLimpio, inicioArray);
         if (finArray == -1) {
             return null;
         }
 
-        String jsonExtraido = limpio.substring(inicioArray, finArray + 1);
+        String jsonExtraido = contenidoLimpio.substring(inicioArray, finArray + 1);
 
         try {
             JsonElement elemento = gson.fromJson(jsonExtraido, JsonElement.class);
@@ -707,23 +699,20 @@ public final class ParserRespuestasAI {
     }
 
     /**
-     * Estrategia 3: Buscar arrays con claves comunes, con limpieza propia.
+     * Estrategia 3: Buscar arrays con claves comunes.
      */
-    private static JsonArray extraerArrayConClavesComunesConLimpieza(String contenido, com.google.gson.Gson gson) {
-        String limpio = limpiarBloquesPensamiento(contenido);
-
+    private static JsonArray extraerArrayConClavesComunes(String contenidoLimpio, com.google.gson.Gson gson) {
         String[] clavesComunes = {"\"hallazgos\"", "\"findings\"", "\"issues\"", "\"vulnerabilidades\"",
                                    "\"results\"", "\"data\"", "\"items\"", "\"objects\""};
 
         for (String clave : clavesComunes) {
-            int indice = limpio.indexOf(clave);
+            int indice = contenidoLimpio.indexOf(clave);
             if (indice >= 0) {
-                // Buscar el array después de la clave
-                int inicioArray = limpio.indexOf('[', indice);
+                int inicioArray = contenidoLimpio.indexOf('[', indice);
                 if (inicioArray >= 0) {
-                    int finArray = encontrarCierreJson(limpio, inicioArray);
+                    int finArray = encontrarCierreJson(contenidoLimpio, inicioArray);
                     if (finArray >= 0) {
-                        String arrayStr = limpio.substring(inicioArray, finArray + 1);
+                    String arrayStr = contenidoLimpio.substring(inicioArray, finArray + 1);
                         try {
                             JsonElement elemento = gson.fromJson(arrayStr, JsonElement.class);
                             if (elemento != null && elemento.isJsonArray()) {

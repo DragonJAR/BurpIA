@@ -27,7 +27,7 @@ public class AnalizadorHTTP {
     private final BooleanSupplier tareaPausada;
     private final ControlCancelacionPausa control;
     private final GestorLoggingUnificado gestorLogging;
-    private final ContextExceededDetector detectorContexto;
+    private static final ContextExceededDetector DETECTOR_CONTEXTO = new ContextExceededDetector();
     private volatile Call llamadaHttpActiva;
     
     private static final Map<String, OkHttpClient> CLIENTES_HTTP_POR_TIMEOUT = Collections
@@ -43,7 +43,6 @@ public class AnalizadorHTTP {
         this.control = new ControlCancelacionPausa(tareaCancelada, tareaPausada);
         this.gestorLogging = gestorLogging != null ? gestorLogging : 
             GestorLoggingUnificado.crearMinimal(null, null);
-        this.detectorContexto = new ContextExceededDetector();
     }
 
     public String llamarAPI(String prompt) throws IOException, InterruptedException, ContextExceededException {
@@ -183,7 +182,7 @@ public class AnalizadorHTTP {
                     
                     // Detectar error de contexto excedido
                     String proveedor = config.obtenerProveedorAI();
-                    boolean esErrorContexto = detectorContexto.esErrorContextoExcedido(
+                    boolean esErrorContexto = DETECTOR_CONTEXTO.esErrorContextoExcedido(
                         proveedor, codigoRespuesta, cuerpoError);
                     
                     if (esErrorContexto) {
