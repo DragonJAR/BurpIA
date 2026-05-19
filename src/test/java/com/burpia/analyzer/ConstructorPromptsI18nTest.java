@@ -1,7 +1,11 @@
 package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
+import com.burpia.i18n.IdiomaUI;
 import com.burpia.model.SolicitudAnalisis;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -20,6 +24,18 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @DisplayName("ConstructorPrompts I18n Tests")
 class ConstructorPromptsI18nTest {
+
+        private IdiomaUI idiomaOriginal;
+
+        @BeforeEach
+        void guardarIdiomaOriginal() {
+                idiomaOriginal = I18nUI.obtenerIdioma();
+        }
+
+        @AfterEach
+        void restaurarIdiomaOriginal() {
+                I18nUI.establecerIdioma(idiomaOriginal);
+        }
 
         @Test
         @DisplayName("Constructor lanza NullPointerException con configuración null")
@@ -170,6 +186,7 @@ class ConstructorPromptsI18nTest {
         private ConfiguracionAPI crearConfiguracionConIdioma(String idioma) {
                 ConfiguracionAPI config = new ConfiguracionAPI();
                 config.establecerIdiomaUi(idioma);
+                I18nUI.establecerIdioma("en".equalsIgnoreCase(idioma) ? IdiomaUI.EN : IdiomaUI.ES);
                 return config;
         }
 

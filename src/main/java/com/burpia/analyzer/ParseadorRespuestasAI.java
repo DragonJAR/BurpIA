@@ -1,6 +1,5 @@
 package com.burpia.analyzer;
 
-import com.burpia.config.ProveedorAI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.model.Hallazgo;
@@ -250,6 +249,62 @@ public class ParseadorRespuestasAI {
         return huella;
     }
 
+    /**
+     * Busca el índice del corchete de cierre que balancea con el corchete de apertura
+     * encontrado en la posición inicio. Respeta literales de string y caracteres escapados.
+     *
+     * @param texto            texto a analizar
+     * @param inicio           índice donde comienza a buscar (inclusive); se asume que el
+     *                         carácter en inicio es el corchete de apertura objetivo
+     * @param objetivo         corchete de apertura a rastrear ('[' o '{')
+     * @param cierre           corchete de cierre a balancear (']' o '}')
+     * @param profundidadInicial profundidad inicial (típicamente 0, o 1 cuando inicio
+     *                         apunta a un delimitador que debe consumirse primero)
+     * @return índice del corchete de cierre balanceado, o -1 si no se encuentra
+     */
+    private static int buscarIndiceCorcheteBalanceado(String texto, int inicio, char objetivo, char cierre,
+                                                       int profundidadInicial) {
+        if (texto == null || texto.isEmpty() || inicio < 0 || inicio >= texto.length()) {
+            return -1;
+        }
+        int profundidad = profundidadInicial;
+        boolean enComillas = false;
+        boolean escapado = false;
+        for (int i = inicio; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+            if (escapado) {
+                escapado = false;
+                continue;
+            }
+            if (c == '\\') {
+                escapado = true;
+                continue;
+            }
+            if (c == '"') {
+                enComillas = !enComillas;
+                continue;
+            }
+            if (!enComillas) {
+                if (c == objetivo) {
+                    profundidad++;
+                } else if (c == cierre) {
+                    profundidad--;
+                    if (profundidad == 0) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Sobrecarga conveniente para búsqueda que comienza en profundidad 0.
+     */
+    private static int buscarIndiceCorcheteBalanceado(String texto, int inicio, char objetivo, char cierre) {
+        return buscarIndiceCorcheteBalanceado(texto, inicio, objetivo, cierre, 0);
+    }
+
     private int longitudSegura(String valor) {
         return valor != null ? valor.length() : 0;
     }
@@ -271,35 +326,11 @@ public class ParseadorRespuestasAI {
             return "";
         }
 
-        int profundidad = 0;
-        boolean enComillas = false;
-        boolean escapado = false;
-        for (int i = inicioArray; i < contenido.length(); i++) {
-            char c = contenido.charAt(i);
-            if (escapado) {
-                escapado = false;
-                continue;
-            }
-            if (c == '\\') {
-                escapado = true;
-                continue;
-            }
-            if (c == '"') {
-                enComillas = !enComillas;
-                continue;
-            }
-            if (!enComillas) {
-                if (c == '[') {
-                    profundidad++;
-                } else if (c == ']') {
-                    profundidad--;
-                    if (profundidad == 0) {
-                        return contenido.substring(inicioArray + 1, i);
-                    }
-                }
-            }
+        int indiceCierre = buscarIndiceCorcheteBalanceado(contenido, inicioArray, '[', ']');
+        if (indiceCierre < 0) {
+            return "";
         }
-        return "";
+        return contenido.substring(inicioArray + 1, indiceCierre);
     }
 
     private String normalizarObjetoNoEstricto(String objeto) {
@@ -324,39 +355,18 @@ public class ParseadorRespuestasAI {
         if (Normalizador.esVacio(bloqueHallazgos)) {
             return objetos;
         }
-        int inicioObjeto = -1;
-        int profundidad = 0;
-        boolean enComillas = false;
-        boolean escapado = false;
-        for (int i = 0; i < bloqueHallazgos.length(); i++) {
-            char c = bloqueHallazgos.charAt(i);
-            if (escapado) {
-                escapado = false;
-                continue;
+        int buscarDesde = 0;
+        while (buscarDesde < bloqueHallazgos.length()) {
+            int inicioLlave = bloqueHallazgos.indexOf('{', buscarDesde);
+            if (inicioLlave < 0) {
+                break;
             }
-            if (c == '\\') {
-                escapado = true;
-                continue;
+            int finLlave = buscarIndiceCorcheteBalanceado(bloqueHallazgos, inicioLlave, '{', '}', 1);
+            if (finLlave < 0) {
+                break;
             }
-            if (c == '"') {
-                enComillas = !enComillas;
-                continue;
-            }
-            if (enComillas) {
-                continue;
-            }
-            if (c == '{') {
-                if (profundidad == 0) {
-                    inicioObjeto = i;
-                }
-                profundidad++;
-            } else if (c == '}') {
-                profundidad--;
-                if (profundidad == 0 && inicioObjeto >= 0) {
-                    objetos.add(bloqueHallazgos.substring(inicioObjeto, i + 1));
-                    inicioObjeto = -1;
-                }
-            }
+            objetos.add(bloqueHallazgos.substring(inicioLlave, finLlave + 1));
+            buscarDesde = finLlave + 1;
         }
         if (objetos.isEmpty()) {
             String[] partes = bloqueHallazgos.split("\\}\\s*,\\s*\\{");
@@ -469,9 +479,12 @@ public class ParseadorRespuestasAI {
     }
     
     /**
-     * Encuentra el final de un string JSON (la comilla de cierre no escapada)
+     * Encuentra el final de un string JSON (la comilla de cierre no escapada).
      */
     private int encontrarFinString(String texto, int inicio) {
+        if (texto == null || inicio < 0 || inicio >= texto.length()) {
+            return -1;
+        }
         boolean escapado = false;
         for (int i = inicio; i < texto.length(); i++) {
             char c = texto.charAt(i);
@@ -483,11 +496,22 @@ public class ParseadorRespuestasAI {
                 escapado = true;
                 continue;
             }
-            if (c == '"') {
+            if (c == '"' && esComillaCierreValorJson(texto, i)) {
                 return i;
             }
         }
         return -1;
+    }
+
+    private boolean esComillaCierreValorJson(String texto, int indiceComilla) {
+        for (int i = indiceComilla + 1; i < texto.length(); i++) {
+            char siguiente = texto.charAt(i);
+            if (Character.isWhitespace(siguiente)) {
+                continue;
+            }
+            return siguiente == ',' || siguiente == '}' || siguiente == ']';
+        }
+        return true;
     }
     
     /**

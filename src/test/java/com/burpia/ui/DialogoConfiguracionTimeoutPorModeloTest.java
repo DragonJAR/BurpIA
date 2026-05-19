@@ -349,7 +349,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 comboProveedor.setSelectedItem("Z.ai");
                 comboModelo.setSelectedItem("glm-5");
                 comboModelo.getEditor().setItem("glm-5");
-                txtClave.setText("test-key");
+                txtClave.setText("sk-test-key-12345");
                 txtRetraso.setText("5");
                 txtMaximoConcurrente.setText("3");
                 txtMaximoHallazgosTabla.setText("1000");
@@ -412,7 +412,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 comboProveedor.setSelectedItem("Z.ai");
                 comboModelo.setSelectedItem("glm-5");
                 comboModelo.getEditor().setItem("glm-5");
-                txtClave.setText("test-key");
+                txtClave.setText("sk-test-key-12345");
                 txtRetraso.setText("5");
                 txtMaximoConcurrente.setText("3");
                 txtMaximoHallazgosTabla.setText("1000");
@@ -476,7 +476,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 comboProveedor.setSelectedItem("Z.ai");
                 comboModelo.setSelectedItem("glm-5");
                 comboModelo.getEditor().setItem("glm-5");
-                txtClave.setText("test-key");
+                txtClave.setText("sk-test-key-12345");
                 txtRetraso.setText("5");
                 txtMaximoConcurrente.setText("3");
                 txtMaximoHallazgosTabla.setText("1000");
@@ -774,7 +774,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 comboModelo.setSelectedItem("gpt-4o");
                 comboModelo.getEditor().setItem("gpt-4o");
                 txtUrl.setText("https://api.openai.com/v1");
-                txtClave.setText("test-key");
+                txtClave.setText("sk-test-key-12345");
                 txtMaxTokens.setText("4096");
                 txtTimeoutModelo.setText("120");
 
@@ -910,7 +910,7 @@ class DialogoConfiguracionTimeoutPorModeloTest {
                 comboProveedor.setSelectedItem("Z.ai");
                 comboModelo.setSelectedItem("glm-5");
                 comboModelo.getEditor().setItem("glm-5");
-                txtClave.setText("test-key");
+                txtClave.setText("sk-test-key-12345");
                 txtRetraso.setText("5");
                 txtMaximoConcurrente.setText("3");
                 txtMaximoHallazgosTabla.setText("1000");

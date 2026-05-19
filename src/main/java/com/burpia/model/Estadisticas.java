@@ -1,5 +1,7 @@
 package com.burpia.model;
 
+import com.burpia.i18n.I18nUI;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -247,8 +249,7 @@ public class Estadisticas {
      * @return cadena con el resumen de estadísticas
      */
     public String generarResumen() {
-        return String.format(
-            "Solicitudes: %d | Analizados: %d | Omitidos: %d | Hallazgos: %d | Errores: %d",
+        return I18nUI.Estadisticas.RESUMEN_COMPLETO(
             totalSolicitudes.get(),
             analizados.get(),
             obtenerTotalOmitidos(),

@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class ConfiguracionAPI {
     public enum CodigoValidacionConsulta {
@@ -101,6 +102,9 @@ public class ConfiguracionAPI {
     // UI State Persistence - Estado general
     private Map<String, String> estadoUI;
 
+    // Alertas opt-out — Map<claveAlerta, true> indica que la alerta fue desactivada por el usuario
+    private Map<String, Boolean> alertasDeshabilitadas;
+
     public ConfiguracionAPI() {
         this.proveedorAI = "Ollama";
         this.retrasoSegundos = normalizarRetrasoSegundos(1);
@@ -143,6 +147,9 @@ public class ConfiguracionAPI {
         this.textoFiltroHallazgos = "";
         this.filtroSeveridadHallazgos = "";
         this.estadoUI = new HashMap<>();
+
+        // Valores por defecto para alertas opt-out
+        this.alertasDeshabilitadas = new HashMap<>();
 
         // Valores por defecto para flags de persistencia UI
         this.persistirFiltroBusquedaHallazgos = true;
@@ -747,60 +754,60 @@ public class ConfiguracionAPI {
     }
 
     public String obtenerApiKeyParaProveedor(String proveedor) {
-        asegurarMapas();
-        String proveedorNormalizado = normalizarProveedor(proveedor);
-        if (proveedorNormalizado.isEmpty()) {
+        Optional<String> prov = validarYNormalizarProveedor(proveedor);
+        if (prov.isEmpty()) {
             return "";
         }
-        String key = apiKeysPorProveedor.get(proveedorNormalizado);
+        String p = prov.get();
+        String key = apiKeysPorProveedor.get(p);
         return key != null ? key : "";
     }
 
     public void establecerApiKeyParaProveedor(String proveedor, String apiKey) {
-        asegurarMapas();
-        String proveedorNormalizado = normalizarProveedor(proveedor);
-        if (proveedorNormalizado.isEmpty()) {
+        Optional<String> prov = validarYNormalizarProveedor(proveedor);
+        if (prov.isEmpty()) {
             return;
         }
-        apiKeysPorProveedor.put(proveedorNormalizado, apiKey);
+        String p = prov.get();
+        apiKeysPorProveedor.put(p, apiKey);
     }
 
     public String obtenerUrlBaseParaProveedor(String proveedor) {
-        asegurarMapas();
-        String proveedorNormalizado = normalizarProveedor(proveedor);
-        if (proveedorNormalizado.isEmpty()) {
+        Optional<String> prov = validarYNormalizarProveedor(proveedor);
+        if (prov.isEmpty()) {
             return "";
         }
-        if (urlsBasePorProveedor.containsKey(proveedorNormalizado)) {
-            String urlGuardada = urlsBasePorProveedor.get(proveedorNormalizado);
+        String p = prov.get();
+        if (urlsBasePorProveedor.containsKey(p)) {
+            String urlGuardada = urlsBasePorProveedor.get(p);
             if (Normalizador.noEsVacio(urlGuardada)) {
                 return urlGuardada;
             }
         }
-        String urlPorDefecto = ProveedorAI.obtenerUrlApiPorDefecto(proveedorNormalizado, idiomaUi);
+        String urlPorDefecto = ProveedorAI.obtenerUrlApiPorDefecto(p, idiomaUi);
         return urlPorDefecto != null ? urlPorDefecto : "";
     }
 
     public void establecerUrlBaseParaProveedor(String proveedor, String urlBase) {
-        asegurarMapas();
-        String proveedorNormalizado = normalizarProveedor(proveedor);
-        if (proveedorNormalizado.isEmpty()) {
+        Optional<String> prov = validarYNormalizarProveedor(proveedor);
+        if (prov.isEmpty()) {
             return;
         }
-        urlsBasePorProveedor.put(proveedorNormalizado, urlBase);
+        String p = prov.get();
+        urlsBasePorProveedor.put(p, urlBase);
     }
 
     public String obtenerModeloParaProveedor(String proveedor) {
-        asegurarMapas();
-        String proveedorNormalizado = normalizarProveedor(proveedor);
-        if (proveedorNormalizado.isEmpty()) {
+        Optional<String> prov = validarYNormalizarProveedor(proveedor);
+        if (prov.isEmpty()) {
             return "";
         }
-        if (modelosPorProveedor.containsKey(proveedorNormalizado)) {
-            String modelo = modelosPorProveedor.get(proveedorNormalizado);
+        String p = prov.get();
+        if (modelosPorProveedor.containsKey(p)) {
+            String modelo = modelosPorProveedor.get(p);
             return modelo != null ? modelo : "";
         }
-        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedorNormalizado);
+        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(p);
         return config != null ? config.obtenerModeloPorDefecto() : "";
     }
 
@@ -893,57 +900,58 @@ public class ConfiguracionAPI {
     public Map<String, String> validar() {
         Map<String, String> errores = new HashMap<>();
 
-        if (Normalizador.esVacio(proveedorAI)) {
-            errores.put("proveedorAI", I18nUI.Configuracion.ERROR_PROVEEDOR_REQUERIDO());
-        } else if (!ProveedorAI.existeProveedor(proveedorAI)) {
-            errores.put(
-                    "proveedorAI",
-                    I18nUI.Configuracion.ERROR_PROVEEDOR_NO_RECONOCIDO(proveedorAI));
+        // Delegar validación de proveedor a ConfigValidator
+        ConfigValidator.ValidationResult validacionProveedor =
+                ConfigValidator.validarProveedor(proveedorAI);
+        if (!validacionProveedor.esValido()) {
+            errores.put("proveedorAI", validacionProveedor.obtenerMensajeError());
         }
 
-        ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedorAI);
-        if (config != null && config.requiereClaveApi()) {
-            String key = obtenerApiKeyParaProveedor(proveedorAI);
-            if (Normalizador.esVacio(key)) {
-                errores.put(
-                        "claveApi",
-                        I18nUI.Configuracion.ALERTA_CLAVE_REQUERIDA(proveedorAI));
-            }
+        // Delegar validación de API key a ConfigValidator
+        String apiKey = obtenerApiKeyParaProveedor(proveedorAI);
+        ConfigValidator.ValidationResult validacionApiKey =
+                ConfigValidator.validarApiKey(apiKey, proveedorAI);
+        if (!validacionApiKey.esValido()) {
+            errores.put("claveApi", validacionApiKey.obtenerMensajeError());
         }
 
-        if (Normalizador.esVacio(obtenerModelo())) {
-            errores.put("modelo", I18nUI.Configuracion.ERROR_MODELO_REQUERIDO());
+        // Delegar validación de modelo a ConfigValidator
+        ConfigValidator.ValidationResult validacionModelo =
+                ConfigValidator.validarModelo(obtenerModelo(), proveedorAI);
+        if (!validacionModelo.esValido()) {
+            errores.put("modelo", validacionModelo.obtenerMensajeError());
         }
 
-        if (retrasoSegundos < MINIMO_RETRASO_SEGUNDOS || retrasoSegundos > MAXIMO_RETRASO_SEGUNDOS) {
-            errores.put(
-                    "retrasoSegundos",
-                    I18nUI.Configuracion.ERROR_RETRASO_RANGO(MINIMO_RETRASO_SEGUNDOS, MAXIMO_RETRASO_SEGUNDOS));
+        // Delegar validación de rango a ConfigValidator
+        ConfigValidator.ValidationResult validacionRetraso =
+                ConfigValidator.validarRetrasoSegundos(retrasoSegundos);
+        if (!validacionRetraso.esValido()) {
+            errores.put("retrasoSegundos", validacionRetraso.obtenerMensajeError());
         }
 
-        if (maximoConcurrente < MINIMO_MAXIMO_CONCURRENTE || maximoConcurrente > MAXIMO_MAXIMO_CONCURRENTE) {
-            errores.put(
-                    "maximoConcurrente",
-                    I18nUI.Configuracion.ERROR_MAXIMO_CONCURRENTE_RANGO(MINIMO_MAXIMO_CONCURRENTE,
-                            MAXIMO_MAXIMO_CONCURRENTE));
+        ConfigValidator.ValidationResult validacionConcurrente =
+                ConfigValidator.validarMaximoConcurrente(maximoConcurrente);
+        if (!validacionConcurrente.esValido()) {
+            errores.put("maximoConcurrente", validacionConcurrente.obtenerMensajeError());
         }
 
-        if (maximoHallazgosTabla < MINIMO_HALLAZGOS_TABLA || maximoHallazgosTabla > MAXIMO_HALLAZGOS_TABLA) {
-            errores.put("maximoHallazgosTabla",
-                    I18nUI.Configuracion.ERROR_MAXIMO_HALLAZGOS_TABLA_RANGO(MINIMO_HALLAZGOS_TABLA,
-                            MAXIMO_HALLAZGOS_TABLA));
+        ConfigValidator.ValidationResult validacionHallazgos =
+                ConfigValidator.validarMaximoHallazgos(maximoHallazgosTabla);
+        if (!validacionHallazgos.esValido()) {
+            errores.put("maximoHallazgosTabla", validacionHallazgos.obtenerMensajeError());
         }
 
-        if (tiempoEsperaAI < 10 || tiempoEsperaAI > 300) {
-            errores.put(
-                    "tiempoEsperaAI",
-                    I18nUI.Configuracion.ERROR_TIMEOUT_RANGO());
+        ConfigValidator.ValidationResult validacionTimeout =
+                ConfigValidator.validarTimeoutModelo(tiempoEsperaAI);
+        if (!validacionTimeout.esValido()) {
+            errores.put("tiempoEsperaAI", validacionTimeout.obtenerMensajeError());
         }
 
-        if (Normalizador.esVacio(promptConfigurable)) {
-            errores.put(
-                    "promptConfigurable",
-                    I18nUI.Configuracion.ERROR_PROMPT_REQUERIDO());
+        // Delegar validación de prompt a ConfigValidator
+        ConfigValidator.ValidationResult validacionPrompt =
+                ConfigValidator.validarPrompt(promptConfigurable);
+        if (!validacionPrompt.esValido()) {
+            errores.put("promptConfigurable", validacionPrompt.obtenerMensajeError());
         }
 
         ConfigValidator.ValidationResult validacionDelayAgente = ConfigValidator.validarAgenteDelay(agenteDelay);
@@ -1480,40 +1488,17 @@ public class ConfiguracionAPI {
         }
     }
 
+    // Delegamos a ConfigSanitizers (canonical implementations)
     private static Map<String, String> normalizarMapaStringPorProveedor(Map<String, String> mapa) {
-        Map<String, String> limpio = new HashMap<>();
-        if (mapa == null) {
-            return limpio;
-        }
-        for (Map.Entry<String, String> entry : mapa.entrySet()) {
-            if (entry == null) {
-                continue;
-            }
-            String proveedor = normalizarProveedor(entry.getKey());
-            if (proveedor.isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
-                continue;
-            }
-            limpio.put(proveedor, entry.getValue() != null ? entry.getValue() : "");
-        }
-        return limpio;
+        return ConfigSanitizers.normalizarMapaStringPorProveedor(mapa);
     }
 
     private static Map<String, Integer> normalizarMapaIntPorProveedor(Map<String, Integer> mapa) {
-        Map<String, Integer> limpio = new HashMap<>();
-        if (mapa == null) {
-            return limpio;
-        }
-        for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
-            if (entry == null || entry.getValue() == null) {
-                continue;
-            }
-            String proveedor = normalizarProveedor(entry.getKey());
-            if (proveedor.isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
-                continue;
-            }
-            limpio.put(proveedor, entry.getValue());
-        }
-        return limpio;
+        return ConfigSanitizers.normalizarMapaIntPorProveedor(mapa);
+    }
+
+    private static String normalizarClaveTiempoEsperaModelo(String clave) {
+        return ConfigSanitizers.normalizarClaveTimeoutProveedorModelo(clave);
     }
 
     private static List<String> normalizarListaProveedores(List<String> proveedores) {
@@ -1530,20 +1515,6 @@ public class ConfiguracionAPI {
             }
         }
         return normalizados;
-    }
-
-    private static String normalizarClaveTiempoEsperaModelo(String clave) {
-        if (Normalizador.esVacio(clave)) {
-            return "";
-        }
-        String limpia = clave.trim();
-        int separador = limpia.indexOf("::");
-        if (separador <= 0) {
-            return "";
-        }
-        String proveedor = limpia.substring(0, separador);
-        String modelo = limpia.substring(separador + 2);
-        return construirClaveTiempoEsperaModelo(proveedor, modelo);
     }
 
     public ConfiguracionAPI crearSnapshot() {
@@ -1585,6 +1556,7 @@ public class ConfiguracionAPI {
         snapshot.persistirFiltroBusquedaHallazgos = this.persistirFiltroBusquedaHallazgos;
         snapshot.persistirFiltroSeveridadHallazgos = this.persistirFiltroSeveridadHallazgos;
         snapshot.estadoUI = new HashMap<>(this.estadoUI);
+        snapshot.alertasDeshabilitadas = new HashMap<>(this.alertasDeshabilitadas);
 
         snapshot.apiKeysPorProveedor = new HashMap<>(this.apiKeysPorProveedor);
         snapshot.urlsBasePorProveedor = new HashMap<>(this.urlsBasePorProveedor);
@@ -1655,6 +1627,7 @@ public class ConfiguracionAPI {
         this.persistirFiltroBusquedaHallazgos = origen.persistirFiltroBusquedaHallazgos;
         this.persistirFiltroSeveridadHallazgos = origen.persistirFiltroSeveridadHallazgos;
         this.estadoUI = new HashMap<>(origen.estadoUI);
+        this.alertasDeshabilitadas = new HashMap<>(origen.alertasDeshabilitadas);
         this.multiProveedorHabilitado = origen.multiProveedorHabilitado;
         this.proveedoresMultiConsulta = new ArrayList<>(origen.proveedoresMultiConsulta);
         this.nivelErrorHabilitado = origen.nivelErrorHabilitado;
@@ -1741,6 +1714,70 @@ public class ConfiguracionAPI {
         return nivelErrorHabilitado || nivelWarnHabilitado || nivelInfoHabilitado;
     }
 
+    // ==================== MÉTODOS DE ALERTAS OPT-OUT ====================
+
+    /**
+     * Obtiene el mapa de alertas deshabilitadas por opt-out del usuario.
+     *
+     * @return mapa inmutable copy; clave = claveAlerta, valor = {@code true}
+     */
+    public Map<String, Boolean> obtenerAlertasDeshabilitadas() {
+        if (alertasDeshabilitadas == null) {
+            alertasDeshabilitadas = new HashMap<>();
+        }
+        return new HashMap<>(alertasDeshabilitadas);
+    }
+
+    /**
+     * Reemplaza el mapa de alertas deshabilitadas, conservando solo claves válidas con valor true.
+     *
+     * @param alertas mapa de claves de alerta deshabilitadas
+     */
+    public void establecerAlertasDeshabilitadas(Map<String, Boolean> alertas) {
+        this.alertasDeshabilitadas = normalizarAlertasDeshabilitadas(alertas);
+    }
+
+    /**
+     * Agrega una clave de alerta como deshabilitada (opt-out).
+     *
+     * @param claveAlerta clave única de la alerta
+     */
+    public void agregarAlertaDeshabilitada(String claveAlerta) {
+        if (alertasDeshabilitadas == null) {
+            alertasDeshabilitadas = new HashMap<>();
+        }
+        if (Normalizador.esVacio(claveAlerta)) {
+            return;
+        }
+        alertasDeshabilitadas.put(claveAlerta, true);
+    }
+
+    /**
+     * Quita una clave de alerta de las deshabilitadas (el usuario volvió a activar la alerta).
+     *
+     * @param claveAlerta clave única de la alerta
+     */
+    public void quitarAlertaDeshabilitada(String claveAlerta) {
+        if (alertasDeshabilitadas == null) {
+            return;
+        }
+        alertasDeshabilitadas.remove(claveAlerta);
+    }
+
+    private Map<String, Boolean> normalizarAlertasDeshabilitadas(Map<String, Boolean> alertas) {
+        Map<String, Boolean> limpio = new HashMap<>();
+        if (alertas == null) {
+            return limpio;
+        }
+        for (Map.Entry<String, Boolean> entry : alertas.entrySet()) {
+            if (entry == null || Normalizador.esVacio(entry.getKey()) || !Boolean.TRUE.equals(entry.getValue())) {
+                continue;
+            }
+            limpio.put(entry.getKey().trim(), true);
+        }
+        return limpio;
+    }
+
     /**
      * Estima el context window (tokens) de un modelo de AI conocido.
      * Datos centralizados para evitar duplicación y facilitar actualización.
@@ -1771,5 +1808,14 @@ public class ConfiguracionAPI {
         if (m.contains("mistral-large")) return 128000;
         if (m.contains("mistral")) return 32000;
         return 4000;
+    }
+
+    private Optional<String> validarYNormalizarProveedor(String proveedor) {
+        asegurarMapas();
+        String normalizado = normalizarProveedor(proveedor);
+        if (Normalizador.noEsVacio(normalizado) && ProveedorAI.existeProveedor(normalizado)) {
+            return Optional.of(normalizado);
+        }
+        return Optional.empty();
     }
 }

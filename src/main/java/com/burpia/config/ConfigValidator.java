@@ -11,7 +11,6 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 import static com.burpia.util.Normalizador.esVacio;
-import static com.burpia.util.Normalizador.noEsVacio;
 
 /**
  * Clase centralizada para validación de campos de configuración.

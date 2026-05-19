@@ -1,6 +1,5 @@
 package com.burpia.config;
 
-import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
@@ -256,6 +255,9 @@ public class GestorConfiguracion {
         if (archivo.alertasClickDerechoEnviarAHabilitadas != null) {
             config.establecerAlertasClickDerechoEnviarAHabilitadas(archivo.alertasClickDerechoEnviarAHabilitadas);
         }
+        if (archivo.alertasDeshabilitadas != null) {
+            config.establecerAlertasDeshabilitadas(archivo.alertasDeshabilitadas);
+        }
         boolean promptModificado = Boolean.TRUE.equals(archivo.promptModificado);
         config.establecerPromptModificado(promptModificado);
         if (promptModificado && archivo.promptConfigurable != null) {
@@ -383,6 +385,7 @@ public class GestorConfiguracion {
         archivo.autoScrollConsolaHabilitado = config.autoScrollConsolaHabilitado();
         archivo.alertasHabilitadas = config.alertasHabilitadas();
         archivo.alertasClickDerechoEnviarAHabilitadas = config.alertasClickDerechoEnviarAHabilitadas();
+        archivo.alertasDeshabilitadas = new HashMap<>(config.obtenerAlertasDeshabilitadas());
         archivo.promptConfigurable = config.obtenerPromptConfigurable();
         archivo.promptModificado = config.esPromptModificado();
         archivo.ignorarErroresSSL = config.ignorarErroresSSL();
@@ -428,32 +431,11 @@ public class GestorConfiguracion {
     }
 
     private Map<String, String> sanitizarMapaString(Map<String, String> mapa) {
-        Map<String, String> limpio = new HashMap<>();
-        if (mapa == null) {
-            return limpio;
-        }
-        for (Map.Entry<String, String> entry : mapa.entrySet()) {
-            String proveedor = ProveedorAI.normalizarProveedor(entry.getKey());
-            if (Normalizador.noEsVacio(proveedor) && ProveedorAI.existeProveedor(proveedor)) {
-                limpio.put(proveedor, entry.getValue() != null ? entry.getValue() : "");
-            }
-        }
-        return limpio;
+        return ConfigSanitizers.normalizarMapaStringPorProveedor(mapa);
     }
 
     private Map<String, Integer> sanitizarMapaInt(Map<String, Integer> mapa) {
-        Map<String, Integer> limpio = new HashMap<>();
-        if (mapa == null) {
-            return limpio;
-        }
-        for (Map.Entry<String, Integer> entry : mapa.entrySet()) {
-            String proveedor = ProveedorAI.normalizarProveedor(entry.getKey());
-            if (Normalizador.noEsVacio(proveedor) && ProveedorAI.existeProveedor(proveedor)
-                    && entry.getValue() != null && entry.getValue() > 0) {
-                limpio.put(proveedor, entry.getValue());
-            }
-        }
-        return limpio;
+        return ConfigSanitizers.normalizarMapaIntPorProveedor(mapa);
     }
 
     private Map<String, Integer> sanitizarMapaTimeoutPorModelo(Map<String, Integer> mapa) {
@@ -475,26 +457,7 @@ public class GestorConfiguracion {
     }
 
     private String normalizarClaveTimeoutProveedorModelo(String claveOriginal) {
-        if (Normalizador.esVacio(claveOriginal)) {
-            return "";
-        }
-        String clave = claveOriginal.trim();
-        int separador = clave.indexOf("::");
-        if (separador <= 0) {
-            return clave;
-        }
-
-        String proveedor = ProveedorAI.normalizarProveedor(clave.substring(0, separador));
-        if (Normalizador.esVacio(proveedor) || !ProveedorAI.existeProveedor(proveedor)) {
-            return "";
-        }
-
-        String modelo = clave.substring(separador + 2).trim();
-        if (Normalizador.esVacio(modelo)) {
-            return "";
-        }
-
-        return proveedor + "::" + modelo;
+        return ConfigSanitizers.normalizarClaveTimeoutProveedorModelo(claveOriginal);
     }
 
     private static class ArchivoConfiguracion {
@@ -511,6 +474,7 @@ public class GestorConfiguracion {
         private Boolean autoScrollConsolaHabilitado;
         private Boolean alertasHabilitadas;
         private Boolean alertasClickDerechoEnviarAHabilitadas;
+        private Map<String, Boolean> alertasDeshabilitadas;
         private String promptConfigurable;
         private Boolean promptModificado;
         private Boolean ignorarErroresSSL;

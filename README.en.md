@@ -6,7 +6,7 @@
 
 BurpIA is a Burp Suite extension that analyzes HTTP traffic with LLMs to help you detect potential security findings in less time.
 
-**Current version:** `1.5.0`
+**Current version:** `1.6.0`
 
 Spanish version: [README.md](README.md)
 
@@ -44,13 +44,14 @@ Spanish version: [README.md](README.md)
 ## What you get with BurpIA
 
 - **Hybrid AI Analysis:** Automatic passive scanning or manual (via context menu) over real HTTP evidence (`request` + `response`).
-- **Flow Analysis:** Capability to analyze multiple related requests as a single contextual flow.
-- **High-Speed Triage:** Direct sending of findings to Repeater, Intruder, or Scanner from the centralized results table.
-- **Smart Findings Management:** Prioritization by severity/confidence with the option to send directly to the Burp Suite project.
-- **Adaptive Interface:** Native support for Burp's **Dark/Light** modes, responsive window, and font customization.
-- **Deduplication and Load Control:** Queue system with concurrency limits and SHA-256 hashes to avoid redundant re-analysis.
-- **Flexible Export:** Support for data export in CSV and JSON formats for external reports.
-- **User Experience:** Bilingual interface (Spanish/English) with repetitive alert suppression and settings persistence.
+- **Flow Analysis:** Contextual analysis of 2 to 4 related requests as a single flow, with direct submission to the CLI agent for deep validation.
+- **High-Speed Triage:** Direct sending of findings to **Burp Repeater** from the centralized results table.
+- **Smart Findings Management:** Prioritization by severity/confidence with text and severity filters, and the option to send directly to the Burp Suite project.
+- **Adaptive Interface:** Native support for Burp's **Dark/Light** modes, responsive window, and font customization (standard and mono).
+- **Deduplication and Load Control:** Queue system with configurable concurrency limit (1–10), SHA-256 hashes, 15-min TTL and 10,000-entry LRU to avoid redundant re-analysis; automatic static resource filtering.
+- **Flexible Export:** Support for exporting findings in CSV and JSON formats for external reports.
+- **User Experience:** Bilingual interface (Spanish/English), per-alert opt-out with persistence ("Don't show this again"), and persistent filters and settings.
+- **Advanced Context Menu:** Individual analysis options ("Analyze request with BurpIA"), flow analysis ("🔍 Analyze this flow" for 2–4 requests), and direct CLI agent integration ("🤖 Analyze with {Agent}").
 
 ## Agent guides
 
@@ -62,9 +63,9 @@ Spanish version: [README.md](README.md)
 
 ---
 
-## Current status (v1.5.0)
+## Current status (v1.6.0)
 
-BurpIA is updated to `v1.5.0`.
+BurpIA is updated to `v1.6.0`.
 See the change summary in **Version history**.
 
 
@@ -72,7 +73,18 @@ See the change summary in **Version history**.
 
 ## Version history
 
-### v1.5.0 (current)
+### v1.6.0 (current)
+
+- **Alert Opt-Out:** centralized system to suppress individual alerts ("Don't show this again") with per-key persistence.
+- **ConfigSanitizers:** DRY extraction of provider map sanitization logic, eliminating duplication between `ConfiguracionAPI` and `GestorConfiguracion`.
+- **Parser Robustness:** refactored generic reusable bracket balancing and improved detection of embedded quotes in JSON.
+- **I18n Hardening:** removed ~15 hardcoded strings, 6 new methods in `I18nUI` and 5 in `I18nLogs.Extension`.
+- **Dead Code Cleanup:** ~13 wrapper methods removed, clean imports, constants centralized in `PoliticaReintentos`.
+- **UI DRY:** `UIUtils.crearMenu()`, `FabricaMenuContextual.crearMenuItem()` to reduce boilerplate.
+- **`Normalizador.describirError(Throwable)`:** new utility for error description, replacing duplicated local implementations.
+
+
+### v1.5.0
 
 - **Contextual flow analysis:** analyzes multiple HTTP requests as a complete flow in a single LLM query, now including both requests and responses.
 - **Send flow to agent:** sends the complete flow (requests + responses) to the CLI agent with specialized prompt for deep validation.
@@ -86,7 +98,7 @@ See the change summary in **Version history**.
 
 ### v1.0.2
 
-- **Multi-provider System:** ability to query requests using up to 5 different configured providers simultaneously.
+- **Multi-provider System:** ability to query requests using multiple configured providers simultaneously.
 - **Update Notifications:** new alert engine for available version updates.
 - **User Experience:** optimizations for navigation and general usability.
 - **Interface Customization:** enhancements to visual environment settings.
@@ -111,10 +123,10 @@ See the change summary in **Version history**.
 
 ## Quick Start (3 minutes)
 
-1. Download the `BurpIA-1.5.0.jar` file.
+1. Download the `BurpIA-1.6.0.jar` file.
 2. Load the extension in Burp Suite:
    - Go to the `Extensions` tab -> `Add`.
-   - Select the `BurpIA-1.5.0.jar` file.
+   - Select the `BurpIA-1.6.0.jar` file.
 3. Configure BurpIA in the plugin tab:
    - Select your **LLM Provider**.
    - Enter the **API Key** (if applicable).
@@ -131,10 +143,11 @@ See the change summary in **Version history**.
 - **OpenAI** (o1 models, GPT-4o, etc.).
 - **Claude** (Anthropic: Sonnet 3.5/3.6, Opus).
 - **Gemini** (Google: 1.5 Pro/Flash with native support).
-- **DeepSeek** (Via Ollama or OpenAI-compatible providers).
 - **Moonshot (Kimi)** (k2.5 and previous models).
 - **Z.ai** / **Minimax**.
 - **Custom** (Up to 3 custom profiles for any OpenAI-compatible API).
+
+> **Note:** DeepSeek can be used through Ollama or via a Custom profile with the OpenAI-compatible API.
 
 
 > [!TIP]
@@ -158,10 +171,12 @@ See the change summary in **Version history**.
 
 
 ### Manual flow
-1. Select any request in any Burp tab.
-2. Right-click -> `Analyze request with BurpIA`.
-3. BurpIA analyzes the request and its associated response.
-4. The finding appears in the table to be edited, exported, or sent to other tools.
+1. Select one or more requests (2–4 for flow analysis) in any Burp tab.
+2. Right-click:
+   - **1 request:** `Analyze request with BurpIA` or `🤖 Analyze with {Agent}`.
+   - **2–4 requests:** `🔍 Analyze this flow` or `🤖 Analyze this flow with {Agent}`.
+3. BurpIA analyzes the request/flow and its associated responses.
+4. The finding appears in the table to be edited, exported, or sent to Repeater.
 
 
 ---
@@ -170,9 +185,16 @@ See the change summary in **Version history**.
 
 BurpIA supports the following tokens to customize analysis:
 
+### Individual analysis
 - `{REQUEST}`: Inserts the normalized HTTP request.
 - `{RESPONSE}`: Inserts the HTTP response (if available).
 - `{OUTPUT_LANGUAGE}`: Indicates the expected output language for the finding description.
+
+### Flow analysis (2–4 requests)
+- `{REQUEST_1}`, `{REQUEST_2}`, ... : Inserts the Nth request in the flow.
+- `{RESPONSE_1}`, `{RESPONSE_2}`, ... : Inserts the Nth response in the flow.
+- `{REQUEST}`: Inserts all requests in the flow concatenated.
+- `{OUTPUT_LANGUAGE}`: Output language (same as individual analysis).
 
 *If you omit these tokens, BurpIA will automatically add a security block (fallback) to maintain minimum context and enforce the configured language.*
 

@@ -69,14 +69,14 @@ class AnalizadorAITest {
     }
 
     /**
-     * Invoca el método privado parsearRespuesta mediante reflexión.
-     * Principio DRY: Centraliza acceso reflexivo al método de parsing.
+     * Invoca parsearRespuesta del parseador interno mediante reflexión.
      */
     private ResultadoAnalisisMultiple invocarParsearRespuesta(AnalizadorAI analizador, String respuesta)
             throws Exception {
-        Method metodoParseo = AnalizadorAI.class.getDeclaredMethod("parsearRespuesta", String.class);
-        metodoParseo.setAccessible(true);
-        return (ResultadoAnalisisMultiple) metodoParseo.invoke(analizador, respuesta);
+        Field campoParseador = AnalizadorAI.class.getDeclaredField("parseador");
+        campoParseador.setAccessible(true);
+        ParseadorRespuestasAI parseador = (ParseadorRespuestasAI) campoParseador.get(analizador);
+        return parseador.parsearRespuesta(respuesta, crearSolicitudBasica("https://example.com", "GET", "test"), "Z.ai");
     }
 
     @Test
@@ -111,6 +111,28 @@ class AnalizadorAITest {
         assertEquals(2, resultado.obtenerNumeroHallazgos(), "Debe recuperar 2 hallazgos");
         assertTrue(resultado.obtenerHallazgos().get(1).obtenerHallazgo().contains("Evidencia: <form action=\"search.php\" method=\"post\">"),
             "La evidencia debe contener el HTML del formulario");
+    }
+
+    @Test
+    @DisplayName("Fallback no estricto respeta comillas escapadas y repara HTML en evidencia")
+    void testParseoNoEstrictoConComillasEscapadasYHtml() throws Exception {
+        ConfiguracionAPI config = crearConfiguracionBasica(PROVEEDOR_ZAI);
+        SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com/html", "GET", "hash-html-quotes");
+        AnalizadorAI analizador = crearAnalizadorParaTest(config, solicitud);
+
+        String respuesta = "{\"hallazgos\":["
+            + "{\"titulo\":\"HTML\",\"descripcion\":\"Header \\\"seguro\\\" detectado\","
+            + "\"severidad\":\"Low\",\"confianza\":\"High\","
+            + "\"evidencia\":\"<input name=\"q\" value=\"test\">\"}"
+            + "]}";
+
+        ResultadoAnalisisMultiple resultado = invocarParsearRespuesta(analizador, respuesta);
+
+        assertEquals(1, resultado.obtenerNumeroHallazgos(), "Debe recuperar el hallazgo con HTML");
+        assertTrue(resultado.obtenerHallazgos().get(0).obtenerHallazgo().contains("Header \"seguro\" detectado"),
+            "Debe preservar comillas escapadas válidas en la descripción");
+        assertTrue(resultado.obtenerHallazgos().get(0).obtenerHallazgo().contains("<input name=\"q\" value=\"test\">"),
+            "Debe reparar y preservar comillas de atributos HTML");
     }
 
     @Test

@@ -127,7 +127,7 @@ class ContextExceededDetectorTest {
         void extraeLimiteOpenAI() {
             String cuerpoError = "This model's maximum context length is 128000 tokens";
             
-            int limite = detector.extraerLimiteTokens(cuerpoError);
+            int limite = ContextExceededDetector.extraerLimiteTokens(cuerpoError);
             
             assertEquals(128000, limite, "Debe extraer 128000 tokens");
         }
@@ -137,7 +137,7 @@ class ContextExceededDetectorTest {
         void extraeLimiteClaude() {
             String cuerpoError = "prompt is too long: 200001 tokens > 200000 maximum";
             
-            int limite = detector.extraerLimiteTokens(cuerpoError);
+            int limite = ContextExceededDetector.extraerLimiteTokens(cuerpoError);
             
             assertEquals(200001, limite, "Debe extraer el primer número de tokens encontrado");
         }
@@ -147,7 +147,7 @@ class ContextExceededDetectorTest {
         void retornaMenosUnoSinLimite() {
             String cuerpoError = "Error genérico sin información de tokens";
             
-            int limite = detector.extraerLimiteTokens(cuerpoError);
+            int limite = ContextExceededDetector.extraerLimiteTokens(cuerpoError);
             
             assertEquals(-1, limite, "Debe retornar -1 cuando no hay límite");
         }
@@ -155,7 +155,7 @@ class ContextExceededDetectorTest {
         @Test
         @DisplayName("maneja mensaje null")
         void manejaMensajeNull() {
-            int limite = detector.extraerLimiteTokens(null);
+            int limite = ContextExceededDetector.extraerLimiteTokens(null);
             
             assertEquals(-1, limite, "Debe retornar -1 para mensaje null");
         }

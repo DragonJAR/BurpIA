@@ -110,6 +110,34 @@ public final class UIUtils {
         return menuItem;
     }
 
+    /**
+     * Crea un JMenu con texto y fuente estándar aplicada.
+     *
+     * @param texto Texto del menú
+     * @return JMenu configurado con FUENTE_ESTANDAR
+     */
+    public static JMenu crearMenu(String texto) {
+        JMenu menu = new JMenu(texto);
+        menu.setFont(EstilosUI.FUENTE_ESTANDAR);
+        return menu;
+    }
+
+    /**
+     * Agrega un JMenuItem a un JMenu existente con texto, tooltip y acción.
+     *
+     * @param menu   Menú padre al que agregar el item
+     * @param texto  Texto del item
+     * @param tooltip Tooltip del item
+     * @param accion ActionListener a ejecutar (puede ser null)
+     * @return El JMenuItem creado y agregado
+     */
+    public static JMenuItem agregarMenuItemAlMenu(JMenu menu, String texto, String tooltip,
+            java.awt.event.ActionListener accion) {
+        JMenuItem item = crearMenuItemContextual(texto, tooltip, accion);
+        menu.add(item);
+        return item;
+    }
+
     public static void instalarTooltipsEncabezadoTabla(JTable tabla, String... tooltipsPorModelo) {
         if (tabla == null) {
             return;

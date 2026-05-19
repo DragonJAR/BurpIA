@@ -4,14 +4,11 @@ import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
-import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.ControlCancelacionPausa;
 import com.burpia.util.Normalizador;
 import okhttp3.*;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -24,9 +21,6 @@ import javax.net.ssl.X509TrustManager;
 
 public class AnalizadorHTTP {
     private static final String ORIGEN_LOG = "AnalizadorHTTP";
-    private static final int MAX_INTENTOS_RETRY = 5;
-    private static final long BACKOFF_INICIAL_MS = 1000L;
-    private static final long BACKOFF_MAXIMO_MS = 8000L;
     
     private final ConfiguracionAPI config;
     private final BooleanSupplier tareaCancelada;
@@ -65,16 +59,16 @@ public class AnalizadorHTTP {
 
     private String llamarAPIConRetries(String prompt) throws IOException, InterruptedException, ContextExceededException {
         IOException ultimaExcepcion = null;
-        long backoffActualMs = BACKOFF_INICIAL_MS;
+        long backoffActualMs = PoliticaReintentos.BACKOFF_INICIAL_MS;
 
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Sistema de retry: hasta " + MAX_INTENTOS_RETRY +
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Sistema de retry: hasta " + PoliticaReintentos.MAX_INTENTOS_RETRY +
                           " intentos con backoff exponencial"));
 
-        for (int intento = 1; intento <= MAX_INTENTOS_RETRY; intento++) {
+        for (int intento = 1; intento <= PoliticaReintentos.MAX_INTENTOS_RETRY; intento++) {
             control.verificarCancelacion();
             control.esperarSiPausada();
             
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Intento #" + intento + " de " + MAX_INTENTOS_RETRY));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Intento #" + intento + " de " + PoliticaReintentos.MAX_INTENTOS_RETRY));
             
             try {
                 return llamarAPISingle(prompt, intento == 1);
@@ -84,7 +78,7 @@ public class AnalizadorHTTP {
                 ultimaExcepcion = e;
                 // Si es error de contexto, lanzar excepción específica (no reintentar aquí)
                 if (e.esErrorContextoExcedido()) {
-                    int limite = detectorContexto.extraerLimiteTokens(e.obtenerCuerpoError());
+                    int limite = ContextExceededDetector.extraerLimiteTokens(e.obtenerCuerpoError());
                     throw new ContextExceededException(e.getMessage(), e.obtenerCuerpoError(), limite);
                 }
                 if (PoliticaReintentos.esCodigoNoReintentable(e.obtenerCodigoEstado(), e.obtenerCuerpoError())) {
@@ -94,7 +88,7 @@ public class AnalizadorHTTP {
                     throw e;
                 }
                 registrarFalloIntento(intento, e);
-                if (intento >= MAX_INTENTOS_RETRY) {
+                if (intento >= PoliticaReintentos.MAX_INTENTOS_RETRY) {
                     break;
                 }
                 long esperaMs = PoliticaReintentos.calcularEsperaMs(
@@ -106,14 +100,14 @@ public class AnalizadorHTTP {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando " + esperaSegundos +
                                  " segundos antes del próximo reintento"));
                 control.esperarConControl(esperaMs);
-                backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
+                backoffActualMs = Math.min(backoffActualMs * 2L, PoliticaReintentos.BACKOFF_MAXIMO_MS);
             } catch (IOException e) {
                 ultimaExcepcion = e;
                 if (!PoliticaReintentos.esExcepcionReintentable(e)) {
                     throw e;
                 }
                 registrarFalloIntento(intento, e);
-                if (intento >= MAX_INTENTOS_RETRY) {
+                if (intento >= PoliticaReintentos.MAX_INTENTOS_RETRY) {
                     break;
                 }
                 long esperaMs = PoliticaReintentos.calcularEsperaMs(-1, null, backoffActualMs, intento);
@@ -121,12 +115,12 @@ public class AnalizadorHTTP {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando " + esperaSegundos +
                                  " segundos antes del próximo reintento"));
                 control.esperarConControl(esperaMs);
-                backoffActualMs = Math.min(backoffActualMs * 2L, BACKOFF_MAXIMO_MS);
+                backoffActualMs = Math.min(backoffActualMs * 2L, PoliticaReintentos.BACKOFF_MAXIMO_MS);
             }
         }
 
         gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Todos los reintentos fallaron después de " +
-                           MAX_INTENTOS_RETRY + " intentos"));
+                           PoliticaReintentos.MAX_INTENTOS_RETRY + " intentos"));
         gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("SUGERENCIA: Considera cambiar de proveedor de API."));
         
         if (ultimaExcepcion == null) {
@@ -194,7 +188,7 @@ public class AnalizadorHTTP {
                     
                     if (esErrorContexto) {
                         gestorLogging.info(ORIGEN_LOG, I18nLogs.ContextoExcedido.DETECTADO());
-                        int limiteTokens = detectorContexto.extraerLimiteTokens(cuerpoError);
+                        int limiteTokens = ContextExceededDetector.extraerLimiteTokens(cuerpoError);
                         if (limiteTokens > 0) {
                             gestorLogging.verbose(ORIGEN_LOG, I18nLogs.ContextoExcedido.LIMITE_EXTRAIDO(limiteTokens));
                         }

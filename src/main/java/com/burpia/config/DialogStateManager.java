@@ -2,7 +2,6 @@ package com.burpia.config;
 
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
-import com.burpia.i18n.IdiomaUI;
 import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;

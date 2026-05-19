@@ -40,7 +40,7 @@ public final class ProcesadorPromptHTTP {
 
     private ProcesadorPromptHTTP() {
         throw new UnsupportedOperationException(
-            "ProcesadorPromptHTTP es una clase de utilidad y no puede instanciarse"
+            I18nUI.General.ERROR_CLASE_UTILIDAD("ProcesadorPromptHTTP")
         );
     }
     

@@ -6,10 +6,8 @@ import burp.api.montoya.http.handler.HttpRequestToBeSent;
 import burp.api.montoya.http.handler.HttpResponseReceived;
 import burp.api.montoya.http.handler.RequestToBeSentAction;
 import burp.api.montoya.http.handler.ResponseReceivedAction;
-import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
-import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.flow.FlowAnalysisConstraints;
@@ -18,7 +16,6 @@ import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
-import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaHallazgos;
@@ -31,13 +28,10 @@ import com.burpia.util.LimitadorTasa;
 import com.burpia.util.HttpUtils;
 import com.burpia.util.Normalizador;
 import com.burpia.util.ControlBackpressureGlobal;
-import com.burpia.util.FiltroContenidoAnalizable;
 import com.burpia.util.DeduplicadorSolicitudes;
 import com.burpia.evidence.EvidenceManager;
-import com.burpia.util.AlmacenEvidenciaHttp;
 import com.burpia.processor.HttpRequestProcessor;
 import com.burpia.execution.TaskExecutionManager;
-import com.burpia.util.PoliticaMemoria;
 import javax.swing.*;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -45,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 import java.util.function.Supplier;
 
 public class ManejadorHttpBurpIA implements HttpHandler {
@@ -563,6 +556,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 } else {
                     api.logging().logToOutput(mensaje);
                 }
+            // Best-effort: logging to Burp UI may fail in headless environments
             } catch (Exception ignored) {
             }
         }

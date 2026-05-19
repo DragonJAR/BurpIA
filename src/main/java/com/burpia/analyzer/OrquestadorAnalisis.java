@@ -18,10 +18,7 @@ import java.util.List;
 
 public class OrquestadorAnalisis {
     private static final String ORIGEN_LOG = "OrquestadorAnalisis";
-    private static final int MAX_INTENTOS_RETRY = 5;
     private static final int MAX_TRUNCADOS = 3;
-    private static final long BACKOFF_INICIAL_MS = 1000L;
-    private static final long BACKOFF_MAXIMO_MS = 8000L;
 
     private final SolicitudAnalisis solicitud;
     // Snapshot inmutable: el llamador crea una copia via crearSnapshot() antes de pasarla.
@@ -97,8 +94,8 @@ public class OrquestadorAnalisis {
         gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud()));
 
         try {
-            verificarCancelacion();
-            esperarSiPausada();
+            controlCancelacionPausa.verificarCancelacion();
+            controlCancelacionPausa.esperarSiPausada();
             notificarInicioAnalisis();
             
             String alertaConfiguracion = validarConfiguracionAntesDeConsulta();
@@ -130,7 +127,7 @@ public class OrquestadorAnalisis {
                     gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Usando proveedor único: " + config.obtenerProveedorAI()));
                 }
                 String respuesta = llamarAPIAIConRetries();
-                resultadoMultiple = parsearRespuesta(respuesta);
+                resultadoMultiple = parseador.parsearRespuesta(respuesta, solicitud, config != null ? config.obtenerProveedorAI() : "");
             }
 
             long duracion = System.currentTimeMillis() - tiempoInicio;
@@ -164,18 +161,6 @@ public class OrquestadorAnalisis {
         return error != null ? error.trim() : "";
     }
 
-    private void verificarCancelacion() throws InterruptedException {
-        controlCancelacionPausa.verificarCancelacion();
-    }
-
-    private void esperarSiPausada() throws InterruptedException {
-        controlCancelacionPausa.esperarSiPausada();
-    }
-
-    private void esperarConControl(long milisegundos) throws InterruptedException {
-        controlCancelacionPausa.esperarConControl(milisegundos);
-    }
-
     private String construirPromptAnalisis() {
         gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Construyendo prompt para URL: " + solicitud.obtenerUrl()));
         String promptPreconstruido = solicitud.obtenerPromptPreconstruido();
@@ -193,8 +178,8 @@ public class OrquestadorAnalisis {
         
         while (intentosTruncado <= MAX_TRUNCADOS) {
             try {
-                verificarCancelacion();
-                esperarSiPausada();
+                controlCancelacionPausa.verificarCancelacion();
+                controlCancelacionPausa.esperarSiPausada();
                 
                 String respuesta = analizadorHTTP.llamarAPI(promptActual);
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Longitud de respuesta de API: " + respuesta.length() + " caracteres"));
@@ -236,8 +221,7 @@ public class OrquestadorAnalisis {
      */
     private int obtenerTokensObjetivo(String cuerpoError) {
         // Intentar extraer límite del error
-        ContextExceededDetector detector = new ContextExceededDetector();
-        int limiteExtraido = detector.extraerLimiteTokens(cuerpoError);
+        int limiteExtraido = ContextExceededDetector.extraerLimiteTokens(cuerpoError);
         
         if (limiteExtraido > 0) {
             // Dejar margen para respuesta (25% del context window)
@@ -264,14 +248,6 @@ public class OrquestadorAnalisis {
      */
     private int estimarContextWindow(String modelo) {
         return ConfiguracionAPI.estimarContextWindow(modelo);
-    }
-
-    private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
-        return parsearRespuesta(respuestaJson, config != null ? config.obtenerProveedorAI() : "");
-    }
-
-    private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson, String proveedor) {
-        return parseador.parsearRespuesta(respuestaJson, solicitud, proveedor);
     }
 
     private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {
@@ -309,7 +285,14 @@ public class OrquestadorAnalisis {
     }
 
     private static String alertaConfiguracionNoDisponible() {
-        return I18nUI.tr("ALERTA: Configuracion de IA no disponible", "ALERT: AI configuration is unavailable");
+        return I18nUI.tr("ALERTA: Configuracion de IA no disponible", "ALERTA: AI configuration is unavailable");
     }
 
+    /**
+     * Parsea una respuesta JSON usando el parseador interno.
+     * Exist for test access only — production code should use the full pipeline.
+     */
+    ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
+        return parseador.parsearRespuesta(respuestaJson, solicitud, config != null ? config.obtenerProveedorAI() : "");
+    }
 }

@@ -112,6 +112,16 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         descargado = true;
     }
 
+    private static JMenuItem crearMenuItem(String texto, String tooltip, java.awt.event.ActionListener accion) {
+        JMenuItem menuItem = new JMenuItem(texto);
+        menuItem.setFont(EstilosUI.FUENTE_ESTANDAR);
+        menuItem.setToolTipText(tooltip);
+        if (accion != null) {
+            menuItem.addActionListener(accion);
+        }
+        return menuItem;
+    }
+
     @Override
     public List<Component> provideMenuItems(ContextMenuEvent evento) {
         if (descargado) {
@@ -127,17 +137,17 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         final ContextoInvocacion contextoInvocacion = construirContextoInvocacion(evento, cantidadSeleccionada);
 
         if (cantidadSeleccionada == 1) {
-            JMenuItem itemAnalizar = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD());
-            itemAnalizar.setFont(EstilosUI.FUENTE_ESTANDAR);
-            itemAnalizar.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD());
-            itemAnalizar.addActionListener(e -> manejarAnalisisSeleccion(seleccion, contextoInvocacion));
-            itemsMenu.add(itemAnalizar);
+            itemsMenu.add(crearMenuItem(
+                I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD(),
+                I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD(),
+                e -> manejarAnalisisSeleccion(seleccion, contextoInvocacion)
+            ));
         } else if (cantidadSeleccionada >= 2) {
-            JMenuItem itemFlujo = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_FLUJO());
-            itemFlujo.setFont(EstilosUI.FUENTE_ESTANDAR);
-            itemFlujo.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO());
-            itemFlujo.addActionListener(e -> manejarAnalisisFlujo(seleccion, contextoInvocacion));
-            itemsMenu.add(itemFlujo);
+            itemsMenu.add(crearMenuItem(
+                I18nUI.Contexto.ITEM_ANALIZAR_FLUJO(),
+                I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO(),
+                e -> manejarAnalisisFlujo(seleccion, contextoInvocacion)
+            ));
         }
 
         if (config != null && config.hayAlgunAgenteHabilitado()) {
@@ -146,17 +156,17 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 I18nUI.General.AGENTE_GENERICO()
             );
             if (cantidadSeleccionada == 1 && manejadorAgenteSolicitud != null) {
-                JMenuItem itemAgente = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente));
-                itemAgente.setFont(EstilosUI.FUENTE_ESTANDAR);
-                itemAgente.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente));
-                itemAgente.addActionListener(e -> manejarEnvioAgenteSolicitud(seleccion, nombreAgente, contextoInvocacion));
-                itemsMenu.add(itemAgente);
+                itemsMenu.add(crearMenuItem(
+                    I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente),
+                    I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente),
+                    e -> manejarEnvioAgenteSolicitud(seleccion, nombreAgente, contextoInvocacion)
+                ));
             } else if (cantidadSeleccionada >= 2 && manejadorAgenteFlujo != null) {
-                JMenuItem itemAgenteFlujo = new JMenuItem(I18nUI.Contexto.ITEM_ANALIZAR_FLUJO_CON_AGENTE(nombreAgente));
-                itemAgenteFlujo.setFont(EstilosUI.FUENTE_ESTANDAR);
-                itemAgenteFlujo.setToolTipText(I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO_CON_AGENTE(nombreAgente));
-                itemAgenteFlujo.addActionListener(e -> manejarEnvioAgenteFlujo(seleccion, nombreAgente, contextoInvocacion));
-                itemsMenu.add(itemAgenteFlujo);
+                itemsMenu.add(crearMenuItem(
+                    I18nUI.Contexto.ITEM_ANALIZAR_FLUJO_CON_AGENTE(nombreAgente),
+                    I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO_CON_AGENTE(nombreAgente),
+                    e -> manejarEnvioAgenteFlujo(seleccion, nombreAgente, contextoInvocacion)
+                ));
             }
         }
 
@@ -407,12 +417,14 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 if (evento.invocationType() != null) {
                     tipoInvocacion = evento.invocationType();
                 }
+            // Best-effort: invocationType() may not be available in all Burp editions
             } catch (Exception ignored) {
             }
             try {
                 if (evento.toolType() != null) {
                     tipoHerramienta = evento.toolType();
                 }
+            // Best-effort: toolType() may not be available in all Burp editions
             } catch (Exception ignored) {
             }
         }
@@ -420,14 +432,15 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
 
     private boolean alertasEnviarAHabilitadas() {
-        return config == null
-            || (config.alertasHabilitadas() && config.alertasClickDerechoEnviarAHabilitadas());
+        return (config == null || config.alertasClickDerechoEnviarAHabilitadas())
+            && AlertasOptOutHelper.debeMostrarAlerta(AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A, config);
     }
 
     private void deshabilitarAlertasEnviarA() {
         if (config == null || !config.alertasClickDerechoEnviarAHabilitadas()) {
             return;
         }
+        AlertasOptOutHelper.registrarDeshabilitacion(AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A, config);
         config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
         if (manejadorCambioAlertasEnviarA != null) {
             manejadorCambioAlertasEnviarA.run();

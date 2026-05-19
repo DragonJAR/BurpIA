@@ -2,7 +2,6 @@ package com.burpia.i18n;
 
 import burp.api.montoya.core.ToolType;
 import burp.api.montoya.ui.contextmenu.InvocationType;
-import com.burpia.util.Normalizador;
 
 import java.util.Arrays;
 import java.util.regex.Matcher;
@@ -931,6 +930,37 @@ public final class I18nLogs {
 
         public static String ESTADO_REFERENCIA_ACTUALIZADO() {
             return tr("Estado de referencia actualizado");
+        }
+    }
+
+    /**
+     * Mensajes de logging relacionados con el ciclo de vida de la extensión BurpIA.
+     */
+    public static final class Extension {
+        private Extension() {
+        }
+
+        public static String CONFIGURACION_ACTUALIZADA(boolean detallado, int maxConcurrente, int retraso, int maxHallazgos, int maxTareas) {
+            return I18nUI.trf("Configuración actualizada: detallado=%s, máximoConcurrente=%d, retraso=%ds, máximoHallazgos=%d, máximoTareas=%d",
+                    "Configuration updated: detailed=%s, maxConcurrent=%d, delay=%ds, maxFindings=%d, maxTasks=%d",
+                    detallado, maxConcurrente, retraso, maxHallazgos, maxTareas);
+        }
+
+        public static String DESCARGANDO() {
+            return I18nUI.tr("Descargando extensión BurpIA...", "Unloading BurpIA extension...");
+        }
+
+        public static String DESCARGADA_OK() {
+            return I18nUI.tr("Extensión BurpIA descargada correctamente", "BurpIA extension unloaded successfully");
+        }
+
+        public static String AGENTE_INICIALIZADO() {
+            return I18nUI.tr("Agente inicializado - secuencia automática de arranque activa",
+                    "Agent initialized - automatic startup sequence active");
+        }
+
+        public static String EXECUTOR_CERRADO() {
+            return I18nUI.tr("ExecutorService cerrado", "ExecutorService closed");
         }
     }
 

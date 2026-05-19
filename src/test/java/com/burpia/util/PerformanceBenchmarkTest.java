@@ -548,7 +548,8 @@ class PerformanceBenchmarkTest {
 
         BenchmarkResult result = runBenchmark("ConstructorPrompts.construirPromptAnalisis.truncado", () -> {
             String prompt = constructor.construirPromptAnalisis(solicitud);
-            assertTrue(prompt.contains("[TRUNCATED request body: +2000 characters]"),
+            assertTrue(prompt.contains("[TRUNCATED request body: +2000 characters]")
+                    || prompt.contains("[TRUNCADO cuerpo de solicitud: +2000 caracteres]"),
                 "assertTrue failed at PerformanceBenchmarkTest.java:522");
             assertTrue(prompt.contains("POST https://example.com/upload"),
                 "assertTrue failed at PerformanceBenchmarkTest.java:524");

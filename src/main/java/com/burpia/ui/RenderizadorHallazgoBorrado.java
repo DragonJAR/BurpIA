@@ -1,5 +1,7 @@
 package com.burpia.ui;
 
+import com.burpia.i18n.I18nUI;
+
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Font;
@@ -30,9 +32,9 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
      * @throws IllegalArgumentException si algún parámetro es null
      */
     public RenderizadorHallazgoBorrado(TableCellRenderer rendererOriginal, JTable tabla, ModeloTablaHallazgos modelo) {
-        this.rendererOriginal = Objects.requireNonNull(rendererOriginal, "El renderer original no puede ser null");
-        this.tabla = Objects.requireNonNull(tabla, "La tabla no puede ser null");
-        this.modelo = Objects.requireNonNull(modelo, "El modelo no puede ser null");
+        this.rendererOriginal = Objects.requireNonNull(rendererOriginal, I18nUI.General.ERROR_ARGUMENTO_NULO("renderer"));
+        this.tabla = Objects.requireNonNull(tabla, I18nUI.General.ERROR_ARGUMENTO_NULO("tabla"));
+        this.modelo = Objects.requireNonNull(modelo, I18nUI.General.ERROR_ARGUMENTO_NULO("modelo"));
     }
 
     @Override

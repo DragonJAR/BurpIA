@@ -13,7 +13,6 @@ import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class EvidenceManager {

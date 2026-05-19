@@ -167,6 +167,18 @@ public final class Normalizador {
     }
 
     /**
+     * Describe un error de forma segura para visualización en UI.
+     * @param error el error a describir
+     * @return mensaje del error o nombre de clase si no hay mensaje
+     */
+    public static String describirError(Throwable error) {
+        if (error == null) return "";
+        String mensaje = error.getMessage();
+        if (noEsVacio(mensaje)) return mensaje.trim();
+        return error.getClass().getSimpleName().replace("Exception", "").replace("Error", "");
+    }
+
+    /**
      * Desescapa secuencias de escape básicas en un texto.
      * <p>
      * Secuencias soportadas: {@code \n}, {@code \r}, {@code \t}, {@code \"}, {@code \\}

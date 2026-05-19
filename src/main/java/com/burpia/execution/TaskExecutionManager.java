@@ -13,17 +13,13 @@ import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
-import com.burpia.util.HttpUtils;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
-import com.burpia.util.PoliticaMemoria;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;

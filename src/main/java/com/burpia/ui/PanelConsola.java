@@ -74,7 +74,7 @@ public class PanelConsola extends JPanel {
      */
     @SuppressWarnings("this-escape")
     public PanelConsola(GestorConsolaGUI gestorConsola) {
-        this.gestorConsola = Objects.requireNonNull(gestorConsola, "gestorConsola no puede ser null");
+        this.gestorConsola = Objects.requireNonNull(gestorConsola, I18nUI.General.ERROR_ARGUMENTO_NULO("gestorConsola"));
 
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));

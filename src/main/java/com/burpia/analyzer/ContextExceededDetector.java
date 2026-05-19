@@ -154,7 +154,7 @@ public class ContextExceededDetector {
      * @param mensajeError Mensaje de error del proveedor
      * @return Límite de tokens extraído, o -1 si no se puede extraer
      */
-    public int extraerLimiteTokens(String mensajeError) {
+    public static int extraerLimiteTokens(String mensajeError) {
         if (Normalizador.esVacio(mensajeError)) {
             return -1;
         }

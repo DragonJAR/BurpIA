@@ -141,7 +141,7 @@ public class GestorMultiProveedor {
     private ResultadoAnalisisMultiple ejecutarAnalisisProveedorUnico() throws IOException, InterruptedException {
         AnalizadorHTTP analizadorHTTP = new AnalizadorHTTP(config, tareaCancelada, tareaPausada, gestorLogging);
         String respuesta = llamarAPIAIConRetries(analizadorHTTP, config);
-        return parsearRespuesta(respuesta, config.obtenerProveedorAI());
+        return parseador.parsearRespuesta(respuesta, solicitud, config.obtenerProveedorAI());
     }
 
     private ResultadoAnalisisMultiple ejecutarAnalisisProveedor(String proveedor, String modelo)
@@ -150,7 +150,7 @@ public class GestorMultiProveedor {
         ConfiguracionAPI configProveedor = crearConfiguracionParaProveedor(proveedor);
         AnalizadorHTTP analizadorHTTP = new AnalizadorHTTP(configProveedor, tareaCancelada, tareaPausada, gestorLogging);
         String respuesta = llamarAPIAIConRetries(analizadorHTTP, configProveedor);
-        ResultadoAnalisisMultiple resultado = parsearRespuesta(respuesta, proveedor);
+        ResultadoAnalisisMultiple resultado = parseador.parsearRespuesta(respuesta, solicitud, proveedor);
         
         return etiquetarResultado(resultado, proveedor, modelo);
     }
@@ -178,14 +178,6 @@ public class GestorMultiProveedor {
             // Para multi-proveedor, propagar como IOException
             throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO_PROVEEDOR(configActual.obtenerProveedorAI()), e);
         }
-    }
-
-    private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
-        return parsearRespuesta(respuestaJson, config != null ? config.obtenerProveedorAI() : "");
-    }
-
-    private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson, String proveedor) {
-        return parseador.parsearRespuesta(respuestaJson, solicitud, proveedor);
     }
 
     private ResultadoAnalisisMultiple etiquetarResultado(ResultadoAnalisisMultiple resultado,
@@ -254,5 +246,13 @@ public class GestorMultiProveedor {
                 destinoStr.flush();
             }
         }
+    }
+
+    /**
+     * Parsea una respuesta JSON usando el parseador interno.
+     * Exist for test access only — production code should use the full pipeline.
+     */
+    ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson, String proveedor) {
+        return parseador.parsearRespuesta(respuestaJson, solicitud, proveedor);
     }
 }

@@ -1,7 +1,11 @@
 package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
+import com.burpia.i18n.IdiomaUI;
 import com.burpia.model.SolicitudAnalisis;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,11 +17,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("ConstructorPrompts Tests")
 class ConstructorPromptsTest {
 
+    private IdiomaUI idiomaOriginal;
+
+    @BeforeEach
+    void guardarIdiomaOriginal() {
+        idiomaOriginal = I18nUI.obtenerIdioma();
+    }
+
+    @AfterEach
+    void restaurarIdiomaOriginal() {
+        I18nUI.establecerIdioma(idiomaOriginal);
+    }
+
     @Test
     @DisplayName("Prompt de flujo usa el prompt configurable y omite respuesta inexistente")
     void testPromptDeFlujoUsaPromptConfigurableYOmiteRespuestaInexistente() {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerIdiomaUi("es");
+        I18nUI.establecerIdioma(IdiomaUI.ES);
         config.establecerPromptConfigurable("PROMPT FLUJO USUARIO\nREQ={REQUEST}\nRES={RESPONSE}");
         ConstructorPrompts constructor = new ConstructorPrompts(config);
 
@@ -67,6 +84,7 @@ class ConstructorPromptsTest {
     void testPromptIndividualAgregaBloquesFallbackCuandoFaltanTokens() {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerIdiomaUi("en");
+        I18nUI.establecerIdioma(IdiomaUI.EN);
         config.establecerPromptConfigurable("Analyze business logic issues only.");
         ConstructorPrompts constructor = new ConstructorPrompts(config);
 

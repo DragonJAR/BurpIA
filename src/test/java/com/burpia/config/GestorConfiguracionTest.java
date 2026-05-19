@@ -14,6 +14,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -104,6 +105,31 @@ class GestorConfiguracionTest {
         assertTrue(json.contains("\"modelosPorProveedor\""), "assertTrue failed at GestorConfiguracionTest.java:114");
         assertTrue(json.contains("\"idiomaUi\": \"en\""), "assertTrue failed at GestorConfiguracionTest.java:115");
         assertTrue(json.contains("\"maximoHallazgosTabla\": 2500"), "assertTrue failed at GestorConfiguracionTest.java:116");
+    }
+
+    @Test
+    @DisplayName("Guarda y carga alertas deshabilitadas filtrando entradas inválidas")
+    void testGuardaYCargaAlertasDeshabilitadas() throws Exception {
+        configurarDirectorioTemporalComoHome();
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        Map<String, Boolean> alertas = new java.util.HashMap<>();
+        alertas.put("alerta_hallazgos_envio_issues", true);
+        alertas.put("alerta_no_persistida", false);
+        alertas.put("   ", true);
+        config.establecerAlertasDeshabilitadas(alertas);
+
+        assertTrue(gestor.guardarConfiguracion(config), "assertTrue failed at GestorConfiguracionTest.java:alertas:guardar");
+
+        ConfiguracionAPI cargada = gestor.cargarConfiguracion();
+
+        assertTrue(cargada.obtenerAlertasDeshabilitadas().containsKey("alerta_hallazgos_envio_issues"),
+            "assertTrue failed at GestorConfiguracionTest.java:alertas:carga");
+        assertFalse(cargada.obtenerAlertasDeshabilitadas().containsKey("alerta_no_persistida"),
+            "assertFalse failed at GestorConfiguracionTest.java:alertas:false");
+        assertFalse(cargada.obtenerAlertasDeshabilitadas().containsKey(""),
+            "assertFalse failed at GestorConfiguracionTest.java:alertas:vacia");
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.Normalizador;
 import com.burpia.util.PoliticaMemoria;
@@ -39,7 +40,7 @@ public class ConstructorPrompts {
      * @throws NullPointerException si la configuración es {@code null}
      */
     public ConstructorPrompts(ConfiguracionAPI config) {
-        this.config = Objects.requireNonNull(config, "ConfiguracionAPI no puede ser null");
+        this.config = Objects.requireNonNull(config, I18nUI.General.ERROR_CONFIGURACION_NULA_ARGUMENTO());
     }
 
     /**
@@ -84,8 +85,8 @@ public class ConstructorPrompts {
             promptFinal += "\n\nRESPONSE:\n" + responseContenido;
         }
         if (!teniaTokenIdioma) {
-            promptFinal += "\n\n" + trPrompt("IDIOMA DE SALIDA", "OUTPUT LANGUAGE") + ": " + idiomaSalida +
-                    "\n" + trPrompt(
+            promptFinal += "\n\n" + I18nUI.tr("IDIOMA DE SALIDA", "OUTPUT LANGUAGE") + ": " + idiomaSalida +
+                    "\n" + I18nUI.tr(
                             "Escribe \"descripcion\" estrictamente en IDIOMA DE SALIDA. Mantén \"severidad\" y \"confianza\" exactamente con valores canónicos.",
                             "Write \"descripcion\" strictly in OUTPUT LANGUAGE. Keep \"severidad\" and \"confianza\" exactly as canonical values.");
         }
@@ -119,7 +120,7 @@ public class ConstructorPrompts {
      */
     private String construirBloqueRequest(SolicitudAnalisis solicitud) {
         if (solicitud == null) {
-            return trPrompt("[REQUEST NO DISPONIBLE]", "[REQUEST NOT AVAILABLE]");
+            return I18nUI.tr("[REQUEST NO DISPONIBLE]", "[REQUEST NOT AVAILABLE]");
         }
 
         String lineaInicial = valorNoVacio(solicitud.obtenerMetodo(), "[METHOD NULL]") +
@@ -141,7 +142,7 @@ public class ConstructorPrompts {
                     .append(truncarTexto(
                             cuerpo,
                             PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
-                            trPrompt("cuerpo de solicitud", "request body")));
+                            I18nUI.tr("cuerpo de solicitud", "request body")));
         }
 
         return requestBuilder.toString();
@@ -160,7 +161,7 @@ public class ConstructorPrompts {
      */
     private String construirBloqueResponse(SolicitudAnalisis solicitud) {
         if (solicitud == null) {
-            return "STATUS: N/A\n" + trPrompt("[RESPONSE NO DISPONIBLE]", "[RESPONSE NOT AVAILABLE]");
+            return "STATUS: N/A\n" + I18nUI.tr("[RESPONSE NO DISPONIBLE]", "[RESPONSE NOT AVAILABLE]");
         }
 
         int status = solicitud.obtenerCodigoEstadoRespuesta();
@@ -168,7 +169,7 @@ public class ConstructorPrompts {
         String cuerpo = valorNoVacio(solicitud.obtenerCuerpoRespuesta(), "");
 
         if (status < 0 && encabezados.isEmpty() && cuerpo.isEmpty()) {
-            return "STATUS: N/A\n" + trPrompt("[RESPONSE NO DISPONIBLE]", "[RESPONSE NOT AVAILABLE]");
+            return "STATUS: N/A\n" + I18nUI.tr("[RESPONSE NO DISPONIBLE]", "[RESPONSE NOT AVAILABLE]");
         }
 
         StringBuilder responseBuilder = new StringBuilder();
@@ -177,7 +178,7 @@ public class ConstructorPrompts {
         if (!encabezados.isEmpty()) {
             responseBuilder.append(encabezados);
         } else {
-            responseBuilder.append(trPrompt("[HEADERS NO DISPONIBLES]", "[HEADERS NOT AVAILABLE]")).append("\n");
+            responseBuilder.append(I18nUI.tr("[HEADERS NO DISPONIBLES]", "[HEADERS NOT AVAILABLE]")).append("\n");
         }
 
         if (!cuerpo.isEmpty()) {
@@ -185,7 +186,7 @@ public class ConstructorPrompts {
                     .append(truncarTexto(
                             cuerpo,
                             PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
-                            trPrompt("cuerpo de respuesta", "response body")));
+                            I18nUI.tr("cuerpo de respuesta", "response body")));
         } else {
             responseBuilder.append("\nBODY:\n[EMPTY]");
         }
@@ -216,24 +217,9 @@ public class ConstructorPrompts {
         }
         int truncados = texto.length() - maxCaracteres;
         return texto.substring(0, maxCaracteres) +
-                "\n" + trPrompt(
+                "\n" + I18nUI.tr(
                         "[TRUNCADO " + etiqueta + ": +" + truncados + " caracteres]",
                         "[TRUNCATED " + etiqueta + ": +" + truncados + " characters]");
-    }
-
-    /**
-     * Traduce un texto según el idioma de la UI configurado.
-     * <p>
-     * Este método es específico para traducir texto dentro de los prompts,
-     * no para la UI de la aplicación.
-     * </p>
-     *
-     * @param textoEs texto en español
-     * @param textoEn texto en inglés
-     * @return el texto en el idioma configurado (español por defecto)
-     */
-    private String trPrompt(String textoEs, String textoEn) {
-        return "en".equalsIgnoreCase(config.obtenerIdiomaUi()) ? textoEn : textoEs;
     }
 
     /**

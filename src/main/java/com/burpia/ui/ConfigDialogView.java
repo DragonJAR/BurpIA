@@ -7,7 +7,6 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 
 public class ConfigDialogView {

@@ -90,7 +90,7 @@ class ConfigPersistenceManagerTest {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("OpenAI");
         config.establecerModelo("gpt-4o"); // Esto establece el modelo para el proveedor actual
-        config.establecerApiKeyParaProveedor("OpenAI", "test-key");
+        config.establecerApiKeyParaProveedor("OpenAI", "sk-test-key-12345");
         config.establecerRetrasoSegundos(0);
         config.establecerMaximoConcurrente(5);
         config.establecerMaximoHallazgosTabla(1000);
@@ -115,7 +115,7 @@ class ConfigPersistenceManagerTest {
     void testGuardarConfiguracionValida() {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("OpenAI");
-        config.establecerApiKeyParaProveedor("OpenAI", "test-key");
+        config.establecerApiKeyParaProveedor("OpenAI", "sk-test-key-12345");
         config.establecerModelo("gpt-4o");
         config.establecerRetrasoSegundos(0);
         config.establecerMaximoConcurrente(5);

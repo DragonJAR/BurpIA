@@ -105,8 +105,7 @@ public final class ConstructorSolicitudesProveedor {
             );
             if (!modelosValidosGemini.contains(modeloConfigurado)) {
                 modeloUsado = modelosValidosGemini.get(0);
-                advertencia = "Modelo Gemini \"" + modeloConfigurado +
-                    "\" no soportado para generateContent. Se usó \"" + modeloUsado + "\".";
+                advertencia = I18nUI.Conexion.WARNING_MODELO_GEMINI_FALLBACK(modeloConfigurado, modeloUsado);
             }
             endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) +
                 "/models/" + modeloUsado + ":generateContent";

@@ -14,7 +14,7 @@ import java.util.Locale;
 public final class VersionBurpIA {
 
     /** Versión actual de BurpIA. */
-    public static final String VERSION_ACTUAL = "1.5.0";
+    public static final String VERSION_ACTUAL = "1.6.0";
 
     /** URL del archivo VERSION.txt en el repositorio remoto. */
     public static final String URL_VERSION_REMOTA =

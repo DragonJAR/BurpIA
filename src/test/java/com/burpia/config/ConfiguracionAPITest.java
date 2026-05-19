@@ -51,6 +51,27 @@ class ConfiguracionAPITest {
     }
 
     @Test
+    @DisplayName("Alertas deshabilitadas se normalizan y se copian profundamente")
+    void testAlertasDeshabilitadasSeNormalizanYCopian() {
+        Map<String, Boolean> alertas = new HashMap<>();
+        alertas.put(" alerta_hallazgos_envio_issues ", true);
+        alertas.put("alerta_inactiva", false);
+        alertas.put("   ", true);
+
+        config.establecerAlertasDeshabilitadas(alertas);
+        ConfiguracionAPI snapshot = config.crearSnapshot();
+
+        assertTrue(snapshot.obtenerAlertasDeshabilitadas().containsKey("alerta_hallazgos_envio_issues"),
+            "assertTrue failed at ConfiguracionAPITest.java:alertas:issues");
+        assertFalse(snapshot.obtenerAlertasDeshabilitadas().containsKey("alerta_inactiva"),
+            "assertFalse failed at ConfiguracionAPITest.java:alertas:false");
+
+        alertas.put("alerta_mutada", true);
+        assertFalse(config.obtenerAlertasDeshabilitadas().containsKey("alerta_mutada"),
+            "assertFalse failed at ConfiguracionAPITest.java:alertas:copia");
+    }
+
+    @Test
     @DisplayName("Agente delay se normaliza dentro del rango permitido")
     void testAgenteDelaySeNormalizaPorRango() {
         config.establecerAgenteDelay(-250);
@@ -185,7 +206,7 @@ class ConfiguracionAPITest {
         valida.establecerProveedorAI("OpenAI");
         valida.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
         valida.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
-        valida.establecerApiKeyParaProveedor("OpenAI", "test-key");
+        valida.establecerApiKeyParaProveedor("OpenAI", "sk-test-key-12345");
         assertTrue(valida.validar().isEmpty(), "assertTrue failed at ConfiguracionAPITest.java:101");
 
         ConfiguracionAPI invalida = valida.crearSnapshot();
@@ -571,9 +592,12 @@ class ConfiguracionAPITest {
         int defectoOpenAi = ProveedorAI.obtenerProveedor("OpenAI").obtenerMaxTokensPorDefecto();
         Map<String, Integer> mapa = new HashMap<>();
         mapa.put("OpenAI", null);
+        mapa.put("Claude", 0);
+        mapa.put("Gemini", -10);
         config.establecerMaxTokensPorProveedor(mapa);
 
         assertEquals(defectoOpenAi, config.obtenerMaxTokensParaProveedor("OpenAI"), "assertEquals failed at ConfiguracionAPITest.java:449");
+        assertTrue(config.obtenerMaxTokensPorProveedor().isEmpty(), "assertTrue failed at ConfiguracionAPITest.java:maxTokensInvalidosMapa");
     }
 
     @Test

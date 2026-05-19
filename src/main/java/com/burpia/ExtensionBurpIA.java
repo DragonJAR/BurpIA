@@ -643,17 +643,16 @@ public class ExtensionBurpIA implements BurpExtension {
                             pestaniaActual.aplicarIdioma();
                         }
                         if (gestorConsola != null) {
-                            gestorConsola.registrarInfo("Configuracion guardada exitosamente");
+                            gestorConsola.registrarInfo(I18nLogs.Configuracion.GUARDADA_OK());
                         }
                         if (api != null) {
                             api.logging().logToOutput(I18nUI.General.CONFIGURACION_GUARDADA());
                         }
 
-                        registrar("Configuracion actualizada: detallado=" + configActual.esDetallado() +
-                                ", maximoConcurrente=" + configActual.obtenerMaximoConcurrente() +
-                                ", retraso=" + configActual.obtenerRetrasoSegundos() + "s" +
-                                ", maximoHallazgos=" + configActual.obtenerMaximoHallazgosTabla() +
-                                ", maximoTareas=" + configActual.obtenerMaximoTareasTabla());
+                        registrar(I18nLogs.Extension.CONFIGURACION_ACTUALIZADA(
+                                configActual.esDetallado(), configActual.obtenerMaximoConcurrente(),
+                                configActual.obtenerRetrasoSegundos(), configActual.obtenerMaximoHallazgosTabla(),
+                                configActual.obtenerMaximoTareasTabla()));
 
                         pestaniaActual.actualizarVisibilidadAgentes();
                     });
@@ -1052,7 +1051,7 @@ public class ExtensionBurpIA implements BurpExtension {
         }
 
         panelAgente.asegurarConsolaIniciada();
-        registrar("Agente inicializado - secuencia automática de arranque activa");
+        registrar(I18nLogs.Extension.AGENTE_INICIALIZADO());
     }
 
     private void guardarConfiguracionSilenciosa(String origen) {
@@ -1063,14 +1062,14 @@ public class ExtensionBurpIA implements BurpExtension {
         if (!gestorConfig.guardarConfiguracion(config, mensajeError)) {
             String detalle = mensajeError.toString().trim();
             if (Normalizador.esVacio(detalle)) {
-                detalle = "Error desconocido";
+                detalle = I18nUI.Tareas.MSG_ERROR_DESCONOCIDO();
             }
-            registrarError("No se pudo persistir configuracion (" + origen + "): " + detalle);
+            registrarError(I18nUI.Configuracion.MSG_ERROR_PERSISTIR_CONFIG(origen, detalle));
         }
     }
 
     public void unload() {
-        registrar("Descargando extensión BurpIA...");
+        registrar(I18nLogs.Extension.DESCARGANDO());
 
         this.httpRequestProcessor = null;
 
@@ -1081,7 +1080,7 @@ public class ExtensionBurpIA implements BurpExtension {
         if (manejadorHttp != null) {
             manejadorHttp.shutdown();
             manejadorHttp = null;
-            registrar("ExecutorService cerrado");
+            registrar(I18nLogs.Extension.EXECUTOR_CERRADO());
         }
 
         if (pestaniaPrincipal != null) {
@@ -1103,7 +1102,7 @@ public class ExtensionBurpIA implements BurpExtension {
             limitador = null;
         }
 
-        registrar("Extensión BurpIA descargada correctamente");
+        registrar(I18nLogs.Extension.DESCARGADA_OK());
     }
 
     public static burp.api.montoya.scanner.audit.issues.AuditIssue crearAuditIssueDesdeHallazgo(
@@ -1232,11 +1231,13 @@ public class ExtensionBurpIA implements BurpExtension {
                 BurpSuiteEdition edicion = api.burpSuite().version().edition();
                 return edicion == BurpSuiteEdition.PROFESSIONAL;
             }
+        // Best-effort: edition probe — Burp CE/Community throws; fallback to defaults
         } catch (Exception ignored) {
         }
 
         try {
             return api.ai() != null && api.ai().isEnabled();
+        // Best-effort: ai().isEnabled() probe — CE/Community may throw
         } catch (Exception ignored) {
             return false;
         }
@@ -1250,6 +1251,7 @@ public class ExtensionBurpIA implements BurpExtension {
                     return version;
                 }
             }
+        // Best-effort: version probe — Burp CE/Community throws; fallback to defaults
         } catch (Exception ignored) {
         }
         return null;

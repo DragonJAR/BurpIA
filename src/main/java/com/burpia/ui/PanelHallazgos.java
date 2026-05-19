@@ -1565,14 +1565,15 @@ public class PanelHallazgos extends JPanel {
     }
 
     private boolean alertasEnviarAHabilitadas() {
-        return config == null
-            || (config.alertasHabilitadas() && config.alertasClickDerechoEnviarAHabilitadas());
+        return (config == null || config.alertasClickDerechoEnviarAHabilitadas())
+            && AlertasOptOutHelper.debeMostrarAlerta(AlertasOptOutHelper.ALERTA_HALLAZGOS_ENVIAR_A, config);
     }
 
     private void deshabilitarAlertasEnviarA() {
         if (config == null || !config.alertasClickDerechoEnviarAHabilitadas()) {
             return;
         }
+        AlertasOptOutHelper.registrarDeshabilitacion(AlertasOptOutHelper.ALERTA_HALLAZGOS_ENVIAR_A, config);
         config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
         if (manejadorCambioAlertasEnviarA != null) {
             manejadorCambioAlertasEnviarA.run();

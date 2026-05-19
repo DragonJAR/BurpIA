@@ -39,7 +39,6 @@ public final class ProviderConfigManager {
     private final Map<String, EstadoProveedorUI> estadoProveedorTemporal;
     private String proveedorActualUi;
     private boolean actualizandoProveedorUi = false;
-    private boolean actualizandoListaMultiProveedor = false;
     private boolean actualizandoModeloUi = false;
     private boolean actualizandoCamposProveedorUi = false;
     private boolean actualizandoTimeoutModeloUi = false;

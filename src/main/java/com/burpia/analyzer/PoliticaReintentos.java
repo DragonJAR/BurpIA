@@ -28,6 +28,15 @@ import java.util.Set;
  */
 public final class PoliticaReintentos {
 
+    /** Número máximo de reintentos para llamadas a la API. */
+    public static final int MAX_INTENTOS_RETRY = 5;
+
+    /** Tiempo inicial de backoff en milisegundos (1 segundo). */
+    public static final long BACKOFF_INICIAL_MS = 1000L;
+
+    /** Tiempo máximo de backoff en milisegundos (8 segundos). */
+    public static final long BACKOFF_MAXIMO_MS = 8000L;
+
     /** Códigos HTTP que siempre deben reintentarse (errores de servidor y rate limiting). */
     private static final Set<Integer> CODIGOS_REINTENTABLES_SIEMPRE = Set.of(
         408,

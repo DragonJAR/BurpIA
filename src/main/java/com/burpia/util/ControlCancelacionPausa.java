@@ -1,5 +1,7 @@
 package com.burpia.util;
 
+import com.burpia.i18n.I18nUI;
+
 import java.util.function.BooleanSupplier;
 
 /**
@@ -49,7 +51,7 @@ public final class ControlCancelacionPausa {
      */
     public void verificarCancelacion() throws InterruptedException {
         if (tareaCancelada.getAsBoolean()) {
-            throw new InterruptedException("Tarea cancelada");
+            throw new InterruptedException(I18nUI.Tareas.ERROR_TAREA_CANCELADA());
         }
     }
 

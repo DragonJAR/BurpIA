@@ -3,7 +3,6 @@ package com.burpia.analyzer;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.I18nLogs;
-import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
@@ -13,10 +12,8 @@ import com.burpia.util.LimitadorTasa;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 import okhttp3.*;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 public class AnalizadorAI implements Runnable {
@@ -199,8 +196,8 @@ public class AnalizadorAI implements Runnable {
         gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud()));
 
         try {
-            verificarCancelacion();
-            esperarSiPausada();
+            controlCancelacionPausa.verificarCancelacion();
+            controlCancelacionPausa.esperarSiPausada();
             notificarInicioAnalisis();
             
             String alertaConfiguracion = validarConfiguracionAntesDeConsulta();
@@ -218,7 +215,7 @@ public class AnalizadorAI implements Runnable {
 
             int retrasoSegundos = config.obtenerRetrasoSegundos();
             gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Durmiendo por " + retrasoSegundos + " segundos antes de llamar a la API"));
-            esperarConControl(retrasoSegundos * 1000L);
+            controlCancelacionPausa.esperarConControl(retrasoSegundos * 1000L);
 
             gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analizando: " + solicitud.obtenerUrl()));
 
@@ -255,12 +252,12 @@ public class AnalizadorAI implements Runnable {
                 ? e.getMessage()
                 : I18nUI.General.ERROR_INESPERADO_TIPO(e.getClass().getSimpleName());
 
-            if (esPausada()) {
+            if (controlCancelacionPausa.esPausada()) {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Analisis pausado y liberando hilo (" + duracion + "ms)"));
                 return;
             }
 
-            if (esCancelada()) {
+            if (controlCancelacionPausa.esCancelada()) {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Analisis cancelado por usuario (" + duracion + "ms)"));
                 callback.alCanceladoAnalisis();
             } else {
@@ -303,26 +300,6 @@ public class AnalizadorAI implements Runnable {
         return error != null ? error.trim() : "";
     }
 
-    private boolean esCancelada() {
-        return controlCancelacionPausa.esCancelada();
-    }
-
-    private boolean esPausada() {
-        return controlCancelacionPausa.esPausada();
-    }
-
-    private void verificarCancelacion() throws InterruptedException {
-        controlCancelacionPausa.verificarCancelacion();
-    }
-
-    private void esperarSiPausada() throws InterruptedException {
-        controlCancelacionPausa.esperarSiPausada();
-    }
-
-    private void esperarConControl(long milisegundos) throws InterruptedException {
-        controlCancelacionPausa.esperarConControl(milisegundos);
-    }
-
     private static String mensajeErrorSolicitudNoDisponible() {
         return I18nUI.tr("Solicitud de analisis no disponible", "Analysis request is not available");
     }
@@ -334,13 +311,12 @@ public class AnalizadorAI implements Runnable {
     private static String mensajeAnalisisInterrumpido(String causa) {
         return I18nUI.trf("Analisis interrumpido: %s", "Analysis interrupted: %s", causa);
     }
-    
+
     /**
-     * Método parsearRespuesta para compatibilidad con tests.
-     * Ahora delega a ParseadorRespuestasAI.
+     * Parsea una respuesta JSON usando el parseador interno.
+     * Exist for test access only — production code should use the full pipeline.
      */
-    private ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
-        String proveedor = config != null ? config.obtenerProveedorAI() : "";
-        return parseador.parsearRespuesta(respuestaJson, solicitud, proveedor);
+    ResultadoAnalisisMultiple parsearRespuesta(String respuestaJson) {
+        return parseador.parsearRespuesta(respuestaJson, solicitud, config != null ? config.obtenerProveedorAI() : "");
     }
 }

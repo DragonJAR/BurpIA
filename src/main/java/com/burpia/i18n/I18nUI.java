@@ -182,6 +182,15 @@ public final class I18nUI {
                     "Request list cannot be null");
         }
 
+        public static String ERROR_ARGUMENTO_NULO(String nombre) {
+            return trf("%s no puede ser null", "%s cannot be null", nombre);
+        }
+
+        public static String ERROR_CLASE_UTILIDAD(String nombreClase) {
+            return trf("%s es una clase de utilidad y no puede instanciarse",
+                    "%s is a utility class and cannot be instantiated", nombreClase);
+        }
+
         public static String ERROR_INESPERADO_TIPO(String tipoError) {
             return trf("Error inesperado (%s)", "Unexpected error (%s)", tipoError);
         }
@@ -256,6 +265,12 @@ public final class I18nUI {
             return trf("📥 Solicitudes: %d   |   ✅ Analizados: %d   |   ⏭ Omitidos: %d   |   ❌ Errores: %d",
                     "📥 Requests: %d   |   ✅ Analyzed: %d   |   ⏭ Skipped: %d   |   ❌ Errors: %d",
                     solicitudes, analizados, omitidos, errores);
+        }
+
+        public static String RESUMEN_COMPLETO(int solicitudes, int analizados, int omitidos, int hallazgos, int errores) {
+            return trf("Solicitudes: %d | Analizados: %d | Omitidos: %d | Hallazgos: %d | Errores: %d",
+                    "Requests: %d | Analyzed: %d | Skipped: %d | Findings: %d | Errors: %d",
+                    solicitudes, analizados, omitidos, hallazgos, errores);
         }
     }
 
@@ -497,6 +512,10 @@ public final class I18nUI {
 
         public static String MSG_CANCELADO_USUARIO() {
             return tr("Cancelado por usuario", "Canceled by user");
+        }
+
+        public static String ERROR_TAREA_CANCELADA() {
+            return tr("Tarea cancelada", "Task canceled");
         }
 
         public static String MSG_ID_VACIO() {
@@ -1513,6 +1532,12 @@ public final class I18nUI {
             return trf("SSL inseguro no se pudo configurar, se usará configuración por defecto: %s",
                     "Insecure SSL could not be configured, using default configuration: %s", mensaje);
         }
+
+        public static String WARNING_MODELO_GEMINI_FALLBACK(String modeloConfigurado, String modeloUsado) {
+            return trf("Modelo Gemini \"%s\" no soportado para generateContent. Se usó \"%s\".",
+                    "Gemini model \"%s\" not supported for generateContent. Used \"%s\".",
+                    modeloConfigurado, modeloUsado);
+        }
     }
 
     public static final class DetalleHallazgo {
@@ -2416,6 +2441,12 @@ public final class I18nUI {
             return trf("Error inesperado durante la prueba:%n%n%s",
                     "Unexpected error during test:%n%n%s",
                     detalle);
+        }
+
+        public static String MSG_ERROR_PERSISTIR_CONFIG(String origen, String detalle) {
+            return trf("No se pudo persistir configuracion (%s): %s",
+                    "Could not persist configuration (%s): %s",
+                    origen, detalle);
         }
     }
 

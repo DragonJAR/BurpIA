@@ -6,7 +6,7 @@
 
 BurpIA es una extensión para Burp Suite que analiza tráfico HTTP con LLMs para ayudarte a detectar hallazgos potenciales de seguridad en menos tiempo.
 
-**Versión actual:** `1.5.0`
+**Versión actual:** `1.6.0`
 
 English version: [README.en.md](README.en.md)
 
@@ -44,13 +44,14 @@ English version: [README.en.md](README.en.md)
 ## Qué obtienes con BurpIA
 
 - **Análisis Híbrido con IA:** Escaneo pasivo automático o manual (vía menú contextual) sobre evidencia HTTP real (`request` + `response`).
-- **Análisis de Flujos:** Capacidad para analizar múltiples peticiones relacionadas como un único flujo contextual.
-- **Triage de Alta Velocidad:** Envío directo de hallazgos a Repeater, Intruder o Scanner desde la tabla centralizada de resultados.
-- **Gestión Inteligente de Hallazgos:** Priorización por severidad/confianza con opción de envío directo al proyecto de Burp Suite.
-- **Interfaz Adaptativa:** Soporte nativo para modo **Dark/Light** de Burp, ventana responsive y personalización de tipografías.
-- **Deduplicación y Control de Carga:** Sistema de colas con límite de concurrencia y hashes SHA-256 para evitar re-análisis redundantes.
-- **Exportación Flexible:** Soporte para volcado de datos en formatos CSV y JSON para informes externos.
-- **Experiencia de Usuario:** Interfaz bilingüe (Español/Inglés) con supresión de alertas repetitivas y persistencia de ajustes.
+- **Análisis de Flujos:** Análisis contextual de 2 a 4 peticiones relacionadas como un único flujo, con envío directo al agente CLI para validación profunda.
+- **Triage de Alta Velocidad:** Envío directo de hallazgos a **Burp Repeater** desde la tabla centralizada de resultados.
+- **Gestión Inteligente de Hallazgos:** Priorización por severidad/confianza con filtros por texto y severidad, y opción de envío directo al proyecto de Burp Suite.
+- **Interfaz Adaptativa:** Soporte nativo para modo **Dark/Light** de Burp, ventana responsive y personalización de tipografías (estándar y mono).
+- **Deduplicación y Control de Carga:** Sistema de colas con límite de concurrencia configurable (1–10), hashes SHA-256, TTL de 15 min y LRU de 10 000 entradas para evitar re-análisis redundantes; filtrado automático de recursos estáticos.
+- **Exportación Flexible:** Soporte para volcado de hallazgos en formatos CSV y JSON para informes externos.
+- **Experiencia de Usuario:** Interfaz bilingüe (Español/Inglés), supresión individual de alertas con persistencia ("No volver a mostrar"), y persistencia de filtros y ajustes.
+- **Menú Contextual Avanzado:** Opciones de análisis individual ("Analizar solicitud con BurpIA"), análisis de flujo ("🔍 Analizar este flujo" para 2–4 peticiones), e integración directa con agentes CLI ("🤖 Analizar con {Agente}").
 
 ## Guías de agentes
 
@@ -62,9 +63,9 @@ English version: [README.en.md](README.en.md)
 
 ---
 
-## Estado actual (v1.5.0)
+## Estado actual (v1.6.0)
 
-BurpIA está actualizado a `v1.5.0`.
+BurpIA está actualizado a `v1.6.0`.
 Consulta el resumen de cambios en **Historial de versiones**.
 
 
@@ -72,7 +73,18 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ## Historial de versiones
 
-### v1.5.0 (actual)
+### v1.6.0 (actual)
+
+- **Alertas Opt-Out:** sistema centralizado para suprimir alertas individuales ("No volver a mostrar") con persistencia por clave de alerta.
+- **ConfigSanitizers:** extracción DRY de la lógica de sanitización de mapas por proveedor, eliminando duplicación entre `ConfiguracionAPI` y `GestorConfiguracion`.
+- **Robustez del Parseador:** refactor del balanceo de corchetes genérico reutilizable y mejor detección de comillas embebidas en JSON.
+- **I18n Hardening:** eliminación de ~15 strings hardcodeados, 6 métodos nuevos en `I18nUI` y 5 en `I18nLogs.Extension`.
+- **Limpieza de código muerto:** ~13 métodos wrapper eliminados, imports limpios, constantes centralizadas en `PoliticaReintentos`.
+- **UI DRY:** `UIUtils.crearMenu()`, `FabricaMenuContextual.crearMenuItem()` para reducir boilerplate.
+- **`Normalizador.describirError(Throwable)`:** nueva utilidad para descripción de errores, reemplazando implementaciones locales duplicadas.
+
+
+### v1.5.0
 
 - **Análisis de flujo contextual:** analiza múltiples peticiones HTTP como un flujo completo en una sola consulta al LLM, incluyendo ahora tanto peticiones como respuestas.
 - **Envío de flujo al agente:** envía el flujo completo (peticiones + respuestas) al agente CLI con prompt especializado para validación profunda.
@@ -86,7 +98,7 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ### v1.0.2
 
-- **Sistema Multi-proveedor:** capacidad de consultar peticiones utilizando hasta 5 proveedores configurados simultáneamente.
+- **Sistema Multi-proveedor:** capacidad de consultar peticiones utilizando múltiples proveedores configurados simultáneamente.
 - **Notificaciones de Actualización:** nuevo motor de aviso para nuevas versiones disponibles.
 - **Experiencia de Usuario:** optimizaciones en la navegación y usabilidad general.
 - **Personalización de Interfaz:** mejoras en la customización del entorno visual.
@@ -111,10 +123,10 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ## Inicio rápido (3 minutos)
 
-1. Descarga el archivo `BurpIA-1.5.0.jar`.
+1. Descarga el archivo `BurpIA-1.6.0.jar`.
 2. Carga la extensión en Burp Suite:
     - Ve a la pestaña `Extensions` -> `Add`.
-    - Selecciona el archivo `BurpIA-1.5.0.jar`.
+    - Selecciona el archivo `BurpIA-1.6.0.jar`.
 3. Configura BurpIA en la pestaña del plugin:
     - Selecciona tu **Proveedor LLM**.
     - Ingresa la **API Key** (si aplica).
@@ -131,10 +143,11 @@ Consulta el resumen de cambios en **Historial de versiones**.
 - **OpenAI** (Modelos o1, GPT-4o, etc.).
 - **Claude** (Anthropic: Sonnet 3.5/3.6, Opus).
 - **Gemini** (Google: 1.5 Pro/Flash con soporte nativo).
-- **DeepSeek** (A través de Ollama o proveedores compatibles con OpenAI).
 - **Moonshot (Kimi)** (Modelos k2.5 y anteriores).
 - **Z.ai** / **Minimax**.
 - **Custom** (Hasta 3 perfiles personalizados para cualquier API compatible con OpenAI).
+
+> **Nota:** DeepSeek se puede utilizar a través de Ollama o mediante un perfil Custom con la API compatible con OpenAI.
 
 
 > [!TIP]
@@ -158,10 +171,12 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 
 ### Flujo manual
-1. Seleccionas una solicitud cualquiera en cualquier pestaña de Burp.
-2. Clic derecho -> `Analizar solicitud con BurpIA`.
-3. BurpIA analiza la solicitud y su respuesta asociada.
-4. El hallazgo aparece en la tabla para ser editado, exportado o enviado a otras herramientas.
+1. Selecciona una o varias solicitudes (2–4 para flujo) en cualquier pestaña de Burp.
+2. Clic derecho:
+   - **1 solicitud:** `Analizar solicitud con BurpIA` o `🤖 Analizar con {Agente}`.
+   - **2–4 solicitudes:** `🔍 Analizar este flujo` o `🤖 Analizar este flujo con {Agente}`.
+3. BurpIA analiza la solicitud/flujo y sus respuestas asociadas.
+4. El hallazgo aparece en la tabla para ser editado, exportado o enviado a Repeater.
 
 
 ---
@@ -170,9 +185,16 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 BurpIA soporta los siguientes tokens para personalizar el análisis:
 
+### Análisis individual
 - `{REQUEST}`: Inserta la solicitud HTTP normalizada.
 - `{RESPONSE}`: Inserta la respuesta HTTP (si existe).
 - `{OUTPUT_LANGUAGE}`: Indica el idioma de salida esperado para la descripción del hallazgo.
+
+### Análisis de flujo (2–4 peticiones)
+- `{REQUEST_1}`, `{REQUEST_2}`, ... : Inserta la N-ésima solicitud del flujo.
+- `{RESPONSE_1}`, `{RESPONSE_2}`, ... : Inserta la N-ésima respuesta del flujo.
+- `{REQUEST}`: Inserta todas las solicitudes del flujo concatenadas.
+- `{OUTPUT_LANGUAGE}`: Idioma de salida (igual que análisis individual).
 
 *Si omites estos tokens, BurpIA aplicará un bloque de contexto mínimo para mantener consistencia y el idioma de salida configurado.*
 
