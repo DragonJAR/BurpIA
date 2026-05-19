@@ -75,13 +75,7 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ### v1.6.0 (actual)
 
-- **Alertas Opt-Out:** sistema centralizado para suprimir alertas individuales ("No volver a mostrar") con persistencia por clave de alerta.
-- **ConfigSanitizers:** extracción DRY de la lógica de sanitización de mapas por proveedor, eliminando duplicación entre `ConfiguracionAPI` y `GestorConfiguracion`.
-- **Robustez del Parseador:** refactor del balanceo de corchetes genérico reutilizable y mejor detección de comillas embebidas en JSON.
-- **I18n Hardening:** eliminación de ~15 strings hardcodeados, 6 métodos nuevos en `I18nUI` y 5 en `I18nLogs.Extension`.
-- **Limpieza de código muerto:** ~13 métodos wrapper eliminados, imports limpios, constantes centralizadas en `PoliticaReintentos`.
-- **UI DRY:** `UIUtils.crearMenu()`, `FabricaMenuContextual.crearMenuItem()` para reducir boilerplate.
-- **`Normalizador.describirError(Throwable)`:** nueva utilidad para descripción de errores, reemplazando implementaciones locales duplicadas.
+- Mejoras de calidad interna: alertas configurables, i18n reforzado, código limpio y utilidades centralizadas.
 
 
 ### v1.5.0

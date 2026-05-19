@@ -75,13 +75,7 @@ See the change summary in **Version history**.
 
 ### v1.6.0 (current)
 
-- **Alert Opt-Out:** centralized system to suppress individual alerts ("Don't show this again") with per-key persistence.
-- **ConfigSanitizers:** DRY extraction of provider map sanitization logic, eliminating duplication between `ConfiguracionAPI` and `GestorConfiguracion`.
-- **Parser Robustness:** refactored generic reusable bracket balancing and improved detection of embedded quotes in JSON.
-- **I18n Hardening:** removed ~15 hardcoded strings, 6 new methods in `I18nUI` and 5 in `I18nLogs.Extension`.
-- **Dead Code Cleanup:** ~13 wrapper methods removed, clean imports, constants centralized in `PoliticaReintentos`.
-- **UI DRY:** `UIUtils.crearMenu()`, `FabricaMenuContextual.crearMenuItem()` to reduce boilerplate.
-- **`Normalizador.describirError(Throwable)`:** new utility for error description, replacing duplicated local implementations.
+- Internal quality improvements: configurable alerts, hardened i18n, code cleanup, and centralized utilities.
 
 
 ### v1.5.0
