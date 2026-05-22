@@ -23,6 +23,7 @@ config/pmd/.cache/
 # Compiled
 *.class
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
