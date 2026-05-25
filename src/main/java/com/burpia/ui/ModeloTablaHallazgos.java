@@ -60,15 +60,25 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             return;
         }
         ejecutarEnEdt(() -> {
-            boolean huboCambios = false;
+            boolean huboCambios;
+            boolean rebuildRequerido;
+            List<Object[]> snapshotParaRebuild = null;
             lock.lock();
             try {
                 huboCambios = agregarHallazgoInterno(hallazgo);
-                if (huboCambios && aplicarLimiteFilas()) {
-                    fireTableDataChanged();
+                rebuildRequerido = huboCambios && aplicarLimiteFilas();
+                if (rebuildRequerido) {
+                    snapshotParaRebuild = tomarSnapshotFilas();
                 }
             } finally {
                 lock.unlock();
+            }
+            // Notificaciones a la JTable se hacen fuera del lock para evitar reentrancia
+            // si algún listener externo reentrara al modelo bajo el lock.
+            if (rebuildRequerido) {
+                reconstruirTablaDesde(snapshotParaRebuild);
+            } else if (huboCambios) {
+                addRow(hallazgo.aFilaTabla());
             }
             if (huboCambios) {
                 notificarCambios();
@@ -84,19 +94,31 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
 
         ejecutarEnEdt(() -> {
             boolean huboCambios = false;
+            boolean rebuildRequerido = false;
+            List<Hallazgo> agregadosSinTrim = new ArrayList<>();
+            List<Object[]> snapshotParaRebuild = null;
             lock.lock();
             try {
                 for (Hallazgo hallazgo : hallazgos) {
                     if (agregarHallazgoInterno(hallazgo)) {
                         huboCambios = true;
+                        agregadosSinTrim.add(hallazgo);
                     }
                 }
-
-                if (huboCambios && aplicarLimiteFilas()) {
-                    fireTableDataChanged();
+                rebuildRequerido = huboCambios && aplicarLimiteFilas();
+                if (rebuildRequerido) {
+                    snapshotParaRebuild = tomarSnapshotFilas();
                 }
             } finally {
                 lock.unlock();
+            }
+            if (rebuildRequerido) {
+                reconstruirTablaDesde(snapshotParaRebuild);
+            } else {
+                // Sin trim: insertar fila por fila con notificación granular (preserva selección).
+                for (Hallazgo h : agregadosSinTrim) {
+                    addRow(h.aFilaTabla());
+                }
             }
             if (huboCambios) {
                 notificarCambios();
@@ -104,15 +126,19 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         });
     }
 
+    /**
+     * Recorta la lista interna {@code datos} al tamaño máximo permitido.
+     * NO toca {@code dataVector} ni dispara eventos: el caller decide
+     * si reconstruir la tabla via {@link #reconstruirTablaDesde(List)} (cuando
+     * retorna true) o agregar filas individuales sin trim.
+     */
     private boolean aplicarLimiteFilas() {
-        int rowCount = dataVector.size();
+        int rowCount = datos.size();
         if (rowCount > limiteFilas) {
             int filasAEliminar = rowCount - limiteFilas;
-            
             if (filasAEliminar > 0) {
                 datos.subList(0, filasAEliminar).clear();
-                dataVector.subList(0, filasAEliminar).clear();
-                
+
                 Set<Integer> nuevosIgnorados = new HashSet<>();
                 for (Integer idx : filasIgnoradas) {
                     if (idx >= filasAEliminar) nuevosIgnorados.add(idx - filasAEliminar);
@@ -125,12 +151,40 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         return false;
     }
 
+    /**
+     * Toma un snapshot inmutable del estado actual de {@code datos} para reconstruir
+     * la JTable. Debe llamarse bajo lock.
+     */
+    private List<Object[]> tomarSnapshotFilas() {
+        List<Object[]> snapshot = new ArrayList<>(datos.size());
+        for (Hallazgo h : datos) {
+            if (h != null) {
+                snapshot.add(h.aFilaTabla());
+            }
+        }
+        return snapshot;
+    }
+
+    /**
+     * Reconstruye el dataVector de la JTable en una sola operación via setDataVector,
+     * emitiendo una única notificación coalescida en lugar de mutar dataVector directo
+     * + fireTableDataChanged. Debe llamarse desde el EDT y fuera del lock.
+     */
+    private void reconstruirTablaDesde(List<Object[]> filas) {
+        if (filas == null) {
+            filas = new ArrayList<>();
+        }
+        setDataVector(
+            filas.toArray(new Object[0][]),
+            I18nUI.Tablas.COLUMNAS_HALLAZGOS()
+        );
+    }
+
     private boolean agregarHallazgoInterno(Hallazgo hallazgo) {
         if (hallazgo == null) {
             return false;
         }
         datos.add(hallazgo);
-        addRow(hallazgo.aFilaTabla());
         return true;
     }
 
@@ -351,15 +405,21 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         int limiteNormalizado = Math.max(1, nuevoLimite);
         ejecutarEnEdt(() -> {
             boolean limiteCambio;
+            boolean rebuildRequerido;
+            List<Object[]> snapshotParaRebuild = null;
             lock.lock();
             try {
                 limiteCambio = limiteFilas != limiteNormalizado;
                 limiteFilas = limiteNormalizado;
-                if (aplicarLimiteFilas()) {
-                    fireTableDataChanged();
+                rebuildRequerido = aplicarLimiteFilas();
+                if (rebuildRequerido) {
+                    snapshotParaRebuild = tomarSnapshotFilas();
                 }
             } finally {
                 lock.unlock();
+            }
+            if (rebuildRequerido) {
+                reconstruirTablaDesde(snapshotParaRebuild);
             }
             if (limiteCambio) {
                 notificarCambios();

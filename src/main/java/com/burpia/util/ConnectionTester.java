@@ -175,8 +175,8 @@ public class ConnectionTester {
                     if (!response.isSuccessful()) {
                         throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), response.message()));
                     }
-                    
-                    String responseBody = response.body().string();
+
+                    String responseBody = response.body() != null ? response.body().string() : "";
                     JsonObject release = gson.fromJson(responseBody, JsonObject.class);
                     
                     String ultimaVersion = release.get("tag_name").getAsString();

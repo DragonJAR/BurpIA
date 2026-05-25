@@ -82,11 +82,14 @@ public class ConfiguracionAPI {
     private String agentePrompt;
     private int agenteDelay;
 
-    private ConcurrentMap<String, String> apiKeysPorProveedor;
-    private ConcurrentMap<String, String> urlsBasePorProveedor;
-    private ConcurrentMap<String, String> modelosPorProveedor;
-    private ConcurrentMap<String, Integer> maxTokensPorProveedor;
-    private ConcurrentMap<String, Integer> tiempoEsperaPorModelo;
+    // volatile: asegurarMapas() reasigna estas referencias secuencialmente sin lock.
+    // Marcarlas volatile garantiza visibilidad inter-hilo de los nuevos maps tras
+    // load/clonar, evitando lectores que vean una mezcla de mapas viejos/nuevos.
+    private volatile ConcurrentMap<String, String> apiKeysPorProveedor;
+    private volatile ConcurrentMap<String, String> urlsBasePorProveedor;
+    private volatile ConcurrentMap<String, String> modelosPorProveedor;
+    private volatile ConcurrentMap<String, Integer> maxTokensPorProveedor;
+    private volatile ConcurrentMap<String, Integer> tiempoEsperaPorModelo;
     private boolean promptModificado;
 
     // Multi-Proveedor Configuration
@@ -421,7 +424,12 @@ public class ConfiguracionAPI {
     public void establecerRutaBinarioAgente(String agente, String ruta) {
         if (rutasBinarioPorAgente == null)
             rutasBinarioPorAgente = new ConcurrentHashMap<>();
-        if (agente != null) {
+        if (agente == null) {
+            return;
+        }
+        if (ruta == null) {
+            rutasBinarioPorAgente.remove(agente);
+        } else {
             rutasBinarioPorAgente.put(agente, ruta);
         }
     }

@@ -78,6 +78,10 @@ public class PestaniaPrincipal extends JPanel {
     private final Map<DestinoPestania, Component> componentesPorDestino;
     private final PropertyChangeListener listenerLookAndFeel;
     private volatile Timer timerFocoAgente;
+    // Runnables que liberan los listeners/timers registrados para persistencia de anchos.
+    // Se invocan en destruir() para evitar leaks de TableColumnModelListener y Swing Timers
+    // tras la descarga de la extensión.
+    private final java.util.List<Runnable> limpiadoresAnchosColumnas = new java.util.ArrayList<>();
 
     @SuppressWarnings("this-escape")
     public PestaniaPrincipal(MontoyaApi api,
@@ -531,6 +535,15 @@ public class PestaniaPrincipal extends JPanel {
             timerFocoAgente.stop();
             timerFocoAgente = null;
         }
+        // Detener Timers de persistencia de anchos y remover sus listeners del column model.
+        for (Runnable limpiador : limpiadoresAnchosColumnas) {
+            try {
+                limpiador.run();
+            } catch (Exception ignored) {
+                // Best-effort: ningún limpiador debería fallar pero protegemos para no abortar destruir().
+            }
+        }
+        limpiadoresAnchosColumnas.clear();
         panelEstadisticas.destruir();
         panelConsola.destruir();
         panelTareas.destruir();
@@ -607,15 +620,32 @@ public class PestaniaPrincipal extends JPanel {
         if (tabla == null) {
             return;
         }
-        tabla.getColumnModel().addColumnModelListener(crearListenerPersistenciaAnchos(tabla, identificadorTabla));
-    }
-
-    private TableColumnModelListener crearListenerPersistenciaAnchos(JTable tabla, String identificadorTabla) {
         Timer timerAnchos = new Timer(
             DELAY_GUARDADO_ANCHO_COLUMNAS_MS,
             e -> uiStateManager.guardarAnchosColumnasTabla(tabla, identificadorTabla)
         );
         timerAnchos.setRepeats(false);
+        TableColumnModelListener listener = crearListenerPersistenciaAnchos(timerAnchos);
+        javax.swing.table.TableColumnModel columnModel = tabla.getColumnModel();
+        columnModel.addColumnModelListener(listener);
+        // Registrar limpieza para destruir(): detener el Timer y remover el listener del column model.
+        limpiadoresAnchosColumnas.add(() -> {
+            try {
+                if (timerAnchos.isRunning()) {
+                    timerAnchos.stop();
+                }
+            } catch (Exception ignored) {
+                // Best-effort: stop() no debería fallar fuera del EDT pero protegemos por consistencia.
+            }
+            try {
+                columnModel.removeColumnModelListener(listener);
+            } catch (Exception ignored) {
+                // Best-effort: si el column model ya fue descartado, removeColumnModelListener puede fallar.
+            }
+        });
+    }
+
+    private TableColumnModelListener crearListenerPersistenciaAnchos(Timer timerAnchos) {
         return new TableColumnModelListener() {
             @Override
             public void columnAdded(TableColumnModelEvent e) {

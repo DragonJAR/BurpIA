@@ -125,28 +125,27 @@ public class ModeloTablaTareas extends DefaultTableModel {
         if (Normalizador.esVacio(idTarea)) {
             return;
         }
-        int indiceEnDatos;
+        boolean actualizado;
         lock.lock();
         try {
-            indiceEnDatos = buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
+            int indiceEnDatos = buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
             if (indiceEnDatos >= 0) {
                 datos.set(indiceEnDatos, tarea);
                 marcarCambio();
+                actualizado = true;
+            } else {
+                actualizado = false;
             }
         } finally {
             lock.unlock();
         }
-        
-        if (indiceEnDatos != -1) {
-            final int filaUI = indiceEnDatos;
-            final Object[] nuevosValores = tarea.aFilaTabla();
-            ejecutarEnEdt(() -> {
-                if (filaUI < getRowCount()) {
-                    for (int col = 0; col < TOTAL_COLUMNAS; col++) {
-                        setValueAt(nuevosValores[col], filaUI, col);
-                    }
-                }
-            });
+
+        // Usar el camino de sincronización completa para evitar TOCTOU: si entre el
+        // unlock y la ejecución del EDT otro hilo dispara una purga, un setValueAt
+        // con índice capturado escribiría en la fila equivocada. setDataVector reusa
+        // el snapshot bajo lock y emite una sola notificación.
+        if (actualizado) {
+            programarSincronizacionTabla();
         }
     }
 

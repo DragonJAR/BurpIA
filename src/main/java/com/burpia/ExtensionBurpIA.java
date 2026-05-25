@@ -5,6 +5,7 @@ import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import com.burpia.analyzer.AnalizadorHTTP;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.config.GestorConfiguracion;
@@ -933,7 +934,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private HttpRequestProcessor obtenerProcesadorSolicitudes() {
         if (httpRequestProcessor == null) {
-            httpRequestProcessor = new HttpRequestProcessor(api, configRef.obtener(), gestorLogging);
+            httpRequestProcessor = new HttpRequestProcessor(api, configRef, gestorLogging);
         }
         return httpRequestProcessor;
     }
@@ -1093,6 +1094,10 @@ public class ExtensionBurpIA implements BurpExtension {
         if (limitador != null) {
             limitador = null;
         }
+
+        // Cerrar dispatchers y connection pools de OkHttpClient cacheados estáticamente,
+        // evitando leak de threads al recargar la extensión.
+        AnalizadorHTTP.limpiarClientes();
 
         registrar(I18nLogs.Extension.DESCARGADA_OK());
     }

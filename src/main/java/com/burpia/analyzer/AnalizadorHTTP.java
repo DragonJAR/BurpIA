@@ -229,6 +229,29 @@ public class AnalizadorHTTP {
         return configurarClienteHttp(timeoutEfectivo, config.ignorarErroresSSL());
     }
 
+    /**
+     * Cierra y libera todos los OkHttpClient cacheados. Debe llamarse al descargar la extensión
+     * para evitar leaks de threads del dispatcher y connections del pool.
+     * Idempotente y seguro para llamar múltiples veces.
+     */
+    public static void limpiarClientes() {
+        synchronized (CLIENTES_HTTP_POR_TIMEOUT) {
+            for (OkHttpClient cliente : CLIENTES_HTTP_POR_TIMEOUT.values()) {
+                try {
+                    cliente.dispatcher().executorService().shutdown();
+                } catch (Exception ignored) {
+                    // Best-effort: el shutdown del executor puede fallar si el JVM ya está cerrando.
+                }
+                try {
+                    cliente.connectionPool().evictAll();
+                } catch (Exception ignored) {
+                    // Best-effort: evictAll no debería lanzar pero protegemos por si acaso.
+                }
+            }
+            CLIENTES_HTTP_POR_TIMEOUT.clear();
+        }
+    }
+
     private OkHttpClient configurarClienteHttp(int tiempoEsperaSegundos, boolean ignorarSSL) {
         int timeoutNormalizado = ConfiguracionAPI.normalizarTiempoEspera(tiempoEsperaSegundos);
         String clave = timeoutNormalizado + (ignorarSSL ? "_insecure" : "_secure");

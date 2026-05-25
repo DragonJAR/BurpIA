@@ -35,6 +35,11 @@ public class PanelEstadisticas extends JPanel {
     private JPanel panelLineaOperativo;
     private JLabel etiquetaSeparadorHallazgos;
     private JLabel etiquetaSeparadorLimite;
+    // Referencias al modelo y la escucha registrada para poder removerla en destruir().
+    // Sin esto, la lambda this::actualizarForzado queda atrapada en el CopyOnWriteArrayList
+    // del modelo y mantiene este panel reachable tras la descarga de la extensión.
+    private final ModeloTablaHallazgos modeloSuscrito;
+    private final EscuchaCambiosHallazgos escuchaCambiosRegistrada;
 
     private static final int UMBRAL_RESPONSIVE = 900;
     private static final int TAMANIO_FIJO_BOTON = 60;
@@ -55,13 +60,17 @@ public class PanelEstadisticas extends JPanel {
         this.botonConfiguracion = new JButton();
         this.botonCaptura = new JButton();
 
-        // Suscribirse a cambios en el modelo de hallazgos
-        if (panelHallazgos != null) {
-            ModeloTablaHallazgos modelo = panelHallazgos.obtenerModelo();
-            if (modelo != null) {
-                modelo.agregarEscucha(this::actualizarForzado);
-            }
+        // Suscribirse a cambios en el modelo de hallazgos. Guardamos la referencia para poder
+        // remover la escucha en destruir() — sin esto, la lambda queda atrapada en el
+        // CopyOnWriteArrayList del modelo y filtra este panel tras la descarga.
+        ModeloTablaHallazgos modeloLocal = panelHallazgos != null ? panelHallazgos.obtenerModelo() : null;
+        EscuchaCambiosHallazgos escuchaLocal = null;
+        if (modeloLocal != null) {
+            escuchaLocal = this::actualizarForzado;
+            modeloLocal.agregarEscucha(escuchaLocal);
         }
+        this.modeloSuscrito = modeloLocal;
+        this.escuchaCambiosRegistrada = escuchaLocal;
 
         initComponents();
     }
@@ -404,6 +413,10 @@ public class PanelEstadisticas extends JPanel {
         if (timerActualizacion != null) {
             timerActualizacion.stop();
             timerActualizacion = null;
+        }
+        // Remover la escucha del modelo para que no quede referenciando este panel tras la descarga.
+        if (modeloSuscrito != null && escuchaCambiosRegistrada != null) {
+            modeloSuscrito.eliminarEscucha(escuchaCambiosRegistrada);
         }
     }
 }

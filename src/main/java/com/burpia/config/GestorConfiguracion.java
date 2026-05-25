@@ -150,8 +150,11 @@ public class GestorConfiguracion {
 
             Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
+            // Aplicar permisos restrictivos en cada guardado (idempotente).
+            // Esto cubre archivos creados por versiones previas sin protección o por terceros.
+            asegurarPermisosPrivados(path);
             if (archivoNuevo) {
-                asegurarPermisosPrivados(path);
+                logInfo("[Configuracion] Archivo de configuracion creado: " + path);
             }
 
             logInfo("[Configuracion] Configuracion guardada exitosamente en: " + path);
