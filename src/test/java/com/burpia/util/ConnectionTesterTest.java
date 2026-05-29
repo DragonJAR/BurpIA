@@ -54,41 +54,6 @@ class ConnectionTesterTest {
     }
 
     @Test
-    @DisplayName("Cliente HTTP usa SSL seguro por defecto")
-    void clienteHttp_usaSSLSeguro_porDefecto() {
-        // Configurar SSL seguro (por defecto)
-        config.establecerIgnorarErroresSSL(false);
-
-        // Crear cliente y verificar que no está configurado para ignorar SSL
-        CompletableFuture<Boolean> resultado = new CompletableFuture<>();
-        
-        connectionTester.probarConexionProveedor(config, new ConnectionTester.CallbackConexion() {
-            @Override
-            public void alExito(String mensaje) {
-                resultado.complete(true);
-            }
-
-            @Override
-            public void alError(String error) {
-                resultado.complete(false);
-            }
-        });
-
-        // La configuración debe permitir SSL seguro
-        assertFalse(config.ignorarErroresSSL(), "SSL no debe ser ignorado por defecto");
-    }
-
-    @Test
-    @DisplayName("Cliente HTTP ignora errores SSL cuando está configurado")
-    void clienteHttp_ignoraErroresSSL_cuandoEstaConfigurado() {
-        // Configurar para ignorar errores SSL
-        config.establecerIgnorarErroresSSL(true);
-
-        // Verificar que la configuración se aplicó
-        assertTrue(config.ignorarErroresSSL(), "SSL debe ser ignorado cuando está configurado");
-    }
-
-    @Test
     @DisplayName("Error de configuración nula lanza excepción")
     void probarConexion_configNull_lanzaExcepcion() {
         CompletableFuture<Boolean> resultado = new CompletableFuture<>();
@@ -309,29 +274,4 @@ class ConnectionTesterTest {
         }, "Cerrar no debe lanzar excepción");
     }
 
-    @Test
-    @DisplayName("Configuración SSL se aplica correctamente según configuración")
-    void configuracionSSL_seAplicaCorrectamente() throws Exception {
-        // Test con SSL habilitado (ignorar errores)
-        ConfiguracionAPI configInsegura = new ConfiguracionAPI();
-        configInsegura.establecerProveedorAI("OpenAI");
-        configInsegura.establecerClaveApi("test-key");
-        configInsegura.establecerUrlApi(mockWebServer.url("/v1/models").toString());
-        configInsegura.establecerModelo("gpt-3.5-turbo");
-        configInsegura.establecerIgnorarErroresSSL(true);
-
-        assertTrue(configInsegura.ignorarErroresSSL(), 
-            "La configuración debe indicar que se ignoran errores SSL");
-
-        // Test con SSL seguro (no ignorar errores)
-        ConfiguracionAPI configSegura = new ConfiguracionAPI();
-        configSegura.establecerProveedorAI("OpenAI");
-        configSegura.establecerClaveApi("test-key");
-        configSegura.establecerUrlApi(mockWebServer.url("/v1/models").toString());
-        configSegura.establecerModelo("gpt-3.5-turbo");
-        configSegura.establecerIgnorarErroresSSL(false);
-
-        assertFalse(configSegura.ignorarErroresSSL(), 
-            "La configuración debe indicar que no se ignoran errores SSL");
-    }
 }

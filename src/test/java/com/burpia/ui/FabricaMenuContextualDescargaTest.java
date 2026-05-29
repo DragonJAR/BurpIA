@@ -102,11 +102,10 @@ class FabricaMenuContextualDescargaTest {
         fabrica.marcarDescargado();
         fabrica.marcarDescargado();
 
+        // El hecho de que provideMenuItems retorne una lista vacía tras 3
+        // marcarDescargado() consecutivos ya verifica idempotencia + sin excepciones.
         List<Component> items = fabrica.provideMenuItems(evento);
-        assertTrue(items.isEmpty(), "assertTrue failed at FabricaMenuContextualDescargaTest.java:92");
-
-        // Also verify it was called many times without issue
-        assertTrue(true, "No exception thrown after multiple marcarDescargado calls");
+        assertTrue(items.isEmpty(), "Tras marcarDescargado, provideMenuItems debe retornar lista vacía");
     }
 
     @Test

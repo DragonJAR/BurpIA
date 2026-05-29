@@ -19,7 +19,6 @@ import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -216,81 +215,6 @@ class ExtensionBurpIATest {
         @DisplayName("crearAuditIssueDesdeHallazgo retorna null cuando hallazgo es null")
         void testCrearAuditIssueConHallazgoNull() {
             assertNull(ExtensionBurpIA.crearAuditIssueDesdeHallazgo(null, null), "assertNull failed at ExtensionBurpIATest.java:190");
-        }
-
-        /**
-         * CONFIABILIDAD: Los siguientes tests requieren Burp Suite corriendo para crear AuditIssue.
-         * La API de Montoya usa ObjectFactoryLocator.FACTORY que solo está disponible en runtime.
-         * Se deshabilitan para evitar NullPointerException en entorno de tests.
-         */
-        @Test
-        @Disabled("Requiere Burp Suite corriendo - AuditIssue.auditIssue() necesita ObjectFactoryLocator.FACTORY")
-        @DisplayName("crearAuditIssueDesdeHallazgo crea issue válido con hallazgo completo")
-        void testCrearAuditIssueConHallazgoCompleto() {
-            Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "XSS Title", "XSS Description", "High", "High");
-            var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:204");
-            assertEquals("XSS Title", issue.name(), "assertEquals failed at ExtensionBurpIATest.java:205");
-        }
-
-        @Test
-        @Disabled("Requiere Burp Suite corriendo - AuditIssue.auditIssue() necesita ObjectFactoryLocator.FACTORY")
-        @DisplayName("crearAuditIssueDesdeHallazgo maneja severidad crítica")
-        void testCrearAuditIssueSeveridadCritical() {
-            Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "RCE", "Remote Code Execution", "Critical", "High");
-            var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:214");
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.HIGH, issue.severity(), "assertEquals failed at ExtensionBurpIATest.java:215");
-        }
-
-        @Test
-        @Disabled("Requiere Burp Suite corriendo - AuditIssue.auditIssue() necesita ObjectFactoryLocator.FACTORY")
-        @DisplayName("crearAuditIssueDesdeHallazgo maneja severidad baja")
-        void testCrearAuditIssueSeveridadLow() {
-            Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "Info Leak", "Information Disclosure", "Low", "Medium");
-            var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:224");
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.LOW, issue.severity(), "assertEquals failed at ExtensionBurpIATest.java:225");
-        }
-
-        @Test
-        @Disabled("Requiere Burp Suite corriendo - AuditIssue.auditIssue() necesita ObjectFactoryLocator.FACTORY")
-        @DisplayName("crearAuditIssueDesdeHallazgo maneja severidad info")
-        void testCrearAuditIssueSeveridadInfo() {
-            Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "Info", "Informational", "Info", "Low");
-            var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:234");
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueSeverity.INFORMATION, issue.severity(), "assertEquals failed at ExtensionBurpIATest.java:235");
-        }
-
-        @Test
-        @Disabled("Requiere Burp Suite corriendo - AuditIssue.auditIssue() necesita ObjectFactoryLocator.FACTORY")
-        @DisplayName("crearAuditIssueDesdeHallazgo mapea confianza alta a CERTAIN")
-        void testCrearAuditIssueConfianzaAlta() {
-            Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "SQLi", "SQL Injection", "High", "High");
-            var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:244");
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.CERTAIN, issue.confidence(), "assertEquals failed at ExtensionBurpIATest.java:245");
-        }
-
-        @Test
-        @Disabled("Requiere Burp Suite corriendo - AuditIssue.auditIssue() necesita ObjectFactoryLocator.FACTORY")
-        @DisplayName("crearAuditIssueDesdeHallazgo mapea confianza media a FIRM")
-        void testCrearAuditIssueConfianzaMedia() {
-            Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "SQLi", "SQL Injection", "High", "Medium");
-            var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:254");
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.FIRM, issue.confidence(), "assertEquals failed at ExtensionBurpIATest.java:255");
-        }
-
-        @Test
-        @Disabled("Requiere Burp Suite corriendo - AuditIssue.auditIssue() necesita ObjectFactoryLocator.FACTORY")
-        @DisplayName("crearAuditIssueDesdeHallazgo mapea confianza baja a TENTATIVE")
-        void testCrearAuditIssueConfianzaBaja() {
-            Hallazgo hallazgo = new Hallazgo("https://example.com/vuln", "SQLi", "SQL Injection", "High", "Low");
-            var issue = ExtensionBurpIA.crearAuditIssueDesdeHallazgo(hallazgo, null);
-            assertNotNull(issue, "assertNotNull failed at ExtensionBurpIATest.java:264");
-            assertEquals(burp.api.montoya.scanner.audit.issues.AuditIssueConfidence.TENTATIVE, issue.confidence(), "assertEquals failed at ExtensionBurpIATest.java:265");
         }
     }
 
