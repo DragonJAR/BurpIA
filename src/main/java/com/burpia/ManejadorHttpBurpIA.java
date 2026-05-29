@@ -52,7 +52,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final PrintWriter stdout;
     private final PrintWriter stderr;
     private final Object logLock;
-    private final boolean esBurpProfessional;
     private final Estadisticas estadisticas;
     private final GestorTareas gestorTareas;
     private final GestorConsolaGUI gestorConsola;
@@ -87,7 +86,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         this.taskExecutionManager = new TaskExecutionManager(configRefSegura.obtener(), gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador, controlBackpressure);
         this.alertasConfiguracionEmitidas = new ConcurrentHashMap<>();
         Hallazgo.establecerResolutorEvidencia(evidenceManager::obtenerEvidencia);
-        this.esBurpProfessional = ExtensionBurpIA.esBurpProfessional(api);
         int maxThreads = configSnapshot.obtenerMaximoConcurrente() > 0 ? configSnapshot.obtenerMaximoConcurrente() : 10;
         this.limitador = limitador != null ? limitador : new LimitadorTasa(maxThreads);
         this.logLock = new Object();

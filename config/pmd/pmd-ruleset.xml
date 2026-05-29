@@ -30,4 +30,8 @@
             <property name="violationSuppressXPath" value="./ancestor::ClassOrInterfaceDeclaration[@SimpleName='ManejadorHttpBurpIATest' or @SimpleName='EnterProbeProcess']"/>
         </properties>
     </rule>
+
+    <!-- Detección automática de imports no usados.
+         Sin esta regla pasan invisibles al build y se acumulan con el tiempo. -->
+    <rule ref="category/java/bestpractices.xml/UnusedImports"/>
 </ruleset>
