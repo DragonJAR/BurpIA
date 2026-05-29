@@ -3097,19 +3097,20 @@ public final class I18nUI {
             }
 
             public static String URL_API() {
+                // Texto plano sin HTML: el LAF de Burp Suite no renderiza tooltips HTML
+                // y mostraría las etiquetas <html>/<br> como texto crudo. El preview en
+                // vivo debajo del campo URL ya muestra la transformación final aplicada.
                 return I18nUI.tr(
-                        "<html>URL del endpoint del proveedor seleccionado.<br>"
-                        + "Para proveedores OpenAI-compatibles (Custom, LM Studio, etc.) podés ingresar:<br>"
-                        + "&nbsp;&nbsp;• Solo host:puerto (ej. <i>http://127.0.0.1:1234</i>) → se agrega <i>/v1/chat/completions</i> automáticamente.<br>"
-                        + "&nbsp;&nbsp;• URL base (ej. <i>http://127.0.0.1:1234/v1</i>) → se agrega <i>/chat/completions</i>.<br>"
-                        + "&nbsp;&nbsp;• Endpoint completo (ej. <i>http://127.0.0.1:1234/v1/chat/completions</i>) → se respeta tal cual.<br>"
-                        + "El preview debajo del campo muestra la URL final que se va a usar.</html>",
-                        "<html>Endpoint URL for the selected provider.<br>"
-                        + "For OpenAI-compatible providers (Custom, LM Studio, etc.) you can enter:<br>"
-                        + "&nbsp;&nbsp;• Host:port only (e.g. <i>http://127.0.0.1:1234</i>) → <i>/v1/chat/completions</i> is appended automatically.<br>"
-                        + "&nbsp;&nbsp;• Base URL (e.g. <i>http://127.0.0.1:1234/v1</i>) → <i>/chat/completions</i> is appended.<br>"
-                        + "&nbsp;&nbsp;• Full endpoint (e.g. <i>http://127.0.0.1:1234/v1/chat/completions</i>) → kept as-is.<br>"
-                        + "The preview below the field shows the final URL that will be used.</html>");
+                        "URL del endpoint del proveedor. Para OpenAI-compatibles (Custom, LM Studio): "
+                        + "ingresá solo host:puerto y el plugin agrega /v1/chat/completions; "
+                        + "o ingresá la base con /v1 y se agrega /chat/completions; "
+                        + "o ingresá el endpoint completo y se respeta tal cual. "
+                        + "Mirá el preview debajo del campo para ver la URL final.",
+                        "Endpoint URL for the selected provider. For OpenAI-compatible (Custom, LM Studio): "
+                        + "enter host:port only and the plugin appends /v1/chat/completions; "
+                        + "or enter the base URL with /v1 and /chat/completions is appended; "
+                        + "or enter the full endpoint and it is kept verbatim. "
+                        + "Check the preview below the field for the final URL.");
             }
 
             public static String CLAVE_API() {
