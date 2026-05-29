@@ -104,23 +104,6 @@ class GestorMultiProveedorTest {
     }
 
     @Test
-    @DisplayName("Validar inicialización del gestor")
-    void testConstructorConParametrosValidos() {
-        GestorMultiProveedor gestor = new GestorMultiProveedor(
-            solicitudMock,
-            configMock,
-            stdout,
-            stderr,
-            gestorConsola,
-            () -> false,
-            () -> false,
-            gestorLogging
-        );
-
-        assertNotNull(gestor, "El gestor multi proveedor debe inicializarse con dependencias válidas");
-    }
-
-    @Test
     @DisplayName("Validar cancelación inmediata")
     void testEjecutarAnalisisMultiProveedorCanceladoInmediatamente() {
         lenient().when(configMock.obtenerProveedoresMultiConsulta()).thenReturn(List.of("openai", "claude"));

@@ -412,8 +412,8 @@ class ExtensionBurpIATest {
         }
 
         @Test
-        @DisplayName("Enviar al Agente tolera solicitud-respuesta nula")
-        void testEnviarAAgenteNuloNoFalla() throws Exception {
+        @DisplayName("Enviar al Agente con solicitud nula retorna false sin lanzar")
+        void testEnviarAAgenteNuloRetornaFalse() throws Exception {
             ExtensionBurpIA extension = new ExtensionBurpIA();
             ConfiguracionAPI config = new ConfiguracionAPI();
             config.establecerAgenteHabilitado(true);
@@ -422,7 +422,10 @@ class ExtensionBurpIATest {
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
             enviarAAgente.setAccessible(true);
 
-            assertDoesNotThrow(() -> enviarAAgente.invoke(extension, (Object) null));
+            // Verifica el null-guard de ExtensionBurpIA.enviarAAgente: retorna false
+            // y no propaga NPE cuando la solicitud-respuesta es null.
+            Object resultado = enviarAAgente.invoke(extension, (Object) null);
+            assertFalse((Boolean) resultado, "Con solicitud nula debe retornar false (no NPE ni true)");
         }
 
         @Test
@@ -442,15 +445,6 @@ class ExtensionBurpIATest {
 
             Object resultado = enviarAAgente.invoke(extension, solicitudRespuesta);
             assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:378");
-        }
-
-        @Test
-        @DisplayName("Enviar al Agente es seguro sin configuración inicializada")
-        void testEnviarAAgenteSinConfigNoFalla() throws Exception {
-            ExtensionBurpIA extension = new ExtensionBurpIA();
-            Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
-            enviarAAgente.setAccessible(true);
-            assertDoesNotThrow(() -> enviarAAgente.invoke(extension, (Object) null));
         }
 
         @Test

@@ -158,11 +158,10 @@ class ExtensionBurpIAUnloadTest {
             establecerCampo(extension, "stdout", new PrintWriter(new StringWriter(), true));
             establecerCampo(extension, "stderr", new PrintWriter(new StringWriter(), true));
 
+            // JUnit considera el test exitoso si las dos llamadas a unload()
+            // completan sin propagar excepción. No hace falta assertTrue(true).
             extension.unload();
             extension.unload();
-
-            // Si llega hasta acá sin excepción, el test pasa
-            assertTrue(true, "Idempotencia verificada");
         }
 
         @Test

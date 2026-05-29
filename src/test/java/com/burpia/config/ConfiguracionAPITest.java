@@ -3,6 +3,8 @@ package com.burpia.config;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -316,18 +318,15 @@ class ConfiguracionAPITest {
         assertTrue(promptValidacion.contains("{OUTPUT_LANGUAGE}"), "assertTrue failed at ConfiguracionAPITest.java:207");
     }
 
-    @Test
-    @DisplayName("Establecer prompt null usa default")
-    void testEstablecerPromptNull() {
-        config.establecerPromptConfigurable(null);
-        assertNotNull(config.obtenerPromptConfigurable(), "assertNotNull failed at ConfiguracionAPITest.java:214");
-    }
-
-    @Test
-    @DisplayName("Establecer prompt vacio usa default")
-    void testEstablecerPromptVacio() {
-        config.establecerPromptConfigurable("");
-        assertNotNull(config.obtenerPromptConfigurable(), "assertNotNull failed at ConfiguracionAPITest.java:221");
+    @ParameterizedTest(name = "Establecer prompt {0} usa default")
+    @NullAndEmptySource
+    @DisplayName("Establecer prompt null o vacío usa default")
+    void testEstablecerPromptNullOVacioUsaDefault(String promptInvalido) {
+        config.establecerPromptConfigurable(promptInvalido);
+        assertNotNull(config.obtenerPromptConfigurable(),
+                "Prompt vacío/null debe caer al default, no quedar null");
+        assertFalse(config.obtenerPromptConfigurable().isEmpty(),
+                "El prompt default no debe ser cadena vacía");
     }
 
     @Test

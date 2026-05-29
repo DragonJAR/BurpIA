@@ -176,12 +176,6 @@ class VersionBurpIATest {
     class ObtenerVersionActual {
 
         @Test
-        @DisplayName("Retorna la versión actual configurada")
-        void retornaVersionActualConfigurada() {
-            assertEquals(VersionBurpIA.VERSION_ACTUAL, VersionBurpIA.obtenerVersionActual(), "assertEquals failed at VersionBurpIATest.java:177");
-        }
-
-        @Test
         @DisplayName("La versión actual coincide con formato semver")
         void versionActualCoincideConFormatoSemver() {
             assertTrue(VersionBurpIA.VERSION_ACTUAL.matches("\\d+\\.\\d+\\.\\d+"), "assertTrue failed at VersionBurpIATest.java:183");
