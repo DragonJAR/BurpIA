@@ -192,6 +192,60 @@ class ConfiguracionAPIEndpointsTest {
         assertEquals("", ConfiguracionAPI.extraerUrlBase(null), "assertEquals failed at ConfiguracionAPIEndpointsTest.java:192");
     }
 
+    // --- Smart-detect tests para proveedores Custom (LM Studio y similares) ---
+
+    @Test
+    @DisplayName("Custom: auto-agrega /v1/chat/completions si solo hay host:port")
+    void testCustomSoloHost() {
+        assertEquals(
+            "http://127.0.0.1:1234/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_01, "http://127.0.0.1:1234", "lm-model")
+        );
+    }
+
+    @Test
+    @DisplayName("Custom: auto-agrega /v1/chat/completions con trailing slash")
+    void testCustomSoloHostConSlash() {
+        assertEquals(
+            "http://127.0.0.1:1234/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_01, "http://127.0.0.1:1234/", "lm-model")
+        );
+    }
+
+    @Test
+    @DisplayName("Custom: respeta endpoint /chat/completions completo")
+    void testCustomEndpointCompleto() {
+        assertEquals(
+            "http://127.0.0.1:1234/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_01,
+                "http://127.0.0.1:1234/v1/chat/completions", "lm-model")
+        );
+    }
+
+    @Test
+    @DisplayName("Custom: respeta endpoint /responses completo")
+    void testCustomResponsesVerbatim() {
+        assertEquals(
+            "https://api.openai.com/v1/responses",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_01,
+                "https://api.openai.com/v1/responses", "gpt-4o")
+        );
+    }
+
+    @Test
+    @DisplayName("Custom: HTTPS solo host agrega /v1/chat/completions")
+    void testCustomHttpsSoloHost() {
+        assertEquals(
+            "https://localhost:1234/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_02, "https://localhost:1234", "lm-model")
+        );
+    }
+
     @Test
     @DisplayName("Extrae URL base con string vacio retorna vacio")
     void testExtraerUrlBaseVacio() {

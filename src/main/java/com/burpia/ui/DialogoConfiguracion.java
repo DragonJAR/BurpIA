@@ -250,6 +250,10 @@ public class DialogoConfiguracion extends JDialog {
     public JTextField obtenerTxtUrl() {
         return obtenerComponente(ConfigDialogView::obtenerTxtUrl);
     }
+
+    public JLabel obtenerLblPreviewEndpoint() {
+        return obtenerComponente(ConfigDialogView::obtenerLblPreviewEndpoint);
+    }
     
     public JPasswordField obtenerTxtClave() {
         return obtenerComponente(ConfigDialogView::obtenerTxtClave);

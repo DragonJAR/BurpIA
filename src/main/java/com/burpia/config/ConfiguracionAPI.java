@@ -718,8 +718,56 @@ public class ConfiguracionAPI {
             case "Z.ai":
             case "minimax":
             default:
-                return baseNormalizada + "/chat/completions";
+                return construirEndpointOpenAICompatible(urlBase, baseNormalizada);
         }
+    }
+
+    /**
+     * Construye un endpoint OpenAI-compatible aplicando reglas tolerantes para
+     * cubrir las tres formas en que el usuario puede escribir la URL:
+     * <ol>
+     *   <li><b>Endpoint completo respetado:</b> si la URL termina en
+     *       {@code /chat/completions}, {@code /completions} o {@code /responses},
+     *       se devuelve verbatim.</li>
+     *   <li><b>Solo host[:port] → auto-{@code /v1/chat/completions}:</b> si la URL
+     *       no tiene path (caso LM Studio "out of the box" como
+     *       {@code http://127.0.0.1:1234}), se agrega {@code /v1/chat/completions}.</li>
+     *   <li><b>Caso general:</b> el comportamiento original
+     *       ({@code normalizarUrlBase(url) + "/chat/completions"}) para preservar
+     *       proveedores conocidos como Z.ai, minimax y Custom con
+     *       {@code https://host/v1}.</li>
+     * </ol>
+     */
+    private static String construirEndpointOpenAICompatible(String urlOriginal, String baseNormalizada) {
+        String input = urlOriginal != null ? urlOriginal.trim() : "";
+        while (input.endsWith("/")) {
+            input = input.substring(0, input.length() - 1);
+        }
+        if (input.isEmpty()) {
+            return baseNormalizada + "/chat/completions";
+        }
+        if (terminaEnEndpointOpenAI(input)) {
+            return input;
+        }
+        if (esSoloHostYPuerto(input)) {
+            return input + "/v1/chat/completions";
+        }
+        return baseNormalizada + "/chat/completions";
+    }
+
+    private static boolean terminaEnEndpointOpenAI(String url) {
+        return url.endsWith("/chat/completions")
+                || url.endsWith("/completions")
+                || url.endsWith("/responses");
+    }
+
+    private static boolean esSoloHostYPuerto(String url) {
+        int idxDobleSlash = url.indexOf("://");
+        if (idxDobleSlash < 0) {
+            return false;
+        }
+        int idxPathSep = url.indexOf('/', idxDobleSlash + 3);
+        return idxPathSep < 0;
     }
 
     public static String extraerUrlBase(String urlConfigurada) {

@@ -3097,8 +3097,19 @@ public final class I18nUI {
             }
 
             public static String URL_API() {
-                return I18nUI.tr("URL base del endpoint del proveedor seleccionado.",
-                        "Base endpoint URL for selected provider.");
+                return I18nUI.tr(
+                        "<html>URL del endpoint del proveedor seleccionado.<br>"
+                        + "Para proveedores OpenAI-compatibles (Custom, LM Studio, etc.) podés ingresar:<br>"
+                        + "&nbsp;&nbsp;• Solo host:puerto (ej. <i>http://127.0.0.1:1234</i>) → se agrega <i>/v1/chat/completions</i> automáticamente.<br>"
+                        + "&nbsp;&nbsp;• URL base (ej. <i>http://127.0.0.1:1234/v1</i>) → se agrega <i>/chat/completions</i>.<br>"
+                        + "&nbsp;&nbsp;• Endpoint completo (ej. <i>http://127.0.0.1:1234/v1/chat/completions</i>) → se respeta tal cual.<br>"
+                        + "El preview debajo del campo muestra la URL final que se va a usar.</html>",
+                        "<html>Endpoint URL for the selected provider.<br>"
+                        + "For OpenAI-compatible providers (Custom, LM Studio, etc.) you can enter:<br>"
+                        + "&nbsp;&nbsp;• Host:port only (e.g. <i>http://127.0.0.1:1234</i>) → <i>/v1/chat/completions</i> is appended automatically.<br>"
+                        + "&nbsp;&nbsp;• Base URL (e.g. <i>http://127.0.0.1:1234/v1</i>) → <i>/chat/completions</i> is appended.<br>"
+                        + "&nbsp;&nbsp;• Full endpoint (e.g. <i>http://127.0.0.1:1234/v1/chat/completions</i>) → kept as-is.<br>"
+                        + "The preview below the field shows the final URL that will be used.</html>");
             }
 
             public static String CLAVE_API() {

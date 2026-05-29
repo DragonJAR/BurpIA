@@ -244,6 +244,42 @@ public class ConfigDialogController {
                 UIUtils.crearDocumentListener(this::actualizarContadorPrompt));
         agregarDocumentListenerSiPresente(dialogo.obtenerTxtAgenteBinario(),
                 UIUtils.crearDocumentListener(this::actualizarRutaEnMemoria));
+        // Preview en vivo del endpoint final: se recalcula al editar la URL,
+        // al cambiar de proveedor (porque alCambiarProveedor reescribe txtUrl,
+        // disparando este listener) y al cambiar el modelo (afecta Gemini).
+        agregarDocumentListenerSiPresente(dialogo.obtenerTxtUrl(),
+                UIUtils.crearDocumentListener(this::actualizarPreviewEndpoint));
+        agregarListenerSiPresente(dialogo.obtenerComboModelo(),
+                e -> actualizarPreviewEndpoint());
+    }
+
+    /**
+     * Recalcula el preview del endpoint final mostrando la URL real que se va
+     * a usar para la request HTTP. Construido vía {@code construirUrlApiProveedor}
+     * para que el usuario vea exactamente lo que va a pasar antes de guardar.
+     */
+    private void actualizarPreviewEndpoint() {
+        JLabel lblPreview = dialogo.obtenerLblPreviewEndpoint();
+        if (lblPreview == null) {
+            return;
+        }
+        try {
+            JComboBox<String> comboProv = dialogo.obtenerComboProveedor();
+            JTextField txtUrlField = dialogo.obtenerTxtUrl();
+            if (comboProv == null || txtUrlField == null) {
+                lblPreview.setText(" ");
+                return;
+            }
+            String proveedor = (String) comboProv.getSelectedItem();
+            String urlBase = txtUrlField.getText();
+            String modelo = obtenerModeloSeleccionado();
+            String endpoint = com.burpia.config.ConfiguracionAPI.construirUrlApiProveedor(
+                    proveedor, urlBase, modelo);
+            lblPreview.setText("→ " + endpoint);
+        } catch (Exception ignored) {
+            // Best-effort: el preview no debe nunca romper la UI.
+            lblPreview.setText(" ");
+        }
     }
 
     // ===== MÉTODOS DRY PARA EVENT HANDLERS =====

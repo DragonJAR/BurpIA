@@ -22,6 +22,7 @@ public class ConfigDialogView {
     private JPanel panelBotones;
 
     private JTextField txtUrl;
+    private JLabel lblPreviewEndpoint;
     private JPasswordField txtClave;
     private JTextField txtRetraso;
     private JTextField txtMaximoConcurrente;
@@ -103,6 +104,13 @@ public class ConfigDialogView {
 
         txtUrl = crearCampoTexto(30);
         txtUrl.setToolTipText(I18nUI.Tooltips.Configuracion.URL_API());
+
+        // Preview en vivo del endpoint final calculado. Lo actualiza ConfigDialogController
+        // via DocumentListener sobre txtUrl + cambio de proveedor/modelo.
+        lblPreviewEndpoint = new JLabel(" ");
+        lblPreviewEndpoint.setFont(lblPreviewEndpoint.getFont().deriveFont(java.awt.Font.ITALIC, 11f));
+        lblPreviewEndpoint.setForeground(java.awt.Color.GRAY);
+        lblPreviewEndpoint.setToolTipText(I18nUI.Tooltips.Configuracion.URL_API());
 
         txtClave = new JPasswordField(30);
         txtClave.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
@@ -345,6 +353,15 @@ public class ConfigDialogView {
         gbc.gridwidth = GridBagConstraints.REMAINDER;
         gbc.weightx = 1.0;
         panel.add(txtUrl, gbc);
+
+        // Fila de preview del endpoint final (ocupa solo la columna del campo,
+        // alineada bajo txtUrl).
+        fila++;
+        gbc.gridx = 1;
+        gbc.gridy = fila;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.weightx = 1.0;
+        panel.add(lblPreviewEndpoint, gbc);
 
         fila++;
 
@@ -1058,6 +1075,10 @@ public class ConfigDialogView {
 
     public JTextField obtenerTxtUrl() {
         return txtUrl;
+    }
+
+    public JLabel obtenerLblPreviewEndpoint() {
+        return lblPreviewEndpoint;
     }
 
     public JPasswordField obtenerTxtClave() {
