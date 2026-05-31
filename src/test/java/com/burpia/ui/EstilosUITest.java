@@ -380,4 +380,55 @@ class EstilosUITest {
         }
     }
 
+    @Nested
+    @DisplayName("actualizarFuentes — reasignación dinámica de FUENTE_*")
+    class ActualizarFuentes {
+
+        /**
+         * Las constantes FUENTE_* de EstilosUI son {@code public static Font}
+         * (sin {@code final}) — se reasignan en {@link EstilosUI#actualizarFuentes}
+         * según la config del usuario. Este test cubre la brecha que dejaron los
+         * antiguos {@code testFuentesDefinidas} (verificaban solo el valor en
+         * classload). Acá ejercitamos el método real y confirmamos que tras
+         * aplicar una config válida ninguna referencia queda nula y que el
+         * estilo PLAIN/BOLD se preserva por familia.
+         */
+        @Test
+        @DisplayName("Con config por defecto, todas las fuentes quedan no-null con estilo correcto")
+        void aplicarDefaultsConservaFuentesNoNull() {
+            EstilosUI.actualizarFuentes(new com.burpia.config.ConfiguracionAPI());
+
+            assertNotNull(EstilosUI.FUENTE_ESTANDAR, "FUENTE_ESTANDAR no debe ser null tras actualizar");
+            assertNotNull(EstilosUI.FUENTE_NEGRITA, "FUENTE_NEGRITA no debe ser null tras actualizar");
+            assertNotNull(EstilosUI.FUENTE_MONO, "FUENTE_MONO no debe ser null tras actualizar");
+            assertNotNull(EstilosUI.FUENTE_MONO_NEGRITA, "FUENTE_MONO_NEGRITA no debe ser null tras actualizar");
+            assertNotNull(EstilosUI.FUENTE_TABLA, "FUENTE_TABLA no debe ser null tras actualizar");
+            assertNotNull(EstilosUI.FUENTE_CAMPO_TEXTO, "FUENTE_CAMPO_TEXTO no debe ser null tras actualizar");
+            assertNotNull(EstilosUI.FUENTE_BOTON_PRINCIPAL, "FUENTE_BOTON_PRINCIPAL no debe ser null tras actualizar");
+            assertNotNull(EstilosUI.FUENTE_TITULO_BANNER, "FUENTE_TITULO_BANNER no debe ser null tras actualizar");
+            assertNotNull(EstilosUI.FUENTE_ICONO_GRANDE, "FUENTE_ICONO_GRANDE no debe ser null tras actualizar");
+
+            assertEquals(java.awt.Font.PLAIN, EstilosUI.FUENTE_ESTANDAR.getStyle(), "FUENTE_ESTANDAR debe ser PLAIN");
+            assertEquals(java.awt.Font.BOLD, EstilosUI.FUENTE_NEGRITA.getStyle(), "FUENTE_NEGRITA debe ser BOLD");
+            assertEquals(java.awt.Font.PLAIN, EstilosUI.FUENTE_MONO.getStyle(), "FUENTE_MONO debe ser PLAIN");
+            assertEquals(java.awt.Font.BOLD, EstilosUI.FUENTE_MONO_NEGRITA.getStyle(), "FUENTE_MONO_NEGRITA debe ser BOLD");
+        }
+
+        /**
+         * Contrato documentado en EstilosUI:52 — el método retorna sin tocar
+         * estado cuando recibe null. Este test bloquea regresiones que metan
+         * un NPE en el path null.
+         */
+        @Test
+        @DisplayName("config null es no-op silencioso (no lanza excepción)")
+        void configNullEsNoOp() {
+            java.awt.Font esperada = EstilosUI.FUENTE_ESTANDAR;
+            EstilosUI.actualizarFuentes(null);
+            // Si llega hasta acá sin excepción, el guard funciona. Y como no
+            // tocó nada, FUENTE_ESTANDAR sigue siendo la misma referencia.
+            assertEquals(esperada, EstilosUI.FUENTE_ESTANDAR,
+                    "FUENTE_ESTANDAR no debe cambiar cuando actualizarFuentes recibe null");
+        }
+    }
+
 }

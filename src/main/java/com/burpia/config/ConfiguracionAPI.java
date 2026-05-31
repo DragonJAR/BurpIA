@@ -76,7 +76,6 @@ public class ConfiguracionAPI {
     private int tamanioFuenteMono;
 
     private String tipoAgente;
-    private ConcurrentMap<String, Boolean> agentesHabilitadosPorTipo;
     private ConcurrentMap<String, String> rutasBinarioPorAgente;
     private String agentePreflightPrompt;
     private String agentePrompt;
@@ -85,6 +84,7 @@ public class ConfiguracionAPI {
     // volatile: asegurarMapas() reasigna estas referencias secuencialmente sin lock.
     // Marcarlas volatile garantiza visibilidad inter-hilo de los nuevos maps tras
     // load/clonar, evitando lectores que vean una mezcla de mapas viejos/nuevos.
+    private volatile ConcurrentMap<String, Boolean> agentesHabilitadosPorTipo;
     private volatile ConcurrentMap<String, String> apiKeysPorProveedor;
     private volatile ConcurrentMap<String, String> urlsBasePorProveedor;
     private volatile ConcurrentMap<String, String> modelosPorProveedor;
