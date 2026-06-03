@@ -485,21 +485,24 @@ class ConfiguracionAPITest {
     }
 
     @Test
-    @DisplayName("Custom sin URL guardada usa default por idioma")
+    @DisplayName("Custom sin URL guardada usa default por idioma (endpoint completo verbatim)")
     void testCustomDefaultUrlByLanguage() {
+        // El placeholder default es el endpoint completo porque para Custom
+        // el plugin no agrega path: la URL se usa verbatim tal como la ingresa
+        // el usuario. Por eso el default sugiere el shape completo.
         ConfiguracionAPI configEs = new ConfiguracionAPI();
         configEs.establecerIdiomaUi("es");
         assertEquals(
-            "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1",
+            "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1/chat/completions",
             configEs.obtenerUrlBaseParaProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01)
-        , "assertEquals failed at ConfiguracionAPITest.java:345");
+        );
 
         ConfiguracionAPI configEn = new ConfiguracionAPI();
         configEn.establecerIdiomaUi("en");
         assertEquals(
-            "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1",
+            "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1/chat/completions",
             configEn.obtenerUrlBaseParaProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01)
-        , "assertEquals failed at ConfiguracionAPITest.java:352");
+        );
     }
 
     @Test

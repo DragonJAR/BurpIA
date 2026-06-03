@@ -174,7 +174,17 @@ public class ConfiguracionAPI {
     }
 
     public void establecerUrlApi(String urlApi) {
-        establecerUrlBaseParaProveedor(obtenerProveedorAI(), extraerUrlBase(urlApi));
+        String proveedor = obtenerProveedorAI();
+        String urlAGuardar;
+        if (ProveedorAI.esProveedorCustom(proveedor)) {
+            // Custom: verbatim. NO se strip-ean sufijos OpenAI-compatibles
+            // porque el contrato del provider es que la URL se usa tal cual
+            // la ingresa el usuario.
+            urlAGuardar = urlApi != null ? urlApi : "";
+        } else {
+            urlAGuardar = extraerUrlBase(urlApi);
+        }
+        establecerUrlBaseParaProveedor(proveedor, urlAGuardar);
     }
 
     public String obtenerClaveApi() {
@@ -711,63 +721,20 @@ public class ConfiguracionAPI {
             case "Gemini":
                 return baseNormalizada + "/models/" + modeloNormalizado + ":generateContent";
             case "Ollama":
+            case "Ollama Cloud":
                 return baseNormalizada + "/api/chat";
             case "OpenAI":
                 return baseNormalizada + "/responses";
             case "Moonshot (Kimi)":
             case "Z.ai":
             case "minimax":
+                return baseNormalizada + "/chat/completions";
             default:
-                return construirEndpointOpenAICompatible(urlBase, baseNormalizada);
+                // PROVEEDOR_CUSTOM_01/02/03: URL verbatim, sin manipulación.
+                // El usuario es responsable de escribir el endpoint completo
+                // (ej. http://127.0.0.1:1234/v1/chat/completions para LM Studio).
+                return urlBase != null ? urlBase.trim() : "";
         }
-    }
-
-    /**
-     * Construye un endpoint OpenAI-compatible aplicando reglas tolerantes para
-     * cubrir las tres formas en que el usuario puede escribir la URL:
-     * <ol>
-     *   <li><b>Endpoint completo respetado:</b> si la URL termina en
-     *       {@code /chat/completions}, {@code /completions} o {@code /responses},
-     *       se devuelve verbatim.</li>
-     *   <li><b>Solo host[:port] → auto-{@code /v1/chat/completions}:</b> si la URL
-     *       no tiene path (caso LM Studio "out of the box" como
-     *       {@code http://127.0.0.1:1234}), se agrega {@code /v1/chat/completions}.</li>
-     *   <li><b>Caso general:</b> el comportamiento original
-     *       ({@code normalizarUrlBase(url) + "/chat/completions"}) para preservar
-     *       proveedores conocidos como Z.ai, minimax y Custom con
-     *       {@code https://host/v1}.</li>
-     * </ol>
-     */
-    private static String construirEndpointOpenAICompatible(String urlOriginal, String baseNormalizada) {
-        String input = urlOriginal != null ? urlOriginal.trim() : "";
-        while (input.endsWith("/")) {
-            input = input.substring(0, input.length() - 1);
-        }
-        if (input.isEmpty()) {
-            return baseNormalizada + "/chat/completions";
-        }
-        if (terminaEnEndpointOpenAI(input)) {
-            return input;
-        }
-        if (esSoloHostYPuerto(input)) {
-            return input + "/v1/chat/completions";
-        }
-        return baseNormalizada + "/chat/completions";
-    }
-
-    private static boolean terminaEnEndpointOpenAI(String url) {
-        return url.endsWith("/chat/completions")
-                || url.endsWith("/completions")
-                || url.endsWith("/responses");
-    }
-
-    private static boolean esSoloHostYPuerto(String url) {
-        int idxDobleSlash = url.indexOf("://");
-        if (idxDobleSlash < 0) {
-            return false;
-        }
-        int idxPathSep = url.indexOf('/', idxDobleSlash + 3);
-        return idxPathSep < 0;
     }
 
     public static String extraerUrlBase(String urlConfigurada) {

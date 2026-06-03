@@ -31,11 +31,11 @@ public final class ProveedorAI {
     /** Proveedor custom canónico #3 (OpenAI-compatible) */
     public static final String PROVEEDOR_CUSTOM_03 = "-- Custom 03 --";
 
-    /** URL por defecto para proveedor custom en inglés */
-    public static final String URL_CUSTOM_EN = "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1";
+    /** URL por defecto para proveedor custom en inglés (endpoint completo — verbatim). */
+    public static final String URL_CUSTOM_EN = "https://YOUR_OPENAI_COMPATIBLE_BASE_URL/v1/chat/completions";
 
-    /** URL por defecto para proveedor custom en español */
-    public static final String URL_CUSTOM_ES = "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1";
+    /** URL por defecto para proveedor custom en español (endpoint completo — verbatim). */
+    public static final String URL_CUSTOM_ES = "https://TU_BASE_URL_COMPATIBLE_CON_OPENAI/v1/chat/completions";
 
     /**
      * Configuración de un proveedor de IA.

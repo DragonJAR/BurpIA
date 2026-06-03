@@ -76,30 +76,71 @@ class ConfiguracionAPIEndpointsTest {
         , "assertEquals failed at ConfiguracionAPIEndpointsTest.java:73");
     }
 
+    // --- Custom providers: URL verbatim (sin manipulación del plugin) ---
+
     @Test
-    @DisplayName("Construye endpoint Custom 01/02/03 OpenAI-compatible")
-    void testEndpointCustom() {
+    @DisplayName("Custom 01/02/03: URL verbatim — usuario escribe endpoint completo")
+    void testCustomVerbatimEndpointCompleto() {
         assertEquals(
             "https://example.local/v1/chat/completions",
-            ConfiguracionAPI.construirUrlApiProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01, "https://example.local/v1", "my-model")
-        , "assertEquals failed at ConfiguracionAPIEndpointsTest.java:82");
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_01,
+                "https://example.local/v1/chat/completions", "my-model")
+        );
         assertEquals(
-            "https://example.local/v1/chat/completions",
-            ConfiguracionAPI.construirUrlApiProveedor(ProveedorAI.PROVEEDOR_CUSTOM_02, "https://example.local/v1", "my-model")
-        , "assertEquals failed at ConfiguracionAPIEndpointsTest.java:86");
+            "http://127.0.0.1:1234/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_02,
+                "http://127.0.0.1:1234/v1/chat/completions", "lm-model")
+        );
         assertEquals(
-            "https://example.local/v1/chat/completions",
-            ConfiguracionAPI.construirUrlApiProveedor(ProveedorAI.PROVEEDOR_CUSTOM_03, "https://example.local/v1", "my-model")
-        , "assertEquals failed at ConfiguracionAPIEndpointsTest.java:90");
+            "https://api.openai.com/v1/responses",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_03,
+                "https://api.openai.com/v1/responses", "gpt-4o")
+        );
     }
 
     @Test
-    @DisplayName("Construye endpoint proveedor desconocido usa chat completions por defecto")
-    void testEndpointProveedorDesconocido() {
+    @DisplayName("Custom: URL verbatim sin path — NO se agrega /v1/chat/completions")
+    void testCustomVerbatimSoloHost() {
         assertEquals(
-            "https://unknown.api/v1/chat/completions",
+            "http://127.0.0.1:1234",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_01, "http://127.0.0.1:1234", "lm-model")
+        );
+    }
+
+    @Test
+    @DisplayName("Custom: URL verbatim con path raro — NO se modifica")
+    void testCustomVerbatimPathRaro() {
+        // Si el usuario tipea un path raro, el plugin lo respeta tal cual.
+        // El preview en UI le permite verificarlo antes de guardar.
+        assertEquals(
+            "http://localhost:1234/api/v1/chat",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_01, "http://localhost:1234/api/v1/chat", "any")
+        );
+    }
+
+    @Test
+    @DisplayName("Custom: trim de espacios en URL")
+    void testCustomVerbatimTrim() {
+        assertEquals(
+            "https://api.foo.com/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor(
+                ProveedorAI.PROVEEDOR_CUSTOM_01, "  https://api.foo.com/v1/chat/completions  ", "any")
+        );
+    }
+
+    @Test
+    @DisplayName("Proveedor desconocido cae al default verbatim como Custom")
+    void testEndpointProveedorDesconocido() {
+        // Proveedor desconocido es tratado como Custom: URL verbatim.
+        assertEquals(
+            "https://unknown.api/v1",
             ConfiguracionAPI.construirUrlApiProveedor("UnknownProvider", "https://unknown.api/v1", "model-x")
-        , "assertEquals failed at ConfiguracionAPIEndpointsTest.java:99");
+        );
     }
 
     @Test
@@ -129,12 +170,13 @@ class ConfiguracionAPIEndpointsTest {
     }
 
     @Test
-    @DisplayName("Construye endpoint con proveedor null usa chat completions")
+    @DisplayName("Construye endpoint con proveedor null cae al default verbatim")
     void testEndpointConProveedorNull() {
+        // Provider null normaliza a "" → no matchea ningún case → default (verbatim).
         assertEquals(
-            "https://api.example.com/v1/chat/completions",
+            "https://api.example.com/v1",
             ConfiguracionAPI.construirUrlApiProveedor(null, "https://api.example.com/v1", "model-x")
-        , "assertEquals failed at ConfiguracionAPIEndpointsTest.java:134");
+        );
     }
 
     @Test
@@ -190,60 +232,6 @@ class ConfiguracionAPIEndpointsTest {
     @DisplayName("Extrae URL base con null retorna string vacio")
     void testExtraerUrlBaseNull() {
         assertEquals("", ConfiguracionAPI.extraerUrlBase(null), "assertEquals failed at ConfiguracionAPIEndpointsTest.java:192");
-    }
-
-    // --- Smart-detect tests para proveedores Custom (LM Studio y similares) ---
-
-    @Test
-    @DisplayName("Custom: auto-agrega /v1/chat/completions si solo hay host:port")
-    void testCustomSoloHost() {
-        assertEquals(
-            "http://127.0.0.1:1234/v1/chat/completions",
-            ConfiguracionAPI.construirUrlApiProveedor(
-                ProveedorAI.PROVEEDOR_CUSTOM_01, "http://127.0.0.1:1234", "lm-model")
-        );
-    }
-
-    @Test
-    @DisplayName("Custom: auto-agrega /v1/chat/completions con trailing slash")
-    void testCustomSoloHostConSlash() {
-        assertEquals(
-            "http://127.0.0.1:1234/v1/chat/completions",
-            ConfiguracionAPI.construirUrlApiProveedor(
-                ProveedorAI.PROVEEDOR_CUSTOM_01, "http://127.0.0.1:1234/", "lm-model")
-        );
-    }
-
-    @Test
-    @DisplayName("Custom: respeta endpoint /chat/completions completo")
-    void testCustomEndpointCompleto() {
-        assertEquals(
-            "http://127.0.0.1:1234/v1/chat/completions",
-            ConfiguracionAPI.construirUrlApiProveedor(
-                ProveedorAI.PROVEEDOR_CUSTOM_01,
-                "http://127.0.0.1:1234/v1/chat/completions", "lm-model")
-        );
-    }
-
-    @Test
-    @DisplayName("Custom: respeta endpoint /responses completo")
-    void testCustomResponsesVerbatim() {
-        assertEquals(
-            "https://api.openai.com/v1/responses",
-            ConfiguracionAPI.construirUrlApiProveedor(
-                ProveedorAI.PROVEEDOR_CUSTOM_01,
-                "https://api.openai.com/v1/responses", "gpt-4o")
-        );
-    }
-
-    @Test
-    @DisplayName("Custom: HTTPS solo host agrega /v1/chat/completions")
-    void testCustomHttpsSoloHost() {
-        assertEquals(
-            "https://localhost:1234/v1/chat/completions",
-            ConfiguracionAPI.construirUrlApiProveedor(
-                ProveedorAI.PROVEEDOR_CUSTOM_02, "https://localhost:1234", "lm-model")
-        );
     }
 
     @Test

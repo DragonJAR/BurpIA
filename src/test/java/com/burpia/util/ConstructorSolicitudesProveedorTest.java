@@ -484,22 +484,27 @@ class ConstructorSolicitudesProveedorTest {
         }
 
         @Test
-        @DisplayName("Construye solicitud válida para proveedor Custom 02")
+        @DisplayName("Construye solicitud válida para proveedor Custom 02 (URL verbatim)")
         void construyeSolicitudCustom() throws Exception {
+            // Para Custom el plugin NO manipula la URL — el usuario debe pasar
+            // el endpoint completo. Por eso el test pasa la URL completa
+            // y verifica que se usa exacta.
+            String endpointCompleto = "https://custom.api/v1/chat/completions";
             ConfiguracionAPI config = crearConfiguracionTest(
                 ProveedorAI.PROVEEDOR_CUSTOM_02,
                 "custom-model",
-                "https://custom.api/v1",
+                endpointCompleto,
                 "custom-key"
             );
 
             ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
                 ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
 
-            assertNotNull(solicitud.request, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:429");
-            assertEquals("custom-model", solicitud.modeloUsado, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:430");
-            assertTrue(solicitud.endpoint.endsWith("/chat/completions"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:431");
-            assertNotNull(solicitud.request.header("Authorization"), "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:432");
+            assertNotNull(solicitud.request);
+            assertEquals("custom-model", solicitud.modeloUsado);
+            assertEquals(endpointCompleto, solicitud.endpoint,
+                "Para Custom el endpoint debe coincidir con la URL ingresada (verbatim)");
+            assertNotNull(solicitud.request.header("Authorization"));
         }
     }
 

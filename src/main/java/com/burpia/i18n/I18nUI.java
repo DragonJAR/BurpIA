@@ -3099,18 +3099,20 @@ public final class I18nUI {
             public static String URL_API() {
                 // Texto plano sin HTML: el LAF de Burp Suite no renderiza tooltips HTML
                 // y mostraría las etiquetas <html>/<br> como texto crudo. El preview en
-                // vivo debajo del campo URL ya muestra la transformación final aplicada.
+                // vivo debajo del campo URL confirma la URL final que se va a usar.
                 return I18nUI.tr(
-                        "URL del endpoint del proveedor. Para OpenAI-compatibles (Custom, LM Studio): "
-                        + "ingresá solo host:puerto y el plugin agrega /v1/chat/completions; "
-                        + "o ingresá la base con /v1 y se agrega /chat/completions; "
-                        + "o ingresá el endpoint completo y se respeta tal cual. "
-                        + "Mirá el preview debajo del campo para ver la URL final.",
-                        "Endpoint URL for the selected provider. For OpenAI-compatible (Custom, LM Studio): "
-                        + "enter host:port only and the plugin appends /v1/chat/completions; "
-                        + "or enter the base URL with /v1 and /chat/completions is appended; "
-                        + "or enter the full endpoint and it is kept verbatim. "
-                        + "Check the preview below the field for the final URL.");
+                        "URL del endpoint del proveedor. Para los proveedores Custom (#1/#2/#3) "
+                        + "la URL se usa tal cual la escribís, sin modificaciones — debés ingresar "
+                        + "el endpoint completo (ej: http://127.0.0.1:1234/v1/chat/completions para LM Studio). "
+                        + "Para el resto de proveedores el plugin agrega el path apropiado "
+                        + "(/messages, /api/chat, /chat/completions, /responses). "
+                        + "Mirá el preview debajo del campo para confirmar la URL final.",
+                        "Endpoint URL for the selected provider. For Custom providers (#1/#2/#3) "
+                        + "the URL is used verbatim, with no modifications — you must enter the full "
+                        + "endpoint (e.g. http://127.0.0.1:1234/v1/chat/completions for LM Studio). "
+                        + "For other providers the plugin appends the appropriate path "
+                        + "(/messages, /api/chat, /chat/completions, /responses). "
+                        + "Check the preview below the field to confirm the final URL.");
             }
 
             public static String CLAVE_API() {
