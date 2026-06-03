@@ -1,7 +1,6 @@
 package com.burpia.ui;
 
 import com.burpia.i18n.I18nUI;
-import com.burpia.model.Hallazgo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -12,7 +11,6 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.Component;
 import java.awt.Font;
 import java.awt.font.TextAttribute;
-import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;

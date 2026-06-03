@@ -20,6 +20,8 @@ Guía operativa para:
 
 ## 2. Instalar OpenCode
 
+Para obtener detalles completos y guías de instalación, visita el sitio web oficial: [OpenCode](https://opencode.ai).
+
 ### macOS / Linux
 
 Instalación recomendada:

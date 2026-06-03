@@ -100,6 +100,25 @@ class SubmitSequenceFactoryTest {
     }
 
     @Nested
+    @DisplayName("construir para Grok CLI")
+    class GrokBuildTests {
+
+        @Test
+        @DisplayName("usa SMART_FALLBACK igual que Factory Droid (TUI estándar)")
+        void usaSmartFallback() {
+            // Grok CLI es una TUI estándar — sin comportamiento especial detectado,
+            // cae al sequence por defecto (Droid: \r + fallbacks \n y \r\n).
+            // Si en uso real requiere otro tratamiento, agregar branch específica.
+            SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
+                AgenteTipo.GROK_BUILD,
+                SubmitSequenceFactory.Plataforma.LINUX
+            );
+
+            assertCadenaSmartFallback(secuencia);
+        }
+    }
+
+    @Nested
     @DisplayName("Casos borde y valores nulos")
     class CasosBordeTests {
 

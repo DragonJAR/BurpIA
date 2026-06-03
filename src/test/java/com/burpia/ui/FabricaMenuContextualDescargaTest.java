@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import javax.swing.JMenuItem;
 import java.awt.Component;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

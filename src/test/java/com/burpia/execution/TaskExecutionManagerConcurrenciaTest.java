@@ -4,8 +4,6 @@ import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.ui.ModeloTablaTareas;
 import com.burpia.ui.PestaniaPrincipal;
-import com.burpia.util.ControlBackpressureGlobal;
-import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import org.junit.jupiter.api.AfterEach;
@@ -24,8 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * Concurrency tests for TaskExecutionManager class.

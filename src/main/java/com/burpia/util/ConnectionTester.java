@@ -16,7 +16,6 @@ import javax.net.ssl.X509TrustManager;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ProveedorAI;
 import com.burpia.i18n.I18nUI;
-import com.burpia.util.GsonProvider;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

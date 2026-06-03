@@ -20,6 +20,8 @@ Operational guide to:
 
 ## 2. Install OpenCode
 
+For complete details and installation guidelines, visit the official website: [OpenCode](https://opencode.ai).
+
 ### macOS / Linux
 
 Recommended installation:

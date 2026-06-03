@@ -19,6 +19,8 @@ Operational guide to:
 
 ## 2. Install Claude Code CLI
 
+For complete details and installation guidelines, visit the official website: [Claude Code](https://claude.com/product/claude-code).
+
 ### macOS / Linux
 
 ```bash

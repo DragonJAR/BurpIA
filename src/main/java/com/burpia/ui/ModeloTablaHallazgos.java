@@ -5,7 +5,6 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
-import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
 import java.util.HashSet;

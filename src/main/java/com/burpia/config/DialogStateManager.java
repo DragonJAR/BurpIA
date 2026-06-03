@@ -6,7 +6,6 @@ import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
 
-import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;

@@ -11,7 +11,6 @@ import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.scope.Scope;
 import burp.api.montoya.core.ToolSource;
 import com.burpia.config.ConfiguracionAPI;
-import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorLoggingUnificado;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

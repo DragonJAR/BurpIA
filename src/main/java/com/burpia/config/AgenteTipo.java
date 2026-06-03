@@ -32,6 +32,17 @@ public enum AgenteTipo {
             "%USERPROFILE%\\.opencode\\bin\\opencode.exe",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-OPENCODE-ES.md",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-OPENCODE-EN.md"
+    ),
+    // Grok CLI (xAI). Sin flag CLI de permisos — Grok controla permisos vía
+    // ~/.grok/config.toml (permission_mode = "always-approve"). El submit sequence
+    // por defecto (Droid: \r + fallbacks \n y \r\n) le aplica; si en uso real
+    // requiere comportamiento distinto, agregar branch en SubmitSequenceFactory.
+    GROK_BUILD(
+            "Grok CLI",
+            "~/.grok/bin/grok",
+            "%USERPROFILE%\\.grok\\bin\\grok.exe",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GROK-ES.md",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-GROK-EN.md"
     );
 
     private final String nombreVisible;

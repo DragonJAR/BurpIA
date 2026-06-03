@@ -59,6 +59,7 @@ English version: [README.en.md](README.en.md)
 - Claude Code: [ES](AGENTE-CLAUDE-ES.md) | [EN](AGENT-CLAUDE-EN.md)
 - Gemini CLI: [ES](AGENTE-GEMINI-ES.md) | [EN](AGENT-GEMINI-EN.md)
 - OpenCode: [ES](AGENTE-OPENCODE-ES.md) | [EN](AGENT-OPENCODE-EN.md)
+- Grok: [ES](AGENTE-GROK-ES.md) | [EN](AGENT-GROK-EN.md)
 
 
 ---
@@ -145,6 +146,7 @@ Consulta el resumen de cambios en **Historial de versiones**.
 - **Custom** (Hasta 3 perfiles personalizados para cualquier API compatible con OpenAI).
 
 > **Nota:** DeepSeek se puede utilizar a través de Ollama o mediante un perfil Custom con la API compatible con OpenAI.
+> **Nota sobre Grok:** **xAI Grok** está soportado tanto como proveedor LLM (API compatible con OpenAI) como agente CLI autónomo — ver [AGENTE-GROK-ES.md](AGENTE-GROK-ES.md) para la configuración del CLI de Grok con Burp MCP.
 
 
 > [!TIP]

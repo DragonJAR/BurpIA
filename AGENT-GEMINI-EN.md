@@ -19,6 +19,8 @@ Operational guide to:
 
 ## 2. Install Gemini CLI
 
+For complete details and installation guidelines, visit the official repository: [Gemini CLI](https://github.com/google/gemini-cli).
+
 ### macOS / Linux
 
 ```bash

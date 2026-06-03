@@ -19,6 +19,8 @@ Guía operativa para:
 
 ## 2. Instalar Droid CLI
 
+Para obtener detalles completos y guías de instalación, visita el sitio web oficial: [Factory Droid](https://factory.ai/product/cli).
+
 ### macOS / Linux
 
 ```bash

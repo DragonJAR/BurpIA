@@ -1,9 +1,7 @@
 package com.burpia.model;
 
 import burp.api.montoya.http.message.HttpRequestResponse;
-import burp.api.montoya.http.message.requests.HttpRequest;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

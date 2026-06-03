@@ -5,11 +5,9 @@ import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
-import burp.api.montoya.scanner.audit.issues.AuditIssue;
 import burp.api.montoya.sitemap.SiteMap;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.model.Hallazgo;
-import com.burpia.util.AlmacenEvidenciaHttp;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,7 +15,6 @@ import org.mockito.MockedStatic;
 
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
