@@ -28,6 +28,54 @@ class I18nUITest {
     }
 
     @Test
+    @DisplayName("URL_EJEMPLO_POR_PROVEEDOR devuelve la URL hint correcta por provider")
+    void testUrlEjemploPorProveedor() {
+        assertEquals("http://localhost:11434",
+            I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR("Ollama"));
+        assertEquals("https://ollama.com",
+            I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR("Ollama Cloud"));
+        assertEquals("https://api.openai.com/v1",
+            I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR("OpenAI"));
+        assertEquals("https://api.deepseek.com",
+            I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR("DeepSeek"));
+        assertEquals("https://api.x.ai/v1",
+            I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR("xAI"));
+        assertEquals("http://127.0.0.1:1234/v1/chat/completions",
+            I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR("-- Custom 01 --"),
+            "Custom hint debe ser endpoint completo para guiar al usuario");
+        assertEquals("",
+            I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR(null),
+            "Provider null debe devolver string vacío");
+    }
+
+    @Test
+    @DisplayName("URL_API_POR_PROVEEDOR devuelve tooltip distinto por provider")
+    void testUrlApiTooltipPorProveedor() {
+        // Cada provider tiene un texto distinto: verifico que mencione su URL canónica.
+        assertTrue(I18nUI.Tooltips.Configuracion.URL_API_POR_PROVEEDOR("Ollama")
+            .contains("localhost:11434"), "Tooltip Ollama debe mencionar localhost:11434");
+        assertTrue(I18nUI.Tooltips.Configuracion.URL_API_POR_PROVEEDOR("DeepSeek")
+            .contains("api.deepseek.com"), "Tooltip DeepSeek debe mencionar api.deepseek.com");
+        assertTrue(I18nUI.Tooltips.Configuracion.URL_API_POR_PROVEEDOR("xAI")
+            .contains("api.x.ai/v1"), "Tooltip xAI debe mencionar api.x.ai/v1");
+        // Custom enfatiza el contrato verbatim.
+        assertTrue(I18nUI.Tooltips.Configuracion.URL_API_POR_PROVEEDOR("-- Custom 02 --")
+            .toLowerCase().contains("verbatim") ||
+            I18nUI.Tooltips.Configuracion.URL_API_POR_PROVEEDOR("-- Custom 02 --")
+            .toLowerCase().contains("tal cual"),
+            "Tooltip Custom debe describir el contrato verbatim");
+    }
+
+    @Test
+    @DisplayName("CLAVE_API_POR_PROVEEDOR explicita que Ollama local no requiere clave")
+    void testClaveApiTooltipOllamaLocal() {
+        String tooltip = I18nUI.Tooltips.Configuracion.CLAVE_API_POR_PROVEEDOR("Ollama");
+        assertTrue(tooltip.toLowerCase().contains("no requiere") ||
+                   tooltip.toLowerCase().contains("not require"),
+            "Tooltip de clave para Ollama local debe explicitar que no requiere clave");
+    }
+
+    @Test
     @DisplayName("Idioma inválido cae en español")
     void testIdiomaInvalido() {
         I18nUI.establecerIdioma("fr");

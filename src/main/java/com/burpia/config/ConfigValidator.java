@@ -204,7 +204,18 @@ public final class ConfigValidator {
      */
     public static ValidationResult validarUrlApi(String url, String proveedor) {
         if (esVacio(url)) {
-            return ValidationResult.valido(); // URL puede ser vacía para usar defaults
+            // Per-provider: si el proveedor requiere URL base, vacío es inválido.
+            // Si es desconocido o no requiere URL, dejamos pasar (default fallback).
+            if (proveedor != null && ProveedorAI.requiereUrlBase(proveedor)) {
+                return ValidationResult.invalido(
+                    I18nUI.tr(
+                        "La URL base es obligatoria para este proveedor.",
+                        "Base URL is required for this provider."
+                    ),
+                    "url"
+                );
+            }
+            return ValidationResult.valido();
         }
 
         String urlTrimmed = url.trim();

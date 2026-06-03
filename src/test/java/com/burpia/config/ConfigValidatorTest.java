@@ -92,6 +92,31 @@ class ConfigValidatorTest {
     }
 
     @Test
+    @DisplayName("URL vacía es rechazada para proveedor conocido (per-provider obligatoria)")
+    void testValidarUrlApiVaciaProveedorConocidoEsRechazada() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi("", "OpenAI");
+        assertFalse(resultado.esValido(),
+            "URL vacía debe ser inválida para OpenAI (provider que requiere URL base)");
+        assertEquals("url", resultado.obtenerCampo());
+    }
+
+    @Test
+    @DisplayName("URL vacía es aceptada cuando proveedor es null (legacy compat)")
+    void testValidarUrlApiVaciaProveedorNullEsValida() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi("", null);
+        assertTrue(resultado.esValido(),
+            "URL vacía con proveedor null debe seguir siendo válida (compat retro)");
+    }
+
+    @Test
+    @DisplayName("URL vacía es aceptada para proveedor desconocido (graceful default)")
+    void testValidarUrlApiVaciaProveedorDesconocidoEsValida() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi("", "ProveedorQueNoExiste");
+        assertTrue(resultado.esValido(),
+            "URL vacía con proveedor desconocido cae al default fallback");
+    }
+
+    @Test
     @DisplayName("Ollama Cloud rechaza URL HTTP (HTTPS obligatorio para cloud)")
     void testValidarUrlApiOllamaCloudRechazaHttp() {
         ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(

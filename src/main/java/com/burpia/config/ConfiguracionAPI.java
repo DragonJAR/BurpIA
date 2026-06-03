@@ -942,12 +942,21 @@ public class ConfiguracionAPI {
             errores.put("proveedorAI", validacionProveedor.obtenerMensajeError());
         }
 
-        // Delegar validación de API key a ConfigValidator
+        // Delegar validación de API key a ConfigValidator (consulta requiereClaveApi)
         String apiKey = obtenerApiKeyParaProveedor(proveedorAI);
         ConfigValidator.ValidationResult validacionApiKey =
                 ConfigValidator.validarApiKey(apiKey, proveedorAI);
         if (!validacionApiKey.esValido()) {
             errores.put("claveApi", validacionApiKey.obtenerMensajeError());
+        }
+
+        // Delegar validación de URL base a ConfigValidator (consulta requiereUrlBase
+        // per-provider y formato HTTP/HTTPS).
+        String urlBase = obtenerUrlBaseParaProveedor(proveedorAI);
+        ConfigValidator.ValidationResult validacionUrl =
+                ConfigValidator.validarUrlApi(urlBase, proveedorAI);
+        if (!validacionUrl.esValido()) {
+            errores.put("urlApi", validacionUrl.obtenerMensajeError());
         }
 
         // Delegar validación de modelo a ConfigValidator

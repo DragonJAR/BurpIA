@@ -289,6 +289,37 @@ public final class ProveedorAI {
     }
 
     /**
+     * Indica si el proveedor requiere API key para autenticarse.
+     * Consulta el flag {@code requiereClaveApi} del registro central.
+     *
+     * @param nombreProveedor nombre del proveedor (normalizado o no)
+     * @return {@code true} si requiere clave; {@code false} si no, o si es desconocido.
+     */
+    public static boolean requiereClaveApi(String nombreProveedor) {
+        String norm = normalizarProveedor(nombreProveedor);
+        if (norm.isEmpty()) {
+            return false;
+        }
+        ConfiguracionProveedor config = PROVEEDORES.get(norm);
+        return config != null && config.requiereClaveApi();
+    }
+
+    /**
+     * Indica si el proveedor requiere una URL base no-vacía para funcionar.
+     * Hoy es {@code true} para todos los proveedores soportados (cada uno
+     * necesita un endpoint para hablar). Se centraliza acá como abstracción
+     * per-provider por si en el futuro algún provider gana URL hardcodeada
+     * (ej. SDK con base inmutable) y debiera retornar {@code false}.
+     *
+     * @param nombreProveedor nombre del proveedor (normalizado o no)
+     * @return {@code true} si requiere URL no-vacía; {@code false} si es desconocido.
+     */
+    public static boolean requiereUrlBase(String nombreProveedor) {
+        String norm = normalizarProveedor(nombreProveedor);
+        return !norm.isEmpty() && PROVEEDORES.containsKey(norm);
+    }
+
+    /**
      * Constructor privado para evitar instanciación.
      * <p>
      * Esta es una clase de utilidad con solo métodos estáticos.

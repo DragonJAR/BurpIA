@@ -218,10 +218,42 @@ public class ConfigDialogController {
     }
 
     private void inicializarEventHandlersProvider() {
-        agregarListenerSiPresente(dialogo.obtenerComboProveedor(), e -> actualizarEstadoCargaModelosSegunProveedor());
+        agregarListenerSiPresente(dialogo.obtenerComboProveedor(), e -> {
+            actualizarEstadoCargaModelosSegunProveedor();
+            actualizarTooltipsYHintSegunProveedor();
+        });
         agregarListenerSiPresente(dialogo.obtenerComboModelo(), e -> manejarCambioModelo());
         agregarListenerSiPresente(dialogo.obtenerBtnRefrescarModelos(), e -> manejarRefrescarModelos());
         agregarListenerSiPresente(dialogo.obtenerBtnProbarConexion(), e -> manejarProbarConexion());
+        // Refresco inicial al cargar el diálogo: el provider ya está seleccionado
+        // por el modelo de configuración, así que los tooltips deben reflejarlo.
+        actualizarTooltipsYHintSegunProveedor();
+    }
+
+    /**
+     * Sincroniza los tooltips de los campos URL y API key con el proveedor
+     * seleccionado actualmente, y refresca el hint de URL de ejemplo en el
+     * label gris debajo del campo URL si éste está vacío.
+     */
+    private void actualizarTooltipsYHintSegunProveedor() {
+        JComboBox<String> comboProv = dialogo.obtenerComboProveedor();
+        if (comboProv == null) {
+            return;
+        }
+        String proveedor = (String) comboProv.getSelectedItem();
+        if (proveedor == null) {
+            return;
+        }
+        JTextField txtUrlField = dialogo.obtenerTxtUrl();
+        if (txtUrlField != null) {
+            txtUrlField.setToolTipText(I18nUI.Tooltips.Configuracion.URL_API_POR_PROVEEDOR(proveedor));
+        }
+        javax.swing.JPasswordField txtClaveField = dialogo.obtenerTxtClave();
+        if (txtClaveField != null) {
+            txtClaveField.setToolTipText(I18nUI.Tooltips.Configuracion.CLAVE_API_POR_PROVEEDOR(proveedor));
+        }
+        // Refrescar preview/hint label: si URL vacío → ejemplo; si no → endpoint computado.
+        actualizarPreviewEndpoint();
     }
 
     private void inicializarEventHandlersAgent() {
@@ -254,9 +286,15 @@ public class ConfigDialogController {
     }
 
     /**
-     * Recalcula el preview del endpoint final mostrando la URL real que se va
-     * a usar para la request HTTP. Construido vía {@code construirUrlApiProveedor}
-     * para que el usuario vea exactamente lo que va a pasar antes de guardar.
+     * Recalcula el label gris debajo del campo URL. Dos modos:
+     * <ol>
+     *   <li><b>URL vacío</b> → muestra un HINT con la URL de ejemplo del
+     *       proveedor seleccionado (ej. "Ejemplo: https://api.openai.com/v1").
+     *       Ayuda al usuario a saber qué shape de URL espera el proveedor.</li>
+     *   <li><b>URL con contenido</b> → muestra el endpoint final computado
+     *       vía {@code construirUrlApiProveedor} (ej. "→ ...&#47;chat/completions"),
+     *       para que confirme exactamente lo que se va a usar.</li>
+     * </ol>
      */
     private void actualizarPreviewEndpoint() {
         JLabel lblPreview = dialogo.obtenerLblPreviewEndpoint();
@@ -272,6 +310,14 @@ public class ConfigDialogController {
             }
             String proveedor = (String) comboProv.getSelectedItem();
             String urlBase = txtUrlField.getText();
+            if (urlBase == null || urlBase.trim().isEmpty()) {
+                // Modo hint: URL vacío → mostrar ejemplo per-provider.
+                String ejemplo = I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR(proveedor);
+                lblPreview.setText(ejemplo.isEmpty()
+                        ? " "
+                        : I18nUI.tr("Ejemplo: ", "Example: ") + ejemplo);
+                return;
+            }
             String modelo = obtenerModeloSeleccionado();
             String endpoint = com.burpia.config.ConfiguracionAPI.construirUrlApiProveedor(
                     proveedor, urlBase, modelo);

@@ -3120,6 +3120,141 @@ public final class I18nUI {
                         "Provider authentication token/key.");
             }
 
+            /**
+             * Tooltip específico del campo URL según el proveedor seleccionado.
+             * Si el proveedor es desconocido, devuelve el tooltip genérico ({@link #URL_API()}).
+             */
+            public static String URL_API_POR_PROVEEDOR(String proveedor) {
+                if (proveedor == null) {
+                    return URL_API();
+                }
+                switch (proveedor) {
+                    case "Ollama":
+                        return I18nUI.tr(
+                            "Ollama local. URL del daemon, típicamente http://localhost:11434. "
+                            + "El plugin agrega /api/chat. No requiere API key.",
+                            "Ollama local. Daemon URL, typically http://localhost:11434. "
+                            + "The plugin appends /api/chat. No API key required.");
+                    case "Ollama Cloud":
+                        return I18nUI.tr(
+                            "Ollama Cloud. URL base del servicio, típicamente https://ollama.com. "
+                            + "El plugin agrega /api/chat. Requiere API key con Bearer auth.",
+                            "Ollama Cloud. Service base URL, typically https://ollama.com. "
+                            + "The plugin appends /api/chat. Requires API key with Bearer auth.");
+                    case "OpenAI":
+                        return I18nUI.tr(
+                            "OpenAI. URL base de la API, típicamente https://api.openai.com/v1. "
+                            + "El plugin agrega /responses. Requiere API key con prefijo sk-.",
+                            "OpenAI. API base URL, typically https://api.openai.com/v1. "
+                            + "The plugin appends /responses. Requires API key with sk- prefix.");
+                    case "Claude":
+                        return I18nUI.tr(
+                            "Anthropic Claude. URL base, típicamente https://api.anthropic.com/v1. "
+                            + "El plugin agrega /messages. Requiere API key con prefijo sk-ant-.",
+                            "Anthropic Claude. Base URL, typically https://api.anthropic.com/v1. "
+                            + "The plugin appends /messages. Requires API key with sk-ant- prefix.");
+                    case "Gemini":
+                        return I18nUI.tr(
+                            "Google Gemini. URL base, típicamente https://generativelanguage.googleapis.com/v1beta. "
+                            + "Requiere API key con prefijo AIza.",
+                            "Google Gemini. Base URL, typically https://generativelanguage.googleapis.com/v1beta. "
+                            + "Requires API key with AIza prefix.");
+                    case "Z.ai":
+                        return I18nUI.tr(
+                            "Z.ai (GLM). URL base, típicamente https://api.z.ai/api/paas/v4. "
+                            + "El plugin agrega /chat/completions. Requiere API key.",
+                            "Z.ai (GLM). Base URL, typically https://api.z.ai/api/paas/v4. "
+                            + "The plugin appends /chat/completions. Requires API key.");
+                    case "minimax":
+                        return I18nUI.tr(
+                            "MiniMax. URL base, típicamente https://api.minimax.io/v1. "
+                            + "El plugin agrega /chat/completions. Requiere API key.",
+                            "MiniMax. Base URL, typically https://api.minimax.io/v1. "
+                            + "The plugin appends /chat/completions. Requires API key.");
+                    case "Moonshot (Kimi)":
+                        return I18nUI.tr(
+                            "Moonshot (Kimi). URL base, típicamente https://api.moonshot.ai/v1. "
+                            + "El plugin agrega /chat/completions. Requiere API key.",
+                            "Moonshot (Kimi). Base URL, typically https://api.moonshot.ai/v1. "
+                            + "The plugin appends /chat/completions. Requires API key.");
+                    case "DeepSeek":
+                        return I18nUI.tr(
+                            "DeepSeek. URL base, típicamente https://api.deepseek.com. "
+                            + "El plugin agrega /chat/completions. Requiere API key.",
+                            "DeepSeek. Base URL, typically https://api.deepseek.com. "
+                            + "The plugin appends /chat/completions. Requires API key.");
+                    case "xAI":
+                        return I18nUI.tr(
+                            "xAI Grok. URL base, típicamente https://api.x.ai/v1. "
+                            + "El plugin agrega /chat/completions. Requiere API key.",
+                            "xAI Grok. Base URL, typically https://api.x.ai/v1. "
+                            + "The plugin appends /chat/completions. Requires API key.");
+                    default:
+                        // Custom 01/02/03 y desconocidos: contrato verbatim.
+                        if (com.burpia.config.ProveedorAI.esProveedorCustom(proveedor)) {
+                            return I18nUI.tr(
+                                "Custom OpenAI-compatible. La URL se usa tal cual la escribís, sin modificaciones. "
+                                + "Debés ingresar el endpoint COMPLETO. Ejemplo LM Studio: "
+                                + "http://127.0.0.1:1234/v1/chat/completions. API key opcional.",
+                                "Custom OpenAI-compatible. URL is used verbatim, with no modifications. "
+                                + "Enter the FULL endpoint. LM Studio example: "
+                                + "http://127.0.0.1:1234/v1/chat/completions. API key optional.");
+                        }
+                        return URL_API();
+                }
+            }
+
+            /**
+             * URL de ejemplo (hint) que se muestra como placeholder en el label
+             * gris debajo del campo URL cuando está vacío. Una vez el usuario
+             * escribe algo, el label muestra el endpoint computado en vivo.
+             */
+            public static String URL_EJEMPLO_POR_PROVEEDOR(String proveedor) {
+                if (proveedor == null) {
+                    return "";
+                }
+                switch (proveedor) {
+                    case "Ollama":          return "http://localhost:11434";
+                    case "Ollama Cloud":    return "https://ollama.com";
+                    case "OpenAI":          return "https://api.openai.com/v1";
+                    case "Claude":          return "https://api.anthropic.com/v1";
+                    case "Gemini":          return "https://generativelanguage.googleapis.com/v1beta";
+                    case "Z.ai":            return "https://api.z.ai/api/paas/v4";
+                    case "minimax":         return "https://api.minimax.io/v1";
+                    case "Moonshot (Kimi)": return "https://api.moonshot.ai/v1";
+                    case "DeepSeek":        return "https://api.deepseek.com";
+                    case "xAI":             return "https://api.x.ai/v1";
+                    default:
+                        if (com.burpia.config.ProveedorAI.esProveedorCustom(proveedor)) {
+                            return "http://127.0.0.1:1234/v1/chat/completions";
+                        }
+                        return "";
+                }
+            }
+
+            /**
+             * Tooltip específico del campo API key según el proveedor.
+             * Para Ollama local — que NO requiere clave — explicita ese contrato.
+             */
+            public static String CLAVE_API_POR_PROVEEDOR(String proveedor) {
+                if (proveedor == null) {
+                    return CLAVE_API();
+                }
+                if ("Ollama".equals(proveedor)) {
+                    return I18nUI.tr(
+                        "Ollama local NO requiere API key — podés dejar este campo vacío.",
+                        "Ollama local does NOT require an API key — you can leave this field empty.");
+                }
+                if (com.burpia.config.ProveedorAI.esProveedorCustom(proveedor)) {
+                    return I18nUI.tr(
+                        "API key opcional para Custom OpenAI-compatible. Se envía como "
+                        + "Authorization: Bearer si se completa.",
+                        "Optional API key for Custom OpenAI-compatible. Sent as "
+                        + "Authorization: Bearer if provided.");
+                }
+                return CLAVE_API();
+            }
+
             public static String MODELO() {
                 return I18nUI.tr("Modelo específico utilizado para el análisis.",
                         "Specific model used for analysis.");
