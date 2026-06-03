@@ -87,8 +87,9 @@ public final class UIStateManager {
             guardarEstadoUI(estadoGuardado);
             
             if (config.esDetallado()) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Estado de filtros guardado: búsqueda='" + textoBusqueda +
-                    "', severidad='" + severidadSeleccionada + "'"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf(
+                    "Estado de filtros guardado: búsqueda='%s', severidad='%s'",
+                    textoBusqueda, severidadSeleccionada));
             }
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al guardar estado de filtros"), e);
@@ -129,8 +130,9 @@ public final class UIStateManager {
             }
             
             if (estadoRestaurado && config.esDetallado()) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Estado de filtros restaurado: búsqueda='" + textoBusqueda +
-                    "', severidad='" + severidadSeleccionada + "'"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf(
+                    "Estado de filtros restaurado: búsqueda='%s', severidad='%s'",
+                    textoBusqueda, severidadSeleccionada));
             }
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al restaurar estado de filtros"), e);
@@ -154,7 +156,8 @@ public final class UIStateManager {
             guardarEstadoUI(estadoGuardado);
             
             if (config.esDetallado()) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Última pestaña guardada: " + identificadorPestania));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf(
+                    "Última pestaña guardada: %s", identificadorPestania));
             }
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al guardar última pestaña seleccionada"), e);
@@ -186,7 +189,8 @@ public final class UIStateManager {
                             || identificadorPestania.equals(tituloPestania)) {
                         tabbedPane.setSelectedIndex(i);
                         if (config.esDetallado()) {
-                            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Pestaña restaurada: " + identificadorPestania + " (índice: " + i + ")"));
+                            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf(
+                                "Pestaña restaurada: %s (índice: %d)", identificadorPestania, i));
                         }
                         return;
                     }
@@ -232,11 +236,13 @@ public final class UIStateManager {
             guardarEstadoUI(estadoGuardado);
             
             if (config.esDetallado()) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Anchos de columna guardados para " + identificadorTabla +
-                    ": " + anchos.toString()));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf(
+                    "Anchos de columna guardados para %s: %s",
+                    identificadorTabla, anchos.toString()));
             }
         } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al guardar anchos de columna para " + identificadorTabla), e);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.trf(
+                "Error al guardar anchos de columna para %s", identificadorTabla), e);
         }
     }
 
@@ -265,19 +271,22 @@ public final class UIStateManager {
                         try {
                             anchosParseados[i] = Integer.parseInt(anchos[i]);
                         } catch (NumberFormatException e) {
-                            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Ancho inválido para columna " + i +
-                                " en tabla " + identificadorTabla + ": " + anchos[i]));
+                            gestorLogging.error(ORIGEN_LOG, I18nLogs.trf(
+                                "Ancho inválido para columna %d en tabla %s: %s",
+                                i, identificadorTabla, anchos[i]));
                         }
                     }
                     UIUtils.restaurarAnchosColumnasTabla(tabla, anchosParseados);
-                    
+
                     if (config.esDetallado()) {
-                        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Anchos de columna restaurados para " + identificadorTabla));
+                        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf(
+                            "Anchos de columna restaurados para %s", identificadorTabla));
                     }
                 }
             }
         } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error al restaurar anchos de columna para " + identificadorTabla), e);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.trf(
+                "Error al restaurar anchos de columna para %s", identificadorTabla), e);
         }
     }
 

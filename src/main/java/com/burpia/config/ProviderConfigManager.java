@@ -311,7 +311,7 @@ public final class ProviderConfigManager {
                 comboProveedor.setSelectedItem(nuevoProveedor);
             }
 
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor cambiado a: " + nuevoProveedor));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Proveedor cambiado a: %s", nuevoProveedor));
 
             // Sincronizar proveedor principal con lista multi-proveedor
             sincronizarProveedorPrincipalConMultiProveedor();
@@ -331,7 +331,7 @@ public final class ProviderConfigManager {
     public EstadoProveedorUI extraerEstadoActual() {
         ValidationResultEstadoProveedor resultado = validarEstadoActual(false, false);
         if (!resultado.esValido()) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Estado actual inválido: " + resultado.obtenerMensajeError()));
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("Estado actual inválido: %s", resultado.obtenerMensajeError()));
             return null;
         }
         return resultado.obtenerEstado();
@@ -578,7 +578,7 @@ public final class ProviderConfigManager {
             EstadoProveedorUI borrador = estadoProveedorTemporal.get(proveedor);
             ProveedorAI.ConfiguracionProveedor configProveedor = ProveedorAI.obtenerProveedor(proveedor);
             if (configProveedor == null) {
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se encontró configuración para proveedor: " + proveedor));
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("No se encontró configuración para proveedor: %s", proveedor));
                 return;
             }
 
@@ -653,7 +653,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor agregado a lista: " + proveedor));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Proveedor agregado a lista: %s", proveedor));
     }
 
     private void quitarProveedorSeleccionado() {
@@ -667,7 +667,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor quitado de lista: " + proveedor));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Proveedor quitado de lista: %s", proveedor));
     }
 
     private void subirProveedorSeleccionado() {
@@ -684,7 +684,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor subido en lista: " + proveedor));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Proveedor subido en lista: %s", proveedor));
     }
 
     private void bajarProveedorSeleccionado() {
@@ -701,7 +701,7 @@ public final class ProviderConfigManager {
 
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Proveedor bajado en lista: " + proveedor));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Proveedor bajado en lista: %s", proveedor));
     }
 
     private void sincronizarProveedorPrincipalConMultiProveedor() {

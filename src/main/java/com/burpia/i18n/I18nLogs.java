@@ -1439,6 +1439,27 @@ public final class I18nLogs {
     }
 
     /**
+     * Traduce un formato y aplica {@link String#format} con los argumentos
+     * provistos. Reemplaza la antigua práctica de concatenar variables dentro
+     * del argumento de {@link #tr(String)} — patrón que rompía la traducción
+     * a inglés porque el diccionario word-boundary no puede matchear strings
+     * compuestos en runtime.
+     * <p>
+     * El diccionario se aplica sobre el {@code formato} (con placeholders
+     * {@code %s} / {@code %d} intactos) y luego se inyectan los args. Los
+     * valores no traducibles (paths, IDs, URLs, números) viajan como args
+     * y NO pasan por el traductor.
+     * </p>
+     *
+     * @param formato la plantilla con placeholders estilo {@link String#format}
+     * @param args los valores a insertar en los placeholders
+     * @return el mensaje traducido con los valores insertados
+     */
+    public static String trf(String formato, Object... args) {
+        return String.format(tr(formato), args);
+    }
+
+    /**
      * Aplica una serie de reemplazos a un texto.
      * <p>
      * Para palabras simples, usa patrones regex para coincidir palabras completas.

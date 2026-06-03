@@ -725,7 +725,7 @@ public final class ParserRespuestasAI {
                             }
                         } catch (Exception e) {
                             GESTOR_LOGGING.warning("ParserRespuestasAI",
-                                I18nLogs.tr("JSON para clave común es inválido: " + clave) + ": " + e.getMessage());
+                                I18nLogs.trf("JSON para clave común es inválido: %s", clave) + ": " + e.getMessage());
                         }
                     }
                 }

@@ -1643,8 +1643,8 @@ public final class I18nUI {
         }
 
         public static String TXT_MULTI_PROVEEDOR_HABILITADO(String cantidad) {
-            return tr("Multi-consulta habilitada - usando " + cantidad + " proveedores",
-                    "Multi-query enabled - using " + cantidad + " providers");
+            return trf("Multi-consulta habilitada - usando %s proveedores",
+                    "Multi-query enabled - using %s providers", cantidad);
         }
 
         public static String ERROR_MAX_PROVEEDORES() {
@@ -1668,8 +1668,8 @@ public final class I18nUI {
         }
 
         public static String TXT_DESCUBIERTO_CON(String proveedor, String modelo) {
-            return tr("\n\n[descubierto con " + proveedor + " - " + modelo + "]",
-                    "\n\n[discovered with " + proveedor + " - " + modelo + "]");
+            return trf("\n\n[descubierto con %s - %s]",
+                    "\n\n[discovered with %s - %s]", proveedor, modelo);
         }
 
         public static String BOTON_HABILITAR() {
@@ -1798,8 +1798,8 @@ public final class I18nUI {
         }
 
         public static String ERROR_API_SIN_MODELOS(String proveedorSeleccionado) {
-            return tr("La API no devolvió modelos para " + proveedorSeleccionado,
-                    "The API returned no models for " + proveedorSeleccionado);
+            return trf("La API no devolvió modelos para %s",
+                    "The API returned no models for %s", proveedorSeleccionado);
         }
 
         public static String ERROR_OBTENER_GEMINI() {

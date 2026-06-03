@@ -136,8 +136,8 @@ public class AnalizadorAI implements Runnable {
                 this.config.obtenerProveedorAI(),
                 this.config.obtenerModelo());
 
-        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + Thread.currentThread().getName() + "] Timeout configurado para el cliente HTTP: "
-                + timeoutEfectivo + "s"));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Timeout configurado para el cliente HTTP: %ds",
+                Thread.currentThread().getName(), timeoutEfectivo));
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
@@ -184,8 +184,8 @@ public class AnalizadorAI implements Runnable {
             return;
         }
 
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] AnalizadorAI iniciado para URL: " + solicitud.obtenerUrl()));
-        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud()));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("[%s] AnalizadorAI iniciado para URL: %s", nombreHilo, solicitud.obtenerUrl()));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Hash de solicitud: %s", nombreHilo, solicitud.obtenerHashSolicitud()));
 
         try {
             controlCancelacionPausa.verificarCancelacion();
@@ -200,7 +200,7 @@ public class AnalizadorAI implements Runnable {
             }
 
             if (controlBackpressure != null && controlBackpressure.estaEnCooldown()) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Backpressure activo, esperando cooldown..."));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("[%s] Backpressure activo, esperando cooldown...", nombreHilo));
                 while (controlBackpressure.estaEnCooldown()) {
                     if (controlCancelacionPausa.esCancelada()) {
                         callback.alCanceladoAnalisis();
@@ -208,44 +208,45 @@ public class AnalizadorAI implements Runnable {
                     }
                     Thread.sleep(500);
                 }
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Backpressure expirado, continuando"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("[%s] Backpressure expirado, continuando", nombreHilo));
             }
 
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Adquiriendo permiso del limitador (disponibles: " +
-                    limitador.permisosDisponibles() + ")"));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Adquiriendo permiso del limitador (disponibles: %d)",
+                    nombreHilo, limitador.permisosDisponibles()));
             limitador.adquirir();
             permisoAdquirido = true;
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Permiso de limitador adquirido"));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Permiso de limitador adquirido", nombreHilo));
 
             int retrasoSegundos = config.obtenerRetrasoSegundos();
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Durmiendo por " + retrasoSegundos + " segundos antes de llamar a la API"));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Durmiendo por %d segundos antes de llamar a la API", nombreHilo, retrasoSegundos));
             controlCancelacionPausa.esperarConControl(retrasoSegundos * 1000L);
 
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analizando: " + solicitud.obtenerUrl()));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Analizando: %s", solicitud.obtenerUrl()));
 
             boolean multiHabilitado = config.esMultiProveedorHabilitado();
             java.util.List<String> proveedoresConfig = config.obtenerProveedoresMultiConsulta();
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("DIAGNOSTICO: multiHabilitado=" + multiHabilitado + ", proveedoresConfig=" +
-                    (proveedoresConfig != null ? proveedoresConfig.size() + " elementos" : "null")));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("DIAGNOSTICO: multiHabilitado=%s, proveedoresConfig=%s",
+                    multiHabilitado,
+                    proveedoresConfig != null ? proveedoresConfig.size() + " elementos" : "null"));
 
             ResultadoAnalisisMultiple resultadoMultiple;
             if (multiHabilitado && proveedoresConfig != null && proveedoresConfig.size() > 1) {
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("DIAGNOSTICO: Ejecutando multi-proveedor con " + proveedoresConfig.size() + " proveedores"));
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("DIAGNOSTICO: Ejecutando multi-proveedor con %d proveedores", proveedoresConfig.size()));
                 resultadoMultiple = gestorMulti.ejecutarAnalisisMultiProveedor();
             } else {
                 if (multiHabilitado) {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Multi-proveedor habilitado pero solo " +
-                            (proveedoresConfig != null ? proveedoresConfig.size() : 0) +
-                            " proveedor(es) configurado(s). Usando proveedor único: " + config.obtenerProveedorAI()));
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("PROVEEDOR: Multi-proveedor habilitado pero solo %d proveedor(es) configurado(s). Usando proveedor único: %s",
+                            proveedoresConfig != null ? proveedoresConfig.size() : 0,
+                            config.obtenerProveedorAI()));
                 } else {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Usando proveedor único: " + config.obtenerProveedorAI()));
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("PROVEEDOR: Usando proveedor único: %s", config.obtenerProveedorAI()));
                 }
                 resultadoMultiple = orquestador.ejecutarAnalisisCompleto();
             }
 
             long duracion = System.currentTimeMillis() - tiempoInicio;
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analisis completado: " + solicitud.obtenerUrl() + " (tomo " + duracion + "ms)"));
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Severidad maxima: " + resultadoMultiple.obtenerSeveridadMaxima()));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Analisis completado: %s (tomo %dms)", solicitud.obtenerUrl(), duracion));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Severidad maxima: %s", nombreHilo, resultadoMultiple.obtenerSeveridadMaxima()));
 
             callback.alCompletarAnalisis(resultadoMultiple);
 
@@ -257,15 +258,15 @@ public class AnalizadorAI implements Runnable {
                 : I18nUI.General.ERROR_INESPERADO_TIPO(e.getClass().getSimpleName());
 
             if (controlCancelacionPausa.esPausada()) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Analisis pausado y liberando hilo (" + duracion + "ms)"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("[%s] Analisis pausado y liberando hilo (%dms)", nombreHilo, duracion));
                 return;
             }
 
             if (controlCancelacionPausa.esCancelada()) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Analisis cancelado por usuario (" + duracion + "ms)"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("[%s] Analisis cancelado por usuario (%dms)", nombreHilo, duracion));
                 callback.alCanceladoAnalisis();
             } else {
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Analisis interrumpido despues de " + duracion + "ms: " + causa));
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("[%s] Analisis interrumpido despues de %dms: %s", nombreHilo, duracion, causa));
                 callback.alErrorAnalisis(mensajeAnalisisInterrumpido(causa));
             }
         } catch (Exception e) {
@@ -274,13 +275,13 @@ public class AnalizadorAI implements Runnable {
                 ? e.getMessage()
                 : I18nUI.Tareas.MSG_ERROR_DESCONOCIDO();
 
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Analisis fallido despues de " + duracion + "ms: " + falloMsg));
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("[%s] Analisis fallido despues de %dms: %s", nombreHilo, duracion, falloMsg));
             callback.alErrorAnalisis(falloMsg);
         } finally {
             if (permisoAdquirido) {
                 limitador.liberar();
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Permiso de limitador liberado (disponibles: " +
-                        limitador.permisosDisponibles() + ")"));
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Permiso de limitador liberado (disponibles: %d)",
+                        nombreHilo, limitador.permisosDisponibles()));
             }
         }
     }

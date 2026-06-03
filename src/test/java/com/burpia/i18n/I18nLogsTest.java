@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("I18nLogs Tests")
@@ -165,6 +166,54 @@ class I18nLogsTest {
             I18nUI.establecerIdioma(IdiomaUI.EN);
             String mensaje = "Configuracion guardada exitosamente";
             assertEquals(mensaje, I18nLogs.trTecnico(mensaje), "assertEquals failed at I18nLogsTest.java:166");
+        }
+    }
+
+    @Nested
+    @DisplayName("trf() con placeholders")
+    class Trf {
+
+        @Test
+        @DisplayName("aplica formato sin traducir en idioma español")
+        void aplicaFormatoEnEspanol() {
+            I18nUI.establecerIdioma(IdiomaUI.ES);
+            // El formato es el mismo en ES → solo se reemplazan los placeholders.
+            String resultado = I18nLogs.trf("Intento %d de %d para %s", 2, 5, "/api/v1");
+            assertEquals("Intento 2 de 5 para /api/v1", resultado);
+        }
+
+        @Test
+        @DisplayName("traduce formato a inglés ANTES de insertar args")
+        void traduceFormatoYLuegoInyectaArgs() {
+            // Diccionario contiene "Intento #" -> "Attempt #" como entrada.
+            I18nUI.establecerIdioma(IdiomaUI.EN);
+            String resultado = I18nLogs.trf("Intento #%d", 5);
+            // Verifica: el prefijo "Intento" se tradujo a "Attempt" ANTES
+            // del format, y luego se inyectó el arg.
+            assertTrue(resultado.contains("Attempt"),
+                "El formato debió traducirse al inglés (Intento → Attempt) antes de String.format");
+            assertTrue(resultado.contains("5"), "Arg 5 debe estar inyectado");
+            assertFalse(resultado.contains("Intento"),
+                "La palabra 'Intento' no debería quedar en el output traducido");
+        }
+
+        @Test
+        @DisplayName("preserva valores técnicos pasados como args (no se traducen)")
+        void preservaArgsTecnicos() {
+            I18nUI.establecerIdioma(IdiomaUI.EN);
+            // El path NO debe pasar por el traductor porque viaja como arg.
+            String path = "/home/user/.burpia/config.json";
+            String resultado = I18nLogs.trf("Archivo: %s", path);
+            assertTrue(resultado.contains(path),
+                "El path no se debe alterar — viaja como arg, no como parte del formato");
+        }
+
+        @Test
+        @DisplayName("acepta sin args (degrada a tr puro)")
+        void sinArgs() {
+            I18nUI.establecerIdioma(IdiomaUI.ES);
+            String resultado = I18nLogs.trf("Mensaje fijo sin placeholders");
+            assertEquals("Mensaje fijo sin placeholders", resultado);
         }
     }
 

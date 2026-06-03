@@ -60,14 +60,14 @@ public class AnalizadorHTTP {
         IOException ultimaExcepcion = null;
         long backoffActualMs = PoliticaReintentos.BACKOFF_INICIAL_MS;
 
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Sistema de retry: hasta " + PoliticaReintentos.MAX_INTENTOS_RETRY +
-                          " intentos con backoff exponencial"));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Sistema de retry: hasta %d intentos con backoff exponencial",
+                          PoliticaReintentos.MAX_INTENTOS_RETRY));
 
         for (int intento = 1; intento <= PoliticaReintentos.MAX_INTENTOS_RETRY; intento++) {
             control.verificarCancelacion();
             control.esperarSiPausada();
             
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Intento #" + intento + " de " + PoliticaReintentos.MAX_INTENTOS_RETRY));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Intento #%d de %d", intento, PoliticaReintentos.MAX_INTENTOS_RETRY));
             
             try {
                 return llamarAPISingle(prompt, intento == 1);
@@ -96,8 +96,8 @@ public class AnalizadorHTTP {
                         backoffActualMs,
                         intento);
                 long esperaSegundos = Math.max(1L, (esperaMs + 999L) / 1000L);
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando " + esperaSegundos +
-                                 " segundos antes del próximo reintento"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Esperando %d segundos antes del próximo reintento",
+                                 esperaSegundos));
                 control.esperarConControl(esperaMs);
                 backoffActualMs = Math.min(backoffActualMs * 2L, PoliticaReintentos.BACKOFF_MAXIMO_MS);
             } catch (IOException e) {
@@ -111,15 +111,15 @@ public class AnalizadorHTTP {
                 }
                 long esperaMs = PoliticaReintentos.calcularEsperaMs(-1, null, backoffActualMs, intento);
                 long esperaSegundos = Math.max(1L, (esperaMs + 999L) / 1000L);
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Esperando " + esperaSegundos +
-                                 " segundos antes del próximo reintento"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Esperando %d segundos antes del próximo reintento",
+                                 esperaSegundos));
                 control.esperarConControl(esperaMs);
                 backoffActualMs = Math.min(backoffActualMs * 2L, PoliticaReintentos.BACKOFF_MAXIMO_MS);
             }
         }
 
-        gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Todos los reintentos fallaron después de " +
-                           PoliticaReintentos.MAX_INTENTOS_RETRY + " intentos"));
+        gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("Todos los reintentos fallaron después de %d intentos",
+                           PoliticaReintentos.MAX_INTENTOS_RETRY));
         gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("SUGERENCIA: Considera cambiar de proveedor de API."));
         
         if (ultimaExcepcion == null) {
@@ -127,7 +127,7 @@ public class AnalizadorHTTP {
         }
         
         gestorLogging.error(ORIGEN_LOG,
-                I18nLogs.tr("Último error: " + ultimaExcepcion.getClass().getSimpleName()),
+                I18nLogs.trf("Último error: %s", ultimaExcepcion.getClass().getSimpleName()),
                 ultimaExcepcion);
 
         throw ultimaExcepcion;
@@ -144,8 +144,8 @@ public class AnalizadorHTTP {
                 .construirSolicitud(config, prompt, clienteHttp);
         Request solicitudHttp = preparada.request;
         
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Llamando a API: " + preparada.endpoint +
-                          " con modelo: " + preparada.modeloUsado));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Llamando a API: %s con modelo: %s",
+                          preparada.endpoint, preparada.modeloUsado));
         
         if (Normalizador.noEsVacio(preparada.advertencia)) {
             gestorLogging.info(ORIGEN_LOG, preparada.advertencia);
@@ -162,8 +162,8 @@ public class AnalizadorHTTP {
         try {
             try (Response respuesta = call.execute()) {
                 int codigoRespuesta = respuesta.code();
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Código de respuesta de API: " + codigoRespuesta));
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Encabezados de respuesta de API: " + respuesta.headers()));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Código de respuesta de API: %d", codigoRespuesta));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Encabezados de respuesta de API: %s", respuesta.headers()));
 
                 if (!respuesta.isSuccessful()) {
                     String cuerpoError = "";
@@ -177,8 +177,9 @@ public class AnalizadorHTTP {
                         }
                     }
                     String retryAfterHeader = respuesta.header("Retry-After");
-                    String mensajeError = I18nLogs.tr("Error de API: " + codigoRespuesta + " - " +
-                            (Normalizador.noEsVacio(cuerpoError) ? cuerpoError : I18nUI.Conexion.DETALLE_SIN_CUERPO()));
+                    String mensajeError = I18nLogs.trf("Error de API: %d - %s",
+                            codigoRespuesta,
+                            Normalizador.noEsVacio(cuerpoError) ? cuerpoError : I18nUI.Conexion.DETALLE_SIN_CUERPO());
                     
                     // Detectar error de contexto excedido
                     String proveedor = config.obtenerProveedorAI();
@@ -206,8 +207,8 @@ public class AnalizadorHTTP {
                     cuerpoRespuesta = "";
                 }
                 
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Longitud de respuesta de API: " +
-                                  cuerpoRespuesta.length() + " caracteres"));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Longitud de respuesta de API: %d caracteres",
+                                  cuerpoRespuesta.length()));
                 
                 return cuerpoRespuesta;
             }
@@ -315,14 +316,14 @@ public class AnalizadorHTTP {
 
     private void registrarFalloIntento(int intento, IOException error) {
         String falloMsg = PoliticaReintentos.obtenerMensajeErrorAmigable(error);
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Intento #" + intento + " falló: " +
-                error.getClass().getSimpleName() + " - " + falloMsg));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Intento #%d falló: %s - %s",
+                intento, error.getClass().getSimpleName(), falloMsg));
         
         if (error instanceof ApiHttpException) {
             ApiHttpException apiError = (ApiHttpException) error;
             String cuerpoError = apiError.obtenerCuerpoError();
             if (Normalizador.noEsVacio(cuerpoError)) {
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Cuerpo de respuesta de error de API: " + cuerpoError));
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("Cuerpo de respuesta de error de API: %s", cuerpoError));
             }
         }
     }
