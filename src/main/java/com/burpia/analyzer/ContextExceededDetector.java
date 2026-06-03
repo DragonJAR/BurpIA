@@ -103,6 +103,10 @@ public class ContextExceededDetector {
             Map.entry("Ollama", PATRONES_OLLAMA),
             Map.entry("Ollama Cloud", PATRONES_OLLAMA),
 
+            // DeepSeek y xAI son OpenAI-compatibles: reusan patrones de Custom.
+            Map.entry("DeepSeek", PATRONES_CUSTOM),
+            Map.entry("xAI", PATRONES_CUSTOM),
+
             // Custom providers (usan patrones comunes - DRY)
             Map.entry("Custom 01", PATRONES_CUSTOM),
             Map.entry("Custom 02", PATRONES_CUSTOM),

@@ -728,6 +728,8 @@ public class ConfiguracionAPI {
             case "Moonshot (Kimi)":
             case "Z.ai":
             case "minimax":
+            case "DeepSeek":
+            case "xAI":
                 return baseNormalizada + "/chat/completions";
             default:
                 // PROVEEDOR_CUSTOM_01/02/03: URL verbatim, sin manipulación.

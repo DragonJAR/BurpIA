@@ -41,6 +41,28 @@ class ProveedorAITest {
         }
 
         @Test
+        @DisplayName("DeepSeek registrado con default URL api.deepseek.com y requiere API key")
+        void deepSeekRegistrado() {
+            assertTrue(ProveedorAI.existeProveedor("DeepSeek"), "DeepSeek deberia existir");
+            ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor("DeepSeek");
+            assertNotNull(config);
+            assertTrue(config.requiereClaveApi(), "DeepSeek DEBE requerir API key");
+            assertEquals("https://api.deepseek.com", config.obtenerUrlApi(),
+                "Default URL DeepSeek debe ser https://api.deepseek.com (OpenAI-compat sin /v1)");
+        }
+
+        @Test
+        @DisplayName("xAI registrado con default URL api.x.ai/v1 y requiere API key")
+        void xAIRegistrado() {
+            assertTrue(ProveedorAI.existeProveedor("xAI"), "xAI deberia existir");
+            ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor("xAI");
+            assertNotNull(config);
+            assertTrue(config.requiereClaveApi(), "xAI DEBE requerir API key");
+            assertEquals("https://api.x.ai/v1", config.obtenerUrlApi(),
+                "Default URL xAI debe ser https://api.x.ai/v1");
+        }
+
+        @Test
         @DisplayName("Custom 01/02/03 son los ultimos proveedores en orden")
         void customEsUltimo() {
             List<String> nombres = ProveedorAI.obtenerNombresProveedores();

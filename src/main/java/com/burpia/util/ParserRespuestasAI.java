@@ -105,6 +105,8 @@ public final class ParserRespuestasAI {
             } else if ("OpenAI".equals(proveedorNormalizado)
                     || "Z.ai".equals(proveedorNormalizado)
                     || "minimax".equals(proveedorNormalizado)
+                    || "DeepSeek".equals(proveedorNormalizado)
+                    || "xAI".equals(proveedorNormalizado)
                     || ProveedorAI.esProveedorCustom(proveedorNormalizado)) {
                 contenido = extraerContenidoOpenAI(raiz);
             } else if ("Claude".equals(proveedorNormalizado)) {

@@ -239,6 +239,33 @@ public final class ProveedorAI {
                 true,
                 4096));
 
+        // DeepSeek — OpenAI-compatible. Base URL canónica: https://api.deepseek.com
+        // Endpoint /chat/completions. Bearer auth.
+        PROVEEDORES.put("DeepSeek", new ConfiguracionProveedor(
+                "https://api.deepseek.com",
+                "deepseek-v4-flash",
+                Arrays.asList(
+                        "deepseek-v4-flash",
+                        "deepseek-v4-pro",
+                        "deepseek-chat",
+                        "deepseek-reasoner"),
+                true,
+                4096));
+
+        // xAI Grok — OpenAI-compatible. Base URL canónica: https://api.x.ai/v1
+        // Endpoint /chat/completions. Bearer auth.
+        PROVEEDORES.put("xAI", new ConfiguracionProveedor(
+                "https://api.x.ai/v1",
+                "grok-4.3",
+                Arrays.asList(
+                        "grok-4.3",
+                        "grok-4",
+                        "grok-3",
+                        "grok-2",
+                        "grok-2-vision"),
+                true,
+                4096));
+
         PROVEEDORES.put(PROVEEDOR_CUSTOM_01, new ConfiguracionProveedor(
                 URL_CUSTOM_ES,
                 "",

@@ -140,6 +140,8 @@ Consulta el resumen de cambios en **Historial de versiones**.
 - **Gemini** (Google: 1.5 Pro/Flash con soporte nativo).
 - **Moonshot (Kimi)** (Modelos k2.5 y anteriores).
 - **Z.ai** / **Minimax**.
+- **DeepSeek** (Modelos v4-flash, v4-pro — API compatible con OpenAI).
+- **xAI Grok** (Modelos grok-4.3, grok-4 — API compatible con OpenAI).
 - **Custom** (Hasta 3 perfiles personalizados para cualquier API compatible con OpenAI).
 
 > **Nota:** DeepSeek se puede utilizar a través de Ollama o mediante un perfil Custom con la API compatible con OpenAI.

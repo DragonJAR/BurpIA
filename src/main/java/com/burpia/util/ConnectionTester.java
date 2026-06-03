@@ -335,7 +335,8 @@ public class ConnectionTester {
             .addHeader("Content-Type", "application/json")
             .addHeader("Accept", "application/json");
         
-        if ("OpenAI".equals(proveedor) || "Z.ai".equals(proveedor) || "minimax".equals(proveedor)) {
+        if ("OpenAI".equals(proveedor) || "Z.ai".equals(proveedor) || "minimax".equals(proveedor)
+                || "DeepSeek".equals(proveedor) || "xAI".equals(proveedor)) {
             endpoint = urlBase + "/models";
             if (Normalizador.noEsVacio(apiKey)) {
                 builder.addHeader("Authorization", "Bearer " + apiKey.trim());

@@ -60,6 +60,8 @@ public final class ConstructorSolicitudesProveedor {
                 return listarModelosClaude(urlBase, apiKey, clienteHttp);
             case "OpenAI":
             case "Moonshot (Kimi)":
+            case "DeepSeek":
+            case "xAI":
                 return listarModelosCompatiblesOpenAI(urlBase, apiKey, clienteHttp);
             default:
                 if (ProveedorAI.esProveedorCustom(proveedorNormalizado)) {
@@ -138,6 +140,8 @@ public final class ConstructorSolicitudesProveedor {
         } else if ("OpenAI".equals(proveedor)
             || "Z.ai".equals(proveedor)
             || "minimax".equals(proveedor)
+            || "DeepSeek".equals(proveedor)
+            || "xAI".equals(proveedor)
             || ProveedorAI.esProveedorCustom(proveedor)) {
             endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
             prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);

@@ -85,6 +85,24 @@ class ConfiguracionAPIEndpointsTest {
         );
     }
 
+    @Test
+    @DisplayName("Construye endpoint DeepSeek chat completions")
+    void testEndpointDeepSeek() {
+        assertEquals(
+            "https://api.deepseek.com/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor("DeepSeek", "https://api.deepseek.com", "deepseek-v4-flash")
+        );
+    }
+
+    @Test
+    @DisplayName("Construye endpoint xAI chat completions")
+    void testEndpointXAI() {
+        assertEquals(
+            "https://api.x.ai/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor("xAI", "https://api.x.ai/v1", "grok-4.3")
+        );
+    }
+
     // --- Custom providers: URL verbatim (sin manipulación del plugin) ---
 
     @Test
