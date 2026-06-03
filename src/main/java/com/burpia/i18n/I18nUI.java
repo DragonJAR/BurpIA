@@ -92,6 +92,15 @@ public final class I18nUI {
             return tr("Confirmar limpieza", "Confirm cleanup");
         }
 
+        /**
+         * Sentinel mostrado en logs cuando el usuario consulta el estado de un
+         * proveedor que aún no tiene API key configurada. Reemplaza el literal
+         * {@code "[NO CONFIGURADA]"} hardcoded en {@code Normalizador.sanitizarApiKey}.
+         */
+        public static String CLAVE_NO_CONFIGURADA() {
+            return tr("[NO CONFIGURADA]", "[NOT CONFIGURED]");
+        }
+
         public static String DESACTIVADO() {
             return tr("desactivado", "disabled");
         }

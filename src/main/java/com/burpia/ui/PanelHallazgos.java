@@ -494,13 +494,19 @@ public class PanelHallazgos extends JPanel {
     }
 
     private String construirLineaCsv(Hallazgo hallazgo) {
+        // Las columnas Severidad/Confianza se traducen al idioma de la UI para
+        // que coincidan con los headers del CSV (que también son bilingües).
+        // Sin esto, un usuario en español ve "Severidad" en el header pero
+        // "High"/"Medium" en los datos.
+        String severidadCruda = obtenerCampoSeguro(hallazgo, Hallazgo::obtenerSeveridad);
+        String confianzaCruda = obtenerCampoSeguro(hallazgo, Hallazgo::obtenerConfianza);
         String[] valores = {
             obtenerCampoSeguro(hallazgo, Hallazgo::obtenerHoraDescubrimiento),
             obtenerCampoSeguro(hallazgo, Hallazgo::obtenerUrl),
             obtenerCampoSeguro(hallazgo, Hallazgo::obtenerTitulo),
             obtenerCampoSeguro(hallazgo, Hallazgo::obtenerHallazgo),
-            obtenerCampoSeguro(hallazgo, Hallazgo::obtenerSeveridad),
-            obtenerCampoSeguro(hallazgo, Hallazgo::obtenerConfianza)
+            severidadCruda.isEmpty() ? "" : I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(severidadCruda),
+            confianzaCruda.isEmpty() ? "" : I18nUI.Hallazgos.TRADUCIR_CONFIANZA(confianzaCruda)
         };
 
         StringBuilder linea = new StringBuilder();
@@ -514,13 +520,22 @@ public class PanelHallazgos extends JPanel {
     }
 
     private String construirObjetoJson(Hallazgo hallazgo) {
+        // Las KEYS son schema (machine-readable, fijas) — NO se traducen.
+        // Los VALORES de severidad/confianza sí se traducen al idioma de la UI
+        // para coherencia con el CSV y la tabla en pantalla.
+        String severidadCruda = obtenerCampoSeguro(hallazgo, Hallazgo::obtenerSeveridad);
+        String confianzaCruda = obtenerCampoSeguro(hallazgo, Hallazgo::obtenerConfianza);
+        String severidad = severidadCruda.isEmpty()
+                ? "" : I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(severidadCruda);
+        String confianza = confianzaCruda.isEmpty()
+                ? "" : I18nUI.Hallazgos.TRADUCIR_CONFIANZA(confianzaCruda);
         return "    {\n"
             + "      \"hora\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerHoraDescubrimiento)) + "\",\n"
             + "      \"url\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerUrl)) + "\",\n"
             + "      \"titulo\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerTitulo)) + "\",\n"
             + "      \"hallazgo\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerHallazgo)) + "\",\n"
-            + "      \"severidad\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerSeveridad)) + "\",\n"
-            + "      \"confianza\": \"" + escapeJson(obtenerCampoSeguro(hallazgo, Hallazgo::obtenerConfianza)) + "\"\n"
+            + "      \"severidad\": \"" + escapeJson(severidad) + "\",\n"
+            + "      \"confianza\": \"" + escapeJson(confianza) + "\"\n"
             + "    }";
     }
 

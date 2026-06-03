@@ -40,7 +40,7 @@ public class GestorConfiguracion {
             this.out = out;
             this.err = err;
             this.gestorLogging = GestorLoggingUnificado.crearMinimal(out, err);
-            logInfo("[Configuracion] Ruta de configuracion: " + rutaConfig.toAbsolutePath());
+            logInfo("[Configuracion] Ruta de configuracion: %s", rutaConfig.toAbsolutePath());
         }
     }
 
@@ -66,7 +66,7 @@ public class GestorConfiguracion {
             }
 
             if (!Files.isReadable(path)) {
-                logError("[Configuracion] Archivo no es legible: " + path);
+                logError("[Configuracion] Archivo no es legible: %s", path);
                 return new ConfiguracionAPI();
             }
 
@@ -89,14 +89,14 @@ public class GestorConfiguracion {
             return config;
 
         } catch (JsonSyntaxException e) {
-            logError("[Configuracion] Error de sintaxis JSON: " + e.getMessage());
+            logError("[Configuracion] Error de sintaxis JSON: %s", e.getMessage());
             return new ConfiguracionAPI();
         } catch (IOException e) {
-            logError("[Configuracion] Error de E/S al cargar: " + e.getMessage());
+            logError("[Configuracion] Error de E/S al cargar: %s", e.getMessage());
             return new ConfiguracionAPI();
         } catch (Exception e) {
-            logError("[Configuracion] Error inesperado al cargar: " + e.getClass().getSimpleName() + " - "
-                    + e.getMessage());
+            logError("[Configuracion] Error inesperado al cargar: %s - %s",
+                    e.getClass().getSimpleName(), e.getMessage());
             return new ConfiguracionAPI();
         }
     }
@@ -123,7 +123,7 @@ public class GestorConfiguracion {
                 try {
                     Files.createDirectories(directorioPadre);
                 } catch (Exception e) {
-                    logError("[Configuracion] Directorio padre no existe: " + directorioPadre);
+                    logError("[Configuracion] Directorio padre no existe: %s", directorioPadre);
                     if (mensajeError != null) {
                         mensajeError.append(I18nUI.Configuracion.MSG_DIRECTORIO_NO_EXISTE())
                                 .append(directorioPadre);
@@ -133,7 +133,7 @@ public class GestorConfiguracion {
             }
 
             if (directorioPadre != null && !Files.isWritable(directorioPadre)) {
-                logError("[Configuracion] Directorio no es escribible: " + directorioPadre);
+                logError("[Configuracion] Directorio no es escribible: %s", directorioPadre);
                 if (mensajeError != null) {
                     mensajeError.append(I18nUI.Configuracion.MSG_DIRECTORIO_NO_ESCRIBIBLE())
                             .append(directorioPadre);
@@ -154,22 +154,22 @@ public class GestorConfiguracion {
             // Esto cubre archivos creados por versiones previas sin protección o por terceros.
             asegurarPermisosPrivados(path);
             if (archivoNuevo) {
-                logInfo("[Configuracion] Archivo de configuracion creado: " + path);
+                logInfo("[Configuracion] Archivo de configuracion creado: %s", path);
             }
 
-            logInfo("[Configuracion] Configuracion guardada exitosamente en: " + path);
+            logInfo("[Configuracion] Configuracion guardada exitosamente en: %s", path);
             return true;
 
         } catch (IOException e) {
-            logError("[Configuracion] Error de E/S al guardar: " + e.getClass().getSimpleName() + " - "
-                    + e.getMessage());
+            logError("[Configuracion] Error de E/S al guardar: %s - %s",
+                    e.getClass().getSimpleName(), e.getMessage());
             if (mensajeError != null) {
                 mensajeError.append(I18nUI.Configuracion.MSG_ERROR_IO()).append(e.getMessage());
             }
             return false;
         } catch (Exception e) {
-            logError("[Configuracion] Error inesperado al guardar: " + e.getClass().getSimpleName() + " - "
-                    + e.getMessage());
+            logError("[Configuracion] Error inesperado al guardar: %s - %s",
+                    e.getClass().getSimpleName(), e.getMessage());
             if (mensajeError != null) {
                 mensajeError.append(I18nUI.Configuracion.MSG_ERROR_INESPERADO()).append(e.getMessage());
             }
@@ -183,14 +183,27 @@ public class GestorConfiguracion {
         return rutaConfig.toAbsolutePath().toString();
     }
 
-    private void logInfo(String mensaje) {
+    private void logInfo(String formato, Object... args) {
         inicializarLogging();
-        gestorLogging.info("Configuracion", mensaje);
+        gestorLogging.info("Configuracion", traducir(formato, args));
     }
 
-    private void logError(String mensaje) {
+    private void logError(String formato, Object... args) {
         inicializarLogging();
-        gestorLogging.error("Configuracion", mensaje);
+        gestorLogging.error("Configuracion", traducir(formato, args));
+    }
+
+    /**
+     * DRY helper para los logs de esta clase: si no hay args, aplica
+     * {@link com.burpia.i18n.I18nLogs#tr(String) tr} (diccionario);
+     * si hay args, aplica {@link com.burpia.i18n.I18nLogs#trf(String, Object...) trf}
+     * (formato traducido + format con args).
+     */
+    private static String traducir(String formato, Object... args) {
+        if (args == null || args.length == 0) {
+            return com.burpia.i18n.I18nLogs.tr(formato);
+        }
+        return com.burpia.i18n.I18nLogs.trf(formato, args);
     }
 
     private void asegurarPermisosPrivados(Path path) {
@@ -206,7 +219,7 @@ public class GestorConfiguracion {
                     PosixFilePermission.OWNER_WRITE);
             Files.setPosixFilePermissions(path, permisos);
         } catch (Exception e) {
-            logError("[Configuracion] No se pudieron ajustar permisos privados del archivo: " + e.getMessage());
+            logError("[Configuracion] No se pudieron ajustar permisos privados del archivo: %s", e.getMessage());
         }
     }
 
@@ -217,7 +230,7 @@ public class GestorConfiguracion {
         try {
             Files.deleteIfExists(tempPath);
         } catch (Exception e) {
-            logError("[Configuracion] No se pudo eliminar archivo temporal: " + tempPath + " (" + e.getMessage() + ")");
+            logError("[Configuracion] No se pudo eliminar archivo temporal: %s (%s)", tempPath, e.getMessage());
         }
     }
 

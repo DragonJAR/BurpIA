@@ -90,8 +90,10 @@ public class OrquestadorAnalisis {
             throw new IOException(error);
         }
 
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Orquestador iniciado para URL: " + solicitud.obtenerUrl()));
-        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Hash de solicitud: " + solicitud.obtenerHashSolicitud()));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("[%s] Orquestador iniciado para URL: %s",
+                nombreHilo, solicitud.obtenerUrl()));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Hash de solicitud: %s",
+                nombreHilo, solicitud.obtenerHashSolicitud()));
 
         try {
             controlCancelacionPausa.verificarCancelacion();
@@ -107,32 +109,38 @@ public class OrquestadorAnalisis {
             // NOTA: El limitador YA fue adquirido por el llamador (AnalizadorAI o FlowAnalysisManager)
             // No adquirimos aquí para evitar doble adquisición que causa permisos negativos
 
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analizando: " + solicitud.obtenerUrl()));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Analizando: %s", solicitud.obtenerUrl()));
 
             boolean multiHabilitado = config.esMultiProveedorHabilitado();
             List<String> proveedoresConfig = config.obtenerProveedoresMultiConsulta();
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("DIAGNOSTICO: multiHabilitado=" + multiHabilitado + ", proveedoresConfig=" +
-                    (proveedoresConfig != null ? proveedoresConfig.size() + " elementos" : "null")));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("DIAGNOSTICO: multiHabilitado=%s, proveedoresConfig=%s",
+                    multiHabilitado,
+                    proveedoresConfig != null ? proveedoresConfig.size() + " elementos" : "null"));
 
             ResultadoAnalisisMultiple resultadoMultiple;
             if (multiHabilitado && proveedoresConfig != null && proveedoresConfig.size() > 1) {
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("DIAGNOSTICO: Ejecutando multi-proveedor con " + proveedoresConfig.size() + " proveedores"));
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("DIAGNOSTICO: Ejecutando multi-proveedor con %d proveedores",
+                        proveedoresConfig.size()));
                 resultadoMultiple = ejecutarAnalisisMultiProveedorSecuencial();
             } else {
                 if (multiHabilitado) {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Multi-proveedor habilitado pero solo " +
-                            (proveedoresConfig != null ? proveedoresConfig.size() : 0) +
-                            " proveedor(es) configurado(s). Usando proveedor único: " + config.obtenerProveedorAI()));
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.trf(
+                            "PROVEEDOR: Multi-proveedor habilitado pero solo %d proveedor(es) configurado(s). Usando proveedor único: %s",
+                            proveedoresConfig != null ? proveedoresConfig.size() : 0,
+                            config.obtenerProveedorAI()));
                 } else {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PROVEEDOR: Usando proveedor único: " + config.obtenerProveedorAI()));
+                    gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("PROVEEDOR: Usando proveedor único: %s",
+                            config.obtenerProveedorAI()));
                 }
                 String respuesta = llamarAPIAIConRetries();
                 resultadoMultiple = parseador.parsearRespuesta(respuesta, solicitud, config != null ? config.obtenerProveedorAI() : "");
             }
 
             long duracion = System.currentTimeMillis() - tiempoInicio;
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Análisis completado: " + solicitud.obtenerUrl() + " (tomo " + duracion + "ms)"));
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("[" + nombreHilo + "] Severidad maxima: " + resultadoMultiple.obtenerSeveridadMaxima()));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Análisis completado: %s (tomo %dms)",
+                    solicitud.obtenerUrl(), duracion));
+            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Severidad maxima: %s",
+                    nombreHilo, resultadoMultiple.obtenerSeveridadMaxima()));
 
             return resultadoMultiple;
 
@@ -162,13 +170,14 @@ public class OrquestadorAnalisis {
     }
 
     private String construirPromptAnalisis() {
-        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Construyendo prompt para URL: " + solicitud.obtenerUrl()));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("Construyendo prompt para URL: %s",
+                solicitud.obtenerUrl()));
         String promptPreconstruido = solicitud.obtenerPromptPreconstruido();
         String prompt = Normalizador.noEsVacio(promptPreconstruido)
             ? promptPreconstruido
             : constructorPrompt.construirPromptAnalisis(solicitud);
-        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Longitud de prompt: " + prompt.length() + " caracteres"));
-        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Prompt (preview):\n" + resumirParaLog(prompt)));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("Longitud de prompt: %d caracteres", prompt.length()));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("Prompt (preview):%n%s", resumirParaLog(prompt)));
         return prompt;
     }
 
@@ -182,8 +191,10 @@ public class OrquestadorAnalisis {
                 controlCancelacionPausa.esperarSiPausada();
                 
                 String respuesta = analizadorHTTP.llamarAPI(promptActual);
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Longitud de respuesta de API: " + respuesta.length() + " caracteres"));
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.tr("Respuesta de API (preview):\n" + resumirParaLog(respuesta)));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Longitud de respuesta de API: %d caracteres",
+                        respuesta.length()));
+                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("Respuesta de API (preview):%n%s",
+                        resumirParaLog(respuesta)));
                 return respuesta;
                 
             } catch (InterruptedException e) {

@@ -669,7 +669,7 @@ public class ExtensionBurpIA implements BurpExtension {
                 registrar(I18nLogs.Agente.LOG_AGENTE_CAMBIADO(obtenerTipoAgenteOperativoActual()));
             });
 
-            api.userInterface().registerSuiteTab("BurpIA", pestaniaPrincipal.obtenerPanel());
+            api.userInterface().registerSuiteTab(I18nUI.Configuracion.TITULO_APP(), pestaniaPrincipal.obtenerPanel());
             // CONFIABILIDAD: Log compacto con información de versión
             registrar(I18nLogs.Inicializacion.UI_REGISTRADA_EN(
                     esProfessional ? "Burp Suite Professional" : "Burp Suite",

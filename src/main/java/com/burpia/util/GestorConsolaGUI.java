@@ -592,7 +592,10 @@ public class GestorConsolaGUI {
 
     private void registrarErrorInterno(String mensaje) {
         String mensajeFinal = mensaje != null ? mensaje : I18nLogs.tr("Error interno de consola");
-        String texto = "[BurpIA] [ERROR] " + mensajeFinal;
+        // "[BurpIA]" es el nombre del plugin (no se traduce). TAG_ERROR() viene
+        // bilingüe ya espaciado para mantener consistencia con el resto del
+        // pipeline de logs (etiquetaNivel).
+        String texto = "[BurpIA]" + com.burpia.i18n.I18nUI.Consola.TAG_ERROR() + " " + mensajeFinal;
         if (stderrOriginal != null) {
             stderrOriginal.println(texto);
             stderrOriginal.flush();

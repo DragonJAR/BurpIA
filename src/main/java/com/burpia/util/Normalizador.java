@@ -158,7 +158,7 @@ public final class Normalizador {
      */
     public static String sanitizarApiKey(String apiKey) {
         if (apiKey == null || apiKey.isEmpty()) {
-            return "[NO CONFIGURADA]";
+            return com.burpia.i18n.I18nUI.General.CLAVE_NO_CONFIGURADA();
         }
         if (apiKey.length() <= 8) {
             return "****";

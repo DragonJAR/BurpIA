@@ -1,7 +1,11 @@
 package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
+import com.burpia.i18n.I18nUI;
+import com.burpia.i18n.IdiomaUI;
 import com.burpia.model.Hallazgo;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -21,6 +25,26 @@ import static org.mockito.Mockito.mock;
  */
 @DisplayName("PanelHallazgos Export Tests")
 class PanelHallazgosExportTest {
+
+    private IdiomaUI idiomaPrevio;
+
+    @BeforeEach
+    void fijarIdiomaIngles() {
+        // Los valores esperados en estos tests usan los nombres canonical
+        // ("High", "Medium", "Low"). Tras el fix de i18n en CSV/JSON export,
+        // el valor de severidad/confianza se traduce al idioma de la UI.
+        // Fijamos EN para que los valores traducidos coincidan con los
+        // canonical English usados en las aserciones.
+        idiomaPrevio = I18nUI.obtenerIdioma();
+        I18nUI.establecerIdioma("en");
+    }
+
+    @AfterEach
+    void restaurarIdioma() {
+        if (idiomaPrevio != null) {
+            I18nUI.establecerIdioma(idiomaPrevio.codigo());
+        }
+    }
 
     @Test
     @DisplayName("CSV escapa comillas, comas y saltos de linea")
@@ -63,6 +87,32 @@ class PanelHallazgosExportTest {
         assertTrue(json.contains("\"hallazgo\": \"Linea1\\r\\nLinea2\\t\\\\\\\"\""), "assertTrue failed at PanelHallazgosExportTest.java:63");
         assertTrue(json.contains("\"severidad\": \"High\""), "assertTrue failed at PanelHallazgosExportTest.java:64");
         assertTrue(json.contains("\"confianza\": \"Low\""), "assertTrue failed at PanelHallazgosExportTest.java:65");
+    }
+
+    @Test
+    @DisplayName("CSV traduce severidad/confianza al idioma de la UI (regresión J3)")
+    void testCsvTraduceSeveridadYConfianzaAlIdiomaUi() throws Exception {
+        // Cambia a español para verificar que los valores se traducen
+        // (el setUp del test fijó EN; acá lo cambiamos puntualmente).
+        I18nUI.establecerIdioma("es");
+
+        PanelHallazgos panel = crearPanel();
+        Hallazgo hallazgo = new Hallazgo(
+            "10:00:00",
+            "https://example.com/a",
+            "Titulo X",
+            "Detalle",
+            "High",
+            "Medium",
+            null
+        );
+
+        String csv = invocarMetodoPrivado(panel, "construirLineaCsv", hallazgo);
+
+        assertTrue(csv.contains("Alta"),
+            "En español, el valor canonical 'High' debe traducirse a 'Alta' en el CSV. CSV: " + csv);
+        assertTrue(csv.contains("Media") || csv.contains("Medio"),
+            "En español, el valor canonical 'Medium' debe traducirse a 'Media/Medio' en el CSV. CSV: " + csv);
     }
 
     @Test

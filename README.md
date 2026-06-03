@@ -59,7 +59,7 @@ English version: [README.en.md](README.en.md)
 - Claude Code: [ES](AGENTE-CLAUDE-ES.md) | [EN](AGENT-CLAUDE-EN.md)
 - Gemini CLI: [ES](AGENTE-GEMINI-ES.md) | [EN](AGENT-GEMINI-EN.md)
 - OpenCode: [ES](AGENTE-OPENCODE-ES.md) | [EN](AGENT-OPENCODE-EN.md)
-- Grok: [ES](AGENTE-GROK-ES.md) | [EN](AGENT-GROK-EN.md)
+- Grok Build: [ES](AGENTE-GROK-ES.md) | [EN](AGENT-GROK-EN.md)
 
 
 ---
