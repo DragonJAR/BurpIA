@@ -54,6 +54,8 @@ public final class ConstructorSolicitudesProveedor {
                 return listarModelosGemini(urlBase, apiKey, clienteHttp);
             case "Ollama":
                 return listarModelosOllama(urlBase, clienteHttp);
+            case "Ollama Cloud":
+                return listarModelosOllamaCloud(urlBase, apiKey, clienteHttp);
             case "Claude":
                 return listarModelosClaude(urlBase, apiKey, clienteHttp);
             case "OpenAI":
@@ -124,6 +126,15 @@ public final class ConstructorSolicitudesProveedor {
             carga.addProperty("model", modeloUsado);
             carga.addProperty("stream", false);
             agregarMensajeUsuario(carga, prompt);
+        } else if ("Ollama Cloud".equals(proveedor)) {
+            // Mismo body shape que Ollama local (/api/chat con messages array y
+            // stream=false), pero con Authorization: Bearer porque el endpoint
+            // cloud requiere autenticación.
+            endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/api/chat";
+            carga.addProperty("model", modeloUsado);
+            carga.addProperty("stream", false);
+            agregarMensajeUsuario(carga, prompt);
+            agregarAuthorizationSiExiste(builder, config.obtenerClaveApi());
         } else if ("OpenAI".equals(proveedor)
             || "Z.ai".equals(proveedor)
             || "minimax".equals(proveedor)
@@ -258,18 +269,36 @@ public final class ConstructorSolicitudesProveedor {
     }
 
     public static List<String> listarModelosOllama(String urlBase, OkHttpClient clienteHttp) throws IOException {
+        return ejecutarListadoOllamaApiTags(urlBase, null, clienteHttp);
+    }
+
+    public static List<String> listarModelosOllamaCloud(String urlBase,
+                                                        String apiKey,
+                                                        OkHttpClient clienteHttp) throws IOException {
+        return ejecutarListadoOllamaApiTags(urlBase, apiKey, clienteHttp);
+    }
+
+    /**
+     * Helper DRY que centraliza el listado de modelos vía {@code /api/tags}
+     * (formato Ollama). Si se proporciona {@code apiKey}, se envía
+     * {@code Authorization: Bearer} (necesario para Ollama Cloud); si es
+     * null/vacío, no se envía header de auth (Ollama local).
+     */
+    private static List<String> ejecutarListadoOllamaApiTags(String urlBase,
+                                                              String apiKey,
+                                                              OkHttpClient clienteHttp) throws IOException {
         String base = ConfiguracionAPI.extraerUrlBase(urlBase);
         if (Normalizador.esVacio(base)) {
             throw new IOException(I18nUI.Conexion.ERROR_URL_BASE_OLLAMA_INVALIDA());
         }
 
         String endpoint = base + "/api/tags";
-        Request request = new Request.Builder()
+        Request.Builder builder = new Request.Builder()
             .url(endpoint)
-            .addHeader("Accept", "application/json")
-            .build();
+            .addHeader("Accept", "application/json");
+        agregarAuthorizationSiExiste(builder, apiKey);
 
-        try (Response response = clienteHttp.newCall(request).execute()) {
+        try (Response response = clienteHttp.newCall(builder.build()).execute()) {
             if (!response.isSuccessful()) {
                 String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
                 throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));

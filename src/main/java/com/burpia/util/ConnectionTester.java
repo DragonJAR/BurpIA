@@ -351,7 +351,13 @@ public class ConnectionTester {
             }
         } else if ("Ollama".equals(proveedor)) {
             endpoint = urlBase + "/api/tags";
-            // Ollama no requiere API key
+            // Ollama local no requiere API key
+        } else if ("Ollama Cloud".equals(proveedor)) {
+            // Mismo endpoint que Ollama local (/api/tags) pero con Bearer auth.
+            endpoint = urlBase + "/api/tags";
+            if (Normalizador.noEsVacio(apiKey)) {
+                builder.addHeader("Authorization", "Bearer " + apiKey.trim());
+            }
         } else {
             // Default para proveedores custom (OpenAI-compatible)
             endpoint = urlBase + "/models";

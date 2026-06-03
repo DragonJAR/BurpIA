@@ -134,6 +134,7 @@ See the change summary in **Version history**.
 ## Supported LLM Providers
 
 - **Ollama** (Local models: Gemma 3, DeepSeek v3, Phi-4, Llama 3.3, etc.).
+- **Ollama Cloud** (Cloud models at `https://ollama.com` — requires API key).
 - **OpenAI** (o1 models, GPT-4o, etc.).
 - **Claude** (Anthropic: Sonnet 3.5/3.6, Opus).
 - **Gemini** (Google: 1.5 Pro/Flash with native support).

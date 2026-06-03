@@ -104,6 +104,15 @@ class ParserRespuestasAITest {
     }
 
     @Test
+    @DisplayName("Extrae contenido formato Ollama Cloud (mismo extractor que Ollama local)")
+    void testExtraerOllamaCloud() {
+        String json = "{\"message\":{\"content\":\"OK Ollama Cloud\"}}";
+        assertEquals("OK Ollama Cloud",
+            ParserRespuestasAI.extraerContenido(json, "Ollama Cloud"),
+            "Ollama Cloud debe usar el mismo extractor que Ollama local (message.content)");
+    }
+
+    @Test
     @DisplayName("Valida respuestas esperadas de prueba")
     void testValidarRespuestaPrueba() {
         assertTrue(ParserRespuestasAI.validarRespuestaPrueba("OK"), "assertTrue failed at ParserRespuestasAITest.java:109");

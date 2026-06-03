@@ -97,7 +97,10 @@ public final class ParserRespuestasAI {
             String proveedorNormalizado = proveedor != null ? proveedor : "";
             String contenido;
 
-            if ("Ollama".equals(proveedorNormalizado)) {
+            if ("Ollama".equals(proveedorNormalizado)
+                    || "Ollama Cloud".equals(proveedorNormalizado)) {
+                // Ollama Cloud usa el mismo formato de respuesta que Ollama local:
+                // {"message": {"content": "..."}}.
                 contenido = extraerContenidoOllama(raiz);
             } else if ("OpenAI".equals(proveedorNormalizado)
                     || "Z.ai".equals(proveedorNormalizado)

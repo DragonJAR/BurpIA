@@ -81,6 +81,39 @@ class ConfigValidatorTest {
     }
 
     @Test
+    @DisplayName("Ollama Cloud acepta cualquier API key no vacía (sin prefijo específico)")
+    void testValidarApiKeyOllamaCloudAceptaSinPrefijoEspecifico() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarApiKey(
+            "ollama-cloud-token-arbitrario-123",
+            "Ollama Cloud"
+        );
+        assertTrue(resultado.esValido(),
+            "Ollama Cloud no requiere prefijo específico, debe aceptar cualquier clave no vacía");
+    }
+
+    @Test
+    @DisplayName("Ollama Cloud rechaza URL HTTP (HTTPS obligatorio para cloud)")
+    void testValidarUrlApiOllamaCloudRechazaHttp() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "http://ollama.com",
+            "Ollama Cloud"
+        );
+        assertFalse(resultado.esValido(),
+            "Ollama Cloud debe rechazar HTTP — solo HTTPS está permitido para cloud");
+    }
+
+    @Test
+    @DisplayName("Ollama Cloud acepta URL HTTPS")
+    void testValidarUrlApiOllamaCloudAceptaHttps() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "https://ollama.com",
+            "Ollama Cloud"
+        );
+        assertTrue(resultado.esValido(),
+            "Ollama Cloud debe aceptar HTTPS");
+    }
+
+    @Test
     @DisplayName("Ollama permite URL HTTP sin HTTPS")
     void testValidarUrlApiOllamaPermiteHttp() {
         ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(

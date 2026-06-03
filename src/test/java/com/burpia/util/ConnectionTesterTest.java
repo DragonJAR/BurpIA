@@ -138,6 +138,42 @@ class ConnectionTesterTest {
     }
 
     @Test
+    @DisplayName("Obtener modelos para Ollama Cloud usa /api/tags + Bearer auth")
+    void obtenerModelos_ollamaCloudUsaBearer() throws Exception {
+        ConfiguracionAPI configCloud = new ConfiguracionAPI();
+        configCloud.establecerProveedorAI("Ollama Cloud");
+        configCloud.establecerModeloParaProveedor("Ollama Cloud", "llama3.2");
+        configCloud.establecerUrlBaseParaProveedor("Ollama Cloud", mockWebServer.url("").toString());
+        configCloud.establecerApiKeyParaProveedor("Ollama Cloud", "ollama-cloud-bearer-token");
+
+        mockWebServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setBody("{\"models\":[{\"name\":\"llama3.2:latest\"},{\"name\":\"qwen2.5:latest\"}]}"));
+
+        CompletableFuture<List<String>> resultado = new CompletableFuture<>();
+
+        connectionTester.obtenerModelosDisponibles(configCloud, new ConnectionTester.CallbackModelos() {
+            @Override
+            public void alExito(List<String> modelos) {
+                resultado.complete(modelos);
+            }
+
+            @Override
+            public void alError(String error) {
+                resultado.completeExceptionally(new AssertionError(error));
+            }
+        });
+
+        assertEquals(List.of("llama3.2:latest", "qwen2.5:latest"), resultado.get(5, TimeUnit.SECONDS),
+            "Ollama Cloud debe parsear modelos con el mismo formato que Ollama local");
+        okhttp3.mockwebserver.RecordedRequest request = mockWebServer.takeRequest();
+        assertEquals("/api/tags", request.getPath(),
+            "Ollama Cloud debe consultar /api/tags (mismo endpoint que Ollama local)");
+        assertEquals("Bearer ollama-cloud-bearer-token", request.getHeader("Authorization"),
+            "Ollama Cloud DEBE enviar Authorization: Bearer con la API key");
+    }
+
+    @Test
     @DisplayName("Obtener modelos usa GET /models para Claude")
     void obtenerModelos_claudeUsaEndpointOficial() throws Exception {
         ConfiguracionAPI configClaude = new ConfiguracionAPI();

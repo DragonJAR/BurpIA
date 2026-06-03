@@ -2119,7 +2119,7 @@ public final class I18nUI {
         private static final String[] CARACTERISTICAS_APP_ES = {
                 "Detección de forma pasiva de problemas de seguridad con IA Generativa",
                 "IA basada en agentes integrada en la interfaz del plugin",
-                "Compatibilidad con OpenAI, Claude, Gemini, Z.ai, Minimax y Ollama",
+                "Compatibilidad con OpenAI, Claude, Gemini, Z.ai, Minimax, Ollama y Ollama Cloud",
                 "De-duplicación inteligente de peticiones para optimizar la cuota de API",
                 "Gestión asíncrona mediante colas de tareas paralelizables",
                 "Integración con site map (Issues), Repeater, Intruder y Scanner Pro",
@@ -2131,7 +2131,7 @@ public final class I18nUI {
         private static final String[] CARACTERISTICAS_APP_EN = {
                 "Passive detection of security issues with Generative AI",
                 "Agentic AI integrated into the plugin interface",
-                "Compatibility with OpenAI, Claude, Gemini, Z.ai, Minimax, and Ollama",
+                "Compatibility with OpenAI, Claude, Gemini, Z.ai, Minimax, Ollama, and Ollama Cloud",
                 "Smart request deduplication to optimize API quota",
                 "Asynchronous task management through parallel queues",
                 "Integration with site map (Issues), Repeater, Intruder, and Scanner Pro",

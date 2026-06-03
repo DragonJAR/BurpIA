@@ -76,6 +76,15 @@ class ConfiguracionAPIEndpointsTest {
         , "assertEquals failed at ConfiguracionAPIEndpointsTest.java:73");
     }
 
+    @Test
+    @DisplayName("Construye endpoint Ollama Cloud (mismo /api/chat que Ollama local)")
+    void testEndpointOllamaCloud() {
+        assertEquals(
+            "https://ollama.com/api/chat",
+            ConfiguracionAPI.construirUrlApiProveedor("Ollama Cloud", "https://ollama.com", "llama3.2")
+        );
+    }
+
     // --- Custom providers: URL verbatim (sin manipulación del plugin) ---
 
     @Test

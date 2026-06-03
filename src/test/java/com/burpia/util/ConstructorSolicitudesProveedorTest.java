@@ -470,6 +470,25 @@ class ConstructorSolicitudesProveedorTest {
             assertNotNull(solicitud.request, "assertNotNull failed at ConstructorSolicitudesProveedorTest.java:400");
             assertTrue(solicitud.endpoint.contains("/api/chat"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:401");
             assertEquals("llama3", solicitud.modeloUsado, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:402");
+            assertNull(solicitud.request.header("Authorization"),
+                "Ollama local NO debe enviar Authorization header");
+        }
+
+        @Test
+        @DisplayName("Construye solicitud válida para Ollama Cloud (mismo /api/chat + Bearer auth)")
+        void construyeSolicitudOllamaCloud() throws Exception {
+            ConfiguracionAPI config = crearConfiguracionTest(
+                "Ollama Cloud", "llama3.2", "https://ollama.com", "cloud-api-key-secret");
+
+            ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
+                ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
+
+            assertNotNull(solicitud.request);
+            assertTrue(solicitud.endpoint.endsWith("/api/chat"),
+                "Endpoint debe terminar en /api/chat (mismo path que Ollama local)");
+            assertEquals("llama3.2", solicitud.modeloUsado);
+            assertEquals("Bearer cloud-api-key-secret", solicitud.request.header("Authorization"),
+                "Ollama Cloud DEBE enviar Authorization: Bearer con la API key");
         }
 
         @Test

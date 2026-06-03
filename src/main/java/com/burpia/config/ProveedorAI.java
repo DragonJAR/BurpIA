@@ -140,6 +140,24 @@ public final class ProveedorAI {
                 false,
                 4096));
 
+        // Ollama Cloud — mismo formato que Ollama local (/api/chat con
+        // messages array, response message.content) pero apunta al
+        // servicio cloud (https://ollama.com) y requiere API key vía
+        // Authorization: Bearer.
+        PROVEEDORES.put("Ollama Cloud", new ConfiguracionProveedor(
+                "https://ollama.com",
+                "llama3.2",
+                Arrays.asList(
+                        "llama3.2",
+                        "llama3.3",
+                        "gemma3:12b",
+                        "deepseek-v3.2",
+                        "qwen2.5",
+                        "qwen2.5-coder",
+                        "mistral"),
+                true,
+                4096));
+
         PROVEEDORES.put("OpenAI", new ConfiguracionProveedor(
                 "https://api.openai.com/v1",
                 "gpt-5.2-pro",

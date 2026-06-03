@@ -18,6 +18,7 @@ class ProveedorAITest {
         @DisplayName("Contiene todos los proveedores esperados")
         void contieneProveedoresEsperados() {
             assertTrue(ProveedorAI.existeProveedor("Ollama"), "Ollama deberia existir");
+            assertTrue(ProveedorAI.existeProveedor("Ollama Cloud"), "Ollama Cloud deberia existir");
             assertTrue(ProveedorAI.existeProveedor("OpenAI"), "OpenAI deberia existir");
             assertTrue(ProveedorAI.existeProveedor("Claude"), "Claude deberia existir");
             assertTrue(ProveedorAI.existeProveedor("Gemini"), "Gemini deberia existir");
@@ -27,6 +28,16 @@ class ProveedorAITest {
             assertTrue(ProveedorAI.existeProveedor(ProveedorAI.PROVEEDOR_CUSTOM_01), "Custom 01 deberia existir");
             assertTrue(ProveedorAI.existeProveedor(ProveedorAI.PROVEEDOR_CUSTOM_02), "Custom 02 deberia existir");
             assertTrue(ProveedorAI.existeProveedor(ProveedorAI.PROVEEDOR_CUSTOM_03), "Custom 03 deberia existir");
+        }
+
+        @Test
+        @DisplayName("Ollama Cloud requiere API key y default URL es ollama.com")
+        void ollamaCloudRequiereApiKey() {
+            ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor("Ollama Cloud");
+            assertNotNull(config, "Ollama Cloud config no debe ser null");
+            assertTrue(config.requiereClaveApi(), "Ollama Cloud DEBE requerir API key (Bearer auth)");
+            assertEquals("https://ollama.com", config.obtenerUrlApi(),
+                "Default URL de Ollama Cloud debe ser https://ollama.com");
         }
 
         @Test

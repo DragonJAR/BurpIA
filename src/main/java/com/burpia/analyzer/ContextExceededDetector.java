@@ -41,6 +41,13 @@ public class ContextExceededDetector {
             Pattern.compile("token.*limit.*exceed", Pattern.CASE_INSENSITIVE)
     };
 
+    /** Patrones comunes para Ollama (local y cloud, DRY). */
+    private static final Pattern[] PATRONES_OLLAMA = new Pattern[]{
+            Pattern.compile("context.*length.*exceed", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("prompt.*too.*long", Pattern.CASE_INSENSITIVE),
+            Pattern.compile("token.*limit", Pattern.CASE_INSENSITIVE)
+    };
+
     /**
      * Patrones de error por proveedor.
      * Clave: nombre normalizado del proveedor (Title Case)
@@ -92,12 +99,9 @@ public class ContextExceededDetector {
                     Pattern.compile("token.*exceed", Pattern.CASE_INSENSITIVE)
             }),
 
-            // Ollama (local, mensajes variables)
-            Map.entry("Ollama", new Pattern[]{
-                    Pattern.compile("context.*length.*exceed", Pattern.CASE_INSENSITIVE),
-                    Pattern.compile("prompt.*too.*long", Pattern.CASE_INSENSITIVE),
-                    Pattern.compile("token.*limit", Pattern.CASE_INSENSITIVE)
-            }),
+            // Ollama (local, mensajes variables). Ollama Cloud reusa este array.
+            Map.entry("Ollama", PATRONES_OLLAMA),
+            Map.entry("Ollama Cloud", PATRONES_OLLAMA),
 
             // Custom providers (usan patrones comunes - DRY)
             Map.entry("Custom 01", PATRONES_CUSTOM),
