@@ -6,7 +6,7 @@
 
 BurpIA is a Burp Suite extension that analyzes HTTP traffic with LLMs to help you detect potential security findings in less time.
 
-**Current version:** `1.6.0`
+**Current version:** `1.7.0`
 
 Spanish version: [README.md](README.md)
 
@@ -64,9 +64,9 @@ Spanish version: [README.md](README.md)
 
 ---
 
-## Current status (v1.6.0)
+## Current status (v1.7.0)
 
-BurpIA is updated to `v1.6.0`.
+BurpIA is currently at `v1.7.0` (in development).
 See the change summary in **Version history**.
 
 
@@ -74,7 +74,18 @@ See the change summary in **Version history**.
 
 ## Version history
 
-### v1.6.0 (current)
+### v1.7.0 (in development)
+
+**New LLM providers:**
+- **DeepSeek** (`deepseek-v4-flash`, `deepseek-v4-pro`, plus legacy chat/reasoner — OpenAI-compatible API with `Authorization: Bearer`).
+- **xAI Grok** (`grok-4.3`, `grok-4`, `grok-3`, `grok-2` / `grok-2-vision` — OpenAI-compatible API).
+- **Ollama Cloud** (cloud models at `https://ollama.com` with `Authorization: Bearer`, HTTPS required).
+
+**New CLI agent:**
+- **Grok CLI** (`GROK_BUILD`): integration of xAI's Grok agent into the Agents tab, with automatic binary detection at `~/.grok/bin/grok` (Unix) or `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permissions are controlled via `~/.grok/config.toml` (`permission_mode = "always-approve"`).
+
+
+### v1.6.0
 
 - Internal quality improvements: configurable alerts, hardened i18n, code cleanup, and centralized utilities.
 
@@ -118,10 +129,10 @@ See the change summary in **Version history**.
 
 ## Quick Start (3 minutes)
 
-1. Download the `BurpIA-1.6.0.jar` file.
+1. Download the `BurpIA-1.7.0.jar` file.
 2. Load the extension in Burp Suite:
    - Go to the `Extensions` tab -> `Add`.
-   - Select the `BurpIA-1.6.0.jar` file.
+   - Select the `BurpIA-1.7.0.jar` file.
 3. Configure BurpIA in the plugin tab:
    - Select your **LLM Provider**.
    - Enter the **API Key** (if applicable).

@@ -6,7 +6,7 @@
 
 BurpIA es una extensión para Burp Suite que analiza tráfico HTTP con LLMs para ayudarte a detectar hallazgos potenciales de seguridad en menos tiempo.
 
-**Versión actual:** `1.6.0`
+**Versión actual:** `1.7.0`
 
 English version: [README.en.md](README.en.md)
 
@@ -64,9 +64,9 @@ English version: [README.en.md](README.en.md)
 
 ---
 
-## Estado actual (v1.6.0)
+## Estado actual (v1.7.0) en desarrollo
 
-BurpIA está actualizado a `v1.6.0`.
+BurpIA está actualmente en `v1.7.0` (en desarrollo).
 Consulta el resumen de cambios en **Historial de versiones**.
 
 
@@ -74,7 +74,17 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ## Historial de versiones
 
-### v1.6.0 (actual)
+### v1.7.0 (en desarrollo)
+
+**Nuevos proveedores LLM:**
+- **DeepSeek** (modelos `deepseek-v4-flash`, `deepseek-v4-pro` y legacy chat/reasoner — API compatible con OpenAI, `Authorization: Bearer`).
+- **xAI Grok** (modelos `grok-4.3`, `grok-4`, `grok-3`, `grok-2`/`grok-2-vision` — API compatible con OpenAI).
+- **Ollama Cloud** (modelos cloud en `https://ollama.com` con `Authorization: Bearer`, HTTPS obligatorio).
+
+**Nuevo agente CLI:**
+- **Grok CLI** (`GROK_BUILD`): integración del agente Grok de xAI en la pestaña Agentes, con detección automática de binario en `~/.grok/bin/grok` (Unix) o `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permisos controlados vía `~/.grok/config.toml` (`permission_mode = "always-approve"`).
+
+### v1.6.0
 
 - Mejoras de calidad interna: alertas configurables, i18n reforzado, código limpio y utilidades centralizadas.
 
@@ -118,10 +128,10 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ## Inicio rápido (3 minutos)
 
-1. Descarga el archivo `BurpIA-1.6.0.jar`.
+1. Descarga el archivo `BurpIA-1.7.0.jar`.
 2. Carga la extensión en Burp Suite:
     - Ve a la pestaña `Extensions` -> `Add`.
-    - Selecciona el archivo `BurpIA-1.6.0.jar`.
+    - Selecciona el archivo `BurpIA-1.7.0.jar`.
 3. Configura BurpIA en la pestaña del plugin:
     - Selecciona tu **Proveedor LLM**.
     - Ingresa la **API Key** (si aplica).
