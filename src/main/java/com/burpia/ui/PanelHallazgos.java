@@ -220,13 +220,13 @@ public class PanelHallazgos extends JPanel {
         botonLimpiarTodo.addActionListener(e -> {
             int total = modelo.getRowCount();
             if (total == 0) {
-                UIUtils.mostrarInfo(this, I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_SIN_HALLAZGOS_LIMPIAR());
+                UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_SIN_HALLAZGOS_LIMPIAR());
                 return;
             }
 
             boolean confirmacion = UIUtils.confirmarAdvertencia(
                 this,
-                I18nUI.Hallazgos.TITULO_CONFIRMAR_LIMPIEZA(),
+                I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
                 I18nUI.Hallazgos.MSG_CONFIRMAR_LIMPIEZA(total)
             );
             if (confirmacion) {
@@ -853,7 +853,7 @@ public class PanelHallazgos extends JPanel {
 
     private void enviarAIssues(int... filas) {
         if (!integracionIssuesDisponible) {
-            mostrarInfoEnviarA(I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ISSUES_SOLO_PRO());
+            mostrarInfoEnviarA(I18nUI.General.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ISSUES_SOLO_PRO());
             return;
         }
         ejecutarAccionBurp(
@@ -948,7 +948,7 @@ public class PanelHallazgos extends JPanel {
         List<EntradaAccion> entradas = captura.entradas;
         if (Normalizador.esVacia(entradas)) {
             if (captura.totalIgnorados > 0) {
-                mostrarInfoEnviarA(I18nUI.Hallazgos.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ACCION_SOLO_IGNORADOS(captura.totalIgnorados));
+                mostrarInfoEnviarA(I18nUI.General.TITULO_INFORMACION(), I18nUI.Hallazgos.MSG_ACCION_SOLO_IGNORADOS(captura.totalIgnorados));
             }
             return;
         }

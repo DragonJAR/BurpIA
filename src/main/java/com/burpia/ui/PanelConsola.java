@@ -164,13 +164,13 @@ public class PanelConsola extends JPanel {
         botonLimpiar.addActionListener(e -> {
             int total = gestorConsola.obtenerTotalLogs();
             if (total == 0) {
-                UIUtils.mostrarInfo(this, I18nUI.Consola.TITULO_INFORMACION(), I18nUI.Consola.MSG_CONSOLA_VACIA());
+                UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Consola.MSG_CONSOLA_VACIA());
                 return;
             }
 
             boolean confirmacion = UIUtils.confirmarPregunta(
                 this,
-                I18nUI.Consola.TITULO_CONFIRMAR_LIMPIEZA(),
+                I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
                 I18nUI.Consola.MSG_CONFIRMAR_LIMPIEZA(total)
             );
             if (confirmacion) {
@@ -235,7 +235,7 @@ public class PanelConsola extends JPanel {
             actualizarBotonesBusqueda(false);
 
             UIUtils.mostrarError(this,
-                I18nUI.Consola.TITULO_INFORMACION(),
+                I18nUI.General.TITULO_INFORMACION(),
                 I18nUI.Consola.MSG_BUSQUEDA_REGEX_INVALIDA(textoBusqueda, e.getMessage()));
         }
     }

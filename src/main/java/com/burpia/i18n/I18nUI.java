@@ -81,6 +81,17 @@ public final class I18nUI {
             return tr("ACTIVADO", "ENABLED");
         }
 
+        // Títulos genéricos de diálogos — consolidados acá para evitar la
+        // duplicación previa en Tareas/Hallazgos/Consola (todos usaban la
+        // misma traducción).
+        public static String TITULO_INFORMACION() {
+            return tr("Información", "Information");
+        }
+
+        public static String TITULO_CONFIRMAR_LIMPIEZA() {
+            return tr("Confirmar limpieza", "Confirm cleanup");
+        }
+
         public static String DESACTIVADO() {
             return tr("desactivado", "disabled");
         }
@@ -352,10 +363,6 @@ public final class I18nUI {
                     "There are no completed tasks to clear.");
         }
 
-        public static String TITULO_INFORMACION() {
-            return tr("Información", "Information");
-        }
-
         public static String ENCABEZADO_DETALLES_ERROR() {
             return tr("La tarea para la siguiente URL falló:",
                     "The task for the following URL failed:");
@@ -363,10 +370,6 @@ public final class I18nUI {
 
         public static String TITULO_CONFIRMAR_CANCELACION() {
             return tr("Confirmar cancelación", "Confirm cancellation");
-        }
-
-        public static String TITULO_CONFIRMAR_LIMPIEZA() {
-            return tr("Confirmar limpieza", "Confirm cleanup");
         }
 
         public static String MSG_CONFIRMAR_CANCELAR_TAREAS(int total) {
@@ -719,18 +722,10 @@ public final class I18nUI {
             return tr("No hay hallazgos para limpiar.", "There are no findings to clear.");
         }
 
-        public static String TITULO_INFORMACION() {
-            return tr("Información", "Information");
-        }
-
         public static String MSG_CONFIRMAR_LIMPIEZA(int total) {
             return trf("¿Estas seguro de que deseas limpiar todos los hallazgos (%d)?",
                     "Are you sure you want to clear all findings (%d)?",
                     total);
-        }
-
-        public static String TITULO_CONFIRMAR_LIMPIEZA() {
-            return tr("Confirmar limpieza", "Confirm cleanup");
         }
 
         public static String DIALOGO_EXPORTAR_CSV() {
@@ -1246,18 +1241,10 @@ public final class I18nUI {
             return tr("La consola ya está vacía.", "The console is already empty.");
         }
 
-        public static String TITULO_INFORMACION() {
-            return tr("Información", "Information");
-        }
-
         public static String MSG_CONFIRMAR_LIMPIEZA(int total) {
             return trf("¿Limpiar %d log(s) de la consola?",
                     "Clear %d console log(s)?",
                     total);
-        }
-
-        public static String TITULO_CONFIRMAR_LIMPIEZA() {
-            return tr("Confirmar limpieza", "Confirm cleanup");
         }
 
         public static String LOG_INICIALIZADA() {
@@ -1802,17 +1789,10 @@ public final class I18nUI {
                     "The API returned no models for %s", proveedorSeleccionado);
         }
 
-        public static String ERROR_OBTENER_GEMINI() {
-            return tr("No se pudieron obtener modelos Gemini: ", "Could not retrieve Gemini models: ");
-        }
-
-        public static String ERROR_OBTENER_OLLAMA() {
-            return tr("No se pudieron obtener modelos Ollama: ", "Could not retrieve Ollama models: ");
-        }
-
-        public static String ERROR_OBTENER_API() {
-            return tr("No se pudieron obtener modelos de la API: ", "Could not retrieve models from API: ");
-        }
+        // ERROR_OBTENER_GEMINI/OLLAMA/API removed — were dead code with zero
+        // callers in production. The error surface for model-listing failures
+        // is now driven by ERROR_API_SIN_MODELOS(provider) above which is
+        // parameterized and lives in a single canonical method.
 
         public static String ERROR_PROVEEDOR_SIN_LISTA() {
             return tr(

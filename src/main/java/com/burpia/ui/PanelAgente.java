@@ -669,7 +669,7 @@ public class PanelAgente extends JPanel {
         }
         UIUtils.abrirUrlConFallbackInfo(
             this,
-            I18nUI.Consola.TITULO_INFORMACION(),
+            I18nUI.General.TITULO_INFORMACION(),
             url,
             I18nUI.Consola.MSG_URL_GUIA_AGENTE(url)
         );

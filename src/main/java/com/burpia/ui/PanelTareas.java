@@ -119,7 +119,7 @@ public class PanelTareas extends JPanel {
             } else if (estadisticas.obtenerActivasSinPausadas() > 0) {
                 gestorTareas.pausarTodasActivas();
             } else {
-                UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(),
+                UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(),
                         I18nUI.Tareas.INFO_SIN_TAREAS_GESTIONAR());
             }
             actualizarEstadisticas();
@@ -130,7 +130,7 @@ public class PanelTareas extends JPanel {
             int activas = estadisticas.obtenerActivas();
 
             if (activas == 0) {
-                UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
+                UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
                 return;
             }
 
@@ -149,13 +149,13 @@ public class PanelTareas extends JPanel {
             int completadas = estadisticas.obtenerFinalizadas();
 
             if (completadas == 0) {
-                UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
+                UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
                 return;
             }
 
             boolean confirmacion = UIUtils.confirmarPregunta(
                     this,
-                    I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
+                    I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
                     I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(completadas));
             if (confirmacion) {
                 gestorTareas.limpiarCompletadas();
@@ -440,7 +440,7 @@ public class PanelTareas extends JPanel {
     private void cancelarTareas(List<TareaSeleccionada> seleccion) {
         int total = contarSeleccion(seleccion, Tarea::esEstadoCancelable);
         if (total <= 0) {
-            UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
+            UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
             return;
         }
 
@@ -459,13 +459,13 @@ public class PanelTareas extends JPanel {
     private void eliminarTareasSeleccionadas(List<TareaSeleccionada> seleccion) {
         int total = contarSeleccion(seleccion, Tarea::esEstadoEliminable);
         if (total <= 0) {
-            UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
+            UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
             return;
         }
 
         boolean confirmacion = UIUtils.confirmarPregunta(
                 this,
-                I18nUI.Tareas.TITULO_CONFIRMAR_LIMPIEZA(),
+                I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
                 I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(total));
         if (!confirmacion)
             return;
@@ -532,7 +532,7 @@ public class PanelTareas extends JPanel {
     }
 
     private void mostrarMensaje(String mensaje) {
-        UIUtils.mostrarInfo(this, I18nUI.Tareas.TITULO_INFORMACION(), mensaje);
+        UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), mensaje);
     }
 
     private void actualizarEstadisticas() {

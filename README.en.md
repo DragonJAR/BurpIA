@@ -85,11 +85,6 @@ See the change summary in **Version history**.
 - **Grok CLI** (`GROK_BUILD`): integration of xAI's Grok agent into the Agents tab, with automatic binary detection at `~/.grok/bin/grok` (Unix) or `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permissions are controlled via `~/.grok/config.toml` (`permission_mode = "always-approve"`).
 
 
-### v1.6.0
-
-- Internal quality improvements: configurable alerts, hardened i18n, code cleanup, and centralized utilities.
-
-
 ### v1.5.0
 
 - **Contextual flow analysis:** analyzes multiple HTTP requests as a complete flow in a single LLM query, now including both requests and responses.

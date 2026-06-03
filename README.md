@@ -84,11 +84,6 @@ Consulta el resumen de cambios en **Historial de versiones**.
 **Nuevo agente CLI:**
 - **Grok CLI** (`GROK_BUILD`): integración del agente Grok de xAI en la pestaña Agentes, con detección automática de binario en `~/.grok/bin/grok` (Unix) o `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permisos controlados vía `~/.grok/config.toml` (`permission_mode = "always-approve"`).
 
-### v1.6.0
-
-- Mejoras de calidad interna: alertas configurables, i18n reforzado, código limpio y utilidades centralizadas.
-
-
 ### v1.5.0
 
 - **Análisis de flujo contextual:** analiza múltiples peticiones HTTP como un flujo completo en una sola consulta al LLM, incluyendo ahora tanto peticiones como respuestas.
