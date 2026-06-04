@@ -109,39 +109,7 @@ class ConfiguracionAPIRefTest {
             "assertTrue failed at ConfiguracionAPIRefTest.java:103 - valor normalizado fuera de rango");
     }
 
-    @Test
-    @DisplayName("CompararYReemplazar funciona correctamente")
-    void testCompararYReemplazarFunciona() {
-        ConfiguracionAPI original = ref.obtener();
-        ConfiguracionAPI nueva = new ConfiguracionAPI();
-        nueva.establecerProveedorAI("Claude");
-
-        // CAS exitoso cuando la referencia actual es la esperada
-        boolean exito = ref.compararYReemplazar(original, nueva);
-        assertTrue(exito, "assertTrue failed at ConfiguracionAPIRefTest.java:102");
-        assertEquals("Claude", ref.obtener().obtenerProveedorAI(),
-            "assertEquals failed at ConfiguracionAPIRefTest.java:103");
-
-        // CAS falla cuando la referencia actual no es la esperada
-        ConfiguracionAPI otra = new ConfiguracionAPI();
-        otra.establecerProveedorAI("Gemini");
-        boolean fracaso = ref.compararYReemplazar(original, otra);
-        assertFalse(fracaso, "assertFalse failed at ConfiguracionAPIRefTest.java:108");
-        assertEquals("Claude", ref.obtener().obtenerProveedorAI(),
-            "assertEquals failed at ConfiguracionAPIRefTest.java:109");
-    }
-
-    @Test
-    @DisplayName("CompararYReemplazar con null retorna false")
-    void testCompararYReemplazarConNullRetornaFalse() {
-        ConfiguracionAPI original = ref.obtener();
-
-        boolean resultado = ref.compararYReemplazar(original, null);
-
-        assertFalse(resultado, "assertFalse failed at ConfiguracionAPIRefTest.java:119");
-        assertSame(original, ref.obtener(),
-            "assertSame failed at ConfiguracionAPIRefTest.java:120");
-    }
+    // Tests de compararYReemplazar removidos: el método se eliminó por orphan.
 
     @Test
     @DisplayName("Reemplazar null no modifica la referencia")

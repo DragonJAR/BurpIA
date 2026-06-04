@@ -38,7 +38,6 @@ public class PanelTareas extends JPanel {
     private Function<String, Boolean> manejadorReintento;
     private volatile int ultimaVersionTareas = -1;
 
-    private static final int COLUMNA_ID = 0;
     private static final int COLUMNA_URL = 1;
     private static final int COLUMNA_ESTADO = 2;
     private static final int COLUMNA_DURACION = 3;

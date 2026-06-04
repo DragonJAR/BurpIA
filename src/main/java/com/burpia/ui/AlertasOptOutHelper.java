@@ -37,38 +37,12 @@ public final class AlertasOptOutHelper {
     /** Clave global para alertas de acciones "Enviar a" desde hallazgos */
     public static final String ALERTA_HALLAZGOS_ENVIAR_A = "alerta_hallazgos_enviar_a";
 
-    /** Clave para la alerta de análisis de flujo en menú contextual */
-    public static final String ALERTA_MENU_FLUJO_INICIADO = "alerta_menu_flujo_iniciado";
-
-    /** Clave para la alerta de análisis de solicitud individual en menú contextual */
-    public static final String ALERTA_MENU_SOLICITUD_INICIADA = "alerta_menu_solicitud_iniciada";
-
-    /** Clave para la alerta de envío de agente (solicitud) en menú contextual */
-    public static final String ALERTA_MENU_ENVIO_AGENTE_SOLICITUD = "alerta_menu_envio_agente_solicitud";
-
-    /** Clave para la alerta de envío de agente (flujo) en menú contextual */
-    public static final String ALERTA_MENU_ENVIO_AGENTE_FLUJO = "alerta_menu_envio_agente_flujo";
-
-    /** Clave para la alerta de flujo requiere múltiples solicitudes válidas */
-    public static final String ALERTA_MENU_FLUJO_REQUIERE_MULTIPLES_VALIDAS = "alerta_menu_flujo_requiere_multiples_validas";
-
-    /** Clave para la alerta de flujo excede máximo de peticiones */
-    public static final String ALERTA_MENU_FLUJO_MAXIMO_PETICIONES = "alerta_menu_flujo_maximo_peticiones";
-
-    /** Clave para la alerta de análisis de hallazgos iniciado */
-    public static final String ALERTA_HALLAZGOS_ANALISIS_INICIADO = "alerta_hallazgos_analisis_iniciado";
-
-    /** Clave para la alerta de envío a Repeater */
-    public static final String ALERTA_HALLAZGOS_ENVIO_REPEATER = "alerta_hallazgos_envio_repeater";
-
-    /** Clave para la alerta de envío a Intruder */
-    public static final String ALERTA_HALLAZGOS_ENVIO_INTRUDER = "alerta_hallazgos_envio_intruder";
-
-    /** Clave para la alerta de envío a Scanner */
-    public static final String ALERTA_HALLAZGOS_ENVIO_SCANNER = "alerta_hallazgos_envio_scanner";
-
-    /** Clave para la alerta de envío a Issues */
-    public static final String ALERTA_HALLAZGOS_ENVIO_ISSUES = "alerta_hallazgos_envio_issues";
+    // NOTA: Las constantes ALERTA_MENU_FLUJO_*, ALERTA_MENU_SOLICITUD_INICIADA,
+    // ALERTA_MENU_ENVIO_AGENTE_*, ALERTA_HALLAZGOS_ANALISIS_INICIADO y
+    // ALERTA_HALLAZGOS_ENVIO_* (Repeater/Intruder/Scanner/Issues) fueron
+    // pre-declaradas para features que nunca se conectaron al sistema de
+    // opt-out. Removidas en cleanup post-audit. Si en el futuro se necesita
+    // un opt-out granular por acción, se vuelven a declarar.
 
     private AlertasOptOutHelper() {
         // Utility class
@@ -104,15 +78,9 @@ public final class AlertasOptOutHelper {
         config.agregarAlertaDeshabilitada(claveAlerta);
     }
 
-    /**
-     * Combina la verificación de {@link ConfiguracionAPI#alertasHabilitadas()}
-     * con la clave de opt-out individual.
-     *
-     * @param claveAlerta clave única de la alerta
-     * @param config      configuración activa
-     * @return {@code true} si la alerta debe mostrarse
-     */
-    public static boolean alertasEnviarAHabilitadas(String claveAlerta, ConfiguracionAPI config) {
-        return debeMostrarAlerta(claveAlerta, config);
-    }
+    // alertasEnviarAHabilitadas(String, ConfiguracionAPI) removed (orphan):
+    // método estático bypassed por wrappers privados (sin args) en
+    // FabricaMenuContextual y PanelHallazgos. Los callers reales usan
+    // debeMostrarAlerta(claveAlerta, config) directamente, lo que hace este
+    // wrapper redundante.
 }

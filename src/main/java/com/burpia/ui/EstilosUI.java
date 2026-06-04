@@ -101,7 +101,6 @@ public class EstilosUI {
 
     public static final Color COLOR_FONDO_PANEL = new Color(245, 245, 245);
     public static final Color COLOR_TEXTO_NORMAL = Color.BLACK;
-    public static final Color COLOR_TEXTO_DESHABILITADO = new Color(150, 150, 150);
 
     public static final Color COLOR_CRITICAL = new Color(156, 39, 176);
     public static final Color COLOR_HIGH = new Color(220, 53, 69);

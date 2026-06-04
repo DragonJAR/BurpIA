@@ -154,15 +154,6 @@ public final class EstadoProveedorUI {
     }
 
     /**
-     * Verifica si la API key está configurada (no vacía).
-     *
-     * @return true si hay una API key configurada
-     */
-    public boolean tieneApiKey() {
-        return Normalizador.noEsVacio(apiKey);
-    }
-
-    /**
      * Verifica si el modelo está seleccionado (no vacío).
      *
      * @return true si hay un modelo seleccionado
@@ -171,14 +162,10 @@ public final class EstadoProveedorUI {
         return Normalizador.noEsVacio(modelo);
     }
 
-    /**
-     * Verifica si la URL base está configurada (no vacía).
-     *
-     * @return true si hay una URL base configurada
-     */
-    public boolean tieneBaseUrl() {
-        return Normalizador.noEsVacio(baseUrl);
-    }
+    // tieneApiKey() y tieneBaseUrl() removidos (orphan): zero callers en
+    // producción ni tests. La validación de API key/URL ocurre vía
+    // ConfigValidator que consulta otros campos. Si en el futuro un caller
+    // necesita estos predicados, se reintroducen.
 
     /**
      * Representación en string para debugging.

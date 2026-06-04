@@ -12,7 +12,6 @@ import org.mockito.MockitoAnnotations;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.contains;
@@ -155,89 +154,10 @@ class DialogStateManagerTest {
             "assertTrue failed at DialogStateManagerTest.java:110");
     }
 
-    @Test
-    void testObtenerCambiosDetectados() {
-        stateManager.capturarEstadoInicial(uiProvider);
-        
-        when(uiProvider.obtenerModeloSeleccionado()).thenReturn("gpt-3.5-turbo");
-        when(uiProvider.esDetalladoSeleccionado()).thenReturn(false);
-        
-        List<String> cambios = stateManager.obtenerCambiosDetectados(uiProvider);
-        
-        assertEquals(2, cambios.size());
-        assertTrue(cambios.contains(I18nUI.Configuracion.CAMBIO_MODELO()));
-        assertTrue(cambios.contains(I18nUI.Configuracion.CAMBIO_MODO_DETALLADO()));
-    }
-
-    @Test
-    void testObtenerCambiosDetectadosRespetaIdiomaActual() {
-        I18nUI.establecerIdioma("en");
-        stateManager.capturarEstadoInicial(uiProvider);
-
-        when(uiProvider.obtenerModeloSeleccionado()).thenReturn("gpt-3.5-turbo");
-        when(uiProvider.esDetalladoSeleccionado()).thenReturn(false);
-
-        List<String> cambios = stateManager.obtenerCambiosDetectados(uiProvider);
-
-        assertTrue(cambios.contains("Model"));
-        assertTrue(cambios.contains("Verbose mode"));
-    }
-
-    @Test
-    void testGestionarCambioProveedor() {
-        stateManager.gestionarCambioProveedor("Claude", uiProvider);
-        
-        verify(uiProvider).actualizarProveedorEnUI("Claude");
-        verify(gestorLogging).info(eq("DialogStateManager"), contains("Cambiando proveedor"));
-    }
-
-    @Test
-    void testGestionarCambioProveedor_MismoProveedor() {
-        stateManager.capturarEstadoInicial(uiProvider);
-        stateManager.gestionarCambioProveedor("OpenAI", uiProvider);
-        
-        verify(uiProvider, never()).actualizarProveedorEnUI(anyString());
-    }
-
-    @Test
-    void testGuardarEstadoTemporalProveedor() {
-        EstadoProveedorUI estado = new EstadoProveedorUI("sk-key", "claude-3", "https://api.anthropic.com", 8192, 180);
-        
-        stateManager.guardarEstadoTemporalProveedor("Claude", estado);
-        
-        Map<String, EstadoProveedorUI> estadosTemporales = stateManager.obtenerEstadoProveedorTemporal();
-        assertTrue(estadosTemporales.containsKey("Claude"));
-        assertEquals(estado, estadosTemporales.get("Claude"));
-        
-        verify(gestorLogging).info(eq("DialogStateManager"), contains("Estado temporal guardado"));
-    }
-
-    @Test
-    void testGuardarRutaBinarioAgente() {
-        stateManager.guardarRutaBinarioAgente("gemini", "/usr/local/bin/gemini");
-        
-        Map<String, String> rutas = stateManager.obtenerRutasBinarioAgenteTemporal();
-        assertTrue(rutas.containsKey("gemini"));
-        assertEquals("/usr/local/bin/gemini", rutas.get("gemini"));
-        
-        verify(gestorLogging).info(eq("DialogStateManager"), contains("Ruta binaria guardada"));
-    }
-
-    @Test
-    void testLimpiarEstadoTemporal() {
-        stateManager.guardarEstadoTemporalProveedor("Claude", new EstadoProveedorUI("sk-key", "claude-3", "https://api.anthropic.com", 8192, 180));
-        stateManager.guardarRutaBinarioAgente("gemini", "/usr/local/bin/gemini");
-        
-        assertFalse(stateManager.obtenerEstadoProveedorTemporal().isEmpty());
-        assertFalse(stateManager.obtenerRutasBinarioAgenteTemporal().isEmpty());
-        
-        stateManager.limpiarEstadoTemporal();
-        
-        assertTrue(stateManager.obtenerEstadoProveedorTemporal().isEmpty());
-        assertTrue(stateManager.obtenerRutasBinarioAgenteTemporal().isEmpty());
-        
-        verify(gestorLogging).info(eq("DialogStateManager"), contains("Estado temporal limpiado"));
-    }
+    // Tests de obtenerCambiosDetectados, gestionarCambioProveedor,
+    // guardarEstadoTemporalProveedor, guardarRutaBinarioAgente,
+    // limpiarEstadoTemporal removidos: los métodos correspondientes se
+    // eliminaron por orphan (zero callers en producción).
 
     @Test
     void testEstadoEdicionDialogo_EqualsAndHashCode() {
@@ -296,8 +216,7 @@ class DialogStateManagerTest {
     void testUIProviderNullHandling() {
         assertNull(stateManager.capturarEstadoActual(null));
         assertFalse(stateManager.hayCambiosNoGuardados(null));
-        assertTrue(stateManager.obtenerCambiosDetectados(null).isEmpty());
-        
+
         verify(gestorLogging).error(eq("DialogStateManager"), eq("UIProvider es nulo"));
     }
 }

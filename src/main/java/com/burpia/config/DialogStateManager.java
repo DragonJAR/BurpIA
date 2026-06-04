@@ -1,7 +1,6 @@
 package com.burpia.config;
 
 import com.burpia.i18n.I18nLogs;
-import com.burpia.i18n.I18nUI;
 import com.burpia.ui.EstadoProveedorUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
@@ -25,13 +24,11 @@ public final class DialogStateManager {
     private final GestorLoggingUnificado gestorLogging;
     private EstadoEdicionDialogo estadoInicial;
     private String proveedorActualUi;
-    private final Map<String, String> rutasBinarioAgenteTemporal;
-    private final Map<String, EstadoProveedorUI> estadoProveedorTemporal;
+    // Fields rutasBinarioAgenteTemporal y estadoProveedorTemporal removidos
+    // (orphan): solo los usaban los métodos que también eran orphan.
 
     public DialogStateManager(GestorLoggingUnificado gestorLogging) {
         this.gestorLogging = gestorLogging;
-        this.rutasBinarioAgenteTemporal = new HashMap<>();
-        this.estadoProveedorTemporal = new HashMap<>();
     }
 
     /**
@@ -64,7 +61,11 @@ public final class DialogStateManager {
         String proveedorSeleccionado = uiProvider.obtenerProveedorSeleccionado();
         String agenteSeleccionado = uiProvider.obtenerAgenteSeleccionado();
 
-        Map<String, String> rutasAgente = new HashMap<>(rutasBinarioAgenteTemporal);
+        // El estado temporal ahora vive completamente en el uiProvider externo
+        // (ConfigDialogController.DialogoEstadoUIProvider). Esta clase ya no
+        // mantiene buffers temporales propios — los métodos que lo hacían eran
+        // orphan y se removieron.
+        Map<String, String> rutasAgente = new HashMap<>();
         Map<String, String> rutasTemporalesExternas = uiProvider.obtenerRutasBinarioAgenteTemporales();
         if (rutasTemporalesExternas != null) {
             rutasAgente.putAll(rutasTemporalesExternas);
@@ -86,7 +87,7 @@ public final class DialogStateManager {
             estadosHabilitacionAgentes.put(agenteSeleccionado, uiProvider.esAgenteHabilitadoSeleccionado());
         }
 
-        Map<String, EstadoProveedorUI> borradores = new HashMap<>(estadoProveedorTemporal);
+        Map<String, EstadoProveedorUI> borradores = new HashMap<>();
         Map<String, EstadoProveedorUI> estadosTemporalesExternos = uiProvider.obtenerEstadosProveedorTemporales();
         if (estadosTemporalesExternos != null) {
             borradores.putAll(estadosTemporalesExternos);
@@ -156,139 +157,20 @@ public final class DialogStateManager {
     }
 
     /**
-     * Obtiene los campos que han cambiado entre el estado inicial y el actual.
-     */
-    public List<String> obtenerCambiosDetectados(EstadoUIProvider uiProvider) {
-        List<String> cambios = new ArrayList<>();
-        
-        if (estadoInicial == null) {
-            return cambios;
-        }
-
-        EstadoEdicionDialogo estadoActual = capturarEstadoActual(uiProvider);
-        if (estadoActual == null) {
-            return cambios;
-        }
-        
-        if (!Objects.equals(estadoInicial.proveedorSeleccionado(), estadoActual.proveedorSeleccionado())) {
-            cambios.add(I18nUI.Configuracion.CAMBIO_PROVEEDOR_AI());
-        }
-
-        if (!Objects.equals(estadoInicial.modeloSeleccionado(), estadoActual.modeloSeleccionado())) {
-            cambios.add(I18nUI.Configuracion.CAMBIO_MODELO());
-        }
-
-        if (!Objects.equals(estadoInicial.apiKeyActual(), estadoActual.apiKeyActual())) {
-            cambios.add(I18nUI.Configuracion.CAMBIO_API_KEY());
-        }
-
-        if (!Objects.equals(estadoInicial.urlActual(), estadoActual.urlActual())) {
-            cambios.add(I18nUI.Configuracion.CAMBIO_URL_API());
-        }
-
-        if (!Objects.equals(estadoInicial.prompt(), estadoActual.prompt())) {
-            cambios.add(I18nUI.Configuracion.CAMBIO_PROMPT());
-        }
-
-        if (estadoInicial.detallado() != estadoActual.detallado()) {
-            cambios.add(I18nUI.Configuracion.CAMBIO_MODO_DETALLADO());
-        }
-
-        if (estadoInicial.multiProveedorHabilitado() != estadoActual.multiProveedorHabilitado()) {
-            cambios.add(I18nUI.Configuracion.CAMBIO_MULTI_PROVEEDOR());
-        }
-        
-        return cambios;
-    }
-
-    /**
-     * Gestiona el cambio de proveedor en la UI.
-     */
-    public void gestionarCambioProveedor(String nuevoProveedor, EstadoUIProvider uiProvider) {
-        if (Normalizador.esVacio(nuevoProveedor)) {
-            gestorLogging.error("DialogStateManager", I18nLogs.tr("Proveedor nuevo es vacío"));
-            return;
-        }
-
-        if (Objects.equals(proveedorActualUi, nuevoProveedor)) {
-            return;
-        }
-
-        String proveedorAnterior = proveedorActualUi;
-        proveedorActualUi = nuevoProveedor;
-
-        gestorLogging.info("DialogStateManager",
-            I18nLogs.Configuracion.CAMBIANDO_PROVEEDOR(
-                proveedorAnterior != null ? proveedorAnterior : "null",
-                nuevoProveedor));
-
-        uiProvider.actualizarProveedorEnUI(nuevoProveedor);
-    }
-
-    /**
-     * Guarda el estado temporal del proveedor durante la edición.
-     */
-    public void guardarEstadoTemporalProveedor(String proveedor, EstadoProveedorUI estado) {
-        if (Normalizador.esVacio(proveedor)) {
-            return;
-        }
-        
-        if (estado != null) {
-            estadoProveedorTemporal.put(proveedor, estado);
-            gestorLogging.info("DialogStateManager", I18nLogs.Configuracion.ESTADO_TEMPORAL_GUARDADO(proveedor));
-        } else {
-            estadoProveedorTemporal.remove(proveedor);
-            gestorLogging.info("DialogStateManager", I18nLogs.Configuracion.ESTADO_TEMPORAL_ELIMINADO(proveedor));
-        }
-    }
-
-    /**
-     * Guarda la ruta binaria del agente de forma temporal.
-     */
-    public void guardarRutaBinarioAgente(String agente, String ruta) {
-        if (Normalizador.esVacio(agente)) {
-            return;
-        }
-        
-        if (Normalizador.noEsVacio(ruta)) {
-            rutasBinarioAgenteTemporal.put(agente, ruta);
-            gestorLogging.info("DialogStateManager",
-                I18nLogs.Configuracion.RUTA_BINARIO_GUARDADA(agente, ruta));
-        } else {
-            rutasBinarioAgenteTemporal.remove(agente);
-            gestorLogging.info("DialogStateManager", I18nLogs.Configuracion.RUTA_BINARIO_ELIMINADA(agente));
-        }
-    }
-
-    /**
-     * Limpia todo el estado temporal.
-     */
-    public void limpiarEstadoTemporal() {
-        rutasBinarioAgenteTemporal.clear();
-        estadoProveedorTemporal.clear();
-        gestorLogging.info("DialogStateManager", I18nLogs.tr("Estado temporal limpiado"));
-    }
-
-    /**
      * Obtiene el proveedor actual seleccionado en la UI.
      */
     public String obtenerProveedorActual() {
         return proveedorActualUi;
     }
 
-    /**
-     * Obtiene las rutas binarias de agentes temporales.
-     */
-    public Map<String, String> obtenerRutasBinarioAgenteTemporal() {
-        return Collections.unmodifiableMap(rutasBinarioAgenteTemporal);
-    }
-
-    /**
-     * Obtiene los estados temporales de proveedores.
-     */
-    public Map<String, EstadoProveedorUI> obtenerEstadoProveedorTemporal() {
-        return Collections.unmodifiableMap(estadoProveedorTemporal);
-    }
+    // Métodos removidos (orphan): obtenerCambiosDetectados,
+    // gestionarCambioProveedor, guardarEstadoTemporalProveedor,
+    // guardarRutaBinarioAgente, limpiarEstadoTemporal,
+    // obtenerRutasBinarioAgenteTemporal, obtenerEstadoProveedorTemporal.
+    // Tenían tests en DialogStateManagerTest pero zero callers en producción.
+    // La gestión real de cambios la hace ConfigDialogController vía
+    // hayCambiosNoGuardados() + listeners directos en la UI. Si en el futuro
+    // se centraliza ese flujo en este manager, se reintroducen con caller real.
 
     /**
      * Crea un snapshot del estado de un proveedor.

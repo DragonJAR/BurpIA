@@ -228,26 +228,11 @@ public final class I18nUI {
         }
     }
 
-    public static final class Herramientas {
-        private Herramientas() {
-        }
-
-        public static String REPEATER() {
-            return tr("BurpIA-Repeater", "BurpIA-Repeater");
-        }
-
-        public static String INTRUDER() {
-            return tr("BurpIA-Intruder", "BurpIA-Intruder");
-        }
-
-        public static String SCANNER() {
-            return tr("BurpIA-Scanner", "BurpIA-Scanner");
-        }
-
-        public static String ISSUES() {
-            return tr("BurpIA-Issues", "BurpIA-Issues");
-        }
-    }
+    // class Herramientas removed (orphan): los 4 métodos REPEATER/INTRUDER/
+    // SCANNER/ISSUES nunca tuvieron callers en el proyecto. Los tool-names
+    // de Burp se referencian directamente vía la API de Montoya, no vía esta
+    // capa de traducción. Si en el futuro se necesita renombrar los Repeater
+    // tabs creados por BurpIA, se vuelve a introducir con su caller real.
 
     public static final class Estadisticas {
         private Estadisticas() {
@@ -298,13 +283,9 @@ public final class I18nUI {
         private Tareas() {
         }
 
-        public static String ESTADO_TAREA_ATASCADA() {
-            return tr("Tarea atascada - timeout", "Stuck task - timeout");
-        }
-
-        public static String LOG_TAREA_ATASCADA_DETECTADA() {
-            return tr("Tarea atascada detectada: ", "Stuck task detected: ");
-        }
+        // ESTADO_TAREA_ATASCADA + LOG_TAREA_ATASCADA_DETECTADA removed
+        // (orphan): migrados a I18nLogs.Tareas durante Sprint H4. Los callers
+        // ya usan I18nLogs.Tareas.ESTADO_ATASCADA() y LOG_ATASCADA_DETECTADA().
 
         public static String TRADUCIR_ESTADO(String estadoOriginal) {
             if (Normalizador.esVacio(estadoOriginal))
@@ -1515,14 +1496,9 @@ public final class I18nUI {
             return trf("Error de red: %s", "Network error: %s", mensaje);
         }
 
-        public static String LOG_UNSUPPORTED_PROVIDER(String proveedor) {
-            return trf("Proveedor no soportado para listar modelos: %s",
-                    "Unsupported provider for model listing: %s", proveedor);
-        }
-
-        public static String LOG_ERROR_PARSING_MODELS() {
-            return tr("Error al parsear respuesta de modelos", "Error parsing models response");
-        }
+        // LOG_UNSUPPORTED_PROVIDER + LOG_ERROR_PARSING_MODELS removed (orphan):
+        // los mensajes equivalentes viven en I18nLogs.REEMPLAZOS_INGLES y los
+        // callers usan I18nLogs.tr() directamente. Sin uso en este archivo.
 
         public static String LOG_SSL_INSECURE_ERROR(String mensaje) {
             return trf("SSL inseguro no se pudo configurar, se usará configuración por defecto: %s",

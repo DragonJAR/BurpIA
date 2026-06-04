@@ -68,20 +68,9 @@ public final class ConfiguracionAPIRef {
         }
     }
 
-    /**
-     * Reemplazo condicional (Compare-And-Set).
-     * <p>
-     * Solo reemplaza si la referencia actual es exactamente {@code esperada},
-     * lo que permite actualizaciones sin conflictos en escenarios optimistas.
-     *
-     * @param esperada la configuración que se espera que sea la actual
-     * @param nueva    la nueva configuración
-     * @return true si el reemplazo fue exitoso
-     */
-    public boolean compararYReemplazar(ConfiguracionAPI esperada, ConfiguracionAPI nueva) {
-        if (nueva == null) {
-            return false;
-        }
-        return ref.compareAndSet(esperada, nueva);
-    }
+    // compararYReemplazar(esperada, nueva) — CAS removed (orphan): no había
+    // callers en producción, solo en tests que verificaban el método mismo.
+    // El flujo real de actualización de config usa establecer(nueva) sin
+    // semántica optimista. Si en el futuro se necesita compare-and-set para
+    // resolver conflictos concurrentes, se vuelve a introducir con su caller.
 }

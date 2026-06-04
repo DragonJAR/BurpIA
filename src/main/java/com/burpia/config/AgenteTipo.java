@@ -67,13 +67,8 @@ public enum AgenteTipo {
         return OSUtils.esWindows() ? rutaWindows : rutaUnix;
     }
 
-    public String obtenerUrlDocES() {
-        return urlDocES;
-    }
-
-    public String obtenerUrlDocEN() {
-        return urlDocEN;
-    }
+    // obtenerUrlDocES/EN removed (orphan): superseded by obtenerUrlDocPorIdioma
+    // que es la API canónica. Los getters por idioma directo no tenían callers.
 
     public String obtenerUrlDocPorIdioma(String codigoIdioma) {
         return "en".equalsIgnoreCase(codigoIdioma) ? urlDocEN : urlDocES;
