@@ -978,6 +978,16 @@ public class ConfigDialogView {
                 null));
         content.add(Box.createVerticalStrut(20));
 
+        // Novedades user-facing de la versión actual. El título incluye la
+        // versión vigente leída dinámicamente, así no queda desincronizada
+        // tras un bump.
+        content.add(crearSeccionAcerca(
+                I18nUI.Configuracion.TITULO_NOVEDADES_VERSION(
+                        com.burpia.util.VersionBurpIA.obtenerVersionActual()),
+                I18nUI.Configuracion.DESCRIPCION_NOVEDADES_VERSION(),
+                null));
+        content.add(Box.createVerticalStrut(20));
+
         JPanel panelBotonWeb = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 5));
         panelBotonWeb.setOpaque(false);
         panelBotonWeb.add(btnSitioWeb);

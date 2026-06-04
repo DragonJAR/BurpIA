@@ -2209,6 +2209,39 @@ public final class I18nUI {
             }
         }
 
+        // Novedades user-facing de la versión actual. Si una nueva versión
+        // introduce features visibles para el usuario, actualizar estos arrays
+        // y borrar los de versiones anteriores — el About siempre muestra solo
+        // los cambios de la versión vigente (el historial completo vive en
+        // los READMEs del proyecto).
+        private static final String[] NOVEDADES_VERSION_ES = {
+                "Nuevos proveedores LLM: DeepSeek, xAI Grok y Ollama Cloud.",
+                "Nuevo agente CLI integrado: Grok CLI en la pestaña Agentes.",
+                "Contrato verbatim para perfiles Custom: la URL base se usa tal cual la ingresás, sin manipulaciones.",
+                "UX per-proveedor en configuración: tooltips dinámicos, URL de ejemplo y validación de campos obligatorios sólo cuando aplica.",
+                "Refactor interno DRY: extracción de helpers para Ollama (local+cloud), endurecimiento de reglas PMD y limpieza de código huérfano.",
+                "Fix crítico de i18n: corregidos ~73 sitios donde la traducción al inglés quedaba en español por concatenación dentro de tr()."
+        };
+
+        private static final String[] NOVEDADES_VERSION_EN = {
+                "New LLM providers: DeepSeek, xAI Grok, and Ollama Cloud.",
+                "New integrated CLI agent: Grok CLI available in the Agents tab.",
+                "Verbatim contract for Custom profiles: the base URL is used as-is, no manipulations.",
+                "Per-provider UX in settings: dynamic tooltips, example URL hints, and required-field validation only when applicable.",
+                "Internal DRY refactor: extracted helpers for Ollama (local+cloud), tightened PMD rules, and removed orphan code.",
+                "Critical i18n fix: ~73 sites corrected where English translation was falling through to Spanish due to concatenation inside tr()."
+        };
+
+        public static String TITULO_NOVEDADES_VERSION(String version) {
+            return trf("NOVEDADES DE LA VERSION %s", "WHAT'S NEW IN VERSION %s", version);
+        }
+
+        public static String DESCRIPCION_NOVEDADES_VERSION() {
+            return tr(
+                    construirDescripcionApp("", "Cambios principales", NOVEDADES_VERSION_ES),
+                    construirDescripcionApp("", "Main changes", NOVEDADES_VERSION_EN));
+        }
+
         public static String TITULO_DESARROLLADO_POR() {
             return tr("DESARROLLADO POR", "DEVELOPED BY");
         }
