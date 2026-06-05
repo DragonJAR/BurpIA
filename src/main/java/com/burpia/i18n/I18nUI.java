@@ -1474,6 +1474,12 @@ public final class I18nUI {
             return tr("Versión o callback no puede ser nulo", "Version or callback cannot be null");
         }
 
+        public static String ERROR_VERSION_REMOTA_NULA() {
+            return tr(
+                "Respuesta inesperada del servidor de releases (no se pudo extraer la versión).",
+                "Unexpected response from the releases server (could not extract the version).");
+        }
+
         public static String ERROR_UPDATE_TIMEOUT(int segundos) {
             return trf("Tiempo de espera de actualización agotado después de %d segundos",
                     "Update check timeout after %d seconds", segundos);

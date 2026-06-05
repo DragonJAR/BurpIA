@@ -94,7 +94,11 @@ public class ConfiguracionAPI {
 
     // Multi-Proveedor Configuration
     private boolean multiProveedorHabilitado;
-    private List<String> proveedoresMultiConsulta;
+    // volatile: el campo es mutado desde EDT (UI) y leído desde threads de
+    // análisis (GestorMultiProveedor). Sin volatile, lecturas concurrentes
+    // pueden ver una referencia stale. Mutaciones siempre reemplazan la
+    // lista entera con copy-on-write (ver establecerProveedoresMultiConsulta).
+    private volatile List<String> proveedoresMultiConsulta;
 
     // UI State Persistence - PanelHallazgos filters
     private String textoFiltroHallazgos;
@@ -809,11 +813,11 @@ public class ConfiguracionAPI {
             return "";
         }
         String p = prov.get();
-        if (urlsBasePorProveedor.containsKey(p)) {
-            String urlGuardada = urlsBasePorProveedor.get(p);
-            if (Normalizador.noEsVacio(urlGuardada)) {
-                return urlGuardada;
-            }
+        // Single get() para evitar TOCTOU: el field volatile puede ser
+        // reasignado entre containsKey y get → lecturas inconsistentes.
+        String urlGuardada = urlsBasePorProveedor.get(p);
+        if (Normalizador.noEsVacio(urlGuardada)) {
+            return urlGuardada;
         }
         String urlPorDefecto = ProveedorAI.obtenerUrlApiPorDefecto(p, idiomaUi);
         return urlPorDefecto != null ? urlPorDefecto : "";
@@ -838,9 +842,10 @@ public class ConfiguracionAPI {
             return "";
         }
         String p = prov.get();
-        if (modelosPorProveedor.containsKey(p)) {
-            String modelo = modelosPorProveedor.get(p);
-            return modelo != null ? modelo : "";
+        // Single get() para evitar TOCTOU (ver obtenerUrlBaseParaProveedor).
+        String modelo = modelosPorProveedor.get(p);
+        if (modelo != null) {
+            return modelo;
         }
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(p);
         return config != null ? config.obtenerModeloPorDefecto() : "";
@@ -879,11 +884,10 @@ public class ConfiguracionAPI {
         if (proveedorNormalizado.isEmpty()) {
             return 4096;
         }
-        if (maxTokensPorProveedor.containsKey(proveedorNormalizado)) {
-            Integer valor = maxTokensPorProveedor.get(proveedorNormalizado);
-            if (valor != null && valor > 0) {
-                return valor;
-            }
+        // Single get() para evitar TOCTOU (ver obtenerUrlBaseParaProveedor).
+        Integer valor = maxTokensPorProveedor.get(proveedorNormalizado);
+        if (valor != null && valor > 0) {
+            return valor;
         }
         return obtenerMaxTokensPorDefectoProveedor(proveedorNormalizado);
     }
@@ -1310,22 +1314,49 @@ public class ConfiguracionAPI {
         if (!ProveedorAI.existeProveedor(proveedorNormalizado)) {
             return;
         }
-        if (proveedoresMultiConsulta == null) {
-            proveedoresMultiConsulta = new ArrayList<>();
+        // Copy-on-write para que el field volatile garantice visibilidad
+        // consistente entre EDT (mutador) y threads de análisis (lectores).
+        List<String> actual = proveedoresMultiConsulta;
+        if (actual == null) {
+            actual = new ArrayList<>();
         }
-        if (!proveedoresMultiConsulta.contains(proveedorNormalizado)) {
-            proveedoresMultiConsulta.add(proveedorNormalizado);
+        if (actual.contains(proveedorNormalizado)) {
+            return;
         }
+        List<String> nueva = new ArrayList<>(actual);
+        nueva.add(proveedorNormalizado);
+        proveedoresMultiConsulta = nueva;
     }
 
     public void removerProveedorMultiConsulta(String proveedor) {
-        if (proveedoresMultiConsulta != null) {
-            String proveedorNormalizado = normalizarProveedor(proveedor);
-            proveedoresMultiConsulta.remove(proveedorNormalizado);
+        List<String> actual = proveedoresMultiConsulta;
+        if (actual == null || actual.isEmpty()) {
+            return;
+        }
+        String proveedorNormalizado = normalizarProveedor(proveedor);
+        if (!actual.contains(proveedorNormalizado)) {
+            return;
+        }
+        // Copy-on-write (ver agregarProveedorMultiConsulta).
+        List<String> nueva = new ArrayList<>(actual);
+        nueva.remove(proveedorNormalizado);
+        proveedoresMultiConsulta = nueva;
+    }
+
+    // Lock dedicado para asegurarMapas(). Evita que dos llamadas concurrentes
+    // creen mapas frescos independientes y se pisen mutuamente (perdiendo
+    // entries que estaban en una pero no en la otra). El cuerpo del método
+    // hace múltiples reasignaciones de fields volatile que deben ser atómicas
+    // como conjunto.
+    private final Object lockNormalizacion = new Object();
+
+    private void asegurarMapas() {
+        synchronized (lockNormalizacion) {
+            asegurarMapasInterno();
         }
     }
 
-    private void asegurarMapas() {
+    private void asegurarMapasInterno() {
         if (agentesHabilitadosPorTipo == null) {
             agentesHabilitadosPorTipo = crearEstadosHabilitacionAgentesPorDefecto();
         }

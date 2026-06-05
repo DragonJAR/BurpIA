@@ -37,7 +37,15 @@ public class ConnectionTester {
     private final ExecutorService executorService;
     private final GestorLoggingUnificado gestorLogging;
     private final Gson gson;
-    
+    // Cliente OkHttp base compartido por verificarActualizaciones() y
+    // ejecutarOperacionRed(). Antes cada llamada construía un client
+    // throwaway con dispatcher + connection pool propios que nunca se
+    // cerraban — sus threads quedaban vivos hasta GC, invisibles para
+    // AnalizadorHTTP.limpiarClientes() (B1). Ahora un único client se
+    // reusa; .newBuilder() en derivados con timeout custom comparte el
+    // dispatcher con el base (OkHttp doc).
+    private final OkHttpClient clienteBase;
+
     public ConnectionTester() {
         this.executorService = Executors.newCachedThreadPool(r -> {
             Thread t = new Thread(r, "ConnectionTester-Thread");
@@ -47,6 +55,10 @@ public class ConnectionTester {
         // Usar gestorLogging sin PrintWriter - usa Logger interno
         this.gestorLogging = GestorLoggingUnificado.crearMinimal(null, null);
         this.gson = GsonProvider.get();
+        this.clienteBase = new OkHttpClient.Builder()
+            .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build();
     }
     
     /**
@@ -164,34 +176,45 @@ public class ConnectionTester {
                     .url(GITHUB_API_URL)
                     .get()
                     .build();
-                
-                OkHttpClient client = new OkHttpClient.Builder()
-                    .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                    .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                    .build();
-                
-                try (Response response = client.newCall(request).execute()) {
+
+                // Reusa clienteBase (timeouts ya configurados a DEFAULT_TIMEOUT_SECONDS).
+                try (Response response = clienteBase.newCall(request).execute()) {
                     if (!response.isSuccessful()) {
                         throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), response.message()));
                     }
 
                     String responseBody = response.body() != null ? response.body().string() : "";
                     JsonObject release = gson.fromJson(responseBody, JsonObject.class);
-                    
-                    String ultimaVersion = release.get("tag_name").getAsString();
-                    String nombreRelease = release.get("name").getAsString();
+                    if (release == null) {
+                        throw new IOException(I18nUI.Conexion.ERROR_VERSION_REMOTA_NULA());
+                    }
+
+                    // Guards .has() para todos los fields: si la API de GitHub
+                    // cambia shape o devuelve rate-limit/error envuelto, no
+                    // queremos un NPE oscuro envuelto en RuntimeException.
+                    String ultimaVersion = release.has("tag_name") ? release.get("tag_name").getAsString() : "";
+                    String nombreRelease = release.has("name") ? release.get("name").getAsString() : ultimaVersion;
                     String cuerpoRelease = release.has("body") ? release.get("body").getAsString() : "";
                     String urlDescarga = "";
-                    
+
                     if (release.has("assets") && release.get("assets").isJsonArray()) {
                         JsonArray assets = release.get("assets").getAsJsonArray();
                         for (JsonElement asset : assets) {
+                            if (asset == null || !asset.isJsonObject()) {
+                                continue;
+                            }
                             JsonObject assetObj = asset.getAsJsonObject();
-                            if (assetObj.get("name").getAsString().endsWith(".jar")) {
+                            String assetName = assetObj.has("name") ? assetObj.get("name").getAsString() : "";
+                            if (assetName.endsWith(".jar") && assetObj.has("browser_download_url")) {
                                 urlDescarga = assetObj.get("browser_download_url").getAsString();
                                 break;
                             }
                         }
+                    }
+
+                    if (Normalizador.esVacio(ultimaVersion)) {
+                        // Sin tag_name no hay forma de comparar versiones.
+                        throw new IOException(I18nUI.Conexion.ERROR_VERSION_REMOTA_NULA());
                     }
                     
                     boolean hayActualizacion = compararVersiones(versionActual, ultimaVersion) < 0;
@@ -229,14 +252,16 @@ public class ConnectionTester {
         
         CompletableFuture.supplyAsync(() -> {
             try {
-                OkHttpClient client = new OkHttpClient.Builder()
+                // .newBuilder() comparte dispatcher + connection pool del
+                // cliente base, así no se alocan threads nuevos por call.
+                OkHttpClient client = clienteBase.newBuilder()
                     .connectTimeout(timeoutSegundos, TimeUnit.SECONDS)
                     .readTimeout(timeoutSegundos, TimeUnit.SECONDS)
                     .build();
-                
+
                 try (Response response = client.newCall(request).execute()) {
                     String responseBody = response.body() != null ? response.body().string() : "";
-                    return new RespuestaRed(response.code(), response.message(), responseBody, 
+                    return new RespuestaRed(response.code(), response.message(), responseBody,
                         response.isSuccessful());
                 }
             } catch (Exception e) {
@@ -260,6 +285,15 @@ public class ConnectionTester {
      * Shuts down the executor service
      */
     public void cerrar() {
+        // Cleanup del clienteBase compartido: dispatcher + connectionPool
+        // mantenían threads vivos invisibles a AnalizadorHTTP.limpiarClientes().
+        try {
+            clienteBase.dispatcher().executorService().shutdown();
+            clienteBase.connectionPool().evictAll();
+        } catch (Exception ignored) {
+            // Best-effort: si falla el shutdown del client, no bloqueamos
+            // el shutdown del executor.
+        }
         executorService.shutdown();
         try {
             if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
