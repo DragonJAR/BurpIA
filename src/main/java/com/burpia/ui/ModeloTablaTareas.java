@@ -139,12 +139,51 @@ public class ModeloTablaTareas extends DefaultTableModel {
             lock.unlock();
         }
 
-        // Usar el camino de sincronización completa para evitar TOCTOU: si entre el
-        // unlock y la ejecución del EDT otro hilo dispara una purga, un setValueAt
-        // con índice capturado escribiría en la fila equivocada. setDataVector reusa
-        // el snapshot bajo lock y emite una sola notificación.
-        if (actualizado) {
-            programarSincronizacionTabla();
+        if (!actualizado) {
+            return;
+        }
+
+        // Update puntual evitando el rebuild completo de setDataVector
+        // (que disparaba fireTableStructureChanged → repaint completo
+        // + reset column model + pérdida de selección). Para evitar TOCTOU
+        // re-buscamos el índice DENTRO del EDT bajo lock: si la tarea fue
+        // purgada por otro hilo entre tanto, la sync completa ya está
+        // programada y nos saltamos esta actualización puntual.
+        ejecutarEnEdt(() -> aplicarActualizacionPuntualEnEdt(idTarea, tarea));
+    }
+
+    /**
+     * Aplica una actualización puntual de fila en el EDT, re-verificando
+     * la posición de la tarea bajo lock para evitar carreras con purgas.
+     */
+    private void aplicarActualizacionPuntualEnEdt(String idTarea, Tarea tarea) {
+        Object[] fila;
+        int indiceActual;
+        lock.lock();
+        try {
+            indiceActual = buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
+            if (indiceActual < 0) {
+                // Purgada entre el unlock y el EDT → ya se programó (o se
+                // programará) una sync completa que cubre este caso.
+                return;
+            }
+            fila = tarea.aFilaTabla();
+        } finally {
+            lock.unlock();
+        }
+
+        // Si el tableModel está fuera de sync con `datos` (puede pasar tras
+        // una purga concurrente que aún no se reflejó), abortamos: la sync
+        // completa lo cubrirá.
+        if (indiceActual >= getRowCount() || fila == null) {
+            return;
+        }
+
+        int columnas = Math.min(fila.length, getColumnCount());
+        for (int col = 0; col < columnas; col++) {
+            // setValueAt actualiza dataVector y emite fireTableCellUpdated.
+            // Swing coalesce cells cercanas en un solo repaint.
+            setValueAt(fila[col], indiceActual, col);
         }
     }
 

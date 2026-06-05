@@ -23,6 +23,12 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
     private final JTable tabla;
     private final ModeloTablaHallazgos modelo;
 
+    // Cache de la fuente tachada para evitar reasignar HashMap + deriveFont
+    // por cada cell paint (60 fps × N filas ignoradas → GC pressure).
+    // Re-derivada solo cuando cambia la identidad de la fuente base.
+    private Font fuenteBaseCacheada;
+    private Font fuenteTachadaCacheada;
+
     /**
      * Crea un nuevo renderizador decorador para hallazgos ignorados.
      *
@@ -90,10 +96,24 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
             etiqueta.setForeground(EstilosUI.colorTextoIgnorado(fondoIgnorado));
         }
 
-        // Aplicar fuente con tachado
-        Font base = tabla.getFont();
+        // Aplicar fuente con tachado (cache invalidación por identidad de base).
+        etiqueta.setFont(obtenerFuenteTachada(tabla.getFont()));
+    }
+
+    /**
+     * Devuelve la versión tachada de {@code base}, cacheando el resultado.
+     * Re-deriva solo cuando la identidad de la fuente base cambia (cambio
+     * de tema o fontsize por el usuario), evitando HashMap + deriveFont
+     * en cada paint.
+     */
+    private Font obtenerFuenteTachada(Font base) {
+        if (base == fuenteBaseCacheada && fuenteTachadaCacheada != null) {
+            return fuenteTachadaCacheada;
+        }
         Map<TextAttribute, Object> atributos = new HashMap<>(base.getAttributes());
         atributos.put(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON);
-        etiqueta.setFont(base.deriveFont(atributos));
+        fuenteTachadaCacheada = base.deriveFont(atributos);
+        fuenteBaseCacheada = base;
+        return fuenteTachadaCacheada;
     }
 }

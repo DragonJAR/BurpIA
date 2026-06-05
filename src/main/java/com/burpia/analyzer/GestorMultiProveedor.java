@@ -114,10 +114,17 @@ public class GestorMultiProveedor {
             try {
                 ResultadoAnalisisMultiple resultado = ejecutarAnalisisProveedor(proveedor, modelo);
                 List<Hallazgo> hallazgosProveedor = resultado.obtenerHallazgos();
-                
+
                 registrar(I18nLogs.MultiProveedor.PROVEEDOR_COMPLETADO(proveedor, hallazgosProveedor.size()));
                 todosHallazgos.addAll(hallazgosProveedor);
 
+            } catch (InterruptedException ie) {
+                // Cancelación del usuario: restaurar flag y propagar para
+                // que el orquestador corte el resto de proveedores. Antes
+                // estaba siendo tragada por el catch Exception siguiente
+                // (M1 audit) → la cancelación no surtía efecto en multi-mode.
+                Thread.currentThread().interrupt();
+                throw ie;
             } catch (Exception e) {
                 registrar(I18nLogs.MultiProveedor.PROVEEDOR_ERROR(proveedor, e.getMessage()));
                 proveedoresFallidos.add(proveedor);
