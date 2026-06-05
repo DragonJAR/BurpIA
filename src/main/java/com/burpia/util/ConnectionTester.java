@@ -355,11 +355,48 @@ public class ConnectionTester {
             final javax.net.ssl.SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
-            builder.hostnameVerifier((hostname, session) -> true);
+            // SECURITY (O3): bypass de hostname verification SOLO para
+            // loopback/LAN. Hosts cloud usan el verifier default — si un
+            // usuario tiene "ignorar SSL" activo para LM Studio local, sus
+            // keys cloud NO se exponen a MITM por misconfig DNS.
+            javax.net.ssl.HostnameVerifier defaultVerifier = javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier();
+            builder.hostnameVerifier((hostname, session) -> {
+                if (esLoopbackOLan(hostname)) {
+                    return true;
+                }
+                return defaultVerifier.verify(hostname, session);
+            });
         } catch (Exception e) {
             gestorLogging.error("ConnectionTester",
                     I18nUI.Conexion.LOG_SSL_INSECURE_ERROR(describirErrorVisible(e)));
         }
+    }
+
+    private static boolean esLoopbackOLan(String hostname) {
+        if (hostname == null || hostname.isEmpty()) {
+            return false;
+        }
+        String h = hostname.toLowerCase(java.util.Locale.ROOT);
+        if ("localhost".equals(h) || h.endsWith(".localhost") || "127.0.0.1".equals(h) || "::1".equals(h)) {
+            return true;
+        }
+        if (h.startsWith("10.") || h.startsWith("192.168.")) {
+            return true;
+        }
+        if (h.startsWith("172.")) {
+            int dot1 = h.indexOf('.', 4);
+            if (dot1 > 4) {
+                try {
+                    int segundo = Integer.parseInt(h.substring(4, dot1));
+                    if (segundo >= 16 && segundo <= 31) {
+                        return true;
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Not an IP — fall through
+                }
+            }
+        }
+        return false;
     }
     
     private Request crearSolicitudTestConexion(String proveedor, String apiKey, String urlBase) {
@@ -379,9 +416,14 @@ public class ConnectionTester {
             builder.addHeader("x-api-key", apiKey);
             builder.addHeader("anthropic-version", "2023-06-01");
         } else if ("Gemini".equals(proveedor)) {
+            // SECURITY (O1): la API key viaja por header x-goog-api-key, NO
+            // como query param (?key=...). Antes la key quedaba en logs de
+            // OkHttp, proxy history (este plugin corre dentro de Burp),
+            // middleware. El production path en ConstructorSolicitudesProveedor
+            // ya usa header — aquí lo igualamos.
             endpoint = urlBase + "/models";
             if (Normalizador.noEsVacio(apiKey)) {
-                endpoint += "?key=" + apiKey.trim();
+                builder.addHeader("x-goog-api-key", apiKey.trim());
             }
         } else if ("Ollama".equals(proveedor)) {
             endpoint = urlBase + "/api/tags";

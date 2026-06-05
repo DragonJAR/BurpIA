@@ -307,11 +307,58 @@ public class AnalizadorHTTP {
             final javax.net.ssl.SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
 
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
-            builder.hostnameVerifier((hostname, session) -> true);
+            // SECURITY (O3): el bypass de hostname verification se limita a
+            // loopback / IP privadas. Para hosts cloud el verifier default
+            // aplica normalmente — si un usuario tiene "Ignorar errores SSL"
+            // activo para LM Studio local, sus keys cloud NO viajan a través
+            // de un MITM por misconfig DNS.
+            javax.net.ssl.HostnameVerifier defaultVerifier = javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier();
+            builder.hostnameVerifier((hostname, session) -> {
+                if (esLoopbackOLan(hostname)) {
+                    return true;
+                }
+                return defaultVerifier.verify(hostname, session);
+            });
         } catch (Exception e) {
             gestorLogging.error(ORIGEN_LOG,
                 I18nUI.Conexion.LOG_SSL_INSECURE_ERROR(e.getClass().getSimpleName()));
         }
+    }
+
+    /**
+     * Determina si un hostname corresponde a una IP loopback o de red privada
+     * (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) o el nombre "localhost".
+     * Usado para limitar el bypass de hostname verification SSL (O3).
+     */
+    private static boolean esLoopbackOLan(String hostname) {
+        if (hostname == null || hostname.isEmpty()) {
+            return false;
+        }
+        String h = hostname.toLowerCase(java.util.Locale.ROOT);
+        if ("localhost".equals(h) || h.endsWith(".localhost") || "127.0.0.1".equals(h) || "::1".equals(h)) {
+            return true;
+        }
+        // IPv4 patterns: 10.x, 172.16-31.x, 192.168.x
+        if (h.startsWith("10.")) {
+            return true;
+        }
+        if (h.startsWith("192.168.")) {
+            return true;
+        }
+        if (h.startsWith("172.")) {
+            int dot1 = h.indexOf('.', 4);
+            if (dot1 > 4) {
+                try {
+                    int segundo = Integer.parseInt(h.substring(4, dot1));
+                    if (segundo >= 16 && segundo <= 31) {
+                        return true;
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Not an IP — fall through
+                }
+            }
+        }
+        return false;
     }
 
     private void registrarFalloIntento(int intento, IOException error) {
@@ -323,9 +370,27 @@ public class AnalizadorHTTP {
             ApiHttpException apiError = (ApiHttpException) error;
             String cuerpoError = apiError.obtenerCuerpoError();
             if (Normalizador.noEsVacio(cuerpoError)) {
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("Cuerpo de respuesta de error de API: %s", cuerpoError));
+                // SECURITY (O2): algunos providers embeben partial tokens /
+                // session IDs en error bodies. Truncamos antes de loggear
+                // para evitar volcar secrets en la consola de Burp.
+                String cuerpoTruncado = truncarParaLog(cuerpoError, MAX_LONGITUD_CUERPO_ERROR_LOG);
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("Cuerpo de respuesta de error de API: %s", cuerpoTruncado));
             }
         }
+    }
+
+    private static final int MAX_LONGITUD_CUERPO_ERROR_LOG = 500;
+
+    /**
+     * Trunca un cuerpo de respuesta para logging, agregando un sufijo que
+     * indica truncate si aplica. Reduce el riesgo de loggear secrets que
+     * algunos providers embeben en error bodies.
+     */
+    private static String truncarParaLog(String cuerpo, int maxLongitud) {
+        if (cuerpo == null || cuerpo.length() <= maxLongitud) {
+            return cuerpo;
+        }
+        return cuerpo.substring(0, maxLongitud) + "… [truncado, +" + (cuerpo.length() - maxLongitud) + " chars]";
     }
 
     private static final class NonRetryableApiException extends IOException {
