@@ -133,7 +133,11 @@ public class AnalizadorHTTP {
         throw ultimaExcepcion;
     }
 
-    private String llamarAPISingle(String prompt, boolean registrarDetalleSolicitud) 
+    // PMD marca la asignación llamadaHttpActiva=call como "sobrescrita" en el
+    // finally, pero el valor es leído por cancelarLlamadaActiva() desde otro
+    // hilo para abortar la petición en vuelo. Es un patrón acquire/release.
+    @SuppressWarnings("PMD.UnusedAssignment")
+    private String llamarAPISingle(String prompt, boolean registrarDetalleSolicitud)
             throws IOException, InterruptedException {
         OkHttpClient clienteHttp = obtenerClienteHttp();
         

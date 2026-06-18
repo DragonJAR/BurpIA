@@ -1575,11 +1575,6 @@ public class ConfiguracionAPI {
         return normalizados;
     }
 
-    private String obtenerPrimerAgenteHabilitado() {
-        asegurarMapas();
-        return obtenerPrimerAgenteHabilitadoSinAsegurar();
-    }
-
     private String obtenerPrimerAgenteHabilitadoSinAsegurar() {
         for (AgenteTipo tipo : AgenteTipo.values()) {
             if (agenteHabilitadoSinAsegurar(tipo.name())) {

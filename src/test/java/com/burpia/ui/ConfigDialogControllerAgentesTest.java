@@ -294,7 +294,7 @@ class ConfigDialogControllerAgentesTest {
     @Test
     @DisplayName("Guardar acepta agente habilitado con ruta expandible por tilde")
     void testGuardarAceptaBinarioAgenteConTildeYArgumentos() throws Exception {
-        Path binarioClaude = crearBinarioClaudeEnHomeActual();
+        crearBinarioClaudeEnHomeActual();
 
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("Z.ai");

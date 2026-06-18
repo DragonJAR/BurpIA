@@ -311,10 +311,16 @@ public class ExtensionBurpIA implements BurpExtension {
         }
     }
 
+    // PMD no rastrea que this::enviarAAgente (línea 215) resuelve a esta
+    // sobrecarga de 1 arg vía Predicate<HttpRequestResponse>; es un falso positivo.
+    @SuppressWarnings("PMD.UnusedPrivateMethod")
     private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta) {
         return enviarAAgente(solicitudRespuesta, null);
     }
 
+    // PMD no rastrea que this::enviarFlujoAAgente (línea 216) resuelve a esta
+    // sobrecarga de 1 arg vía Predicate<List<HttpRequestResponse>>; es un falso positivo.
+    @SuppressWarnings("PMD.UnusedPrivateMethod")
     private boolean enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta) {
         return enviarFlujoAAgente(solicitudesRespuesta, null);
     }

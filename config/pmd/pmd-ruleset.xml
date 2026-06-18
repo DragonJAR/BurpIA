@@ -34,4 +34,19 @@
     <!-- Detección automática de imports no usados.
          Sin esta regla pasan invisibles al build y se acumulan con el tiempo. -->
     <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
+
+    <!-- Detección automática de código muerto (AGENTS.md §4).
+         Estas reglas son la red de seguridad que evita que métodos, variables
+         locales y asignaciones huérfanas se acumulen en el código. PMD las
+         marca en build (ignoreFailures=false) para que no pasen invisibles.
+
+         NOTA: UnusedPrivateField se excluye intencionalmente. En este proyecto
+         los contenedores Swing (DialogoConfiguracion) usan inyección y
+         delegación, lo que produce falsos positivos masivos. La detección de
+         campos huérfanos se hace con escaneo manual guiado por auditoría.
+         Las 3 reglas incluidas tienen alta precisión (pocos falsos positivos)
+         y respetan @Override y @SuppressWarnings cuando aplica. -->
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+    <rule ref="category/java/bestpractices.xml/UnusedAssignment"/>
 </ruleset>

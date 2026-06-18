@@ -53,7 +53,6 @@ public class EstilosUI {
             return;
         }
 
-        // Obtener y validar nombres de fuente
         String nombreEstandar = config.obtenerNombreFuenteEstandar();
         String nombreMono = config.obtenerNombreFuenteMono();
 
@@ -65,7 +64,6 @@ public class EstilosUI {
             nombreMono = FUENTE_POR_DEFECTO;
         }
 
-        // Obtener y validar tamaños de fuente
         int tamanioEstandar = validarTamanioFuente(config.obtenerTamanioFuenteEstandar(), TAMANIO_ESTANDAR_POR_DEFECTO);
         int tamanioMono = validarTamanioFuente(config.obtenerTamanioFuenteMono(), TAMANIO_MONO_POR_DEFECTO);
 

@@ -220,7 +220,6 @@ public final class ReparadorJson {
         int indice = 0;
 
         while (indice < texto.length()) {
-            // Buscar el nombre del campo (case insensitive)
             int posCampo = buscarCampo(texto, nombreCampo, indice);
             if (posCampo == -1) {
                 resultado.append(texto.substring(indice));
@@ -249,7 +248,6 @@ public final class ReparadorJson {
             // El valor empieza en posDosPuntos + 2 (después de ": ")
             int posInicioValor = posDosPuntos + 2;
 
-            // Verificar que hay una comilla de apertura
             if (posInicioValor >= texto.length() || texto.charAt(posInicioValor) != '"') {
                 indice = posInicioValor;
                 continue;

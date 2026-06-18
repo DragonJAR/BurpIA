@@ -402,7 +402,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         ConfiguracionAPI config = configRef.obtener();
         ConfiguracionAPI.CodigoValidacionConsulta codigo = codigoValidacionConsulta();
         if (codigo == ConfiguracionAPI.CodigoValidacionConsulta.OK) {
-            // Verificar si multi-proveedor está habilitado
             boolean multiHabilitado = config.esMultiProveedorHabilitado();
             List<String> proveedores = config.obtenerProveedoresMultiConsulta();
 
@@ -554,16 +553,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             // Best-effort: logging to Burp UI may fail in headless environments
             } catch (Exception ignored) {
             }
-        }
-    }
-
-    private void rastrear(String mensaje, Throwable e) {
-        ConfiguracionAPI config = configRef.obtener();
-        if (config != null && config.esDetallado()) {
-            java.io.StringWriter sw = new java.io.StringWriter();
-            java.io.PrintWriter pw = new java.io.PrintWriter(sw);
-            e.printStackTrace(pw);
-            rastrear(mensaje + "\n" + sw.toString());
         }
     }
 

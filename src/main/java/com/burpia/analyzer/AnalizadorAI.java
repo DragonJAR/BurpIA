@@ -107,8 +107,7 @@ public class AnalizadorAI implements Runnable {
         this.controlBackpressure = controlBackpressure;
         
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
-        
-        // Crear las clases helper
+
         OrquestadorAnalisis.Callback callbackOrquestador = new OrquestadorAnalisis.Callback() {
             @Override
             public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {

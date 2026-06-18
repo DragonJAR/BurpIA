@@ -61,7 +61,6 @@ public class PromptTruncador {
             return prompt;
         }
 
-        // Validar tokensObjetivo con mínimo razonable
         int tokensEfectivos = Math.max(100, tokensObjetivo);
 
         int tokensActuales = estimarTokens(prompt);
@@ -132,7 +131,6 @@ public class PromptTruncador {
             }
 
             if (enBody) {
-                // Detectar fin de body (línea vacía o nuevo sección)
                 if (linea.trim().isEmpty() || linea.contains("Response:") ||
                         linea.startsWith("===") || linea.startsWith("---")) {
                     enBody = false;
@@ -176,7 +174,6 @@ public class PromptTruncador {
         String resultado = prompt;
 
         for (int i = 0; i < HEADERS_ELIMINAR.length; i++) {
-            String header = HEADERS_ELIMINAR[i];
             String patronRegex = PATRONES_HEADERS_ELIMINAR[i];
             // Patrón para encontrar líneas de headers completas
             String patron = "(?im)^" + patronRegex + ":.+$";

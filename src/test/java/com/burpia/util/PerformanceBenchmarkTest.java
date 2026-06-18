@@ -410,8 +410,7 @@ class PerformanceBenchmarkTest {
         configOriginal.establecerMaximoConcurrente(10);
         configOriginal.establecerIdiomaUi("es");
 
-        GestorConfiguracion gestorSetup = new GestorConfiguracion();
-        gestorSetup = crearGestorConfiguracionSilencioso();
+        GestorConfiguracion gestorSetup = crearGestorConfiguracionSilencioso();
         gestorSetup.guardarConfiguracion(configOriginal);
 
         BenchmarkResult result = runBenchmark("I/O.cargarConfiguracion", () -> {

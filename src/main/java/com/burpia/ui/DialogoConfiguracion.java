@@ -125,29 +125,18 @@ public class DialogoConfiguracion extends JDialog {
         setLayout(new BorderLayout(10, 10));
         setMinimumSize(new Dimension(ANCHO_DIALOGO, ALTO_DIALOGO));
         setPreferredSize(new Dimension(ANCHO_DIALOGO, ALTO_DIALOGO));
-        
-        // Crear vista
+
         view = new ConfigDialogView();
-        
-        // Crear controlador
         controller = new ConfigDialogController(this, config, gestorConfig);
-        
-        // Construir UI
+
         JComponent panelPrincipal = view.crearDialogoPrincipal();
         add(panelPrincipal, BorderLayout.CENTER);
-        
-        // Inicializar campos delegados para compatibilidad con tests
+
         inicializarCamposDelegados();
-        
-        // Configurar manejadores de eventos
         controller.inicializarEventHandlers();
-        
-        // Cargar configuración inicial
         controller.cargarConfiguracionInicial();
-        
-        // Configurar cierre del diálogo
         configurarManejadorCierre();
-        
+
         pack();
         setSize(ANCHO_DIALOGO, ALTO_DIALOGO);
         setLocationRelativeTo(getParent());

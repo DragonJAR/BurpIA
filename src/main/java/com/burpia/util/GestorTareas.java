@@ -392,10 +392,6 @@ public class GestorTareas {
         this.manejadorReanudar = manejadorReanudar;
     }
 
-    private int actualizarEstadosMasivo(java.util.function.Predicate<Tarea> filtro, String nuevoEstado) {
-        return actualizarEstadosMasivoConIds(filtro, nuevoEstado).size();
-    }
-
     private List<String> actualizarEstadosMasivoConIds(java.util.function.Predicate<Tarea> filtro, String nuevoEstado) {
         List<Tarea> tareasAActualizar = new ArrayList<>();
         List<String> idsActualizadas = new ArrayList<>();

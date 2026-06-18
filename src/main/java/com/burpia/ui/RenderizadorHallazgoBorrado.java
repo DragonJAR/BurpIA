@@ -56,7 +56,6 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
             table, value, isSelected, hasFocus, row, column
         );
 
-        // Validar índice de fila antes de convertir
         if (row < 0 || row >= tabla.getRowCount()) {
             return componente;
         }
@@ -73,7 +72,6 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
             if (modelo.estaIgnorado(filaModelo)) {
                 aplicarEstiloIgnorado(etiqueta, isSelected, table);
             } else {
-                // Restaurar fuente normal
                 etiqueta.setFont(tabla.getFont());
             }
         }

@@ -93,7 +93,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
 
         ejecutarEnEdt(() -> {
             boolean huboCambios = false;
-            boolean rebuildRequerido = false;
+            boolean rebuildRequerido;
             List<Hallazgo> agregadosSinTrim = new ArrayList<>();
             List<Object[]> snapshotParaRebuild = null;
             lock.lock();

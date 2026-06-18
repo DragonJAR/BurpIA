@@ -151,9 +151,9 @@ public class EvidenceManagerIntegrationTest {
         when(mockRequest.toByteArray()).thenReturn(mockByteArray);
         when(mockResponse.toByteArray()).thenReturn(mockByteArray);
         
-        String id1 = evidenceManager.almacenarEvidencia(mockEvidence);
+        evidenceManager.almacenarEvidencia(mockEvidence);
         String id2 = evidenceManager.almacenarEvidencia(mockEvidence);
-        String id3 = evidenceManager.almacenarEvidencia(mockEvidence);
+        evidenceManager.almacenarEvidencia(mockEvidence);
         
         assertEquals(3, evidenceManager.obtenerContadorEvidencias());
         

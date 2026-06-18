@@ -193,7 +193,6 @@ class ProviderConfigManagerTest {
 
     @Test
     void testObtenerConfiguracionParaGuardar() {
-        EstadoProveedorUI estadoExistente = new EstadoProveedorUI("key1", "model1", "url1", 1024, 30);
         providerConfigManager.cambiarProveedor("OpenAI");
         Map<String, EstadoProveedorUI> config = providerConfigManager.obtenerConfiguracionParaGuardar();
 
@@ -305,7 +304,7 @@ class ProviderConfigManagerTest {
         JList<String> listaDisponiblesReal = new JList<>(modeloListaDisponibles);
         listaDisponiblesReal.setSelectedIndex(0);
 
-        java.lang.reflect.Field field = null;
+        java.lang.reflect.Field field;
         try {
             field = ProviderConfigManager.class.getDeclaredField("listaProveedoresDisponibles");
             field.setAccessible(true);

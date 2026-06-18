@@ -563,6 +563,10 @@ public final class ProviderConfigManager {
      *
      * @param proveedor Nombre del proveedor
      */
+    // PMD marca la asignación actualizandoProveedorUi=true como "sobrescrita"
+    // en el finally, pero el flag es leído por los guards de supresión de
+    // eventos (líneas 300, 947, 965) mientras el combo se setea programáticamente.
+    @SuppressWarnings("PMD.UnusedAssignment")
     public void establecerProveedorActual(String proveedor) {
         if (comboProveedor != null) {
             actualizandoProveedorUi = true;

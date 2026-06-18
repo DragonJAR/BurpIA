@@ -205,10 +205,9 @@ public class ConfigDialogController {
 
     public void inicializarEventHandlers() {
         gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Inicializando manejadores de eventos"));
-        
-        // Configurar componentes de UI primero
+
         configurarComponentesUIProvider();
-        
+
         inicializarEventHandlersProvider();
         inicializarEventHandlersAgent();
         inicializarEventHandlersAcciones();

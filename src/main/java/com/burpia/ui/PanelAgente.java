@@ -210,10 +210,6 @@ public class PanelAgente extends JPanel {
 
     private static final long SESION_IGNORAR_VALIDACION = -1L;
 
-    private boolean escribirComandoCrudoSeguro(String comando) {
-        return escribirComandoCrudoSeguro(comando, SESION_IGNORAR_VALIDACION);
-    }
-
     private boolean escribirComandoCrudoSeguro(String comando, long sesionObjetivo) {
         if (!esSesionVigenteONIgnorada(sesionObjetivo)) {
             return false;
@@ -255,10 +251,6 @@ public class PanelAgente extends JPanel {
             gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Error escribiendo por ttyConnector"));
             return false;
         }
-    }
-
-    private boolean escribirDirectoAlPTY(byte[] bytes) {
-        return escribirDirectoAlPTY(bytes, SESION_IGNORAR_VALIDACION);
     }
 
     private boolean escribirDirectoAlPTY(byte[] bytes, long sesionObjetivo) {

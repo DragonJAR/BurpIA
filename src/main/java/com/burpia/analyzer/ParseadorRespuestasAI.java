@@ -50,7 +50,7 @@ public class ParseadorRespuestasAI {
         try {
             String respuestaNormalizada = ParserRespuestasAI.limpiarContenidoModelo(respuestaOriginal);
             String jsonReparado = ReparadorJson.repararJson(respuestaNormalizada);
-            String respuestaProcesada = respuestaOriginal;
+            String respuestaProcesada;
             if (jsonReparado != null && !jsonReparado.equals(respuestaNormalizada)) {
                 rastrear("JSON reparado exitosamente");
                 respuestaProcesada = jsonReparado;
