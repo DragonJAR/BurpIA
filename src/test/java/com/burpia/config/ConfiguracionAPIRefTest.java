@@ -109,7 +109,48 @@ class ConfiguracionAPIRefTest {
             "assertTrue failed at ConfiguracionAPIRefTest.java:103 - valor normalizado fuera de rango");
     }
 
-    // Tests de compararYReemplazar removidos: el método se eliminó por orphan.
+    // Tests del CAS reemplazarSiEsperada (M3): reintroducido para evitar
+    // lost-update entre el EDT y los handlers HTTP que mutan la config.
+
+    @Test
+    @DisplayName("M3: reemplazarSiEsperada succeeds cuando la ref no cambió")
+    void testReemplazarSiEsperadaSuccess() {
+        ConfiguracionAPI actual = ref.obtener();
+        ConfiguracionAPI modificada = actual.crearSnapshot();
+        modificada.establecerProveedorAI("OpenAI");
+
+        boolean aplicado = ref.reemplazarSiEsperada(actual, modificada);
+
+        assertTrue(aplicado, "El CAS debe aplicar si la ref sigue siendo la esperada");
+        assertEquals("OpenAI", ref.obtener().obtenerProveedorAI());
+    }
+
+    @Test
+    @DisplayName("M3: reemplazarSiEsperada falla si la ref cambió concurrentemente (lost-update evitado)")
+    void testReemplazarSiEsperadaFallaSiCambioConcurrente() {
+        ConfiguracionAPI actual = ref.obtener();
+        // Simula que el EDT (u otro writer) actualizó la ref entre nuestro
+        // obtener() y nuestro CAS. El CAS debe fallar para no pisar su cambio.
+        ConfiguracionAPI escrituraConcurrente = new ConfiguracionAPI();
+        escrituraConcurrente.establecerProveedorAI("Gemini");
+        ref.reemplazar(escrituraConcurrente);
+
+        ConfiguracionAPI modificada = actual.crearSnapshot();
+        modificada.establecerProveedorAI("Claude");
+
+        boolean aplicado = ref.reemplazarSiEsperada(actual, modificada);
+
+        assertFalse(aplicado, "El CAS debe fallar si la ref cambió concurrentemente");
+        assertEquals("Gemini", ref.obtener().obtenerProveedorAI(),
+            "La escritura concurrente debe preservarse (no perderse por lost-update)");
+    }
+
+    @Test
+    @DisplayName("M3: reemplazarSiEsperada rechaza args null")
+    void testReemplazarSiEsperadaRechazaNull() {
+        assertFalse(ref.reemplazarSiEsperada(null, new ConfiguracionAPI()));
+        assertFalse(ref.reemplazarSiEsperada(ref.obtener(), null));
+    }
 
     @Test
     @DisplayName("Reemplazar null no modifica la referencia")

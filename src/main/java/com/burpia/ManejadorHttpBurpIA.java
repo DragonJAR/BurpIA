@@ -152,7 +152,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent solicitudAEnviar) {
         ConfiguracionAPI config = configRef.obtener();
         if (config.escaneoPasivoHabilitado() && config.esDetallado()) {
-            rastrear("Solicitud a enviar: " + solicitudAEnviar.method() + " " + solicitudAEnviar.url());
+            rastrear(I18nLogs.trf("Solicitud a enviar: %s %s", solicitudAEnviar.method(), solicitudAEnviar.url()));
         }
         return RequestToBeSentAction.continueWith(solicitudAEnviar);
     }
@@ -291,7 +291,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return;
         }
 
-        registrar("Analisis forzado solicitado desde menu contextual: " + metodo + " " + url);
+        registrar(I18nLogs.trf("Analisis forzado solicitado desde menu contextual: %s %s", metodo, url));
         HttpRequestResponse evidenciaHttp = httpRequestProcessor.normalizarEvidenciaManual(solicitud, solicitudRespuestaOriginal);
         programarAnalisis(
                 solicitudAnalisis,
@@ -360,7 +360,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         // Usar TaskExecutionManager para reencolar
         boolean resultado = taskExecutionManager.reencolarTarea(tareaId);
         if (resultado) {
-            registrar("Tarea reencolada: " + tareaId);
+            registrar(I18nLogs.tr("Tarea reencolada") + ": " + I18nLogs.trTecnico(tareaId));
         }
         return resultado;
     }
@@ -408,12 +408,12 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
             // CONFIABILIDAD: Logs de diagnóstico solo en modo detallado
             if (config.esDetallado()) {
-                rastrear("DIAGNOSTICO: Configuración multi-proveedor al inicio:");
-                rastrear("DIAGNOSTICO:   - Habilitado: " + multiHabilitado);
-                rastrear("DIAGNOSTICO:   - Proveedores: " +
-                        (proveedores != null ? proveedores.size() + " elemento(s)" : "null"));
+                rastrear(I18nLogs.tr("DIAGNOSTICO: Configuración multi-proveedor al inicio:"));
+                rastrear(I18nLogs.trf("DIAGNOSTICO:   - Habilitado: %s", multiHabilitado));
+                rastrear(I18nLogs.trf("DIAGNOSTICO:   - Proveedores: %s",
+                        proveedores != null ? proveedores.size() + " elemento(s)" : "null"));
                 if (Normalizador.noEsVacia(proveedores)) {
-                    rastrear("DIAGNOSTICO:   - Lista: " + String.join(", ", proveedores));
+                    rastrear(I18nLogs.trf("DIAGNOSTICO:   - Lista: %s", String.join(", ", proveedores)));
                 }
             }
 
@@ -439,8 +439,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             if (multiHabilitado && config.esDetallado()) {
                 int numProveedores = proveedores != null ? proveedores.size() : 0;
                 if (numProveedores <= 1) {
-                    registrar("AVISO: Multi-proveedor habilitado con " + numProveedores +
-                            " proveedor(s). Se usará proveedor único: " + config.obtenerProveedorAI());
+                    registrar(I18nLogs.trf(
+                            "AVISO: Multi-proveedor habilitado con %d proveedor(s). Se usará proveedor único: %s",
+                            numProveedores, config.obtenerProveedorAI()));
                 }
             }
 
@@ -639,23 +640,50 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void pausarCaptura() {
-        synchronized (logLock) {
-            ConfiguracionAPI actual = configRef.obtener();
-            ConfiguracionAPI modificada = actual.crearSnapshot();
+        aplicarCambioConfigAtomico(c -> {
+            ConfiguracionAPI modificada = c.crearSnapshot();
             modificada.establecerEscaneoPasivoHabilitado(false);
-            configRef.reemplazar(modificada);
-        }
+            return modificada;
+        });
         registrar("Captura pausada por usuario");
     }
 
     public void reanudarCaptura() {
-        synchronized (logLock) {
-            ConfiguracionAPI actual = configRef.obtener();
-            ConfiguracionAPI modificada = actual.crearSnapshot();
+        aplicarCambioConfigAtomico(c -> {
+            ConfiguracionAPI modificada = c.crearSnapshot();
             modificada.establecerEscaneoPasivoHabilitado(true);
-            configRef.reemplazar(modificada);
-        }
+            return modificada;
+        });
         registrar("Captura reanudada por usuario");
+    }
+
+    /**
+     * Aplica un cambio parcial a la configuración con CAS + reintento.
+     *
+     * <p>M3: antes estos cambios (pausar/reanudar captura) hacían snapshot-mutar-
+     * reemplazar sin CAS, compitiendo con el EDT que guarda ajustes. Si el EDT
+     * guardaba entre el obtener() y el reemplazar(), el último ganaba y los
+     * cambios del otro se perdían (lost-update). Con CAS reintentamos sobre la
+     * versión más reciente hasta succeeds, preservando ambos cambios.</p>
+     *
+     * @param funcion función que recibe la config actual y devuelve un snapshot
+     *                modificado (no se muta la instancia compartida)
+     */
+    private void aplicarCambioConfigAtomico(java.util.function.UnaryOperator<ConfiguracionAPI> funcion) {
+        // Acotado: la contención EDT vs handler es breve y rara. Un límite bajo
+        // previene bucles infinitos ante un bug en la función (que devuelva una
+        // referencia igual a la actual haría que CAS nunca succeeds).
+        for (int intento = 0; intento < 5; intento++) {
+            ConfiguracionAPI actual = configRef.obtener();
+            ConfiguracionAPI modificada = funcion.apply(actual);
+            if (modificada == null || modificada == actual) {
+                return;
+            }
+            if (configRef.reemplazarSiEsperada(actual, modificada)) {
+                return;
+            }
+            // La ref cambió concurrentemente: reintentar sobre la nueva versión.
+        }
     }
 
     public boolean guardarHallazgoComoIssue(Hallazgo hallazgo) {

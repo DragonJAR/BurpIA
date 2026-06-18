@@ -66,7 +66,7 @@ public class GestorTareas {
         try {
             tareas.put(id, tarea);
             modeloTabla.agregarTarea(tarea);
-            registrar("Tarea creada: " + tipo + " - " + url);
+            registrar(I18nLogs.trf("Tarea creada: %s - %s", tipo, url));
         } finally {
             candado.unlock();
         }
@@ -92,7 +92,7 @@ public class GestorTareas {
 
     public void cancelarTodas() {
         List<String> idsCanceladas = actualizarEstadosMasivoConIds(Tarea::esActiva, Tarea.ESTADO_CANCELADO);
-        registrar("Tareas canceladas: " + idsCanceladas.size());
+        registrar(I18nLogs.trf("Tareas canceladas: %d", idsCanceladas.size()));
         notificarCancelaciones(idsCanceladas);
     }
 
@@ -109,7 +109,7 @@ public class GestorTareas {
             tarea -> Tarea.esEstadoPausable(tarea.obtenerEstado()),
             Tarea.ESTADO_PAUSADO
         );
-        registrar("Tareas pausadas: " + idsPausadas.size());
+        registrar(I18nLogs.trf("Tareas pausadas: %d", idsPausadas.size()));
         notificarOperaciones(idsPausadas, manejadorPausa, "pausa");
     }
 
@@ -118,7 +118,7 @@ public class GestorTareas {
             tarea -> Tarea.esEstadoReanudable(tarea.obtenerEstado()),
             Tarea.ESTADO_EN_COLA
         );
-        registrar("Tareas reanudadas: " + idsReanudadas.size());
+        registrar(I18nLogs.trf("Tareas reanudadas: %d", idsReanudadas.size()));
         notificarOperaciones(idsReanudadas, manejadorReanudar, "reanudar");
     }
 
@@ -158,7 +158,7 @@ public class GestorTareas {
                 Tarea.ESTADO_CANCELADO
             );
 
-            registrar("Tareas limpiadas: " + idsAEliminar.size());
+            registrar(I18nLogs.trf("Tareas limpiadas: %d", idsAEliminar.size()));
         } finally {
             candado.unlock();
         }
@@ -203,7 +203,8 @@ public class GestorTareas {
 
             aplicarRetencionFinalizadas();
         } catch (Exception ex) {
-            registrar("Error en monitor de tareas atascadas: " + ex.getMessage());
+            registrar(I18nLogs.tr("Error en monitor de tareas atascadas") + ": "
+                    + I18nLogs.trTecnico(ex.getMessage()));
         }
     }
 
@@ -238,7 +239,7 @@ public class GestorTareas {
             candado.unlock();
         }
         if (pausada) {
-            registrar("Tarea pausada: " + url);
+            registrar(I18nLogs.trf("Tarea pausada: %s", url));
             notificarManejador(manejador, id, "pausa");
         }
         return pausada;
@@ -262,7 +263,7 @@ public class GestorTareas {
             candado.unlock();
         }
         if (reanudada) {
-            registrar("Tarea reanudada: " + url);
+            registrar(I18nLogs.trf("Tarea reanudada: %s", url));
             notificarManejador(manejador, id, "reanudar");
         }
         return reanudada;
@@ -312,7 +313,7 @@ public class GestorTareas {
             candado.unlock();
         }
         if (cancelada) {
-            registrar("Tarea cancelada: " + url);
+            registrar(I18nLogs.trf("Tarea cancelada: %s", url));
             notificarCancelacion(id);
         }
         return cancelada;
@@ -330,7 +331,7 @@ public class GestorTareas {
         }
 
         modeloTabla.eliminarTareaPorId(id);
-        registrar("Tarea limpiada: " + id);
+        registrar(I18nLogs.trf("Tarea limpiada: %s", id));
         return true;
     }
 
@@ -479,7 +480,7 @@ public class GestorTareas {
             modeloTabla.eliminarTareaPorId(id);
         }
         if (!idsAEliminar.isEmpty()) {
-            registrar("Retencion aplicada en tareas finalizadas: " + idsAEliminar.size() + " eliminadas");
+            registrar(I18nLogs.trf("Retencion aplicada en tareas finalizadas: %d eliminadas", idsAEliminar.size()));
         }
     }
 

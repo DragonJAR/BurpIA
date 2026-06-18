@@ -76,7 +76,13 @@ public class AlmacenEvidenciaHttp {
         this.escrituras = new AtomicInteger(0);
         this.bytesCache = 0L;
         inicializarDirectorio();
-        depurarArchivosDisco();
+        // P4: depurarArchivosDisco() removido del constructor.
+        // Hacía un Files.list() + getLastModifiedTime() por archivo (hasta
+        // 5000 stats syscalls bajo lock) al iniciar el plugin → freeze
+        // perceptible en startup. El cleanup se sigue gatillando en el
+        // path de escritura cada N writes vía el contador `escrituras`,
+        // que es el momento adecuado: solo escaneamos si está habiendo
+        // tráfico real.
     }
 
     /**

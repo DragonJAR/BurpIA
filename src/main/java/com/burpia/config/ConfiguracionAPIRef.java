@@ -68,9 +68,26 @@ public final class ConfiguracionAPIRef {
         }
     }
 
-    // compararYReemplazar(esperada, nueva) — CAS removed (orphan): no había
-    // callers en producción, solo en tests que verificaban el método mismo.
-    // El flujo real de actualización de config usa establecer(nueva) sin
-    // semántica optimista. Si en el futuro se necesita compare-and-set para
-    // resolver conflictos concurrentes, se vuelve a introducir con su caller.
+    /**
+     * Compara-y-reemplaza atómico (CAS). Solo reemplaza la configuración si la
+     * referencia actual sigue siendo {@code esperada}.
+     *
+     * <p>Resuelve el lost-update cuando hay múltiples escritores (p.ej. el EDT
+     * guardando ajustes mientras un handler HTTP muta la config vía
+     * snapshot-mutar-reemplazar). Sin CAS, el último {@link #reemplazar} gana y
+     * los cambios del otro se pierden silenciosamente.</p>
+     *
+     * @param esperada referencia que el llamador cree que es la actual (obtenida
+     *                 vía {@link #obtener()} justo antes de mutar su snapshot)
+     * @param nueva    configuración modificada a instalar
+     * @return {@code true} si el reemplazo se aplicó; {@code false} si la
+     *         referencia cambió concurrentemente (el llamador debe reintentar:
+     *         re-leer, re-snapshotear y re-aplicar su cambio)
+     */
+    public boolean reemplazarSiEsperada(ConfiguracionAPI esperada, ConfiguracionAPI nueva) {
+        if (esperada == null || nueva == null) {
+            return false;
+        }
+        return ref.compareAndSet(esperada, nueva);
+    }
 }

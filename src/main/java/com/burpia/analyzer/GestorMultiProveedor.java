@@ -37,6 +37,23 @@ public class GestorMultiProveedor {
     private final Object logLock;
     private final ConstructorPrompts constructorPrompt;
     private final ParseadorRespuestasAI parseador;
+    private final com.burpia.util.PromptTruncador promptTruncador;
+    // AnalizadorHTTP del proveedor en curso (asignado antes de llamar a la API,
+    // limpiado en finally). Permite cancelar la Call OkHttp activa desde fuera
+    // cuando el usuario pulsa Cancelar durante un análisis multi-proveedor.
+    private volatile AnalizadorHTTP analizadorHttpActivo;
+
+    /**
+     * Cancela la llamada HTTP en curso del proveedor actual. No-op si no hay
+     * llamada activa. Llamado por {@link AnalizadorAI#cancelarLlamadaHttpActiva()}
+     * para que la cancelación del usuario llegue al socket también en modo multi.
+     */
+    public void cancelarLlamadaActiva() {
+        AnalizadorHTTP activo = analizadorHttpActivo;
+        if (activo != null) {
+            activo.cancelarLlamadaActiva();
+        }
+    }
 
     public GestorMultiProveedor(SolicitudAnalisis solicitud,
                                ConfiguracionAPI config,
@@ -58,6 +75,7 @@ public class GestorMultiProveedor {
         this.logLock = new Object();
         this.constructorPrompt = new ConstructorPrompts(this.config);
         this.parseador = new ParseadorRespuestasAI(this.gestorLogging, this.config.obtenerIdiomaUi());
+        this.promptTruncador = new com.burpia.util.PromptTruncador();
     }
 
     public ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedor() throws IOException, InterruptedException {
@@ -147,19 +165,34 @@ public class GestorMultiProveedor {
 
     private ResultadoAnalisisMultiple ejecutarAnalisisProveedorUnico() throws IOException, InterruptedException {
         AnalizadorHTTP analizadorHTTP = new AnalizadorHTTP(config, tareaCancelada, tareaPausada, gestorLogging);
-        String respuesta = llamarAPIAIConRetries(analizadorHTTP, config);
-        return parseador.parsearRespuesta(respuesta, solicitud, config.obtenerProveedorAI());
+        analizadorHttpActivo = analizadorHTTP;
+        try {
+            String respuesta = llamarAPIAIConRetries(analizadorHTTP, config, constructorPrompt);
+            return parseador.parsearRespuesta(respuesta, solicitud, config.obtenerProveedorAI());
+        } finally {
+            analizadorHttpActivo = null;
+        }
     }
 
     private ResultadoAnalisisMultiple ejecutarAnalisisProveedor(String proveedor, String modelo)
             throws IOException, InterruptedException {
-        
+
         ConfiguracionAPI configProveedor = crearConfiguracionParaProveedor(proveedor);
         AnalizadorHTTP analizadorHTTP = new AnalizadorHTTP(configProveedor, tareaCancelada, tareaPausada, gestorLogging);
-        String respuesta = llamarAPIAIConRetries(analizadorHTTP, configProveedor);
-        ResultadoAnalisisMultiple resultado = parseador.parsearRespuesta(respuesta, solicitud, proveedor);
-        
-        return etiquetarResultado(resultado, proveedor, modelo);
+        analizadorHttpActivo = analizadorHTTP;
+        // Construir prompt y parsear con la configuración específica del
+        // proveedor (no la base): los límites de prompt y el idioma de salida
+        // dependen del proveedor activo.
+        ConstructorPrompts constructorProveedor = new ConstructorPrompts(configProveedor);
+        ParseadorRespuestasAI parseadorProveedor =
+                new ParseadorRespuestasAI(gestorLogging, configProveedor.obtenerIdiomaUi());
+        try {
+            String respuesta = llamarAPIAIConRetries(analizadorHTTP, configProveedor, constructorProveedor);
+            ResultadoAnalisisMultiple resultado = parseadorProveedor.parsearRespuesta(respuesta, solicitud, proveedor);
+            return etiquetarResultado(resultado, proveedor, modelo);
+        } finally {
+            analizadorHttpActivo = null;
+        }
     }
 
     private ConfiguracionAPI crearConfiguracionParaProveedor(String proveedor) {
@@ -169,22 +202,24 @@ public class GestorMultiProveedor {
         return configProveedor;
     }
 
-    private String llamarAPIAIConRetries(AnalizadorHTTP analizadorHTTP, ConfiguracionAPI configActual)
+    private String llamarAPIAIConRetries(AnalizadorHTTP analizadorHTTP,
+                                         ConfiguracionAPI configActual,
+                                         ConstructorPrompts constructorActual)
             throws IOException, InterruptedException {
-        
+
         control.verificarCancelacion();
         control.esperarSiPausada();
-        
-        String prompt = constructorPrompt.construirPromptAnalisis(solicitud);
-        
-        try {
-            String respuesta = analizadorHTTP.llamarAPI(prompt);
-            registrar(I18nLogs.MultiProveedor.LONGITUD_RESPUESTA_API(respuesta.length()));
-            return respuesta;
-        } catch (ContextExceededException e) {
-            // Para multi-proveedor, propagar como IOException
-            throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO_PROVEEDOR(configActual.obtenerProveedorAI()), e);
-        }
+
+        String prompt = constructorActual.construirPromptAnalisis(solicitud);
+
+        // Comparte el mismo ejecutor con truncado-y-reintento que el modo único:
+        // antes el multi-proveedor marcaba el proveedor como fallido ante un
+        // error de contexto en vez de truncar y reintentar.
+        String respuesta = new EjecutorLlamadaConTruncado(
+                configActual, analizadorHTTP, promptTruncador, control, gestorLogging)
+                .ejecutar(prompt);
+        registrar(I18nLogs.MultiProveedor.LONGITUD_RESPUESTA_API(respuesta.length()));
+        return respuesta;
     }
 
     private ResultadoAnalisisMultiple etiquetarResultado(ResultadoAnalisisMultiple resultado,

@@ -266,6 +266,28 @@ public final class ProveedorAI {
                 true,
                 4096));
 
+        // LM Studio — servidor LLM local (https://lmstudio.ai). Expone un API
+        // OpenAI-compatible en http://localhost:1234/v1: endpoint
+        // /chat/completions y listado de modelos en /models. No requiere API key
+        // (es local). Los modelos dependen de lo que el usuario haya cargado en
+        // la app: la carga remota (/models) lista los realmente disponibles, y
+        // los defaults de abajo son marcadores de familias comunes (Qwen/Llama/
+        // Phi) que LM Studio identifica por el nombre del .gguf cargado.
+        // Soporta el endpoint OpenAI-compat (NO el /api/v1/chat nativo, que
+        // tiene un formato de request/response distinto).
+        PROVEEDORES.put("LM Studio", new ConfiguracionProveedor(
+                "http://localhost:1234/v1",
+                "qwen2.5-coder-7b-instruct",
+                Arrays.asList(
+                        "qwen2.5-coder-7b-instruct",
+                        "qwen2.5-7b-instruct",
+                        "llama-3.1-8b-instruct",
+                        "phi-3.5-mini-instruct",
+                        "mistral-7b-instruct",
+                        "deepseek-r1-distill-qwen-7b"),
+                false,
+                4096));
+
         PROVEEDORES.put(PROVEEDOR_CUSTOM_01, new ConfiguracionProveedor(
                 URL_CUSTOM_ES,
                 "",
@@ -440,6 +462,47 @@ public final class ProveedorAI {
         }
         ConfiguracionProveedor config = PROVEEDORES.get(proveedorNormalizado);
         return config != null ? config.obtenerModelosDisponibles() : Collections.emptyList();
+    }
+
+    /**
+     * Conjunto canónico de proveedores cuya API es compatible con el formato
+     * de OpenAI (request basado en {@code messages}/{@code input} y respuesta
+     * basada en {@code choices[]}/{@code output}).
+     * <p>
+     * Centraliza la pertenencia a la "familia OpenAI" para aplicar el principio
+     * DRY: la construcción de solicitudes, el parseo de respuestas y la
+     * detección de contexto excedido consultan este mismo método en lugar de
+     * repetir la lista de proveedores en cada sitio (evita que agregar un
+     * proveedor nuevo deje rotos algunos caminos, como ocurrió con Moonshot).
+     * </p>
+     * <p>
+     * Nota: OpenAI usa la Responses API ({@code /responses} con campo
+     * {@code input}) mientras el resto usa {@code /chat/completions} con
+     * {@code messages}; ambos sub-formatos los maneja el extractor de
+     * contenido OpenAI, por eso OpenAI también se considera de esta familia.
+     * Los proveedores custom canónicos son OpenAI-compatibles por contrato.
+     * </p>
+     *
+     * @param nombreProveedor Nombre de proveedor (normalizado o no)
+     * @return {@code true} si el proveedor habla el protocolo OpenAI-compatible
+     */
+    public static boolean esOpenAICompatible(String nombreProveedor) {
+        String proveedorNormalizado = normalizarProveedor(nombreProveedor);
+        if (proveedorNormalizado.isEmpty()) {
+            return false;
+        }
+        switch (proveedorNormalizado) {
+            case "OpenAI":
+            case "Z.ai":
+            case "minimax":
+            case "DeepSeek":
+            case "xAI":
+            case "Moonshot (Kimi)":
+            case "LM Studio":
+                return true;
+            default:
+                return esProveedorCustom(proveedorNormalizado);
+        }
     }
 
     /**

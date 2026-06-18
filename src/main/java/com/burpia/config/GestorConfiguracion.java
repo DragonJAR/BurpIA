@@ -148,7 +148,11 @@ public class GestorConfiguracion {
 
             Files.write(tempPath, json.getBytes(StandardCharsets.UTF_8));
 
-            Files.move(tempPath, path, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            // L6: en Windows, Files.move(REPLACE_EXISTING) puede lanzar
+            // AccessDeniedException si el destino está abierto (AV, indexador,
+            // otro proceso). Reintentamos con backoff corto antes de rendir,
+            // evitando que un bloqueo transitorio haga perder los cambios.
+            moverAtomicoConReintento(tempPath, path);
 
             // Aplicar permisos restrictivos en cada guardado (idempotente).
             // Esto cubre archivos creados por versiones previas sin protección o por terceros.
@@ -188,6 +192,28 @@ public class GestorConfiguracion {
         gestorLogging.info("Configuracion", traducir(formato, args));
     }
 
+    private void logWarn(String formato, Object... args) {
+        // GestorLoggingUnificado no expone nivel warn; usamos info. Estos avisos
+        // son informativos (entries de config ignoradas al migrar/renombrar
+        // proveedores) y deben ser visibles sin instalar un canal nuevo.
+        inicializarLogging();
+        gestorLogging.info("Configuracion", traducir(formato, args));
+    }
+
+    /**
+     * L3: avisa cuando el sanitizado descartó entries del mapa persistido
+     * (proveedores renombrados/eliminados entre versiones, claves malformadas).
+     * Sin esto, el usuario pierde credenciales/configuración sin enterarse.
+     */
+    private void avisarDescartes(Map<?, ?> origen, Map<?, ?> saneado, String concepto) {
+        int antes = origen != null ? origen.size() : 0;
+        int despues = saneado != null ? saneado.size() : 0;
+        if (antes > despues) {
+            logWarn("Config migrada: %d entradas de %s ignoradas por proveedor desconocido o clave inválida",
+                    antes - despues, concepto);
+        }
+    }
+
     private void logError(String formato, Object... args) {
         inicializarLogging();
         gestorLogging.error("Configuracion", traducir(formato, args));
@@ -211,15 +237,50 @@ public class GestorConfiguracion {
             return;
         }
         try {
-            if (!Files.getFileStore(path).supportsFileAttributeView("posix")) {
+            // L5: el archivo contiene API keys en claro. En POSIX aplicamos 0600.
+            // En Windows/FS no-POSIX antes se retornaba sin protección, dejando
+            // el archivo legible por otros usuarios. Ahora intentamos restringir
+            // vía ACL al usuario actual (AclFileAttributeView) en el fallback.
+            if (Files.getFileStore(path).supportsFileAttributeView("posix")) {
+                Set<PosixFilePermission> permisos = Set.of(
+                        PosixFilePermission.OWNER_READ,
+                        PosixFilePermission.OWNER_WRITE);
+                Files.setPosixFilePermissions(path, permisos);
                 return;
             }
-            Set<PosixFilePermission> permisos = Set.of(
-                    PosixFilePermission.OWNER_READ,
-                    PosixFilePermission.OWNER_WRITE);
-            Files.setPosixFilePermissions(path, permisos);
+            asegurarPermisosPrivadosAcl(path);
         } catch (Exception e) {
             logError("[Configuracion] No se pudieron ajustar permisos privados del archivo: %s", e.getMessage());
+        }
+    }
+
+    /**
+     * L5: fallback de protección para FS no-POSIX (Windows). Restringe el ACL a
+     * solo el propietario actual usando {@link AclFileAttributeView}.
+     * Best-effort: si el FS no soporta ACL, queda sin protección (lo registramos).
+     */
+    private void asegurarPermisosPrivadosAcl(Path path) {
+        try {
+            java.nio.file.attribute.AclFileAttributeView aclView =
+                    Files.getFileAttributeView(path, java.nio.file.attribute.AclFileAttributeView.class);
+            if (aclView == null) {
+                logInfo("[Configuracion] FS sin soporte POSIX/ACL: el archivo de config no se pudo restringir");
+                return;
+            }
+            // Conservar solo la entrada del propietario, eliminar herencia/heredados.
+            java.nio.file.attribute.UserPrincipal owner = aclView.getOwner();
+            java.util.List<java.nio.file.attribute.AclEntry> nuevas = new java.util.ArrayList<>();
+            if (owner != null) {
+                java.nio.file.attribute.AclEntry entry = java.nio.file.attribute.AclEntry.newBuilder()
+                        .setType(java.nio.file.attribute.AclEntryType.ALLOW)
+                        .setPrincipal(owner)
+                        .setPermissions(java.nio.file.attribute.AclEntryPermission.values())
+                        .build();
+                nuevas.add(entry);
+            }
+            aclView.setAcl(nuevas);
+        } catch (Exception e) {
+            logInfo("[Configuracion] No se pudo aplicar ACL privada (FS no soportado): %s", e.getMessage());
         }
     }
 
@@ -234,11 +295,48 @@ public class GestorConfiguracion {
         }
     }
 
+    /**
+     * L6: mueve tempPath → destino con reemplazo atómico, reintentando ante
+     * AccessDeniedException (Windows: AV, indexador u otro proceso con el
+     * archivo abierto). En POSIX el move es atómico y no suele bloquearse.
+     */
+    private static void moverAtomicoConReintento(Path tempPath, Path destino) throws IOException {
+        int maxIntentos = 3;
+        long[] backoffMs = {0L, 100L, 250L};
+        IOException ultimo = null;
+        for (int intento = 0; intento < maxIntentos; intento++) {
+            try {
+                if (intento > 0) {
+                    Thread.sleep(backoffMs[intento]);
+                }
+                Files.move(tempPath, destino, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                return;
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new IOException(I18nUI.tr("Move interrumpido", "Move interrupted"), ie);
+            } catch (java.nio.file.AccessDeniedException e) {
+                ultimo = e;
+            }
+        }
+        throw ultimo != null ? ultimo
+                : new IOException(I18nUI.tr("No se pudo mover el archivo tras reintentos",
+                        "Could not move file after retries"));
+    }
+
     private ConfiguracionAPI construirDesdeArchivo(ArchivoConfiguracion archivo) {
         ConfiguracionAPI config = new ConfiguracionAPI();
 
-        if (Normalizador.noEsVacio(archivo.proveedorAI) && ProveedorAI.existeProveedor(archivo.proveedorAI)) {
-            config.establecerProveedorAI(archivo.proveedorAI);
+        if (Normalizador.noEsVacio(archivo.proveedorAI)) {
+            if (ProveedorAI.existeProveedor(archivo.proveedorAI)) {
+                config.establecerProveedorAI(archivo.proveedorAI);
+            } else {
+                // L4: antes el proveedor desconocido caía silenciosamente al
+                // fallback (Z.ai) y el análisis fallaba después con un error de
+                // auth confuso. Avisamos para que el usuario sepa que su
+                // proveedor persistido ya no existe (rename/borrado en migración).
+                logWarn("ALERTA: proveedor '%s' no reconocido; usando '%s'",
+                        archivo.proveedorAI, config.obtenerProveedorAI());
+            }
         }
 
         if (archivo.retrasoSegundos != null) {
@@ -347,11 +445,26 @@ public class GestorConfiguracion {
             config.establecerMaximoTareasTabla(archivo.maximoTareasTabla);
         }
 
-        config.establecerApiKeysPorProveedor(sanitizarMapaString(archivo.apiKeysPorProveedor));
-        config.establecerUrlsBasePorProveedor(sanitizarMapaString(archivo.urlsBasePorProveedor));
-        config.establecerModelosPorProveedor(sanitizarMapaString(archivo.modelosPorProveedor));
-        config.establecerMaxTokensPorProveedor(sanitizarMapaInt(archivo.maxTokensPorProveedor));
-        config.establecerTiempoEsperaPorModelo(sanitizarMapaTimeoutPorModelo(archivo.tiempoEsperaPorModelo));
+        Map<String, String> apiKeysSanitizadas = sanitizarMapaString(archivo.apiKeysPorProveedor);
+        Map<String, String> urlsBaseSanitizadas = sanitizarMapaString(archivo.urlsBasePorProveedor);
+        Map<String, String> modelosSanitizados = sanitizarMapaString(archivo.modelosPorProveedor);
+        Map<String, Integer> maxTokensSanitizados = sanitizarMapaInt(archivo.maxTokensPorProveedor);
+        Map<String, Integer> timeoutsSanitizados = sanitizarMapaTimeoutPorModelo(archivo.tiempoEsperaPorModelo);
+
+        // L3: avisar de entries descartadas (proveedores renombrados/eliminados
+        // entre versiones, claves malformadas) para que el usuario no pierda
+        // credenciales/configuración sin enterarse al migrar versiones.
+        avisarDescartes(archivo.apiKeysPorProveedor, apiKeysSanitizadas, "API keys");
+        avisarDescartes(archivo.urlsBasePorProveedor, urlsBaseSanitizadas, "URLs base");
+        avisarDescartes(archivo.modelosPorProveedor, modelosSanitizados, "modelos");
+        avisarDescartes(archivo.maxTokensPorProveedor, maxTokensSanitizados, "max tokens");
+        avisarDescartes(archivo.tiempoEsperaPorModelo, timeoutsSanitizados, "timeouts por modelo");
+
+        config.establecerApiKeysPorProveedor(apiKeysSanitizadas);
+        config.establecerUrlsBasePorProveedor(urlsBaseSanitizadas);
+        config.establecerModelosPorProveedor(modelosSanitizados);
+        config.establecerMaxTokensPorProveedor(maxTokensSanitizados);
+        config.establecerTiempoEsperaPorModelo(timeoutsSanitizados);
 
         // Multi-Proveedor Configuration
         if (archivo.multiProveedorHabilitado != null) {

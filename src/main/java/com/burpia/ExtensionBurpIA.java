@@ -708,7 +708,7 @@ public class ExtensionBurpIA implements BurpExtension {
 
         // Header siempre presente
         gestorLogging.separador();
-        registrar(" BurpIA v" + VersionBurpIA.obtenerVersionActual());
+        registrar(I18nLogs.trTecnico("BurpIA v") + VersionBurpIA.obtenerVersionActual());
         gestorLogging.separador();
 
         // Sección [Configuration] - MODO NORMAL
@@ -953,7 +953,8 @@ public class ExtensionBurpIA implements BurpExtension {
         configRef.reemplazar(snapshot);
         guardarConfiguracionSilenciosa("captura");
         pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
-        registrar("Estado de captura actualizado: " + (manejadorHttp.estaCapturaActiva() ? "ACTIVA" : "PAUSADA"));
+        registrar(I18nLogs.trf("Estado de captura actualizado: %s",
+                manejadorHttp.estaCapturaActiva() ? I18nLogs.tr("ACTIVA") : I18nLogs.tr("PAUSADA")));
     }
 
     private void inicializarPreferenciasUsuarioEnUI() {
@@ -1084,6 +1085,13 @@ public class ExtensionBurpIA implements BurpExtension {
         if (gestorConsola != null) {
             gestorConsola.shutdown();
             gestorConsola = null;
+        }
+
+        // L9: liberar la referencia del handler de purgado del modelo antes de
+        // descartar el gestor. El handler captura una referencia al gestor/UI;
+        // sin limpiarlo, el modelo retiene la vieja UI en plugins singleton.
+        if (modeloTablaTareas != null) {
+            modeloTablaTareas.dispose();
         }
 
         if (gestorTareas != null) {

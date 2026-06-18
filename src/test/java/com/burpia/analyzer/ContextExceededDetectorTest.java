@@ -48,13 +48,27 @@ class ContextExceededDetectorTest {
         }
 
         @Test
-        @DisplayName("detecta error de Gemini RESOURCE_EXHAUSTED")
+        @DisplayName("detecta error de Gemini con token count exceeds limit")
         void detectaErrorGemini() {
             String cuerpoError = "{\"error\": {\"code\": 429, \"message\": \"Resource exhausted. Token count exceeds limit.\", \"status\": \"RESOURCE_EXHAUSTED\"}}";
-            
+
             boolean resultado = detector.esErrorContextoExcedido("Gemini", 429, cuerpoError);
-            
-            assertTrue(resultado, "Debe detectar error de contexto de Gemini");
+
+            assertTrue(resultado, "Debe detectar error de contexto de Gemini cuando menciona tokens");
+        }
+
+        @Test
+        @DisplayName("NO detecta rate-limit puro de Gemini (RESOURCE_EXHAUSTED sin mención de tokens)")
+        void noDetectaRateLimitGemini() {
+            // Gemini reusa 429 RESOURCE_EXHAUSTED mayormente para rate-limit por
+            // minuto, no para contexto. Ese caso debe caer al retry policy que
+            // honra Retry-After, no al truncado. Antes se malinterpretaba como
+            // contexto y desperdiciaba llamadas truncando sin backoff.
+            String cuerpoError = "{\"error\": {\"code\": 429, \"message\": \"Quota exceeded. Try again later.\", \"status\": \"RESOURCE_EXHAUSTED\"}}";
+
+            boolean resultado = detector.esErrorContextoExcedido("Gemini", 429, cuerpoError);
+
+            assertFalse(resultado, "Un rate-limit puro sin mención de tokens/contexto NO es error de contexto");
         }
 
         @Test
@@ -109,9 +123,11 @@ class ContextExceededDetectorTest {
         @Test
         @DisplayName("detecta error con proveedor google normalizado a Gemini")
         void detectaConGoogleNormalizado() {
-            String cuerpoError = "RESOURCE_EXHAUSTED";
-            boolean resultado = detector.esErrorContextoExcedido("google", 400, cuerpoError);
-            assertTrue(resultado, "Debe detectar error para google normalizado a Gemini");
+            // "RESOURCE_EXHAUSTED" a secas NO es contexto (es rate-limit); se
+            // requiere el calificador de tokens. Usamos una variante de contexto.
+            String cuerpoError = "RESOURCE_EXHAUSTED: token count exceeds limit";
+            boolean resultado = detector.esErrorContextoExcedido("google", 429, cuerpoError);
+            assertTrue(resultado, "Debe detectar error para google normalizado a Gemini con mención de tokens");
         }
     }
 

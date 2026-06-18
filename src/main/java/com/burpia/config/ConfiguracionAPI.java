@@ -4,6 +4,8 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.util.Normalizador;
 import com.burpia.util.OSUtils;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -76,7 +78,10 @@ public class ConfiguracionAPI {
     private int tamanioFuenteMono;
 
     private String tipoAgente;
-    private ConcurrentMap<String, String> rutasBinarioPorAgente;
+    // volatile: reasignado desde el EDT (UI) y leído desde threads de análisis,
+    // al igual que los maps per-proveedor. Sin volatile, un thread worker puede
+    // ver una referencia stale tras una reasignación.
+    private volatile ConcurrentMap<String, String> rutasBinarioPorAgente;
     private String agentePreflightPrompt;
     private String agentePrompt;
     private int agenteDelay;
@@ -109,10 +114,12 @@ public class ConfiguracionAPI {
     private boolean persistirFiltroSeveridadHallazgos;
 
     // UI State Persistence - Estado general
-    private ConcurrentMap<String, String> estadoUI;
+    // volatile: reasignado desde el EDT y leído por threads de análisis.
+    private volatile ConcurrentMap<String, String> estadoUI;
 
     // Alertas opt-out — Map<claveAlerta, true> indica que la alerta fue desactivada por el usuario
-    private ConcurrentMap<String, Boolean> alertasDeshabilitadas;
+    // volatile: reasignado desde el EDT y leído por threads de análisis.
+    private volatile ConcurrentMap<String, Boolean> alertasDeshabilitadas;
 
     public ConfiguracionAPI() {
         this.proveedorAI = "Ollama";
@@ -717,13 +724,24 @@ public class ConfiguracionAPI {
     public static String construirUrlApiProveedor(String proveedor, String urlBase, String modelo) {
         String baseNormalizada = normalizarUrlBase(urlBase);
         String proveedorNormalizado = proveedor != null ? proveedor : "";
-        String modeloNormalizado = Normalizador.noEsVacio(modelo) ? modelo.trim() : "gemini-1.5-pro-002";
+        String modeloLimpio = Normalizador.noEsVacio(modelo) ? modelo.trim() : "";
 
         switch (proveedorNormalizado) {
             case "Claude":
                 return baseNormalizada + "/messages";
             case "Gemini":
-                return baseNormalizada + "/models/" + modeloNormalizado + ":generateContent";
+                // El modelo solo es relevante para construir la URL de Gemini.
+                // Si falta, usamos el default propio de Gemini (no un literal
+                // hardcodeado que contaminaba a todos los proveedores).
+                String modeloGemini = Normalizador.noEsVacio(modeloLimpio)
+                        ? modeloLimpio
+                        : ProveedorAI.obtenerModeloPorDefecto("Gemini");
+                // El modelo va en el path: debe estar URL-encoded para no malformar
+                // la URL ante caracteres no seguros (/, :, espacio, %). El separador
+                // de acción ":generateContent" se añade después, sin codificar.
+                return baseNormalizada + "/models/"
+                        + URLEncoder.encode(modeloGemini, StandardCharsets.UTF_8)
+                        + ":generateContent";
             case "Ollama":
             case "Ollama Cloud":
                 return baseNormalizada + "/api/chat";
@@ -734,6 +752,7 @@ public class ConfiguracionAPI {
             case "minimax":
             case "DeepSeek":
             case "xAI":
+            case "LM Studio":
                 return baseNormalizada + "/chat/completions";
             default:
                 // PROVEEDOR_CUSTOM_01/02/03: URL verbatim, sin manipulación.
@@ -776,11 +795,22 @@ public class ConfiguracionAPI {
             }
         } while (cambio);
 
-        int idxGemini = base.indexOf("/models/");
-        if (idxGemini > 0) {
-            return base.substring(0, idxGemini);
+        // Recorte específico del patrón de Gemini: "/models/<modelo>:<accion>".
+        // A diferencia del viejo indexOf("/models/") (que truncaba cualquier
+        // ocurrencia y rompía paths de gateways con /models/ en el medio), aquí
+        // solo recortamos cuando el segmento /models/ va seguido de un nombre de
+        // modelo y una acción Gemini (:generateContent, :streamGenerateContent,
+        // :countTokens). Esto cubre el endpoint completo de Gemini sin afectar
+        // URLs legítimas que contengan /models/ en otro contexto.
+        int idxModels = base.indexOf("/models/");
+        if (idxModels > 0) {
+            String despuesDeModels = base.substring(idxModels + "/models/".length());
+            if (despuesDeModels.contains(":generateContent")
+                    || despuesDeModels.contains(":streamGenerateContent")
+                    || despuesDeModels.contains(":countTokens")) {
+                return base.substring(0, idxModels);
+            }
         }
-
         return base;
     }
 
@@ -1406,6 +1436,17 @@ public class ConfiguracionAPI {
         return valor;
     }
 
+    /**
+     * Copia defensiva null-safe de un mapa concurrente. Devuelve un mapa vacío
+     * si el origen es null. Centraliza (DRY) el patrón usado en crearSnapshot y
+     * aplicarDesde para todos los ConcurrentMap, eliminando NPEs cuando algún
+     * map queda null (instancia parcialmente construida / raza) y la asimetría
+     * de null-checks defensivos que existía solo en algunos maps.
+     */
+    private static <K, V> ConcurrentMap<K, V> copiarConcurrentMap(Map<K, V> origen) {
+        return origen != null ? new ConcurrentHashMap<>(origen) : new ConcurrentHashMap<>();
+    }
+
     private static int normalizarMaximoHallazgos(int valor) {
         return normalizarRango(valor, MINIMO_HALLAZGOS_TABLA, MAXIMO_HALLAZGOS_TABLA);
     }
@@ -1612,10 +1653,7 @@ public class ConfiguracionAPI {
         snapshot.soloProxy = this.soloProxy;
         snapshot.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(this.agentesHabilitadosPorTipo);
         snapshot.establecerTipoAgente(this.tipoAgente);
-        snapshot.rutasBinarioPorAgente = new ConcurrentHashMap<>();
-        if (this.rutasBinarioPorAgente != null) {
-            snapshot.rutasBinarioPorAgente.putAll(this.rutasBinarioPorAgente);
-        }
+        snapshot.rutasBinarioPorAgente = copiarConcurrentMap(this.rutasBinarioPorAgente);
         snapshot.agentePreflightPrompt = this.agentePreflightPrompt;
         snapshot.agentePrompt = this.agentePrompt;
         snapshot.agenteDelay = this.agenteDelay;
@@ -1629,14 +1667,14 @@ public class ConfiguracionAPI {
         snapshot.filtroSeveridadHallazgos = this.filtroSeveridadHallazgos;
         snapshot.persistirFiltroBusquedaHallazgos = this.persistirFiltroBusquedaHallazgos;
         snapshot.persistirFiltroSeveridadHallazgos = this.persistirFiltroSeveridadHallazgos;
-        snapshot.estadoUI = new ConcurrentHashMap<>(this.estadoUI);
-        snapshot.alertasDeshabilitadas = new ConcurrentHashMap<>(this.alertasDeshabilitadas);
+        snapshot.estadoUI = copiarConcurrentMap(this.estadoUI);
+        snapshot.alertasDeshabilitadas = copiarConcurrentMap(this.alertasDeshabilitadas);
 
-        snapshot.apiKeysPorProveedor = new ConcurrentHashMap<>(this.apiKeysPorProveedor);
-        snapshot.urlsBasePorProveedor = new ConcurrentHashMap<>(this.urlsBasePorProveedor);
-        snapshot.modelosPorProveedor = new ConcurrentHashMap<>(this.modelosPorProveedor);
-        snapshot.maxTokensPorProveedor = new ConcurrentHashMap<>(this.maxTokensPorProveedor);
-        snapshot.tiempoEsperaPorModelo = new ConcurrentHashMap<>(this.tiempoEsperaPorModelo);
+        snapshot.apiKeysPorProveedor = copiarConcurrentMap(this.apiKeysPorProveedor);
+        snapshot.urlsBasePorProveedor = copiarConcurrentMap(this.urlsBasePorProveedor);
+        snapshot.modelosPorProveedor = copiarConcurrentMap(this.modelosPorProveedor);
+        snapshot.maxTokensPorProveedor = copiarConcurrentMap(this.maxTokensPorProveedor);
+        snapshot.tiempoEsperaPorModelo = copiarConcurrentMap(this.tiempoEsperaPorModelo);
         snapshot.nivelErrorHabilitado = this.nivelErrorHabilitado;
         snapshot.nivelWarnHabilitado = this.nivelWarnHabilitado;
         snapshot.nivelInfoHabilitado = this.nivelInfoHabilitado;
@@ -1678,19 +1716,16 @@ public class ConfiguracionAPI {
         this.soloProxy = origen.soloProxy;
         this.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(origen.agentesHabilitadosPorTipo);
         establecerTipoAgente(origen.tipoAgente);
-        this.rutasBinarioPorAgente = new ConcurrentHashMap<>();
-        if (origen.rutasBinarioPorAgente != null) {
-            this.rutasBinarioPorAgente.putAll(origen.rutasBinarioPorAgente);
-        }
+        this.rutasBinarioPorAgente = copiarConcurrentMap(origen.rutasBinarioPorAgente);
         this.agentePreflightPrompt = normalizarPromptAgentePreflight(origen.agentePreflightPrompt);
         this.agentePrompt = normalizarPromptAgente(origen.agentePrompt);
         establecerAgenteDelay(origen.agenteDelay);
 
-        this.apiKeysPorProveedor = new ConcurrentHashMap<>(origen.apiKeysPorProveedor);
-        this.urlsBasePorProveedor = new ConcurrentHashMap<>(origen.urlsBasePorProveedor);
-        this.modelosPorProveedor = new ConcurrentHashMap<>(origen.modelosPorProveedor);
-        this.maxTokensPorProveedor = new ConcurrentHashMap<>(origen.maxTokensPorProveedor);
-        this.tiempoEsperaPorModelo = new ConcurrentHashMap<>(origen.tiempoEsperaPorModelo);
+        this.apiKeysPorProveedor = copiarConcurrentMap(origen.apiKeysPorProveedor);
+        this.urlsBasePorProveedor = copiarConcurrentMap(origen.urlsBasePorProveedor);
+        this.modelosPorProveedor = copiarConcurrentMap(origen.modelosPorProveedor);
+        this.maxTokensPorProveedor = copiarConcurrentMap(origen.maxTokensPorProveedor);
+        this.tiempoEsperaPorModelo = copiarConcurrentMap(origen.tiempoEsperaPorModelo);
 
         this.nombreFuenteEstandar = origen.nombreFuenteEstandar;
         this.tamanioFuenteEstandar = origen.tamanioFuenteEstandar;
@@ -1701,10 +1736,12 @@ public class ConfiguracionAPI {
         this.filtroSeveridadHallazgos = origen.filtroSeveridadHallazgos;
         this.persistirFiltroBusquedaHallazgos = origen.persistirFiltroBusquedaHallazgos;
         this.persistirFiltroSeveridadHallazgos = origen.persistirFiltroSeveridadHallazgos;
-        this.estadoUI = new ConcurrentHashMap<>(origen.estadoUI);
-        this.alertasDeshabilitadas = new ConcurrentHashMap<>(origen.alertasDeshabilitadas);
+        this.estadoUI = copiarConcurrentMap(origen.estadoUI);
+        this.alertasDeshabilitadas = copiarConcurrentMap(origen.alertasDeshabilitadas);
         this.multiProveedorHabilitado = origen.multiProveedorHabilitado;
-        this.proveedoresMultiConsulta = new ArrayList<>(origen.proveedoresMultiConsulta);
+        this.proveedoresMultiConsulta = origen.proveedoresMultiConsulta != null
+                ? new ArrayList<>(origen.proveedoresMultiConsulta)
+                : new ArrayList<>();
         this.nivelErrorHabilitado = origen.nivelErrorHabilitado;
         this.nivelWarnHabilitado = origen.nivelWarnHabilitado;
         this.nivelInfoHabilitado = origen.nivelInfoHabilitado;

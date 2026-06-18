@@ -407,7 +407,24 @@ public final class I18nLogs {
         {"Se detectó pérdida de contenido", "Content loss detected"},
         {"Recuperación extrema", "Extreme recovery"},
         {"Array JSON convertido a", "JSON array converted to"},
-        {"Parseo campo por campo recuperó", "Field-by-field parsing recovered"}
+        {"Parseo campo por campo recuperó", "Field-by-field parsing recovered"},
+        // Entradas para los formatos trf introducidos al corregir concatenaciones
+        // runtime dentro de tr() (violaban la regla de oro de §7 de AGENTS.md).
+        // El traductor aplica el diccionario sobre el formato (con %s/%d intactos)
+        // antes de String.format, por eso las claves llevan los placeholders.
+        {"Longitud:", "Length:"},
+        {"caracteres", "characters"},
+        {"desde menu contextual:", "from context menu:"},
+        {"Configuración multi-proveedor al inicio:", "Multi-provider configuration at startup:"},
+        {"Lista:", "List:"},
+        {"elemento(s)", "element(s)"},
+        {"AVISO: Multi-proveedor habilitado con", "WARNING: Multi-provider enabled with"},
+        {"proveedor(s). Se usará proveedor único:", "provider(s). Single provider will be used:"},
+        {"Se detectó pérdida de contenido tras reparación JSON;", "Content loss detected after JSON repair;"},
+        {"se conserva parseo no estricto del payload original", "non-strict parsing of original payload preserved"},
+        {"No se pudo crear solicitud de análisis forzada", "Could not create forced analysis request"},
+        {"eliminadas", "deleted"},
+        {"Error en monitor de tareas atascadas", "Error in stuck-tasks monitor"}
     };
 
     /**

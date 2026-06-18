@@ -152,8 +152,11 @@ public class AnalizadorHTTP {
         }
         
         if (registrarDetalleSolicitud) {
+            // Neutro respecto al header de auth: distintos proveedores usan
+            // Authorization: Bearer (OpenAI-compatibles/Ollama Cloud),
+            // x-api-key (Claude) o x-goog-api-key (Gemini). No afirmamos Bearer.
             gestorLogging.info(ORIGEN_LOG,
-                I18nLogs.tr("Encabezados de solicitud: Content-Type=application/json, Authorization=Bearer [OCULTO]"));
+                I18nLogs.tr("Encabezados de solicitud: Content-Type=application/json, credencial=[OCULTA]"));
         }
 
         Call call = clienteHttp.newCall(solicitudHttp);

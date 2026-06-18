@@ -55,6 +55,13 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
     private String confianzaStr = "";
     private boolean isIgnorado = false;
 
+    // Cache del color de fondo de segmento — recomputado solo cuando cambia
+    // la identidad del color base de fondo de la tabla (cambio de tema).
+    // Antes se alocaba new Color(...) por cada paint × N filas, generando
+    // miles de allocs/seg al scrollear.
+    private Color tableBgCacheado;
+    private Color bgSegmentColorCacheado;
+
     @SuppressWarnings("this-escape")
     public RenderizadorConfianza() {
         setHorizontalAlignment(SwingConstants.CENTER);
@@ -70,7 +77,14 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         this.setText("");
 
         Font f = getFont();
-        this.isIgnorado = f.getAttributes().containsKey(java.awt.font.TextAttribute.STRIKETHROUGH);
+        // M12: detectar "ignorado" por el valor real del atributo STRIKETHROUGH,
+        // no solo por presencia de la key. Swing reusa la misma instancia de
+        // renderer para todas las filas: si otra celda seteó una fuente tachada
+        // (RenderizadorHallazgoBorrado), getFont() puede devolverla para una fila
+        // NO ignorada. containsKey() además es true incluso con valor null/otro.
+        // Chequear STRIKETHROUGH_ON explícitamente evita falsos "ignorado".
+        Object strike = f.getAttributes().get(java.awt.font.TextAttribute.STRIKETHROUGH);
+        this.isIgnorado = java.awt.font.TextAttribute.STRIKETHROUGH_ON.equals(strike);
 
         return this;
     }
@@ -168,13 +182,19 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
             int barX = x + textWidth + ESPACIO_TEXTO_BARRA;
             int barY = (getHeight() - ALTO_BARRA) / 2;
 
-            Color baseSegmento = EstilosUI.colorSeparador(tableBg);
-            Color bgSegmentColor = new Color(
-                    baseSegmento.getRed(),
-                    baseSegmento.getGreen(),
-                    baseSegmento.getBlue(),
-                    ALPHA_SEGMENTO_FONDO
-            );
+            // Cache invalidación por identidad de tableBg (cambio de tema).
+            // Reduce drásticamente la GC pressure al scrollear muchas filas.
+            if (tableBg != tableBgCacheado || bgSegmentColorCacheado == null) {
+                Color baseSegmento = EstilosUI.colorSeparador(tableBg);
+                bgSegmentColorCacheado = new Color(
+                        baseSegmento.getRed(),
+                        baseSegmento.getGreen(),
+                        baseSegmento.getBlue(),
+                        ALPHA_SEGMENTO_FONDO
+                );
+                tableBgCacheado = tableBg;
+            }
+            Color bgSegmentColor = bgSegmentColorCacheado;
 
             for (int i = 0; i < TOTAL_SEGMENTOS; i++) {
                 if (i < filledSegments) {

@@ -254,6 +254,12 @@ public final class ProviderConfigManager {
             return;
         }
 
+        // M5: descartar borradores de una sesión previa del diálogo. Si el
+        // manager se reutiliza entre aperturas (típico en plugins singleton),
+        // los borradores de una sesión cancelada persistían y reaparecían como
+        // "estado fantasma" al reabrir. Resetear al cargar la config inicial.
+        reset();
+
         // Obtener el proveedor GUARDADO en configuración, NO el primero del combo
         String proveedorGuardado = config.obtenerProveedorAI();
         if (Normalizador.noEsVacio(proveedorGuardado)) {
@@ -304,9 +310,14 @@ public final class ProviderConfigManager {
                 }
             }
 
-            cargarEstadoProveedor(nuevoProveedor);
-            
+            // H4: fijar el nuevo proveedor ANTES de cargar su estado. Antes se
+            // hacía después, por lo que actualizarTimeoutModeloSeleccionado()
+            // (invocado dentro de cargarEstadoProveedor) consultaba el timeout
+            // con el proveedor anterior → se calculaba y persistía mal.
             proveedorActualUi = nuevoProveedor;
+
+            cargarEstadoProveedor(nuevoProveedor);
+
             if (comboProveedor != null) {
                 comboProveedor.setSelectedItem(nuevoProveedor);
             }
@@ -985,6 +996,20 @@ public final class ProviderConfigManager {
         proveedorTimeoutManualUi = "";
         modeloTimeoutManualUi = "";
         timeoutManualTextoUi = "";
+    }
+
+    /**
+     * M5: descarta todo el estado de borradores acumulado. Llamado al cargar la
+     * configuración inicial (apertura del diálogo) para evitar "estado fantasma"
+     * cuando el manager se reutiliza entre aperturas y una sesión previa fue
+     * cancelada sin guardar.
+     */
+    public void reset() {
+        if (estadoProveedorTemporal != null) {
+            estadoProveedorTemporal.clear();
+        }
+        limpiarTimeoutManualActual();
+        proveedorActualUi = null;
     }
 
     private void cargarModelosEnCombo(List<String> modelos, String preferido) {

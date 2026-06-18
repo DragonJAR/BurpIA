@@ -5,7 +5,9 @@ import com.burpia.util.ContadorEstadosTareas;
 import com.burpia.util.Normalizador;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -16,6 +18,12 @@ public class ModeloTablaTareas extends DefaultTableModel {
     private static final int TOTAL_COLUMNAS = 4;
     private static final int LIMITE_DEFECTO_TAREAS = 500;
     private final List<Tarea> datos;
+    // Mapa paralelo id → índice para lookup O(1) en hot paths
+    // (actualizarTarea, buscarIndicePorId). Antes se hacían scans lineales
+    // O(n) bajo lock en cada update — con 500 tareas + bursts concurrentes
+    // se notaba. Mantenido sincrónicamente con `datos`: ver
+    // reconstruirIndicePorId() después de cualquier cambio estructural.
+    private final Map<String, Integer> indicePorId;
     private int limiteFilas;
     private final ReentrantLock lock;
     private final AtomicInteger versionCambios = new AtomicInteger(0);
@@ -28,8 +36,28 @@ public class ModeloTablaTareas extends DefaultTableModel {
     public ModeloTablaTareas(int limiteFilas) {
         super(I18nUI.Tablas.COLUMNAS_TAREAS(), 0);
         this.datos = new ArrayList<>();
+        this.indicePorId = new HashMap<>();
         this.limiteFilas = Math.max(1, limiteFilas);
         this.lock = new ReentrantLock();
+    }
+
+    /**
+     * Reconstruye el índice {@code id → índice} desde {@code datos}. Debe
+     * llamarse bajo lock después de cualquier cambio estructural (add,
+     * remove, purga, limpiar). O(n) — el costo se amortiza contra los
+     * lookups O(1) posteriores en hot paths.
+     */
+    private void reconstruirIndicePorId() {
+        indicePorId.clear();
+        for (int i = 0; i < datos.size(); i++) {
+            Tarea t = datos.get(i);
+            if (t != null) {
+                String id = t.obtenerId();
+                if (Normalizador.noEsVacio(id)) {
+                    indicePorId.put(id, i);
+                }
+            }
+        }
     }
 
     @Override
@@ -83,6 +111,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
                 }
                 marcarCambio();
                 idsPurgadas = aplicarLimiteFilasEnDatos();
+                reconstruirIndicePorId();
             } finally {
                 lock.unlock();
             }
@@ -102,6 +131,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
             datos.add(tarea);
             marcarCambio();
             idsPurgadas = aplicarLimiteFilasEnDatos();
+            reconstruirIndicePorId();
             if (!idsPurgadas.isEmpty()) {
                 programarSincronizacionTabla();
             } else {
@@ -125,6 +155,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
             return;
         }
         boolean actualizado;
+        int versionAlActualizar;
         lock.lock();
         try {
             int indiceEnDatos = buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
@@ -135,6 +166,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
             } else {
                 actualizado = false;
             }
+            versionAlActualizar = versionCambios.get();
         } finally {
             lock.unlock();
         }
@@ -149,18 +181,37 @@ public class ModeloTablaTareas extends DefaultTableModel {
         // re-buscamos el índice DENTRO del EDT bajo lock: si la tarea fue
         // purgada por otro hilo entre tanto, la sync completa ya está
         // programada y nos saltamos esta actualización puntual.
-        ejecutarEnEdt(() -> aplicarActualizacionPuntualEnEdt(idTarea, tarea));
+        // M14: capturamos la versión para abortar si hubo cambio estructural
+        // (purga) entre el encolado y la ejecución en EDT — en ese caso los
+        // índices de `datos` y `dataVector` divergieron y actualizar por índice
+        // escribiría en la fila equivocada.
+        ejecutarEnEdt(() -> aplicarActualizacionPuntualEnEdt(idTarea, tarea, versionAlActualizar));
     }
 
     /**
      * Aplica una actualización puntual de fila en el EDT, re-verificando
      * la posición de la tarea bajo lock para evitar carreras con purgas.
+     *
+     * @param versionAlEncolar versión de cambios capturada al encolar; si difiere
+     *                         de la actual al ejecutar, hubo un cambio estructural
+     *                         y abortamos (la sync completa ya refleja el estado)
      */
-    private void aplicarActualizacionPuntualEnEdt(String idTarea, Tarea tarea) {
+    private void aplicarActualizacionPuntualEnEdt(String idTarea, Tarea tarea, int versionAlEncolar) {
+        // M14: si hubo cambio estructural (purga/add batch) entre el encolado y
+        // ahora, los índices de dataVector ya no corresponden a los de `datos`.
+        // Abortar: la sync completa programada por ese cambio ya es consistente.
+        if (versionCambios.get() != versionAlEncolar) {
+            return;
+        }
+
         Object[] fila;
         int indiceActual;
         lock.lock();
         try {
+            // Re-verificar: la versión pudo cambiar justo antes de tomar el lock.
+            if (versionCambios.get() != versionAlEncolar) {
+                return;
+            }
             indiceActual = buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
             if (indiceActual < 0) {
                 // Purgada entre el unlock y el EDT → ya se programó (o se
@@ -228,6 +279,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         lock.lock();
         try {
             datos.clear();
+            indicePorId.clear();
             marcarCambio();
         } finally {
             lock.unlock();
@@ -260,6 +312,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         try {
             if (indiceFila >= 0 && indiceFila < datos.size()) {
                 datos.remove(indiceFila);
+                reconstruirIndicePorId();
                 eliminado = true;
                 marcarCambio();
             }
@@ -284,7 +337,25 @@ public class ModeloTablaTareas extends DefaultTableModel {
         }
         lock.lock();
         try {
-            return buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
+            // Lookup O(1) vía mapa paralelo. Antes era scan O(n) sobre `datos`.
+            Integer idx = indicePorId.get(idTarea);
+            if (idx == null) {
+                return -1;
+            }
+            // Verificación defensiva: si el mapa quedó stale por algún path
+            // que olvidó reconstruir, no devolvemos un índice inválido.
+            if (idx >= 0 && idx < datos.size()) {
+                Tarea t = datos.get(idx);
+                if (t != null && idTarea.equals(t.obtenerId())) {
+                    return idx;
+                }
+            }
+            // Fallback: scan lineal y reconstruye índice si encuentra discrepancia.
+            int idxReal = buscarIndiceSi(t -> idTarea.equals(t.obtenerId()));
+            if (idxReal >= 0) {
+                reconstruirIndicePorId();
+            }
+            return idxReal;
         } finally {
             lock.unlock();
         }
@@ -339,6 +410,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
             if (!huboCambios) {
                 return;
             }
+            reconstruirIndicePorId();
             marcarCambio();
         } finally {
             lock.unlock();
@@ -418,6 +490,9 @@ public class ModeloTablaTareas extends DefaultTableModel {
             }
             this.limiteFilas = limiteNormalizado;
             idsPurgadas = aplicarLimiteFilasEnDatos();
+            if (!idsPurgadas.isEmpty()) {
+                reconstruirIndicePorId();
+            }
             marcarCambio();
         } finally {
             lock.unlock();
@@ -430,6 +505,16 @@ public class ModeloTablaTareas extends DefaultTableModel {
 
     public void establecerManejadorPurgado(Consumer<List<String>> manejadorPurgado) {
         this.manejadorPurgado = manejadorPurgado;
+    }
+
+    /**
+     * L9: libera referencias retenidas por el modelo al descargar la extensión.
+     * En plugins Burp singleton el modelo puede sobrevivir a la UI; el handler
+     * de purgado captura típicamente una referencia al componente padre, así
+     * que sin limpiarlo se retiene la vieja UI. Idempotente.
+     */
+    public void dispose() {
+        this.manejadorPurgado = null;
     }
 
     /**

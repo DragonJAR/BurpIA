@@ -18,7 +18,6 @@ import java.util.List;
 
 public class OrquestadorAnalisis {
     private static final String ORIGEN_LOG = "OrquestadorAnalisis";
-    private static final int MAX_TRUNCADOS = 3;
 
     private final SolicitudAnalisis solicitud;
     // Snapshot inmutable: el llamador crea una copia via crearSnapshot() antes de pasarla.
@@ -86,7 +85,7 @@ public class OrquestadorAnalisis {
 
         if (solicitud == null) {
             String error = mensajeErrorSolicitudNoDisponible();
-            gestorLogging.error(ORIGEN_LOG, "[" + nombreHilo + "] " + error);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("[%s] %s", nombreHilo, error));
             throw new IOException(error);
         }
 
@@ -181,84 +180,18 @@ public class OrquestadorAnalisis {
         return prompt;
     }
 
-    private String llamarAPIAIConRetries() throws IOException {
-        String promptActual = construirPromptAnalisis();
-        int intentosTruncado = 0;
-        
-        while (intentosTruncado <= MAX_TRUNCADOS) {
-            try {
-                controlCancelacionPausa.verificarCancelacion();
-                controlCancelacionPausa.esperarSiPausada();
-                
-                String respuesta = analizadorHTTP.llamarAPI(promptActual);
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Longitud de respuesta de API: %d caracteres",
-                        respuesta.length()));
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("Respuesta de API (preview):%n%s",
-                        resumirParaLog(respuesta)));
-                return respuesta;
-                
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException(I18nUI.Tareas.ERROR_RETRY_INTERRUPPIDO(), e);
-            } catch (ContextExceededException e) {
-                // Error de contexto - podemos truncar y reintentar
-                if (intentosTruncado < MAX_TRUNCADOS) {
-                    intentosTruncado++;
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.ContextoExcedido.TRUNCANDO(intentosTruncado));
-                    
-                    // Calcular tokens objetivo
-                    int tokensObjetivo = obtenerTokensObjetivo(e.obtenerCuerpoError());
-                    
-                    // Truncar prompt
-                    int longitudOriginal = promptActual.length();
-                    promptActual = promptTruncador.truncarPrompt(promptActual, tokensObjetivo);
-                    
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.ContextoExcedido.TRUNCADO(longitudOriginal, promptActual.length()));
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.ContextoExcedido.RETRY_CON_TRUNCADO());
-                    continue;
-                }
-                // Agotamos intentos de truncado
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.ContextoExcedido.MAX_INTENTOS(MAX_TRUNCADOS));
-                throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO(), e);
-            }
-        }
-        
-        // No debería llegar aquí, pero por seguridad
-        throw new IOException(I18nUI.ContextoExcedido.MENSAJE_FALLIDO());
-    }
-    
-    /**
-     * Calcula el número objetivo de tokens basado en el error y configuración.
-     */
-    private int obtenerTokensObjetivo(String cuerpoError) {
-        // Intentar extraer límite del error
-        int limiteExtraido = ContextExceededDetector.extraerLimiteTokens(cuerpoError);
-        
-        if (limiteExtraido > 0) {
-            // Dejar margen para respuesta (25% del context window)
-            return promptTruncador.calcularTokensDisponibles(limiteExtraido, limiteExtraido / 4);
-        }
-        
-        // Fallback: usar configuración del modelo
-        String proveedor = config.obtenerProveedorAI();
-        String modelo = config.obtenerModelo();
-        int maxTokens = config.obtenerMaxTokensParaProveedor(proveedor);
-        
-        if (maxTokens > 0) {
-            return promptTruncador.calcularTokensDisponibles(maxTokens, maxTokens / 4);
-        }
-        
-        // Último fallback: estimar según modelo conocido
-        int contextWindow = estimarContextWindow(modelo);
-        return promptTruncador.calcularTokensDisponibles(contextWindow, contextWindow / 4);
-    }
-    
-    /**
-     * Estima el context window de un modelo conocido.
-     * Delegado a ConfiguracionAPI.estimarContextWindow() para centralización.
-     */
-    private int estimarContextWindow(String modelo) {
-        return ConfiguracionAPI.estimarContextWindow(modelo);
+    // Propaga InterruptedException sin rebundle: la cancelación debe llegar al
+    // catch (InterruptedException) de AnalizadorAI.run() → alCanceladoAnalisis().
+    // Antes se envolvía en IOException y caía al catch (Exception) → alErrorAnalisis(),
+    // reportando la cancelación del usuario como un error.
+    private String llamarAPIAIConRetries() throws IOException, InterruptedException {
+        String prompt = construirPromptAnalisis();
+        String respuesta = new EjecutorLlamadaConTruncado(
+                config, analizadorHTTP, promptTruncador, controlCancelacionPausa, gestorLogging)
+                .ejecutar(prompt);
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("Respuesta de API (preview):%n%s",
+                resumirParaLog(respuesta)));
+        return respuesta;
     }
 
     private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {

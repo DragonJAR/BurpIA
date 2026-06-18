@@ -63,6 +63,30 @@ class ProveedorAITest {
         }
 
         @Test
+        @DisplayName("LM Studio registrado antes de los customs, OpenAI-compat, sin API key")
+        void lmStudioRegistrado() {
+            assertTrue(ProveedorAI.existeProveedor("LM Studio"), "LM Studio deberia existir");
+            ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor("LM Studio");
+            assertNotNull(config);
+            assertFalse(config.requiereClaveApi(), "LM Studio NO debe requerir API key (servicio local)");
+            assertEquals("http://localhost:1234/v1", config.obtenerUrlApi(),
+                "Default URL LM Studio debe ser http://localhost:1234/v1");
+            assertTrue(ProveedorAI.esOpenAICompatible("LM Studio"),
+                "LM Studio debe ser OpenAI-compatible (/chat/completions)");
+        }
+
+        @Test
+        @DisplayName("LM Studio se ubica antes de los customs en el catálogo")
+        void lmStudioAntesDeCustoms() {
+            List<String> nombres = ProveedorAI.obtenerNombresProveedores();
+            int idxLmStudio = nombres.indexOf("LM Studio");
+            int idxCustom01 = nombres.indexOf(ProveedorAI.PROVEEDOR_CUSTOM_01);
+            assertTrue(idxLmStudio >= 0 && idxCustom01 >= 0, "Ambos proveedores deben existir");
+            assertTrue(idxLmStudio < idxCustom01,
+                "LM Studio debe aparecer antes que los customs en el catálogo");
+        }
+
+        @Test
         @DisplayName("Custom 01/02/03 son los ultimos proveedores en orden")
         void customEsUltimo() {
             List<String> nombres = ProveedorAI.obtenerNombresProveedores();

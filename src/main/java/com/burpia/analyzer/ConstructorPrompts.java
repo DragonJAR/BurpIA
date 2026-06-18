@@ -217,9 +217,10 @@ public class ConstructorPrompts {
         }
         int truncados = texto.length() - maxCaracteres;
         return texto.substring(0, maxCaracteres) +
-                "\n" + I18nUI.tr(
-                        "[TRUNCADO " + etiqueta + ": +" + truncados + " caracteres]",
-                        "[TRUNCATED " + etiqueta + ": +" + truncados + " characters]");
+                "\n" + I18nUI.trf(
+                        "[TRUNCADO %s: +%d caracteres]",
+                        "[TRUNCATED %s: +%d characters]",
+                        etiqueta, truncados);
     }
 
     /**

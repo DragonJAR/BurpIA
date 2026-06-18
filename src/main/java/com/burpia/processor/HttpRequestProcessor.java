@@ -77,7 +77,7 @@ public final class HttpRequestProcessor {
         if (esEstatico) {
             ConfiguracionAPI config = configRef.obtener();
             if (config.esDetallado() && gestorLogging != null) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Recurso coincidio con filtro estatico: " + url));
+                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Recurso coincidio con filtro estatico: %s", url));
             }
         }
 

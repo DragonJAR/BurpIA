@@ -1,6 +1,7 @@
 package com.burpia.util;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -62,6 +63,7 @@ public final class ConstructorSolicitudesProveedor {
             case "Moonshot (Kimi)":
             case "DeepSeek":
             case "xAI":
+            case "LM Studio":
                 return listarModelosCompatiblesOpenAI(urlBase, apiKey, clienteHttp);
             default:
                 if (ProveedorAI.esProveedorCustom(proveedorNormalizado)) {
@@ -102,17 +104,27 @@ public final class ConstructorSolicitudesProveedor {
             builder.addHeader("anthropic-version", "2023-06-01");
         } else if ("Gemini".equals(proveedor)) {
             String modeloConfigurado = modeloUsado;
-            List<String> modelosValidosGemini = listarModelosGemini(
-                ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()),
-                config.obtenerClaveApi(),
-                clienteHttp
-            );
-            if (!modelosValidosGemini.contains(modeloConfigurado)) {
-                modeloUsado = modelosValidosGemini.get(0);
-                advertencia = I18nUI.Conexion.WARNING_MODELO_GEMINI_FALLBACK(modeloConfigurado, modeloUsado);
+            // La validación remota de modelos es una conveniencia, NO un
+            // requisito para enviar la solicitud. Si /models falla (red, cuota,
+            // 5xx) no abortamos el análisis: usamos el modelo configurado tal
+            // cual. Solo cuando el listado responde y el modelo no está en él
+            // hacemos fallback al primer modelo válido.
+            try {
+                List<String> modelosValidosGemini = listarModelosGemini(
+                    ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()),
+                    config.obtenerClaveApi(),
+                    clienteHttp
+                );
+                if (!modelosValidosGemini.isEmpty() && !modelosValidosGemini.contains(modeloConfigurado)) {
+                    modeloUsado = modelosValidosGemini.get(0);
+                    advertencia = I18nUI.Conexion.WARNING_MODELO_GEMINI_FALLBACK(modeloConfigurado, modeloUsado);
+                }
+            } catch (IOException e) {
+                // Best-effort: continuar con el modelo configurado.
+                modeloUsado = modeloConfigurado;
             }
             endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) +
-                "/models/" + modeloUsado + ":generateContent";
+                "/models/" + URLEncoder.encode(modeloUsado, StandardCharsets.UTF_8) + ":generateContent";
             JsonArray contenidos = new JsonArray();
             JsonObject contenido = new JsonObject();
             JsonArray partes = new JsonArray();
@@ -122,12 +134,19 @@ public final class ConstructorSolicitudesProveedor {
             contenido.add("parts", partes);
             contenidos.add(contenido);
             carga.add("contents", contenidos);
+            int maxTokensGemini = config.obtenerMaxTokensParaProveedor(proveedor);
+            if (maxTokensGemini > 0) {
+                JsonObject generationConfig = new JsonObject();
+                generationConfig.addProperty("maxOutputTokens", maxTokensGemini);
+                carga.add("generationConfig", generationConfig);
+            }
             builder.addHeader("x-goog-api-key", config.obtenerClaveApi());
         } else if ("Ollama".equals(proveedor)) {
             endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) + "/api/chat";
             carga.addProperty("model", modeloUsado);
             carga.addProperty("stream", false);
             agregarMensajeUsuario(carga, prompt);
+            agregarOpcionesOllama(carga, config, proveedor);
         } else if ("Ollama Cloud".equals(proveedor)) {
             // Mismo body shape que Ollama local (/api/chat con messages array y
             // stream=false), pero con Authorization: Bearer porque el endpoint
@@ -136,18 +155,14 @@ public final class ConstructorSolicitudesProveedor {
             carga.addProperty("model", modeloUsado);
             carga.addProperty("stream", false);
             agregarMensajeUsuario(carga, prompt);
+            agregarOpcionesOllama(carga, config, proveedor);
             agregarAuthorizationSiExiste(builder, config.obtenerClaveApi());
-        } else if ("OpenAI".equals(proveedor)
-            || "Z.ai".equals(proveedor)
-            || "minimax".equals(proveedor)
-            || "DeepSeek".equals(proveedor)
-            || "xAI".equals(proveedor)
-            || ProveedorAI.esProveedorCustom(proveedor)) {
-            endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
-            prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);
         } else {
+            // Familia OpenAI-compatible (OpenAI, Z.ai, minimax, DeepSeek, xAI,
+            // Moonshot (Kimi), LM Studio, custom) y cualquier proveedor
+            // desconocido: se tratan con el mismo formato OpenAI por defecto.
             endpoint = ConfiguracionAPI.construirUrlApiProveedor(proveedor, config.obtenerUrlApi(), modeloUsado);
-            prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado);
+            prepararSolicitudOpenAICompatible(carga, builder, config, prompt, modeloUsado, proveedor);
         }
 
         Request request = builder
@@ -176,13 +191,36 @@ public final class ConstructorSolicitudesProveedor {
         }
     }
 
-    private static void prepararSolicitudOpenAICompatible(JsonObject carga, Request.Builder builder, ConfiguracionAPI config, String prompt, String modelo) {
+    /**
+     * Agrega el límite de tokens de salida al payload de Ollama dentro del
+     * objeto {@code options} usando la clave nativa {@code num_predict}.
+     */
+    private static void agregarOpcionesOllama(JsonObject carga, ConfiguracionAPI config, String proveedor) {
+        int maxTokens = config.obtenerMaxTokensParaProveedor(proveedor);
+        if (maxTokens > 0) {
+            JsonObject options = new JsonObject();
+            options.addProperty("num_predict", maxTokens);
+            carga.add("options", options);
+        }
+    }
+
+    private static void prepararSolicitudOpenAICompatible(JsonObject carga, Request.Builder builder,
+            ConfiguracionAPI config, String prompt, String modelo, String proveedor) {
         carga.addProperty("model", modelo);
         carga.addProperty("stream", false);
-        if ("OpenAI".equals(config.obtenerProveedorAI())) {
+        int maxTokens = config.obtenerMaxTokensParaProveedor(proveedor);
+        if ("OpenAI".equals(proveedor)) {
+            // Responses API: campo de entrada 'input' y límite 'max_output_tokens'.
             carga.addProperty("input", prompt);
+            if (maxTokens > 0) {
+                carga.addProperty("max_output_tokens", maxTokens);
+            }
         } else {
+            // Chat Completions: 'messages' y límite clásico 'max_tokens'.
             agregarMensajeUsuario(carga, prompt);
+            if (maxTokens > 0) {
+                carga.addProperty("max_tokens", maxTokens);
+            }
         }
         agregarAuthorizationSiExiste(builder, config.obtenerClaveApi());
     }
@@ -207,15 +245,17 @@ public final class ConstructorSolicitudesProveedor {
         if (urlModelos == null) {
             throw new IOException(I18nUI.Conexion.ERROR_URL_BASE_GEMINI_INVALIDA(base));
         }
-        HttpUrl.Builder urlBuilder = urlModelos.newBuilder();
-        if (Normalizador.noEsVacio(apiKey)) {
-            urlBuilder.addQueryParameter("key", apiKey);
-        }
 
-        Request request = new Request.Builder()
-            .url(urlBuilder.build())
-            .addHeader("Accept", "application/json")
-            .build();
+        // La API key viaja en el header x-goog-api-key, NO como query param
+        // (?key=...): las query strings se loguean en proxies/historiales y
+        // esta extensión corre detrás de Burp, exponiendo la credencial.
+        Request.Builder solicitudBuilder = new Request.Builder()
+            .url(urlModelos)
+            .addHeader("Accept", "application/json");
+        if (Normalizador.noEsVacio(apiKey)) {
+            solicitudBuilder.addHeader("x-goog-api-key", apiKey.trim());
+        }
+        Request request = solicitudBuilder.build();
 
         try (Response response = clienteHttp.newCall(request).execute()) {
             if (!response.isSuccessful()) {

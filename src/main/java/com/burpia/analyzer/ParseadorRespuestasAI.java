@@ -64,12 +64,18 @@ public class ParseadorRespuestasAI {
                 contenido = ParserRespuestasAI.limpiarContenidoModelo(respuestaProcesada);
             }
 
-            String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedorNormalizado);
+            // M9: extraer el contenido de comparación sobre la respuesta
+            // NORMALIZADA (sin <think>), no sobre la original cruda. Antes, el
+            // path de comparación re-extraía del original, lo que reintroducía
+            // el bloque de razonamiento: si ese <think> contenía seudohallazgos,
+            // debePreferirHallazgosOriginales podía reemplazar los hallazgos
+            // buenos por basura derivada del razonamiento del modelo.
+            String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaNormalizada, proveedorNormalizado);
             if (Normalizador.esVacio(contenidoOriginal)) {
-                contenidoOriginal = ParserRespuestasAI.limpiarContenidoModelo(respuestaOriginal);
+                contenidoOriginal = respuestaNormalizada;
             }
 
-            rastrear("Contenido extraído - Longitud: " + contenido.length() + " caracteres");
+            rastrear(I18nLogs.trf("Contenido extraído - Longitud: %d caracteres", contenido.length()));
 
             try {
                 // Sanitizar comillas escapadas antes de parsear
@@ -79,7 +85,7 @@ public class ParseadorRespuestasAI {
                 List<JsonObject> objetosHallazgos = JsonParserUtil.extraerObjetosHallazgos(raiz, JsonParserUtil.CAMPOS_HALLAZGOS);
 
                 if (!objetosHallazgos.isEmpty()) {
-                    rastrear("Se encontraron " + objetosHallazgos.size() + " hallazgos en JSON");
+                    rastrear(I18nLogs.trf("Se encontraron %d hallazgos en JSON", objetosHallazgos.size()));
                     for (JsonObject obj : objetosHallazgos) {
                         agregarHallazgoNormalizado(
                                 hallazgos,
@@ -95,10 +101,11 @@ public class ParseadorRespuestasAI {
                     hallazgos.addAll(parsearTextoPlano(contenido, solicitud));
                 }
             } catch (Exception e) {
-                rastrear("No se pudo parsear como JSON de hallazgos: " + e.getMessage());
+                rastrear(I18nLogs.tr("No se pudo parsear como JSON de hallazgos") + ": "
+                        + I18nLogs.trTecnico(e.getMessage()));
                 List<Hallazgo> hallazgosNoEstrictos = parsearHallazgosJsonNoEstricto(contenido, solicitud);
                 if (!hallazgosNoEstrictos.isEmpty()) {
-                    rastrear("Fallback JSON no estricto recuperó " + hallazgosNoEstrictos.size() + " hallazgos");
+                    rastrear(I18nLogs.trf("Fallback JSON no estricto recuperó %d hallazgos", hallazgosNoEstrictos.size()));
                     hallazgos.addAll(hallazgosNoEstrictos);
                 } else {
                     rastrear("Intentando parsing de texto plano como fallback");
@@ -109,15 +116,26 @@ public class ParseadorRespuestasAI {
             if (!respuestaProcesada.equals(respuestaOriginal)) {
                 List<Hallazgo> hallazgosOriginalesNoEstrictos = parsearHallazgosJsonNoEstricto(contenidoOriginal, solicitud);
                 if (debePreferirHallazgosOriginales(hallazgosOriginalesNoEstrictos, hallazgos)) {
-                    rastrear(
-                            "Se detectó pérdida de contenido tras reparación JSON; " +
-                                    "se conserva parseo no estricto del payload original");
+                    rastrear(I18nLogs.tr(
+                            "Se detectó pérdida de contenido tras reparación JSON; "
+                                    + "se conserva parseo no estricto del payload original"));
                     hallazgos.clear();
                     hallazgos.addAll(hallazgosOriginalesNoEstrictos);
                 }
             }
 
-            rastrear("Total de hallazgos parseados: " + hallazgos.size());
+            rastrear(I18nLogs.trf("Total de hallazgos parseados: %d", hallazgos.size()));
+
+            // L13: si no se extrajo ningún hallazgo pero el contenido parece un
+            // JSON truncado/malformado (empieza con [ o {), lo distinguishos del
+            // caso "el modelo no devolvió JSON". Antes todo fallaba en silencio
+            // y era imposible saber si el modelo no cooperó o si el JSON se cortó
+            // a mitad (stream interrumpido, max_tokens justo en el corte).
+            if (hallazgos.isEmpty() && pareceJsonTruncado(contenido)) {
+                gestorLogging.info(ORIGEN_LOG,
+                        I18nLogs.tr("Respuesta con estructura JSON pero 0 hallazgos extraídos "
+                                + "(posible JSON truncado o malformado)"));
+            }
 
             return new ResultadoAnalisisMultiple(
                     solicitud.obtenerUrl(),
@@ -131,7 +149,8 @@ public class ParseadorRespuestasAI {
                 : I18nUI.Tareas.MSG_ERROR_DESCONOCIDO();
             String errorDesc = I18nUI.trf("Error al parsear respuesta: %s", "Error parsing response: %s", errorMsg);
             gestorLogging.error(ORIGEN_LOG,
-                I18nLogs.tr("Error crítico al parsear respuesta de API para " + solicitud.obtenerUrl()),
+                I18nLogs.tr("Error crítico al parsear respuesta de API para") + " "
+                        + I18nLogs.trTecnico(solicitud.obtenerUrl()),
                 e);
             throw new ParseExceptionAI(errorDesc, e);
         }
@@ -151,7 +170,7 @@ public class ParseadorRespuestasAI {
         JsonArray arrayRecuperado = ParserRespuestasAI.extraerHallazgosPorDelimitadores(contenido, gson);
 
         if (arrayRecuperado != null && arrayRecuperado.size() > 0) {
-            rastrear("Recuperación extrema: " + arrayRecuperado.size() + " hallazgos");
+            rastrear(I18nLogs.trf("Recuperación extrema: %d hallazgos", arrayRecuperado.size()));
             return convertirArrayAHallazgos(arrayRecuperado, solicitud);
         }
 
@@ -173,7 +192,7 @@ public class ParseadorRespuestasAI {
                         solicitud);
             }
         }
-        rastrear("Array JSON convertido a " + hallazgos.size() + " hallazgos");
+        rastrear(I18nLogs.trf("Array JSON convertido a %d hallazgos", hallazgos.size()));
         return hallazgos;
     }
 
@@ -208,7 +227,7 @@ public class ParseadorRespuestasAI {
         }
 
         if (!hallazgos.isEmpty()) {
-            rastrear("Parseo campo por campo recuperó " + hallazgos.size() + " hallazgos");
+            rastrear(I18nLogs.trf("Parseo campo por campo recuperó %d hallazgos", hallazgos.size()));
         }
 
         return hallazgos;
@@ -396,10 +415,31 @@ public class ParseadorRespuestasAI {
     }
 
     /**
+     * L13: heurística para distinguir "el modelo no devolvió JSON" de "el JSON
+     * llegó truncado/malformado". Retorna true si el contenido extraído empieza
+     * como un array/objeto JSON pero no está balanceado (sospecha de truncado
+     * por stream cortado o max_tokens justo en el corte).
+     */
+    private static boolean pareceJsonTruncado(String contenido) {
+        if (Normalizador.esVacio(contenido)) {
+            return false;
+        }
+        String recortado = contenido.trim();
+        char inicio = recortado.charAt(0);
+        if (inicio != '[' && inicio != '{') {
+            return false;
+        }
+        char cierreEsperado = (inicio == '[') ? ']' : '}';
+        // Sin el cierre correspondiente → probablemente truncado.
+        return recortado.lastIndexOf(cierreEsperado) < 0
+                || !recortado.trim().endsWith(String.valueOf(cierreEsperado));
+    }
+
+    /**
      * Sanitiza comillas escapadas incorrectamente por el LLM.
      * El LLM genera: "evidencia": "valor con "texto" dentro"
      * sin escapar las comillas internas. Esto rompe el JSON.
-     * 
+     *
      * El LLM también genera: "evidencia": "valor con \"texto\" dentro"
      * donde el backslash se interpreta incorrectamente como literal.
      */
@@ -720,7 +760,11 @@ public class ParseadorRespuestasAI {
     }
 
     private void rastrear(String mensaje) {
-        gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("[RASTREO] " + mensaje));
+        // gestorLogging.info ya aplica I18nLogs.tr internamente; por eso aquí
+        // pasamos el mensaje sin pre-traducir. El prefijo [RASTREO] se traduce
+        // por separado (es literal de tiempo de compilación, no concatenación
+        // runtime) y se ensambla tras la traducción para no romper el diccionario.
+        gestorLogging.info(ORIGEN_LOG, "[RASTREO] " + mensaje);
     }
 
     public static class ParseExceptionAI extends RuntimeException {

@@ -58,7 +58,11 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         this.setText("");
 
         Font f = getFont();
-        this.isIgnorado = f.getAttributes().containsKey(java.awt.font.TextAttribute.STRIKETHROUGH);
+        // M12: mismo fix que RenderizadorConfianza. Chequear el valor
+        // STRIKETHROUGH_ON explícito, no la presencia de la key (la fuente se
+        // cachea en el renderer compartido entre filas).
+        Object strike = f.getAttributes().get(java.awt.font.TextAttribute.STRIKETHROUGH);
+        this.isIgnorado = java.awt.font.TextAttribute.STRIKETHROUGH_ON.equals(strike);
 
         return this;
     }

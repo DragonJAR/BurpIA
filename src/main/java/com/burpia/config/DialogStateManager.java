@@ -146,12 +146,17 @@ public final class DialogStateManager {
      */
     public boolean hayCambiosNoGuardados(EstadoUIProvider uiProvider) {
         if (estadoInicial == null) {
-            return false;
+            // L8: si no hay estado inicial capturado, no podemos comparar. Antes
+            // se retornaba false, lo que permitía cerrar el diálogo perdiendo
+            // ediciones. Conservador: asumir que hay cambios para protegerlos.
+            return true;
         }
 
         EstadoEdicionDialogo estadoActual = capturarEstadoActual(uiProvider);
         if (estadoActual == null) {
-            return false;
+            // L8: idem — ante la imposibilidad de capturar el estado actual,
+            // asumir que hay cambios para no perder ediciones del usuario.
+            return true;
         }
         return !estadoInicial.equals(estadoActual);
     }

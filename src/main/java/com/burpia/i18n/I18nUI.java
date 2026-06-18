@@ -494,11 +494,6 @@ public final class I18nUI {
             return tr("Error desconocido", "Unknown error");
         }
 
-        public static String ERROR_RETRY_INTERRUPPIDO() {
-            return tr("Sistema de retry cancelado/interrumpido",
-                    "Retry system canceled/interrupted");
-        }
-
         public static String MSG_COMPLETADO_HALLAZGOS(int cantidad) {
             return trf("Completado: %d hallazgos", "Completed: %d findings", cantidad);
         }
@@ -1663,7 +1658,7 @@ public final class I18nUI {
         }
 
         public static String LABEL_TIMEOUT_MODELO() {
-            return tr("Timeout de Modelo (s):", "Model Timeout (s):");
+            return tr("Tiempo de espera de Modelo (s):", "Model Timeout (s):");
         }
 
         public static String BOTON_GUARDAR() {
@@ -1732,7 +1727,7 @@ public final class I18nUI {
         }
 
         public static String CAMBIO_API_KEY() {
-            return tr("API Key", "API Key");
+            return tr("Clave de API", "API Key");
         }
 
         public static String CAMBIO_URL_API() {
@@ -3193,6 +3188,14 @@ public final class I18nUI {
                             + "El plugin agrega /chat/completions. Requiere API key.",
                             "xAI Grok. Base URL, typically https://api.x.ai/v1. "
                             + "The plugin appends /chat/completions. Requires API key.");
+                    case "LM Studio":
+                        return I18nUI.tr(
+                            "LM Studio (servidor LLM local). URL base, típicamente http://localhost:1234/v1. "
+                            + "El plugin agrega /chat/completions. No requiere API key (servicio local). "
+                            + "Inicia el servidor desde la pestaña 'Developer' > 'Start Server' de LM Studio.",
+                            "LM Studio (local LLM server). Base URL, typically http://localhost:1234/v1. "
+                            + "The plugin appends /chat/completions. No API key required (local service). "
+                            + "Start the server from LM Studio's 'Developer' > 'Start Server' tab.");
                     default:
                         // Custom 01/02/03 y desconocidos: contrato verbatim.
                         if (com.burpia.config.ProveedorAI.esProveedorCustom(proveedor)) {
@@ -3228,6 +3231,7 @@ public final class I18nUI {
                     case "Moonshot (Kimi)": return "https://api.moonshot.ai/v1";
                     case "DeepSeek":        return "https://api.deepseek.com";
                     case "xAI":             return "https://api.x.ai/v1";
+                    case "LM Studio":       return "http://localhost:1234/v1";
                     default:
                         if (com.burpia.config.ProveedorAI.esProveedorCustom(proveedor)) {
                             return "http://127.0.0.1:1234/v1/chat/completions";
@@ -3248,6 +3252,11 @@ public final class I18nUI {
                     return I18nUI.tr(
                         "Ollama local NO requiere API key — podés dejar este campo vacío.",
                         "Ollama local does NOT require an API key — you can leave this field empty.");
+                }
+                if ("LM Studio".equals(proveedor)) {
+                    return I18nUI.tr(
+                        "LM Studio (servidor local) NO requiere API key — podés dejar este campo vacío.",
+                        "LM Studio (local server) does NOT require an API key — you can leave this field empty.");
                 }
                 if (com.burpia.config.ProveedorAI.esProveedorCustom(proveedor)) {
                     return I18nUI.tr(

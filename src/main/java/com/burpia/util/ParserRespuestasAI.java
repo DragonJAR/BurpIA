@@ -102,12 +102,10 @@ public final class ParserRespuestasAI {
                 // Ollama Cloud usa el mismo formato de respuesta que Ollama local:
                 // {"message": {"content": "..."}}.
                 contenido = extraerContenidoOllama(raiz);
-            } else if ("OpenAI".equals(proveedorNormalizado)
-                    || "Z.ai".equals(proveedorNormalizado)
-                    || "minimax".equals(proveedorNormalizado)
-                    || "DeepSeek".equals(proveedorNormalizado)
-                    || "xAI".equals(proveedorNormalizado)
-                    || ProveedorAI.esProveedorCustom(proveedorNormalizado)) {
+            } else if (ProveedorAI.esOpenAICompatible(proveedorNormalizado)) {
+                // Incluye OpenAI, Z.ai, minimax, DeepSeek, xAI, Moonshot (Kimi)
+                // y los proveedores custom. Antes Moonshot quedaba fuera y caía
+                // en el extractor genérico, que no lee choices[] (devolvía "").
                 contenido = extraerContenidoOpenAI(raiz);
             } else if ("Claude".equals(proveedorNormalizado)) {
                 contenido = extraerContenidoClaude(raiz);
@@ -198,11 +196,12 @@ public final class ParserRespuestasAI {
                         }
                     }
 
-                    // Try reasoning_content
-                    String reasoning = obtenerTexto(message, "reasoning_content");
-                    if (!reasoning.isEmpty()) {
-                        return reasoning;
-                    }
+                    // NO usar reasoning_content como contenido: en modelos
+                    // razonadores (deepseek-reasoner, kimi-k2-thinking, etc.)
+                    // contiene la cadena de pensamiento cruda, no el JSON de
+                    // hallazgos. Si 'content' viene vacío tratamos la respuesta
+                    // como vacía (el pipeline reintenta/reporta) en vez de
+                    // parsear el razonamiento como si fuera el análisis.
                 }
 
                 // Try text field on choice
@@ -272,7 +271,9 @@ public final class ParserRespuestasAI {
     }
 
     private static String extraerContenidoGenerico(JsonObject raiz) {
-        String[] campos = {"content", "text", "message", "response", "output", "reasoning_content"};
+        // 'reasoning_content' se excluye a propósito: es la cadena de
+        // pensamiento de modelos razonadores, no el contenido de la respuesta.
+        String[] campos = {"content", "text", "message", "response", "output"};
 
         for (String campo : campos) {
             JsonElement elemento = obtenerElemento(raiz, campo);
@@ -301,13 +302,20 @@ public final class ParserRespuestasAI {
         return "";
     }
 
+    /** Detecta "OK"/"HOLA" como palabra completa (evita falsos positivos como TOKEN, BROKEN). */
+    private static final java.util.regex.Pattern PATRON_SALUDO_PRUEBA =
+        java.util.regex.Pattern.compile("\\b(OK|HOLA)\\b");
+
     public static boolean validarRespuestaPrueba(String contenido) {
         if (Normalizador.esVacio(contenido)) {
             return false;
         }
 
+        // El prompt de prueba pide responder exactamente "OK"/"HOLA". Validamos
+        // por palabra completa, no por subcadena: antes contains("OK") aceptaba
+        // "TOKEN", "BROKEN", "LOOKS", etc. como respuesta de modelo válida.
         String contenidoUpper = contenido.toUpperCase(Locale.ROOT).trim();
-        return contenidoUpper.contains("OK") || contenidoUpper.contains("HOLA");
+        return PATRON_SALUDO_PRUEBA.matcher(contenidoUpper).find();
     }
 
     public static boolean validarRespuestaConexion(String contenido) {
@@ -520,7 +528,11 @@ public final class ParserRespuestasAI {
         StringBuilder texto = new StringBuilder();
         anexarTexto(texto, obtenerTexto(objeto, "text"));
         anexarTexto(texto, obtenerTexto(objeto, "content"));
-        anexarTexto(texto, obtenerTexto(objeto, "reasoning_content"));
+        // NO concatenar reasoning_content: en modelos razonadores contiene la
+        // cadena de pensamiento cruda, no el contenido útil. extraerContenidoOpenAI
+        // ya lo excluye en choices[].message; esta exclusión lo alinea también
+        // para el path output[].content[] y Gemini/genérico (que usan este helper),
+        // evitando que el JSON de hallazgos se mezcle con el razonamiento del modelo.
         anexarTexto(texto, extraerTextoDesdeArreglo(obtenerArreglo(objeto, "content")));
         anexarTexto(texto, extraerTextoDesdeArreglo(obtenerArreglo(objeto, "parts")));
         return texto.toString();

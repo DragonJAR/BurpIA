@@ -182,8 +182,11 @@ class ConstructorSolicitudesProveedorTest {
         }
 
         @Test
-        @DisplayName("Envía API key como parámetro de query")
+        @DisplayName("Envía API key por header (no como query param, para no exponerla en logs/proxy)")
         void enviaApiKeyComoQueryParam() throws Exception {
+            // La key viaja en el header x-goog-api-key, NO como ?key= en la query
+            // string: esta extensión corre detrás de Burp y las query strings se
+            // loguean en proxies/historiales, lo que expondría la credencial.
             String respuesta = "{\"models\":[{\"name\":\"models/gemini-1.5-pro\",\"supportedGenerationMethods\":[\"generateContent\"]}]}";
 
             servidor.enqueue(new MockResponse().setResponseCode(200).setBody(respuesta));
@@ -193,7 +196,10 @@ class ConstructorSolicitudesProveedorTest {
                 servidor.url("/v1beta").toString(), "my-api-key", clienteHttp);
 
             RecordedRequest request = servidor.takeRequest();
-            assertTrue(request.getPath().contains("key=my-api-key"), "assertTrue failed at ConstructorSolicitudesProveedorTest.java:196");
+            assertEquals("my-api-key", request.getHeader("x-goog-api-key"),
+                "La API key de Gemini debe ir en el header x-goog-api-key");
+            assertFalse(request.getPath().contains("key="),
+                "La API key NO debe viajar como query param (se loguea en proxies): " + request.getPath());
         }
     }
 

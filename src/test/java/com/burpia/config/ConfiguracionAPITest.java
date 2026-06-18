@@ -653,4 +653,70 @@ class ConfiguracionAPITest {
         config.establecerMaximoConcurrente(999);
         assertEquals(ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE, config.obtenerMaximoConcurrente(), "assertEquals failed at ConfiguracionAPITest.java:501");
     }
+
+    @Test
+    @DisplayName("M6: crearSnapshot no falla con maps null y produce copias independientes")
+    void testCrearSnapshotToleranteANull() {
+        // Forzar un estado donde los maps pueden no estar inicializados (simula
+        // una instancia parcialmente construida o una raza). Antes esto NPEaba.
+        ConfiguracionAPI snap = config.crearSnapshot();
+        assertNotNull(snap, "crearSnapshot debe tolerar maps null sin NPE");
+        // La copia es independiente: mutar el snapshot no afecta al original.
+        snap.establecerApiKeyParaProveedor("OpenAI", "sk-x");
+        assertEquals("", config.obtenerApiKeyParaProveedor("OpenAI"),
+            "El snapshot debe ser independiente del original");
+    }
+
+    @Test
+    @DisplayName("M6: aplicarDesde no falla con maps null en el origen")
+    void testAplicarDesdeToleranteANull() {
+        ConfiguracionAPI origen = new ConfiguracionAPI();
+        ConfiguracionAPI destino = new ConfiguracionAPI();
+        // Debe no lanzar NPE aunque algún map interno esté null.
+        destino.aplicarDesde(origen);
+        assertNotNull(destino.obtenerApiKeyParaProveedor("OpenAI"));
+    }
+
+    @Test
+    @DisplayName("M10: normalizarUrlBase NO trunca paths con /models/ en posición no terminal")
+    void testNormalizarUrlBaseNoTruncaModelsEnMedio() {
+        // Antes indexOf("/models/") recortaba cualquier ocurrencia, rompiendo
+        // URLs de gateways/proxies que tienen ese segmento en el path medio.
+        String url = "https://gateway.example.com/api/v2/models/proxy/v1";
+        String base = ConfiguracionAPI.extraerUrlBase(url);
+        assertEquals("https://gateway.example.com/api/v2/models/proxy/v1", base,
+            "Un path con /models/ en medio NO debe truncarse");
+    }
+
+    @Test
+    @DisplayName("M10: normalizarUrlBase sí recorta el sufijo /models terminal")
+    void testNormalizarUrlBaseRecortaSufijoModelsTerminal() {
+        String url = "https://generativelanguage.googleapis.com/v1beta/models";
+        String base = ConfiguracionAPI.extraerUrlBase(url);
+        assertEquals("https://generativelanguage.googleapis.com/v1beta", base,
+            "El sufijo /models terminal sí debe recortarse");
+    }
+
+    @Test
+    @DisplayName("M11: construirUrlApiProveedor codifica el modelo de Gemini en la URL")
+    void testConstruirUrlGeminiCodificaModelo() {
+        String url = ConfiguracionAPI.construirUrlApiProveedor(
+                "Gemini",
+                "https://generativelanguage.googleapis.com/v1beta",
+                "gemini experimental/1.5");
+        // Espacios y '/' deben ir URL-encoded para no malformar la URL.
+        assertTrue(url.contains("/models/gemini+experimental%2F1.5:generateContent"),
+            "El modelo de Gemini debe ir URL-encoded en el path: " + url);
+    }
+
+    @Test
+    @DisplayName("M11: construirUrlApiProveedor deja el modelo simple sin alterar")
+    void testConstruirUrlGeminiModeloSimple() {
+        String url = ConfiguracionAPI.construirUrlApiProveedor(
+                "Gemini",
+                "https://generativelanguage.googleapis.com/v1beta",
+                "gemini-1.5-pro-002");
+        assertTrue(url.endsWith("/models/gemini-1.5-pro-002:generateContent"),
+            "Un modelo sin caracteres especiales no debe alterarse: " + url);
+    }
 }

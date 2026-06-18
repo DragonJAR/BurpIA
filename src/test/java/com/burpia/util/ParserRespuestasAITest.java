@@ -34,10 +34,29 @@ class ParserRespuestasAITest {
     }
 
     @Test
-    @DisplayName("Extrae reasoning_content cuando content viene vacío")
-    void testExtraerReasoningContent() {
+    @DisplayName("M7: NO extrae reasoning_content ni cuando content viene vacío (cadena de pensamiento ≠ análisis)")
+    void testNoExtraeReasoningContent() {
+        // Modelos razonadores (deepseek-reasoner, kimi-k2-thinking) devuelven su
+        // razonamiento en reasoning_content. Esa cadena de pensamiento NO es el
+        // JSON de hallazgos: parsearla mezclaría basura con el análisis. Antes
+        // se extraía como fallback cuando content venía vacío.
         String json = "{\"choices\":[{\"message\":{\"content\":\"\",\"reasoning_content\":\"Analisis interno\"}}]}";
-        assertEquals("Analisis interno", ParserRespuestasAI.extraerContenido(json, "Z.ai"), "assertEquals failed at ParserRespuestasAITest.java:40");
+        String extraido = ParserRespuestasAI.extraerContenido(json, "Z.ai");
+        assertFalse(extraido.contains("Analisis interno"),
+            "reasoning_content NO debe mezclarse con el contenido extraído: " + extraido);
+    }
+
+    @Test
+    @DisplayName("M7: NO extrae reasoning_content vía output[] (Responses API con items de razonamiento)")
+    void testNoExtraeReasoningContentViaOutput() {
+        // Un modelo razonador vía el shape output[].content[] también puede
+        // exponer reasoning. extraerTextoDesdeElemento (helper de output[] y
+        // Gemini/genérico) antes lo concatenaba, inconsistente con choices[].
+        String json = "{\"output\":[{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"hallazgos\\\":[]}\","
+                + "\"reasoning_content\":\"pensamiento crudo que no debe aparecer\"}]}]}";
+        String extraido = ParserRespuestasAI.extraerContenido(json, "OpenAI");
+        assertFalse(extraido.contains("pensamiento crudo"),
+            "reasoning_content en output[] tampoco debe mezclarse: " + extraido);
     }
 
     @Test

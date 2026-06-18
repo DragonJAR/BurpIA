@@ -120,7 +120,9 @@ class DialogStateManagerTest {
 
     @Test
     void testHayCambiosNoGuardados_SinEstadoInicial() {
-        assertFalse(stateManager.hayCambiosNoGuardados(uiProvider));
+        // L8: sin estado inicial capturado, no podemos comparar. Conservador:
+        // asumir que hay cambios para no perder ediciones del usuario.
+        assertTrue(stateManager.hayCambiosNoGuardados(uiProvider));
     }
 
     @Test
@@ -215,7 +217,8 @@ class DialogStateManagerTest {
     @Test
     void testUIProviderNullHandling() {
         assertNull(stateManager.capturarEstadoActual(null));
-        assertFalse(stateManager.hayCambiosNoGuardados(null));
+        // L8: ante estado no capturable (uiProvider null), conservador → true.
+        assertTrue(stateManager.hayCambiosNoGuardados(null));
 
         verify(gestorLogging).error(eq("DialogStateManager"), eq("UIProvider es nulo"));
     }

@@ -61,26 +61,39 @@ final class ConfigSanitizers {
 
     /**
      * Normaliza una clave timeout en formato "proveedor::modelo".
-     * Retorna "" si la clave está vacía o malformada (sin separador "::").
+     * Retorna "" si la clave está vacía o malformada.
+     *
+     * <p>El separador "::" se busca en cada ocurrencia y se elige el split cuyo
+     * prefijo sea un proveedor válido del catálogo. Esto es necesario porque el
+     * nombre del modelo puede contener "::" (ej. variantes custom como
+     * "Qwen/Qwen2.5::Instruct"). Antes se usaba {@code indexOf("::")} (primera
+     * ocurrencia), que truncaba el modelo en casos legítimos y hacía que el
+     * timeout configurado se ignorara silenciosamente.</p>
      */
     static String normalizarClaveTimeoutProveedorModelo(String clave) {
         if (Normalizador.esVacio(clave)) {
             return "";
         }
         String limpia = clave.trim();
-        int separador = limpia.indexOf("::");
-        if (separador <= 0) {
-            return "";
+
+        int desde = 0;
+        while (true) {
+            int separador = limpia.indexOf("::", desde);
+            if (separador <= 0) {
+                return "";
+            }
+            String proveedor = normalizarProveedor(limpia.substring(0, separador));
+            if (!proveedor.isEmpty() && ProveedorAI.existeProveedor(proveedor)) {
+                String modelo = limpia.substring(separador + 2).trim();
+                if (Normalizador.esVacio(modelo)) {
+                    return "";
+                }
+                return proveedor + "::" + modelo;
+            }
+            // El prefijo hasta esta ocurrencia no es un proveedor válido: el
+            // separador pertenece al nombre del modelo. Avanzar a la siguiente.
+            desde = separador + 2;
         }
-        String proveedor = normalizarProveedor(limpia.substring(0, separador));
-        if (proveedor.isEmpty() || !ProveedorAI.existeProveedor(proveedor)) {
-            return "";
-        }
-        String modelo = limpia.substring(separador + 2).trim();
-        if (Normalizador.esVacio(modelo)) {
-            return "";
-        }
-        return proveedor + "::" + modelo;
     }
 
     private static String normalizarProveedor(String proveedor) {

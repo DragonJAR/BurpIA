@@ -158,17 +158,18 @@ public class AnalizadorAI implements Runnable {
     }
 
     /**
-     * Cancela la llamada HTTP activa si existe.
+     * Cancela la llamada HTTP activa si existe, en cualquier modo de análisis.
      * Libera inmediatamente el thread y el socket al usar OkHttp Call.cancel().
      *
-     * <p>
-     * Este método está diseñado para ser llamado desde un thread externo
-     * cuando se pausa o cancela una tarea, permitiendo que la siguiente tarea
-     * en cola comience inmediatamente.
-     * </p>
+     * <p>Fan-out DRY: cancela tanto al AnalizadorHTTP del orquestador (modo
+     * único) como al del gestor multi-proveedor (modo multi). El que esté
+     * inactivo simplemente no tendrá Call activa y su cancelación es no-op, sin
+     * necesidad de trackear el modo actual. Antes solo se cancelaba el del
+     * orquestador, por lo que la cancelación no llegaba al socket en multi.</p>
      */
     public void cancelarLlamadaHttpActiva() {
         orquestador.cancelarLlamadaHttpActiva();
+        gestorMulti.cancelarLlamadaActiva();
     }
 
     @Override
@@ -179,7 +180,7 @@ public class AnalizadorAI implements Runnable {
 
         if (solicitud == null) {
             String error = mensajeErrorSolicitudNoDisponible();
-            gestorLogging.error(ORIGEN_LOG, "[" + nombreHilo + "] " + error);
+            gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("[%s] %s", nombreHilo, error));
             callback.alErrorAnalisis(error);
             return;
         }

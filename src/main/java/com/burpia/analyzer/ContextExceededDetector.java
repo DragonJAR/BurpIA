@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
  * <ul>
  *   <li><b>OpenAI:</b> "context_length_exceeded", "This model's maximum context length is X tokens"</li>
  *   <li><b>Claude:</b> "model_context_window_exceeded", "prompt is too long: X tokens"</li>
- *   <li><b>Gemini:</b> "RESOURCE_EXHAUSTED", "Request token count exceeds limit"</li>
+ *   <li><b>Gemini:</b> "Request token count exceeds limit", "RESOURCE_EXHAUSTED ... token count"</li>
  *   <li><b>Z.ai:</b> "Input token length too long"</li>
  *   <li><b>Moonshot:</b> "Input token length too long", "exceeded model token limit"</li>
  *   <li><b>Ollama:</b> Error local sin patrón específico</li>
@@ -71,11 +71,18 @@ public class ContextExceededDetector {
             }),
 
             // Gemini (Google)
+            // NO incluimos "RESOURCE_EXHAUSTED" a secas: Google reusa ese status
+            // 429 mayormente para RATE LIMITING por minuto (con Retry-After
+            // válido), no para contexto. Tratarlo como contexto hacía que el
+            // ejecutor truncara y reenviara de inmediato sin backoff, gastando
+            // llamadas y fallando. Solo matcheamos variantes que mencionen
+            // tokens/size/contexto, que sí indican prompt demasiado largo.
             Map.entry("Gemini", new Pattern[]{
-                    Pattern.compile("RESOURCE_EXHAUSTED", Pattern.CASE_INSENSITIVE),
                     Pattern.compile("token count exceeds limit", Pattern.CASE_INSENSITIVE),
                     Pattern.compile("request.*too large", Pattern.CASE_INSENSITIVE),
-                    Pattern.compile("context.*exceeded", Pattern.CASE_INSENSITIVE)
+                    Pattern.compile("context.*exceeded", Pattern.CASE_INSENSITIVE),
+                    Pattern.compile("RESOURCE_EXHAUSTED.*?(?:token|context|size|large|prompt)", Pattern.CASE_INSENSITIVE),
+                    Pattern.compile("(?:token|context|size|large|prompt).*?RESOURCE_EXHAUSTED", Pattern.CASE_INSENSITIVE)
             }),
 
             // Z.ai (GLM)
@@ -107,6 +114,10 @@ public class ContextExceededDetector {
             Map.entry("DeepSeek", PATRONES_CUSTOM),
             Map.entry("xAI", PATRONES_CUSTOM),
 
+            // LM Studio — servidor LLM local OpenAI-compatible. Sus errores de
+            // contexto siguen los patrones estándar (context_length_exceeded).
+            Map.entry("LM Studio", PATRONES_CUSTOM),
+
             // Custom providers (usan patrones comunes - DRY)
             Map.entry("Custom 01", PATRONES_CUSTOM),
             Map.entry("Custom 02", PATRONES_CUSTOM),
@@ -115,9 +126,13 @@ public class ContextExceededDetector {
 
     /**
      * Patrón para extraer el límite de tokens del mensaje de error.
-     * Busca números seguidos de "tokens" o "context length".
+     *
+     * <p>Busca un número seguido de "tokens" o "context". El llamador
+     * ({@link EjecutorLlamadaConTruncado}) debe validar que el valor extraído
+     * sea creíble como context window (filtrar números irrelevantes como los de
+     * mensajes de quota, ej. "3 tokens remaining").</p>
      */
-    private static final Pattern PATRON_EXTRAER_LIMITE = 
+    private static final Pattern PATRON_EXTRAER_LIMITE =
             Pattern.compile("(\\d+)\\s*(?:tokens?|context)", Pattern.CASE_INSENSITIVE);
 
     /**
@@ -191,11 +206,12 @@ public class ContextExceededDetector {
         }
 
         String mensajeLower = mensajeError.toLowerCase();
+        // No tratamos "resource_exhausted" a secas como contexto: en Gemini indica
+        // mayormente rate-limiting (429 con Retry-After), no prompt demasiado largo.
         return (mensajeLower.contains("context") && mensajeLower.contains("exceed"))
                 || (mensajeLower.contains("token") && mensajeLower.contains("limit"))
                 || (mensajeLower.contains("prompt") && mensajeLower.contains("too long"))
-                || mensajeLower.contains("context_length_exceeded")
-                || mensajeLower.contains("resource_exhausted");
+                || mensajeLower.contains("context_length_exceeded");
     }
 
     /**
@@ -234,6 +250,10 @@ public class ContextExceededDetector {
         }
         if (normalizado.equalsIgnoreCase("moonshot") || normalizado.equalsIgnoreCase("moonshot (kimi)")) {
             return "Moonshot (Kimi)";
+        }
+        // LM Studio — acepta variantes de spacing/case (lm studio, LMStudio).
+        if (normalizado.equalsIgnoreCase("lm studio") || normalizado.equalsIgnoreCase("lmstudio")) {
+            return "LM Studio";
         }
 
         // Custom providers: capitalizar correctamente (custom 01 → Custom 01)

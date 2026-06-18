@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Política centralizada de reintentos para llamadas a APIs de IA.
@@ -242,10 +243,13 @@ public final class PoliticaReintentos {
             }
         }
 
-        // Jitter determinístico: 100-500ms basado en backoff, con sesgo según intento par/impar
-        long jitterDeterministico = Math.min(500L, Math.max(100L, backoffNormalizado / 5L));
-        long sesgo = (Math.max(1, intentoActual) % 2 == 0) ? jitterDeterministico : jitterDeterministico / 2L;
-        return backoffNormalizado + sesgo;
+        // Jitter ALEATORIO: el objetivo es desincronizar reintentos de hilos
+        // concurrentes tras un 429/503. Un valor determinístico (igual para
+        // todos los hilos en el mismo intento) los hace reintentar en bloque y
+        // repetir el rate limit. Usamos ThreadLocalRandom acotado a [0, jitterMax].
+        long jitterMax = Math.min(500L, Math.max(100L, backoffNormalizado / 5L));
+        long jitter = ThreadLocalRandom.current().nextLong(0L, jitterMax + 1L);
+        return backoffNormalizado + jitter;
     }
 
     /**
