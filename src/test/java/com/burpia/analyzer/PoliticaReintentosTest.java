@@ -547,8 +547,8 @@ class PoliticaReintentosTest {
         }
 
         @Test
-        @DisplayName("Retorna 0 para fecha en el pasado")
-        void retornaCeroParaFechaPasada() {
+        @DisplayName("Retorna ESPERA_MINIMA_MS para fecha en el pasado (anti retry-storm por clock skew)")
+        void retornaEsperaMinimaParaFechaPasada() {
             long ahora = System.currentTimeMillis();
             long pasado = ahora - 60000L;
             java.time.ZonedDateTime fechaPasada = java.time.ZonedDateTime.ofInstant(
@@ -558,7 +558,10 @@ class PoliticaReintentosTest {
             String fechaStr = fechaPasada.format(java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME);
 
             long resultado = PoliticaReintentos.parsearRetryAfterMs(fechaStr, ahora);
-            assertEquals(0L, resultado, "assertEquals failed at PoliticaReintentosTest.java:561");
+            // Tras el fix anti-clock-skew: nunca menos de ESPERA_MINIMA_MS (1000ms),
+            // para evitar un storm de reintentos si el clock salta hacia atrás.
+            assertEquals(1000L, resultado,
+                    "assertEquals failed at PoliticaReintentosTest.java:561");
         }
 
         @Test

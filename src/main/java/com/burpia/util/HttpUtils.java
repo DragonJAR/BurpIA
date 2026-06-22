@@ -294,7 +294,10 @@ public final class HttpUtils {
                 return textoCompleto != null ? textoCompleto : "";
             }
 
-            int maxBytes = Math.min(body.length(), Math.max(64, maxCaracteres * 4));
+            // Cómputo en long para evitar overflow de maxCaracteres * 4 cuando
+            // maxCaracteres está cerca de Integer.MAX_VALUE/4 (wraps a negativo).
+            long presupuestoBytes = Math.max(64L, (long) maxCaracteres * 4L);
+            int maxBytes = (int) Math.min(body.length(), presupuestoBytes);
             ByteArray parcial = body.subArray(0, maxBytes);
             String textoParcial = parcial != null ? parcial.toString() : "";
             return truncarSiSupera(textoParcial != null ? textoParcial : "", maxCaracteres);

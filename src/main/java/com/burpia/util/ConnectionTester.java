@@ -307,27 +307,50 @@ public class ConnectionTester {
     private int compararVersiones(String version1, String version2) {
         String[] v1Parts = version1.replaceAll("[^0-9.]", "").split("\\.");
         String[] v2Parts = version2.replaceAll("[^0-9.]", "").split("\\.");
-        
+
         int maxLength = Math.max(v1Parts.length, v2Parts.length);
         for (int i = 0; i < maxLength; i++) {
-            int v1Part = i < v1Parts.length ? Integer.parseInt(v1Parts[i]) : 0;
-            int v2Part = i < v2Parts.length ? Integer.parseInt(v2Parts[i]) : 0;
-            
+            // parseInt puede lanzar NumberFormatException si un elemento está
+            // vacío (versiones con puntos extra como "1..0" o ".1.0"). Un
+            // elemento vacío se trata como 0.
+            int v1Part = parsearParteVersion(v1Parts, i);
+            int v2Part = parsearParteVersion(v2Parts, i);
+
             if (v1Part < v2Part) return -1;
             if (v1Part > v2Part) return 1;
         }
         return 0;
     }
+
+    private static int parsearParteVersion(String[] partes, int i) {
+        if (i >= partes.length) {
+            return 0;
+        }
+        String parte = partes[i];
+        if (parte.isEmpty()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(parte);
+        } catch (NumberFormatException e) {
+            // Parte no numérica residual tras replaceAll: tratar como 0.
+            return 0;
+        }
+    }
     
     private OkHttpClient crearClienteParaConfiguracion(ConfiguracionAPI config) {
-        OkHttpClient.Builder builder = new OkHttpClient.Builder()
+        // Reusa clienteBase.newBuilder() para compartir su dispatcher y connection
+        // pool, que ya se limpian en cerrar(). Antes se usaba new OkHttpClient
+        // .Builder(), lo que creaba pools/dispatchers huérfanos que se acumulaban
+        // en cada test de conexión / listado de modelos.
+        OkHttpClient.Builder builder = clienteBase.newBuilder()
             .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        
+
         if (config.ignorarErroresSSL()) {
             configurarSslInseguro(builder);
         }
-        
+
         return builder.build();
     }
     

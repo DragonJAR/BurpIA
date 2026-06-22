@@ -52,10 +52,15 @@ public final class ParserModelosOllama {
             return new ArrayList<>();
         }
 
-        JsonArray modelos = raiz.getAsJsonObject().getAsJsonArray("models");
-        if (modelos == null) {
+        // getAsJsonArray lanza ClassCastException si "models" existe pero no
+        // es un array (ej: {"models":"x"} de un proxy malformado). Verificar
+        // tipo antes de castear, igual que hace el resto del parser con otros
+        // elementos.
+        JsonElement elementoModels = raiz.getAsJsonObject().get("models");
+        if (elementoModels == null || !elementoModels.isJsonArray()) {
             return new ArrayList<>();
         }
+        JsonArray modelos = elementoModels.getAsJsonArray();
 
         Set<String> unicos = new LinkedHashSet<>();
         for (JsonElement elemento : modelos) {

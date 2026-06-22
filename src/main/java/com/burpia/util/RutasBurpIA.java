@@ -28,7 +28,10 @@ public final class RutasBurpIA {
     /** Sufijo opcional para el archivo de configuración (usado en tests). */
     private static final String CONFIG_SUFFIX_KEY = "burpia.config.suffix";
 
-    private static String configSuffixCache;
+    // volatile: consistente con cacheHomeUsuario (línea 37). Este cache se lee
+    // desde múltiples hilos (EDT + background) y la inicialización perezosa en
+    // obtenerNombreArchivoConfig no está sincronizada.
+    private static volatile String configSuffixCache;
 
     /** Nombre del directorio para almacenar evidencias HTTP. */
     private static final String DIRECTORIO_EVIDENCIA = "evidence";

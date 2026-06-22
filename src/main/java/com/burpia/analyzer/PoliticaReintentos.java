@@ -286,7 +286,13 @@ public final class PoliticaReintentos {
         try {
             ZonedDateTime fecha = ZonedDateTime.parse(valor, DateTimeFormatter.RFC_1123_DATE_TIME);
             long deltaMs = Duration.between(java.time.Instant.ofEpochMilli(ahoraMs), fecha.toInstant()).toMillis();
-            return Math.max(0L, deltaMs);
+            // Floor en ESPERA_MINIMA_MS (no 0L): si el clock salta hacia atrás
+            // (NTP, migración de VM) la fecha del Retry-After puede quedar en el
+            // pasado produciendo un deltaMs negativo. Con 0L eso dispararía un
+            // retry inmediato (storm de hasta MAX_INTENTOS_RETRY contra el
+            // endpoint rate-limited). ESPERA_MINIMA_MS garantiza ≥1s entre
+            // reintentos, consistente con el path de segundos (línea 281).
+            return Math.max(ESPERA_MINIMA_MS, deltaMs);
         } catch (DateTimeParseException ignored) {
             return 0L;
         }

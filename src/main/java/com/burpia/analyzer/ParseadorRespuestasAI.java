@@ -383,7 +383,12 @@ public class ParseadorRespuestasAI {
             if (inicioLlave < 0) {
                 break;
             }
-            int finLlave = buscarIndiceCorcheteBalanceado(bloqueHallazgos, inicioLlave, '{', '}', 1);
+            // profundidadInicial=0 (no 1): el helper ya cuenta el delimitador en
+            // 'inicio' al iterar desde ahí, así que 0 es el valor correcto para
+            // que la llave de apertura '{' lleve la profundidad a 1 y la de
+            // cierre '}' la devuelva a 0. Antes pasaba 1, lo que duplicaba el
+            // conteo y dejaba el path principal de extracción efectivamente muerto.
+            int finLlave = buscarIndiceCorcheteBalanceado(bloqueHallazgos, inicioLlave, '{', '}', 0);
             if (finLlave < 0) {
                 break;
             }
@@ -668,6 +673,12 @@ public class ParseadorRespuestasAI {
                         agregarHallazgoDesdeDescripcion(hallazgos, descripcion.toString(), severidad, confianza, solicitud);
                         descripcion.setLength(0);
                     }
+
+                    // Reset de severidad/confianza por hallazgo: antes no se
+                    // reseteaban, así que un hallazgo sin línea "Severity:"
+                    // heredaba la severidad del hallazgo anterior.
+                    severidad = Hallazgo.SEVERIDAD_INFO;
+                    confianza = Hallazgo.CONFIANZA_BAJA;
 
                     descripcion
                             .append(PATRON_ETIQUETA_TITULO.matcher(lineaNormalizada).replaceAll("").trim())

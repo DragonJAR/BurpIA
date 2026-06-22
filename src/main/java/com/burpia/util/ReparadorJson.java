@@ -238,7 +238,10 @@ public final class ReparadorJson {
             }
 
             if (posDosPuntos == -1) {
-                indice = posCampo + nombreCampo.length() + 2;
+                // Sin ": " encontrado para este campo: avanzar indice de forma
+                // segura sin exceder el límite del texto (evita offsets fuera de
+                // rango cuando el campo truncado está al final del payload LLM).
+                indice = Math.min(posCampo + nombreCampo.length() + 2, texto.length());
                 continue;
             }
 

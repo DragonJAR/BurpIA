@@ -122,9 +122,13 @@ public class SolicitudAnalisis {
                              String encabezadosRespuesta,
                              String cuerpoRespuesta,
                              String promptPreconstruido) {
-        this.url = url;
-        this.metodo = metodo;
-        this.hashSolicitud = hashSolicitud;
+        // Normalizar null → "" en los campos de identidad. hashSolicitud se usa
+        // como key de dedup y en equals; url/metodo se muestran en UI. Un null
+        // aquí (de un caller que no valide) rompía la dedup y podía NPE en la UI.
+        // Se reusa el helper normalizarNull ya existente en esta clase (DRY).
+        this.url = normalizarNull(url);
+        this.metodo = normalizarNull(metodo);
+        this.hashSolicitud = normalizarNull(hashSolicitud);
         this.solicitudHttp = solicitudHttp;
         this.respuestaHttp = null;
         this.codigoEstadoRespuesta = codigoEstadoRespuesta;

@@ -60,6 +60,12 @@ public class Tarea {
         this.mensajeInfo = "";
         this.tiempoAcumulado = 0;
         this.tiempoUltimoInicioAnalisis = 0;
+        // Si la tarea nace en un estado final (COMPLETADO/ERROR/CANCELADO) o se
+        // fuerza a ERROR por estado inválido, tiempoFin debe reflejar el momento
+        // de creación, no quedar en 0. Antes quedaba en 0 (default long),
+        // produciendo duraciones y tiempoFin inconsistentes para tareas que
+        // nunca transitan por establecerEstado.
+        this.tiempoFin = esEstadoFinal(this.estado) ? this.tiempoInicio : 0L;
 
         if (ESTADO_ANALIZANDO.equals(this.estado)) {
             this.tiempoUltimoInicioAnalisis = System.currentTimeMillis();

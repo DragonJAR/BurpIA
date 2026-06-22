@@ -47,6 +47,12 @@ public final class FlowAnalysisRequestBuilder {
         }
 
         String promptFlujo = new ConstructorPrompts(config).construirPromptFlujo(solicitudes);
+        // Usar el constructor de 10 args para que promptFlujo vaya a
+        // promptPreconstruido (10º arg). Antes se usaba el de 9 args, lo que
+        // cableaba promptFlujo en cuerpoRespuesta y dejaba promptPreconstruido
+        // en null, degradando silenciosamente el análisis de flujo a un
+        // análisis single-request (OrquestadorAnalisis caía en el fallback
+        // construirPromptAnalisis al ver promptPreconstruido vacío).
         return new SolicitudAnalisis(
             primera.obtenerUrl(),
             "FLOW",
@@ -57,7 +63,6 @@ public final class FlowAnalysisRequestBuilder {
             -1,
             "",
             "",
-            promptFlujo
-        );
+            promptFlujo);
     }
 }

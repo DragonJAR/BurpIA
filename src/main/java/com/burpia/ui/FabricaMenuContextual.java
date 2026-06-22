@@ -183,12 +183,19 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         long ahora = System.currentTimeMillis();
 
         RegistroClic previo = ultimoClic.get();
-        if (previo != null && hash.equals(previo.hashSolicitud) && (ahora - previo.timestampMs) < VENTANA_DEBOUNCE_MS) {
+        // hashCode() tiene colisiones conocidas (ej: "Aa" vs "BB"), así que
+        // además del hash verificamos equals del contenido completo antes de
+        // descartar un clic como duplicado. Antes, dos requests distintos con
+        // hashCode colisionante dentro de la ventana de debounce se trataban
+        // erróneamente como duplicados.
+        if (previo != null && hash.equals(previo.hashSolicitud)
+                && previo.contenido != null && previo.contenido.equals(contenido)
+                && (ahora - previo.timestampMs) < VENTANA_DEBOUNCE_MS) {
             api.logging().logToOutput(I18nUI.Contexto.LOG_DEBOUNCE_IGNORADO());
             return false;
         }
 
-        ultimoClic.set(new RegistroClic(hash, ahora));
+        ultimoClic.set(new RegistroClic(hash, contenido, ahora));
 
         if (manejadorAnalisisSolicitud == null) {
             return false;
@@ -449,10 +456,12 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
 
     private static final class RegistroClic {
         private final String hashSolicitud;
+        private final String contenido;
         private final long timestampMs;
 
-        private RegistroClic(String hashSolicitud, long timestampMs) {
+        private RegistroClic(String hashSolicitud, String contenido, long timestampMs) {
             this.hashSolicitud = hashSolicitud;
+            this.contenido = contenido;
             this.timestampMs = timestampMs;
         }
     }

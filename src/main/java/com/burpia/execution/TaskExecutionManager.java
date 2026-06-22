@@ -57,6 +57,10 @@ public class TaskExecutionManager {
     private final Map<String, Future<?>> ejecucionesActivas;
     private final Map<String, AnalizadorAI> analizadoresActivos;
     private final Object poolLock = new Object();
+    // Flag de cierre: se settea al inicio de shutdown() para que los callbacks
+    // de workers aún en vuelo (que pueden completar tras el awaitTermination de
+    // 5s) no posteen a una UI ya destruida durante el reload de la extensión.
+    private volatile boolean cerrando = false;
 
     private static final class ContextoReintento {
         private final SolicitudAnalisis solicitudAnalisis;
@@ -401,6 +405,10 @@ public class TaskExecutionManager {
     }
 
     public void shutdown() {
+        // Marcar cierre inmediatamente: los workers que completen tras el
+        // awaitTermination no postearán a la UI destruida.
+        cerrando = true;
+
         for (AnalizadorAI analizador : analizadoresActivos.values()) {
             if (analizador != null) {
                 analizador.cancelarLlamadaHttpActiva();
@@ -507,8 +515,26 @@ public class TaskExecutionManager {
             final String id = tareaIdRef.get();
 
             try {
+                // Race cancel+complete: si la tarea fue cancelada mientras el
+                // hilo worker completaba la llamada HTTP (ventana no interrumpible
+                // entre ejecutarAnalisisCompleto y este callback), descartamos el
+                // resultado para no mostrar hallazgos fantasma ni revivir la tarea.
+                if (gestorTareas != null && Normalizador.noEsVacio(id)
+                        && gestorTareas.estaTareaCancelada(id)) {
+                    gestorLogging.verbose(ORIGEN_LOG,
+                            I18nLogs.tr("Resultado descartado porque la tarea fue cancelada"));
+                    return;
+                }
+
+                // Reload de extensión: si shutdown() ya marcó el cierre, no
+                // postear a una UI posiblemente destruida (pestaniaPrincipal es
+                // final y no se nullea, así que el null-check existente no protege).
+                if (cerrando) {
+                    return;
+                }
+
                 // Agregar hallazgos al modelo de la tabla
-                if (resultado != null && resultado.obtenerHallazgos() != null 
+                if (resultado != null && resultado.obtenerHallazgos() != null
                         && !resultado.obtenerHallazgos().isEmpty()) {
                     List<com.burpia.model.Hallazgo> hallazgos =
                             enriquecerHallazgosConEvidencia(resultado.obtenerHallazgos(), evidenciaId);
@@ -566,6 +592,11 @@ public class TaskExecutionManager {
         @Override
         public void alErrorAnalisis(String error) {
             final String id = tareaIdRef.get();
+
+            // Reload de extensión: no postear a UI destruida.
+            if (cerrando) {
+                return;
+            }
 
             try {
                 if (gestorTareas != null && Normalizador.noEsVacio(id)) {

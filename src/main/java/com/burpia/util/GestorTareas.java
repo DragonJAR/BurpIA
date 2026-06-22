@@ -1,6 +1,7 @@
 package com.burpia.util;
 
 import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Tarea;
 import com.burpia.ui.ModeloTablaTareas;
 
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -36,17 +38,20 @@ public class GestorTareas {
     }
 
     public GestorTareas(ModeloTablaTareas modeloTabla, Consumer<String> logger, int maxTareasFinalizadasRetenidas) {
+        // modeloTabla es obligatorio: todos los métodos (crearTarea,
+        // actualizarFilaTabla, limpiar, etc.) lo dereferencian sin guard.
+        // Antes el constructor toleraba null, lo que producía NPE en el primer
+        // uso. Se alinea el contrato con el uso real (todos los callers pasan
+        // un ModeloTablaTareas no nulo).
+        this.modeloTabla = Objects.requireNonNull(modeloTabla, I18nUI.General.ERROR_ARGUMENTO_NULO("modeloTabla"));
+        this.modeloTabla.establecerManejadorPurgado(this::eliminarTareasPurgadasDelMapa);
         this.tareas = new ConcurrentHashMap<>();
         this.candado = new ReentrantLock();
-        this.modeloTabla = modeloTabla;
         this.logger = logger != null ? logger : mensaje -> { };
         this.manejadorCancelacion = null;
         this.manejadorPausa = null;
         this.manejadorReanudar = null;
         this.maxTareasFinalizadasRetenidas = Math.max(1, maxTareasFinalizadasRetenidas);
-        if (this.modeloTabla != null) {
-            this.modeloTabla.establecerManejadorPurgado(this::eliminarTareasPurgadasDelMapa);
-        }
 
         this.monitorVerificacion = crearMonitorVerificacion();
         this.monitorVerificacion.scheduleAtFixedRate(
@@ -79,6 +84,15 @@ public class GestorTareas {
         try {
             Tarea tarea = tareas.get(id);
             if (tarea != null) {
+                // Guard anti-resurrección: una tarea que ya alcanzó un estado
+                // final (COMPLETADO/ERROR/CANCELADO) no debe ser sobrescrita por
+                // un callback tardío de un hilo worker (race cancel+complete).
+                // Se permite re-aplicar el MISMO estado final (idempotencia para
+                // actualizar mensajeInfo), pero nunca cambiar a otro estado.
+                String estadoActual = tarea.obtenerEstado();
+                if (Tarea.esEstadoFinal(estadoActual) && !estadoActual.equals(nuevoEstado)) {
+                    return;
+                }
                 tarea.establecerEstado(nuevoEstado);
                 if (Normalizador.noEsVacio(mensajeInfo)) {
                     tarea.establecerMensajeInfo(mensajeInfo);

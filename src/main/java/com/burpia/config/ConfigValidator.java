@@ -8,7 +8,6 @@ import com.burpia.util.OSUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 import static com.burpia.util.Normalizador.esVacio;
@@ -139,20 +138,22 @@ public final class ConfigValidator {
 
         String apiKeyTrimmed = apiKey.trim();
 
-        String proveedorNormalizado = ProveedorAI.normalizarProveedor(proveedor).toLowerCase(Locale.ROOT);
+        // Switch sobre el nombre canónico (devuelto por normalizarProveedor con
+        // el casing exacto del registro). Antes se hacía .toLowerCase() sobre el
+        // resultado, acoplamiento frágil: si el casing canónico cambiaba (ej:
+        // "Z.ai"), el switch dejaba de validar prefijos silenciosamente. El case
+        // "ollama" era además muerto (Ollama no requiere key → early return arriba).
+        String proveedorNormalizado = ProveedorAI.normalizarProveedor(proveedor);
         switch (proveedorNormalizado) {
-            case "openai":
+            case "OpenAI":
                 return validarApiKeyConPrefijo(apiKeyTrimmed, proveedor, OPENAI_API_KEY_PREFIX);
-            case "claude":
-            case "anthropic":
+            case "Claude":
                 return validarApiKeyConPrefijo(apiKeyTrimmed, proveedor, CLAUDE_API_KEY_PREFIX);
-            case "gemini":
+            case "Gemini":
                 return validarApiKeyConPrefijo(apiKeyTrimmed, proveedor, GEMINI_API_KEY_PREFIX);
-            case "ollama":
-                // Ollama no requiere API key format validation
-                break;
             default:
-                // Para proveedores sin prefijo conocido, basta con una clave no vacía.
+                // Para proveedores sin prefijo conocido (Ollama, Z.ai, custom),
+                // basta con una clave no vacía (ya validado arriba).
         }
 
         return ValidationResult.valido();

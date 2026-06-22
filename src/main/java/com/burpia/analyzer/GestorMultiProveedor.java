@@ -87,8 +87,14 @@ public class GestorMultiProveedor {
         }
 
         if (proveedores.size() == 1) {
+            // Usar el proveedor real de la lista (no el default de config),
+            // coherente con el path multi-proveedor. Antes delegaba a
+            // ejecutarAnalisisProveedorUnico() que ignoraba el proveedor
+            // seleccionado. Latente: hoy los callers guard con size()>1,
+            // pero esto previene un bug si ese guard se relaja.
+            String proveedor = proveedores.get(0);
             registrar(I18nLogs.MultiProveedor.UN_PROVEEDOR());
-            return ejecutarAnalisisProveedorUnico();
+            return ejecutarAnalisisProveedor(proveedor, config.obtenerModeloParaProveedor(proveedor));
         }
 
         return ejecutarAnalisisSecuencialProveedores(proveedores);

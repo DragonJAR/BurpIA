@@ -950,7 +950,10 @@ public class ConfiguracionAPI {
             timeoutBase = obtenerTiempoEsperaAI();
         }
 
-        if ("Moonshot (Kimi)".equals(proveedor) && timeoutBase < 120) {
+        // Normalizar el proveedor antes de comparar: antes se comparaba el
+        // valor crudo del caller, así que variantes de casing/espaciado
+        // ("moonshot (kimi)") no activaban el floor de 120s.
+        if ("Moonshot (Kimi)".equals(normalizarProveedor(proveedor)) && timeoutBase < 120) {
             return 120;
         }
 

@@ -132,51 +132,53 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         if (Normalizador.esVacio(severidadStr)) return;
 
         Graphics2D g2 = (Graphics2D) g.create();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        Color tableBg = getBackground();
+            Color tableBg = getBackground();
 
-        String displayText = obtenerTextoMostrar(severidadStr);
+            String displayText = obtenerTextoMostrar(severidadStr);
 
-        Font font = getFont();
-        g2.setFont(font);
-        FontMetrics fm = g2.getFontMetrics();
+            Font font = getFont();
+            g2.setFont(font);
+            FontMetrics fm = g2.getFontMetrics();
 
-        Color colorFondoPildora = obtenerColorSeveridadTraducida(severidadStr);
-        Color colorTexto = EstilosUI.ajustarParaContrasteMinimo(
-            EstilosUI.obtenerColorTextoContraste(colorFondoPildora),
-            colorFondoPildora,
-            EstilosUI.CONTRASTE_AA_NORMAL
-        );
+            Color colorFondoPildora = obtenerColorSeveridadTraducida(severidadStr);
+            Color colorTexto = EstilosUI.ajustarParaContrasteMinimo(
+                EstilosUI.obtenerColorTextoContraste(colorFondoPildora),
+                colorFondoPildora,
+                EstilosUI.CONTRASTE_AA_NORMAL
+            );
 
-        if (isIgnorado) {
-            colorFondoPildora = EstilosUI.colorFondoIgnorado(tableBg);
-            colorTexto = EstilosUI.colorTextoIgnorado(colorFondoPildora);
+            if (isIgnorado) {
+                colorFondoPildora = EstilosUI.colorFondoIgnorado(tableBg);
+                colorTexto = EstilosUI.colorTextoIgnorado(colorFondoPildora);
+            }
+
+            int textWidth = fm.stringWidth(displayText);
+            int paddingX = 12;
+            int paddingY = 4;
+
+            int badgeWidth = textWidth + paddingX * 2;
+            int badgeHeight = fm.getHeight() + paddingY * 2;
+
+            int x = (getWidth() - badgeWidth) / 2;
+            int y = (getHeight() - badgeHeight) / 2;
+
+            g2.setColor(colorFondoPildora);
+            g2.fillRoundRect(x, y, badgeWidth, badgeHeight, badgeHeight, badgeHeight);
+
+            g2.setColor(colorTexto);
+            int textX = x + paddingX;
+            int textY = y + (badgeHeight - fm.getHeight()) / 2 + fm.getAscent();
+            g2.drawString(displayText, textX, textY);
+
+            if (isIgnorado) {
+                int lineY = textY - fm.getAscent() / 2 + 1;
+                g2.drawLine(textX, lineY, textX + textWidth, lineY);
+            }
+        } finally {
+            g2.dispose();
         }
-
-        int textWidth = fm.stringWidth(displayText);
-        int paddingX = 12;
-        int paddingY = 4;
-
-        int badgeWidth = textWidth + paddingX * 2;
-        int badgeHeight = fm.getHeight() + paddingY * 2;
-
-        int x = (getWidth() - badgeWidth) / 2;
-        int y = (getHeight() - badgeHeight) / 2;
-
-        g2.setColor(colorFondoPildora);
-        g2.fillRoundRect(x, y, badgeWidth, badgeHeight, badgeHeight, badgeHeight);
-
-        g2.setColor(colorTexto);
-        int textX = x + paddingX;
-        int textY = y + (badgeHeight - fm.getHeight()) / 2 + fm.getAscent();
-        g2.drawString(displayText, textX, textY);
-
-        if (isIgnorado) {
-            int lineY = textY - fm.getAscent() / 2 + 1;
-            g2.drawLine(textX, lineY, textX + textWidth, lineY);
-        }
-
-        g2.dispose();
     }
 }
