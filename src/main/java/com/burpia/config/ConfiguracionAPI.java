@@ -752,6 +752,7 @@ public class ConfiguracionAPI {
             case "minimax":
             case "DeepSeek":
             case "xAI":
+            case "Sakana":
             case "LM Studio":
                 return baseNormalizada + "/chat/completions";
             default:
@@ -928,8 +929,16 @@ public class ConfiguracionAPI {
         if (proveedorNormalizado.isEmpty()) {
             return;
         }
-        int valorNormalizado = maxTokens > 0 ? maxTokens : obtenerMaxTokensPorDefectoProveedor(proveedorNormalizado);
-        maxTokensPorProveedor.put(proveedorNormalizado, valorNormalizado);
+        // maxTokens <= 0 significa "limpiar override" (revertir a default del
+        // proveedor), consistente con establecerApiKeyParaProveedor (que hace
+        // remove en null). Antes escribia el default en el mapa, conluyendo
+        // "configurado" con "default" y rompiendo la detección de override en
+        // DialogStateManager/ProviderConfigManager (que usan null = sin override).
+        if (maxTokens <= 0) {
+            maxTokensPorProveedor.remove(proveedorNormalizado);
+            return;
+        }
+        maxTokensPorProveedor.put(proveedorNormalizado, maxTokens);
     }
 
     public Integer obtenerTiempoEsperaConfiguradoParaModelo(String proveedor, String modelo) {
@@ -964,6 +973,14 @@ public class ConfiguracionAPI {
         asegurarMapas();
         String clave = construirClaveTiempoEsperaModelo(proveedor, modelo);
         if (clave.isEmpty()) {
+            return;
+        }
+        // timeoutSegundos <= 0 significa "limpiar override" (heredar del
+        // global), consistente con el patron de establecerMaxTokensParaProveedor
+        // y establecerApiKeyParaProveedor. Antes clamp a 10, haciendo imposible
+        // remover un override una vez establecido.
+        if (timeoutSegundos <= 0) {
+            tiempoEsperaPorModelo.remove(clave);
             return;
         }
         tiempoEsperaPorModelo.put(clave, normalizarTiempoEspera(timeoutSegundos));
@@ -1821,7 +1838,13 @@ public class ConfiguracionAPI {
 
     // Método helper para verificar si algún nivel de logging está habilitado
     public boolean hayAlgunNivelLoggingHabilitado() {
-        return nivelErrorHabilitado || nivelWarnHabilitado || nivelInfoHabilitado;
+        // Incluir Debug y Trace: el nombre del método promete "algún nivel", y
+        // si el usuario desactiva Error/Warn/Info pero deja Debug/Trace
+        // activos (vía detallado=true), el método debe reflejar que sí hay
+        // logging. Antes omitía Debug/Trace, suprimiendo toda la salida.
+        return nivelErrorHabilitado || nivelWarnHabilitado
+                || nivelInfoHabilitado || nivelDebugHabilitado
+                || nivelTraceHabilitado;
     }
 
     // ==================== MÉTODOS DE ALERTAS OPT-OUT ====================

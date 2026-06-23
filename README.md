@@ -64,9 +64,9 @@ English version: [README.en.md](README.en.md)
 
 ---
 
-## Estado actual (v1.7.0) en desarrollo
+## Estado actual (v1.7.0)
 
-BurpIA está actualmente en `v1.7.0` (en desarrollo).
+BurpIA está actualmente en `v1.7.0`.
 Consulta el resumen de cambios en **Historial de versiones**.
 
 
@@ -74,15 +74,24 @@ Consulta el resumen de cambios en **Historial de versiones**.
 
 ## Historial de versiones
 
-### v1.7.0 (en desarrollo)
+### v1.7.0
 
 **Nuevos proveedores LLM:**
 - **DeepSeek** (modelos `deepseek-v4-flash`, `deepseek-v4-pro` y legacy chat/reasoner — API compatible con OpenAI, `Authorization: Bearer`).
 - **xAI Grok** (modelos `grok-4.3`, `grok-4`, `grok-3`, `grok-2`/`grok-2-vision` — API compatible con OpenAI).
 - **Ollama Cloud** (modelos cloud en `https://ollama.com` con `Authorization: Bearer`, HTTPS obligatorio).
+- **Sakana Fugu** (modelos `fugu`, `fugu-ultra` — API compatible con OpenAI).
 
 **Nuevo agente CLI:**
 - **Grok CLI** (`GROK_BUILD`): integración del agente Grok de xAI en la pestaña Agentes, con detección automática de binario en `~/.grok/bin/grok` (Unix) o `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permisos controlados vía `~/.grok/config.toml` (`permission_mode = "always-approve"`).
+
+**Mejoras de seguridad y robustez:**
+- **Anti-inyección CSV (CWE-1236):** neutralización de fórmulas maliciosas (`=`, `+`, `-`, `@`) en la exportación de hallazgos para prevenir RCE al abrir CSV en Excel/LibreOffice.
+- **Anti-resurrección de tareas:** guard de estado final que previene que un callback tardío reviva una tarea cancelada o marque como completada una que terminó en error.
+- **Análisis de flujo corregido:** el prompt de flujo multi-request ahora se cablea correctamente (antes degradaba silenciosamente a análisis individual).
+- **Anti retry-storm por clock skew:** floor mínimo de 1s entre reintentos cuando un `Retry-After` con fecha queda en el pasado por salto de reloj.
+- **Anti callback a UI destruida:** flag de cierre que previene que workers en vuelo posteen a la UI tras el reload de la extensión.
+- **Hardening de recursos y concurrencia:** fix de leak de `OkHttpClient` en tests de conexión, overflow de enteros en presupuesto de bytes, race condition en caché de rutas, y `Graphics2D` dispose robusto en renderizadores.
 
 ### v1.5.0
 
@@ -148,6 +157,8 @@ Consulta el resumen de cambios en **Historial de versiones**.
 - **Z.ai** / **Minimax**.
 - **DeepSeek** (Modelos v4-flash, v4-pro — API compatible con OpenAI).
 - **xAI Grok** (Modelos grok-4.3, grok-4 — API compatible con OpenAI).
+- **Sakana Fugu** (Modelos fugu, fugu-ultra — API compatible con OpenAI).
+- **LM Studio** (Servidor LLM local compatible con OpenAI).
 - **Custom** (Hasta 3 perfiles personalizados para cualquier API compatible con OpenAI).
 
 > **Nota:** DeepSeek se puede utilizar a través de Ollama o mediante un perfil Custom con la API compatible con OpenAI.

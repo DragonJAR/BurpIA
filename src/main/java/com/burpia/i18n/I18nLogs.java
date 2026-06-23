@@ -246,7 +246,6 @@ public final class I18nLogs {
         {"ALERTA: Clave de API requerida para", "ALERT: API key is required for"},
         {"Configuracion", "Configuration"},
         {"configuracion", "configuration"},
-        {"Complemento de Seguridad con IA", "AI Security Extension"},
         {"[Configuracion]", "[Configuration]"},
         {"[Environment]", "[Environment]"},
         {"[Multi-Provider Configuration]", "[Multi-Provider Configuration]"},

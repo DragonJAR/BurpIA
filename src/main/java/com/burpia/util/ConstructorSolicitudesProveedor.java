@@ -63,6 +63,7 @@ public final class ConstructorSolicitudesProveedor {
             case "Moonshot (Kimi)":
             case "DeepSeek":
             case "xAI":
+            case "Sakana":
             case "LM Studio":
                 return listarModelosCompatiblesOpenAI(urlBase, apiKey, clienteHttp);
             default:

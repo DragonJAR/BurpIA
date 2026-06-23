@@ -66,7 +66,7 @@ Spanish version: [README.md](README.md)
 
 ## Current status (v1.7.0)
 
-BurpIA is currently at `v1.7.0` (in development).
+BurpIA is currently at `v1.7.0`.
 See the change summary in **Version history**.
 
 
@@ -74,15 +74,24 @@ See the change summary in **Version history**.
 
 ## Version history
 
-### v1.7.0 (in development)
+### v1.7.0
 
 **New LLM providers:**
 - **DeepSeek** (`deepseek-v4-flash`, `deepseek-v4-pro`, plus legacy chat/reasoner — OpenAI-compatible API with `Authorization: Bearer`).
 - **xAI Grok** (`grok-4.3`, `grok-4`, `grok-3`, `grok-2` / `grok-2-vision` — OpenAI-compatible API).
 - **Ollama Cloud** (cloud models at `https://ollama.com` with `Authorization: Bearer`, HTTPS required).
+- **Sakana Fugu** (`fugu`, `fugu-ultra` — OpenAI-compatible API).
 
 **New CLI agent:**
 - **Grok CLI** (`GROK_BUILD`): integration of xAI's Grok agent into the Agents tab, with automatic binary detection at `~/.grok/bin/grok` (Unix) or `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permissions are controlled via `~/.grok/config.toml` (`permission_mode = "always-approve"`).
+
+**Security and robustness improvements:**
+- **CSV injection mitigation (CWE-1236):** neutralizes malicious formula prefixes (`=`, `+`, `-`, `@`) in findings export to prevent RCE when opening CSV in Excel/LibreOffice.
+- **Task anti-resurrection:** final-state guard that prevents a late callback from reviving a cancelled task or marking an errored task as completed.
+- **Flow analysis fixed:** the multi-request flow prompt is now wired correctly (previously degraded silently to single-request analysis).
+- **Anti retry-storm on clock skew:** minimum 1s floor between retries when a date-based `Retry-After` falls in the past due to a clock jump.
+- **Anti callback to destroyed UI:** shutdown flag that prevents in-flight workers from posting to the UI after extension reload.
+- **Resource and concurrency hardening:** fixed `OkHttpClient` leak in connection tests, integer overflow in byte budget, race condition in path cache, and robust `Graphics2D` disposal in renderers.
 
 
 ### v1.5.0
@@ -149,6 +158,8 @@ See the change summary in **Version history**.
 - **Z.ai** / **Minimax**.
 - **DeepSeek** (v4-flash, v4-pro models — OpenAI-compatible API).
 - **xAI Grok** (grok-4.3, grok-4 models — OpenAI-compatible API).
+- **Sakana Fugu** (fugu, fugu-ultra models — OpenAI-compatible API).
+- **LM Studio** (Local LLM server, OpenAI-compatible).
 - **Custom** (Up to 3 custom profiles for any OpenAI-compatible API).
 
 > **Note:** DeepSeek can be used through Ollama or via a Custom profile with the OpenAI-compatible API.

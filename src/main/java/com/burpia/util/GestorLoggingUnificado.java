@@ -281,6 +281,36 @@ public final class GestorLoggingUnificado {
     }
 
     /**
+     * Registra contenido técnico (prompt, respuesta de API, headers HTTP) sin
+     * aplicar el diccionario de traducción. El diccionario de I18nLogs traduce
+     * palabras como "model"→"modelo", "request"→"solicitud", "Type"→"Tipo",
+     * corrompiendo headers y JSON técnicos al mostrarse en consola. Este método
+     * usa trTecnico (pass-through) para preservar el contenido literal.
+     *
+     * @param origen  Origen del mensaje
+     * @param mensaje Contenido técnico a loguear sin traducción
+     */
+    public void verboseTecnico(String origen, String mensaje) {
+        if (esVacio(mensaje)) {
+            return;
+        }
+
+        String origenNormalizado = normalizarOrigen(origen);
+        String mensajeTecnico = I18nLogs.trTecnico(mensaje);
+
+        if (gestorConsola != null) {
+            gestorConsola.registrarVerbose(origenNormalizado, mensajeTecnico);
+        }
+        if (stdout != null) {
+            stdout.println(construirPrefijoConsola(origenNormalizado) + "[VERBOSE] " + mensajeTecnico);
+            stdout.flush();
+        }
+        if (logger != null && logger.isLoggable(Level.FINE)) {
+            logger.log(Level.FINE, mensajeTecnico);
+        }
+    }
+
+    /**
      * Registra un mensaje de advertencia.
      *
      * @param origen Origen del mensaje. Si es null o vacío, se usa "BurpIA".

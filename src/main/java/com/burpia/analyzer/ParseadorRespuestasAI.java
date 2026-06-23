@@ -702,7 +702,8 @@ public class ParseadorRespuestasAI {
                 agregarHallazgoDesdeDescripcion(hallazgos, descripcion.toString(), severidad, confianza, solicitud);
             }
 
-            if (hallazgos.isEmpty() && contenido.trim().length() > 20) {
+            if (hallazgos.isEmpty() && contenido.trim().length() > 20
+                    && !esRespuestaVaciaExplicita(contenido)) {
                 String tituloContenido = contenido.trim();
                 if (tituloContenido.length() > MAX_LONGITUD_TITULO_RESUMIDO) {
                     tituloContenido = tituloContenido.substring(0, MAX_LONGITUD_TITULO_RESUMIDO) + "...";
@@ -721,6 +722,25 @@ public class ParseadorRespuestasAI {
         }
 
         return hallazgos;
+    }
+
+    /**
+     * Detecta si el contenido es una respuesta explícita "sin hallazgos" del
+     * LLM (JSON vacío, array vacío, o variaciones). Evita crear hallazgos
+     * espurios cuando el modelo respondió correctamente que no hay
+     * vulnerabilidades pero el parser no pudo extraer hallazgos.
+     */
+    private static boolean esRespuestaVaciaExplicita(String contenido) {
+        if (Normalizador.esVacio(contenido)) {
+            return true;
+        }
+        String limpio = contenido.trim().replaceAll("\\s+", "");
+        return limpio.equals("{}")
+                || limpio.equals("[]")
+                || limpio.equals("{\"hallazgos\":[]}")
+                || limpio.equals("{\"hallazgos\":null}")
+                || limpio.equals("{\"findings\":[]}")
+                || limpio.equals("{\"findings\":null}");
     }
 
     private boolean contieneAlguno(String texto, String... palabras) {

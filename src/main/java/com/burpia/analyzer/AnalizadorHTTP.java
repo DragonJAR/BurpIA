@@ -163,6 +163,15 @@ public class AnalizadorHTTP {
                 I18nLogs.tr("Encabezados de solicitud: Content-Type=application/json, credencial=[OCULTA]"));
         }
 
+        // Modo detallado: volcar el prompt completo (en crudo) enviado al LLM.
+        // Usa verboseTecnico (no verbose) para no corromper headers técnicos
+        // con el diccionario i18n (que traduciría "Type"→"Tipo", etc.).
+        if (config.esDetallado() && Normalizador.noEsVacio(prompt)) {
+            gestorLogging.verboseTecnico(ORIGEN_LOG,
+                    I18nLogs.tr("=== PETICIÓN COMPLETA ENVIADA A LA API ===") + "\n" + prompt
+                            + "\n" + I18nLogs.tr("=== FIN DE LA PETICIÓN ==="));
+        }
+
         Call call = clienteHttp.newCall(solicitudHttp);
         llamadaHttpActiva = call;
 
@@ -216,7 +225,18 @@ public class AnalizadorHTTP {
                 
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Longitud de respuesta de API: %d caracteres",
                                   cuerpoRespuesta.length()));
-                
+
+                // Modo detallado: volcar la respuesta completa (en crudo) del LLM.
+                // Permite al usuario auditar exactamente qué devolvió la API para
+                // identificar errores de parseo, respuestas truncadas, etc.
+                // Usa verboseTecnico para preservar campos JSON como "model",
+                // headers como "request-id", etc. sin corrupción del diccionario.
+                if (config.esDetallado() && Normalizador.noEsVacio(cuerpoRespuesta)) {
+                    gestorLogging.verboseTecnico(ORIGEN_LOG,
+                            I18nLogs.tr("=== RESPUESTA COMPLETA DE LA API ===") + "\n" + cuerpoRespuesta
+                                    + "\n" + I18nLogs.tr("=== FIN DE LA RESPUESTA ==="));
+                }
+
                 return cuerpoRespuesta;
             }
         } catch (ApiHttpException e) {

@@ -218,6 +218,12 @@ public class ConfigDialogController {
 
     private void inicializarEventHandlersProvider() {
         agregarListenerSiPresente(dialogo.obtenerComboProveedor(), e -> {
+            // Invalidar cualquier refresh de modelos en vuelo: si el usuario
+            // cambia de proveedor mientras un listado async del proveedor
+            // anterior está pendiente, el resultado stale no debe aplicarse al
+            // combo de modelos del proveedor nuevo (race: modelos del
+            // proveedor A llenados bajo el proveedor B seleccionado).
+            secuenciaRefrescoModelos.incrementAndGet();
             actualizarEstadoCargaModelosSegunProveedor();
             actualizarTooltipsYHintSegunProveedor();
         });

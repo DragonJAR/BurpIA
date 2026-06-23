@@ -266,6 +266,17 @@ public final class ProveedorAI {
                 true,
                 4096));
 
+        // Sakana Fugu — OpenAI-compatible. Base URL canónica: https://api.sakana.ai/v1
+        // Endpoint /chat/completions. Bearer auth. Modelos fugu y fugu-ultra.
+        PROVEEDORES.put("Sakana", new ConfiguracionProveedor(
+                "https://api.sakana.ai/v1",
+                "fugu",
+                Arrays.asList(
+                        "fugu",
+                        "fugu-ultra"),
+                true,
+                4096));
+
         // LM Studio — servidor LLM local (https://lmstudio.ai). Expone un API
         // OpenAI-compatible en http://localhost:1234/v1: endpoint
         // /chat/completions y listado de modelos en /models. No requiere API key
@@ -497,6 +508,7 @@ public final class ProveedorAI {
             case "minimax":
             case "DeepSeek":
             case "xAI":
+            case "Sakana":
             case "Moonshot (Kimi)":
             case "LM Studio":
                 return true;

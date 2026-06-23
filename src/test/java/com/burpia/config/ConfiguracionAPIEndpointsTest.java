@@ -103,6 +103,15 @@ class ConfiguracionAPIEndpointsTest {
         );
     }
 
+    @Test
+    @DisplayName("Construye endpoint Sakana chat completions")
+    void testEndpointSakana() {
+        assertEquals(
+            "https://api.sakana.ai/v1/chat/completions",
+            ConfiguracionAPI.construirUrlApiProveedor("Sakana", "https://api.sakana.ai/v1", "fugu")
+        );
+    }
+
     // --- Custom providers: URL verbatim (sin manipulación del plugin) ---
 
     @Test

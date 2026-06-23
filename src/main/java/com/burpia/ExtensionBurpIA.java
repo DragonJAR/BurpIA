@@ -782,8 +782,17 @@ public class ExtensionBurpIA implements BurpExtension {
                           .append(provTimeout).append("s)");
                     }
                     registrar("  " + sb);
+                    // Construir el orden de ejecución real sin duplicar el
+                    // proveedor principal si ya está en la lista multi.
+                    List<String> ordenReal = new java.util.ArrayList<>();
+                    ordenReal.add(proveedor);
+                    for (String p : proveedoresMulti) {
+                        if (!ordenReal.contains(p)) {
+                            ordenReal.add(p);
+                        }
+                    }
                     registrar("  " + I18nLogs.Inicializacion.ORDEN_EJECUCION()
-                            + proveedor + " → " + String.join(" → ", proveedoresMulti));
+                            + String.join(" → ", ordenReal));
                 }
             }
 
@@ -887,6 +896,15 @@ public class ExtensionBurpIA implements BurpExtension {
             return;
         }
         rastrearContextual(I18nLogs.ContextoMenu.PROMPT_AGENTE_DISPONIBLE(Normalizador.noEsVacio(prompt)));
+        // Modo detallado: volcar el prompt completo del agente para que el
+        // usuario pueda ver qué contexto se le está enviando al CLI agent.
+        // Usa verboseTecnico (no rastrearContextual) para no corromper el
+        // contenido del prompt con el diccionario i18n.
+        if (Normalizador.noEsVacio(prompt) && gestorLogging != null) {
+            gestorLogging.verboseTecnico("BurpIA",
+                    I18nLogs.tr("=== PROMPT ENVIADO AL AGENTE ===") + "\n" + prompt
+                            + "\n" + I18nLogs.tr("=== FIN DEL PROMPT DEL AGENTE ==="));
+        }
     }
 
     private void registrarSerializacionAgenteDetallada(int requestsSerializadas, int responsesSerializadas,

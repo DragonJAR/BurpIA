@@ -543,6 +543,20 @@ public class PanelHallazgos extends JPanel {
         if (Normalizador.esVacio(texto)) {
             return "";
         }
+
+        // CSV injection (CWE-1236): los hallazgos contienen datos controlados
+        // por el atacante (URLs, títulos). Si un campo empieza con = + - @ o
+        // TAB, Excel/LibreOffice lo evalúa como fórmula al abrir el CSV, lo que
+        // permite RCE en la máquina del analista (ej: =HYPERLINK, =CMD).
+        // Neutralizar prefijando con un apóstrofo, que el spreadsheet oculta
+        // al renderizar pero preserva como texto literal.
+        char primerCaracter = texto.charAt(0);
+        if (primerCaracter == '=' || primerCaracter == '+'
+                || primerCaracter == '-' || primerCaracter == '@'
+                || primerCaracter == '\t' || primerCaracter == '\r') {
+            texto = "'" + texto;
+        }
+
         boolean requiereComillas = texto.contains(",")
             || texto.contains("\"")
             || texto.contains("\n")
