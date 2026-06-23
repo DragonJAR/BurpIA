@@ -85,13 +85,6 @@ See the change summary in **Version history**.
 **New CLI agent:**
 - **Grok CLI** (`GROK_BUILD`): integration of xAI's Grok agent into the Agents tab, with automatic binary detection at `~/.grok/bin/grok` (Unix) or `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permissions are controlled via `~/.grok/config.toml` (`permission_mode = "always-approve"`).
 
-**Security and robustness improvements:**
-- **CSV injection mitigation (CWE-1236):** neutralizes malicious formula prefixes (`=`, `+`, `-`, `@`) in findings export to prevent RCE when opening CSV in Excel/LibreOffice.
-- **Task anti-resurrection:** final-state guard that prevents a late callback from reviving a cancelled task or marking an errored task as completed.
-- **Flow analysis fixed:** the multi-request flow prompt is now wired correctly (previously degraded silently to single-request analysis).
-- **Anti retry-storm on clock skew:** minimum 1s floor between retries when a date-based `Retry-After` falls in the past due to a clock jump.
-- **Anti callback to destroyed UI:** shutdown flag that prevents in-flight workers from posting to the UI after extension reload.
-- **Resource and concurrency hardening:** fixed `OkHttpClient` leak in connection tests, integer overflow in byte budget, race condition in path cache, and robust `Graphics2D` disposal in renderers.
 
 
 ### v1.5.0

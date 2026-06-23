@@ -85,14 +85,6 @@ Consulta el resumen de cambios en **Historial de versiones**.
 **Nuevo agente CLI:**
 - **Grok CLI** (`GROK_BUILD`): integración del agente Grok de xAI en la pestaña Agentes, con detección automática de binario en `~/.grok/bin/grok` (Unix) o `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permisos controlados vía `~/.grok/config.toml` (`permission_mode = "always-approve"`).
 
-**Mejoras de seguridad y robustez:**
-- **Anti-inyección CSV (CWE-1236):** neutralización de fórmulas maliciosas (`=`, `+`, `-`, `@`) en la exportación de hallazgos para prevenir RCE al abrir CSV en Excel/LibreOffice.
-- **Anti-resurrección de tareas:** guard de estado final que previene que un callback tardío reviva una tarea cancelada o marque como completada una que terminó en error.
-- **Análisis de flujo corregido:** el prompt de flujo multi-request ahora se cablea correctamente (antes degradaba silenciosamente a análisis individual).
-- **Anti retry-storm por clock skew:** floor mínimo de 1s entre reintentos cuando un `Retry-After` con fecha queda en el pasado por salto de reloj.
-- **Anti callback a UI destruida:** flag de cierre que previene que workers en vuelo posteen a la UI tras el reload de la extensión.
-- **Hardening de recursos y concurrencia:** fix de leak de `OkHttpClient` en tests de conexión, overflow de enteros en presupuesto de bytes, race condition en caché de rutas, y `Graphics2D` dispose robusto en renderizadores.
-
 ### v1.5.0
 
 - **Análisis de flujo contextual:** analiza múltiples peticiones HTTP como un flujo completo en una sola consulta al LLM, incluyendo ahora tanto peticiones como respuestas.
