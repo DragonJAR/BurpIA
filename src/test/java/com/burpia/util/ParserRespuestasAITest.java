@@ -170,6 +170,18 @@ class ParserRespuestasAITest {
     }
 
     @Test
+    @DisplayName("Quita <think> sin colapsar los espacios del resto (modelos razonadores)")
+    void testLimpiarContenidoModeloPreservaEspacios() {
+        // Modelos razonadores emiten <think>; al quitarlo NO debe colapsarse el whitespace
+        // del resto del contenido (evidencia con espacios múltiples/indentación se conserva).
+        String entrada = "<think>razonando aqui</think>\n\n{\"evidencia\":\"a    b\"}";
+        String salida = ParserRespuestasAI.limpiarContenidoModelo(entrada);
+        assertFalse(salida.contains("<think>"), "Debe eliminar el bloque <think>");
+        assertTrue(salida.contains("a    b"),
+            "Los espacios múltiples de la evidencia deben conservarse: " + salida);
+    }
+
+    @Test
     @DisplayName("Extractor no estricto acepta alias en inglés")
     void testExtraerCampoNoEstrictoAliasIngles() {
         String contenido = "{\"title\":\"SQLi\",\"description\":\"detalle\",\"severity\":\"High\",\"confidence\":\"Low\",\"evidence\":\"id=1\"}";

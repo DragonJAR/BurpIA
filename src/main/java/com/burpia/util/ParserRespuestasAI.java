@@ -12,7 +12,7 @@ public final class ParserRespuestasAI {
     private static final GestorLoggingUnificado GESTOR_LOGGING = GestorLoggingUnificado.crearMinimal(null, null);
 
     private static final java.util.regex.Pattern PATRON_BLOQUES_PENSAMIENTO =
-        java.util.regex.Pattern.compile("(?is)<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>");
+        java.util.regex.Pattern.compile("(?is)\\s*<\\s*(think|thinking)\\b[^>]*>.*?<\\s*/\\s*\\1\\s*>\\s*");
 
     private ParserRespuestasAI() {
     }
@@ -327,17 +327,10 @@ public final class ParserRespuestasAI {
         if (Normalizador.esVacio(texto)) {
             return "";
         }
-        java.util.regex.Matcher matcher = PATRON_BLOQUES_PENSAMIENTO.matcher(texto);
-        if (!matcher.find()) {
-            // Sin bloques <think>: no colapsar espacios. El replaceAll("\\s+", " ") global
-            // aplastaba la indentación/saltos de la evidencia y de los valores JSON, y dejaba
-            // muerto el parseo por líneas de texto plano (split("\n") sin saltos).
-            return texto.trim();
-        }
-        // Hay bloques que quitar: tras eliminarlos, sí se normalizan los espacios sueltos
-        // que quedan alrededor del hueco (replaceAll resetea el matcher internamente).
-        String limpio = matcher.replaceAll(" ");
-        return limpio.replaceAll("\\s+", " ").trim();
+        // Quita los bloques <think>…</think> consumiendo el whitespace adyacente (el patrón
+        // lleva \s* a ambos lados) y dejando un solo espacio. NO se colapsa el resto del
+        // contenido: así la evidencia/JSON de los modelos razonadores conserva su formato.
+        return PATRON_BLOQUES_PENSAMIENTO.matcher(texto).replaceAll(" ").trim();
     }
 
     private static ExtractorCamposRobusto.Campo resolverCampoRobusto(String campo) {
