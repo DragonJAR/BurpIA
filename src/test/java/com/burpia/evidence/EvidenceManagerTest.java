@@ -18,6 +18,7 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 public class EvidenceManagerTest {
@@ -150,6 +151,26 @@ public class EvidenceManagerTest {
         }
     }
     
+    @Test
+    void guardarHallazgoComoIssue_sinEvidencia_igualGuarda() {
+        when(mockHallazgo.obtenerEvidenciaHttp()).thenReturn(null);
+        when(mockHallazgo.obtenerEvidenciaId()).thenReturn(null);
+        when(mockHallazgo.obtenerSolicitudHttp()).thenReturn(null);
+
+        try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
+            mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any(), any()))
+                          .thenReturn(true);
+
+            EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
+            // Sin evidencia HTTP resoluble: debe enviarse igual (la evidencia es opcional).
+            assertTrue(evidenceManagerPro.guardarHallazgoComoIssue(mockApi, mockHallazgo, null));
+
+            mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
+                any(MontoyaApi.class), any(Hallazgo.class), isNull()));
+        }
+    }
+
     @Test
     void guardarHallazgoComoIssue_conBurpCommunity_deberiaRetornarFalso() {
         MontoyaApi mockApiCommunity = mock(MontoyaApi.class);

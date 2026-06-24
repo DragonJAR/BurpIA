@@ -91,11 +91,10 @@ public class EvidenceManager {
         }
         
         try {
+            // La evidencia HTTP es opcional: si no se resuelve, igual se crea el issue.
+            // Burp acepta issues sin request/response (crearAuditIssueDesdeHallazgo usa
+            // HttpRequestResponse[0]). Antes se rechazaba aquí y el hallazgo no llegaba.
             HttpRequestResponse evidencia = obtenerEvidenciaParaIssue(hallazgo, evidenciaId);
-            if (evidencia == null) {
-                GESTOR_LOGGING.warning(ORIGEN_LOG, I18nLogs.Evidence.HALLAZGO_SIN_EVIDENCIA());
-                return false;
-            }
             
             boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidencia);
             if (guardado) {
