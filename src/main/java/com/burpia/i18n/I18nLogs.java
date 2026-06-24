@@ -1241,10 +1241,6 @@ public final class I18nLogs {
             return tr("Hallazgo sin URL: no se puede crear AuditIssue");
         }
 
-        public static String HALLAZGO_SIN_EVIDENCIA() {
-            return tr("Hallazgo sin evidencia HTTP: no se puede crear AuditIssue");
-        }
-
         public static String AUDIT_ISSUE_CREADO() {
             return tr("AuditIssue creado para hallazgo: ");
         }

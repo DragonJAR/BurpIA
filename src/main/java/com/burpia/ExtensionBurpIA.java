@@ -3,8 +3,10 @@ package com.burpia;
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
+import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
 import com.burpia.analyzer.AnalizadorHTTP;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ConfiguracionAPIRef;
@@ -1181,7 +1183,33 @@ public class ExtensionBurpIA implements BurpExtension {
         if (solicitudRespuestaEvidencia != null) {
             return solicitudRespuestaEvidencia;
         }
-        return hallazgo != null ? hallazgo.obtenerEvidenciaHttp() : null;
+        if (hallazgo == null) {
+            return null;
+        }
+
+        // Re-resolución lazy de la evidencia almacenada (request+response completos).
+        HttpRequestResponse evidenciaResuelta = hallazgo.obtenerEvidenciaHttp();
+        if (evidenciaResuelta != null) {
+            return evidenciaResuelta;
+        }
+
+        // Sin evidencia completa, pero con request: sintetizamos un par con response
+        // vacía para que Burp ancle el issue al nodo del Site Map correspondiente.
+        // Sin este HttpRequestResponse, el issue se agrega pero NO aparece en
+        // Target → Site map → Issues (queda huérfano).
+        HttpRequest solicitud = hallazgo.obtenerSolicitudHttp();
+        if (solicitud != null) {
+            try {
+                HttpResponse respuestaVacia = HttpResponse.httpResponse(ByteArray.byteArray(new byte[0]));
+                return HttpRequestResponse.httpRequestResponse(solicitud, respuestaVacia);
+            } catch (Exception ignored) {
+                // Si la factoría de Montoya no está disponible o falla, mejor crear el
+                // issue sin evidencia (array vacío) que abortar el guardado completo.
+                return null;
+            }
+        }
+
+        return null;
     }
 
     public static boolean guardarAuditIssueDesdeHallazgo(
@@ -1194,7 +1222,7 @@ public class ExtensionBurpIA implements BurpExtension {
             return false;
         }
         if (!esBurpProfessional(api)) {
-            GestorLoggingUnificado.crearMinimal(null, null).info(
+            GestorLoggingUnificado.crearMinimal(null, null).warning(
                     "ExtensionBurpIA", I18nLogs.Evidence.ISSUES_SOLO_PRO());
             return false;
         }
@@ -1258,7 +1286,12 @@ public class ExtensionBurpIA implements BurpExtension {
         try {
             if (api.burpSuite() != null && api.burpSuite().version() != null) {
                 BurpSuiteEdition edicion = api.burpSuite().version().edition();
-                return edicion == BurpSuiteEdition.PROFESSIONAL;
+                if (edicion == BurpSuiteEdition.PROFESSIONAL) {
+                    return true;
+                }
+                // edition() puede devolver null o COMMUNITY: no cortocircuitamos con un
+                // return false aquí, porque version() podría no reflejar la edición real
+                // en algunos builds. Caemos al fallback de ai().isEnabled().
             }
         // Best-effort: edition probe — Burp CE/Community throws; fallback to defaults
         } catch (Exception ignored) {

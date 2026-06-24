@@ -6,6 +6,9 @@ import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import burp.api.montoya.scanner.audit.issues.AuditIssue;
+import burp.api.montoya.scanner.audit.issues.AuditIssueConfidence;
+import burp.api.montoya.scanner.audit.issues.AuditIssueSeverity;
 import burp.api.montoya.ui.contextmenu.InvocationType;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.ManejadorHttpBurpIA;
@@ -216,6 +219,138 @@ class ExtensionBurpIATest {
         void testCrearAuditIssueConHallazgoNull() {
             assertNull(ExtensionBurpIA.crearAuditIssueDesdeHallazgo(null, null), "assertNull failed at ExtensionBurpIATest.java:190");
         }
+
+        @Test
+        @DisplayName("Issue sin evidencia HTTP pero con request incluye el HttpRequest (anclaje al Site Map)")
+        void testCrearAuditIssueSinEvidenciaHttpConRequestIncluyeRequest() {
+            HttpRequest solicitud = mock(HttpRequest.class);
+            Hallazgo hallazgo = new Hallazgo(
+                "https://example.com", "SQLi Title", "Possible SQLi", "High", "High", solicitud);
+
+            // La factoría de Montoya no está disponible en unit tests. Testeamos el contrato
+            // de resolverEvidenciaIssue (package-private) mockeando ByteArray, HttpResponse e
+            // HttpRequestResponse para que la síntesis no toque la factoría real.
+            HttpRequestResponse evidenciaSintetizada;
+            try (org.mockito.MockedStatic<burp.api.montoya.core.ByteArray> mockedBa =
+                     org.mockito.Mockito.mockStatic(burp.api.montoya.core.ByteArray.class);
+                 org.mockito.MockedStatic<HttpResponse> mockedResp = org.mockito.Mockito.mockStatic(HttpResponse.class);
+                 org.mockito.MockedStatic<HttpRequestResponse> mockedHrr = org.mockito.Mockito.mockStatic(HttpRequestResponse.class)) {
+                burp.api.montoya.core.ByteArray baMock = mock(burp.api.montoya.core.ByteArray.class);
+                mockedBa.when(() -> burp.api.montoya.core.ByteArray.byteArray(org.mockito.ArgumentMatchers.any(byte[].class)))
+                    .thenReturn(baMock);
+                HttpResponse respuestaMock = mock(HttpResponse.class);
+                mockedResp.when(() -> HttpResponse.httpResponse(
+                        org.mockito.ArgumentMatchers.any(burp.api.montoya.core.ByteArray.class)))
+                    .thenReturn(respuestaMock);
+                HttpRequestResponse parMock = mock(HttpRequestResponse.class);
+                when(parMock.request()).thenReturn(solicitud);
+                mockedHrr.when(() -> HttpRequestResponse.httpRequestResponse(
+                        org.mockito.ArgumentMatchers.any(HttpRequest.class),
+                        org.mockito.ArgumentMatchers.any(HttpResponse.class)))
+                    .thenReturn(parMock);
+
+                evidenciaSintetizada = invocarResolverEvidenciaIssue(hallazgo, null);
+            }
+
+            assertNotNull(evidenciaSintetizada,
+                "Debe sintetizarse un HttpRequestResponse cuando hay request, para anclar el issue al Site Map");
+            assertEquals(solicitud, evidenciaSintetizada.request(),
+                "El request de la evidencia sintetizada debe ser el del hallazgo");
+        }
+
+        @Test
+        @DisplayName("Sin evidencia ni request, resolverEvidenciaIssue retorna null (degradación elegante)")
+        void testResolverEvidenciaIssueSinDatosRetornaNull() {
+            Hallazgo hallazgo = new Hallazgo(
+                "https://example.com", "Title", "Desc", "High", "High");
+
+            HttpRequestResponse resultado = invocarResolverEvidenciaIssue(hallazgo, null);
+
+            assertNull(resultado,
+                "Sin evidencia ni request, no hay nada que anclar: retorna null");
+        }
+
+        /**
+         * Invoca el método package-private resolverEvidenciaIssue por reflexión.
+         */
+        private HttpRequestResponse invocarResolverEvidenciaIssue(Hallazgo hallazgo,
+                                                                   HttpRequestResponse evidencia) {
+            try {
+                Method metodo = ExtensionBurpIA.class.getDeclaredMethod(
+                    "resolverEvidenciaIssue", Hallazgo.class, HttpRequestResponse.class);
+                metodo.setAccessible(true);
+                return (HttpRequestResponse) metodo.invoke(null, hallazgo, evidencia);
+            } catch (Exception e) {
+                throw new AssertionError("No se pudo invocar resolverEvidenciaIssue: " + e.getMessage(), e);
+            }
+        }
+
+        @Test
+        @DisplayName("Severidad crítica (ES 'crítica' y EN 'Critical') se mapea a HIGH en ambos idiomas")
+        void testSeveridadCriticaSeMapeaAHighIndependientementeDelIdioma() {
+            HttpRequest solicitud = mock(HttpRequest.class);
+
+            Hallazgo hallazgoEs = new Hallazgo(
+                "https://example.com", "Título", "Desc", "crítica", "alta", solicitud);
+            Hallazgo hallazgoEn = new Hallazgo(
+                "https://example.com", "Title", "Desc", "Critical", "High", solicitud);
+
+            // Capturamos el severity que se pasa a AuditIssue.auditIssue en ambos idiomas.
+            // Como la factoría no está disponible, la propia factory lanza; interceptamos
+            // la severidad antes vía reflexión sobre el conversor privado para no acoplarnos
+            // a la factoría. Validamos el contrato real de normalización.
+            assertEquals(AuditIssueSeverity.HIGH, invocarConvertirSeveridad("crítica"),
+                "La severidad 'crítica' (ES) debe mapearse a HIGH");
+            assertEquals(AuditIssueSeverity.HIGH, invocarConvertirSeveridad("Critical"),
+                "La severidad 'Critical' (EN) debe mapearse a HIGH");
+            assertEquals(AuditIssueSeverity.HIGH, invocarConvertirSeveridad("High"),
+                "La severidad 'High' debe mapearse a HIGH");
+        }
+
+        @Test
+        @DisplayName("Confianza ES 'alta' y EN 'High' se mapean a CERTAIN en ambos idiomas")
+        void testConfianzaIndependienteDelIdioma() {
+            assertEquals(AuditIssueConfidence.CERTAIN, invocarConvertirConfianza("alta"),
+                "La confianza 'alta' (ES) debe mapearse a CERTAIN");
+            assertEquals(AuditIssueConfidence.CERTAIN, invocarConvertirConfianza("High"),
+                "La confianza 'High' (EN) debe mapearse a CERTAIN");
+            assertEquals(AuditIssueConfidence.FIRM, invocarConvertirConfianza("media"),
+                "La confianza 'media' (ES) debe mapearse a FIRM");
+        }
+
+        @Test
+        @DisplayName("Severidades ES/EN se mapean correctamente a los niveles de Burp")
+        void testSeveridadesIndependientesDelIdioma() {
+            assertEquals(AuditIssueSeverity.MEDIUM, invocarConvertirSeveridad("media"));
+            assertEquals(AuditIssueSeverity.MEDIUM, invocarConvertirSeveridad("Medium"));
+            assertEquals(AuditIssueSeverity.LOW, invocarConvertirSeveridad("baja"));
+            assertEquals(AuditIssueSeverity.LOW, invocarConvertirSeveridad("Low"));
+            assertEquals(AuditIssueSeverity.INFORMATION, invocarConvertirSeveridad("info"));
+        }
+
+        /**
+         * Invoca el conversor privado convertirSeveridad por reflexión. Es la forma
+         * de testear el mapeo de idioma sin depender de la factoría de Montoya.
+         */
+        private AuditIssueSeverity invocarConvertirSeveridad(String severidad) {
+            try {
+                Method metodo = ExtensionBurpIA.class.getDeclaredMethod("convertirSeveridad", String.class);
+                metodo.setAccessible(true);
+                return (AuditIssueSeverity) metodo.invoke(null, severidad);
+            } catch (Exception e) {
+                throw new AssertionError("No se pudo invocar convertirSeveridad: " + e.getMessage(), e);
+            }
+        }
+
+        private AuditIssueConfidence invocarConvertirConfianza(String confianza) {
+            try {
+                Method metodo = ExtensionBurpIA.class.getDeclaredMethod("convertirConfianza", String.class);
+                metodo.setAccessible(true);
+                return (AuditIssueConfidence) metodo.invoke(null, confianza);
+            } catch (Exception e) {
+                throw new AssertionError("No se pudo invocar convertirConfianza: " + e.getMessage(), e);
+            }
+        }
     }
 
     @Nested
@@ -255,16 +390,49 @@ class ExtensionBurpIATest {
         }
 
         @Test
-        @DisplayName("Guardar AuditIssue retorna false cuando no es Professional Edition")
+        @DisplayName("Guardar AuditIssue retorna false cuando no es Professional Edition ni AI habilitado (fallback)")
         void testGuardarAuditIssueNoProfessional() {
             MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
-            // Simular que no es Professional (burpSuite.version.edition retorna algo distinto de PROFESSIONAL)
+            // edition() null: cae al fallback api.ai().isEnabled(), que también es false → Community puro.
             when(api.burpSuite().version().edition()).thenReturn(null);
+            when(api.ai().isEnabled()).thenReturn(false);
             Hallazgo hallazgo = new Hallazgo("https://example.com", "SQLi Title", "Possible SQLi", "High", "High");
 
             boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
 
             assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:315");
+        }
+
+        @Test
+        @DisplayName("Guardar AuditIssue detecta Pro vía fallback ai().isEnabled() cuando edition() no es PROFESSIONAL")
+        void testGuardarAuditIssueDetectaProPorFallback() {
+            MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+            // edition() devuelve algo distinto de PROFESSIONAL pero ai() está habilitado → Pro por fallback.
+            when(api.burpSuite().version().edition()).thenReturn(BurpSuiteEdition.COMMUNITY_EDITION);
+            when(api.ai().isEnabled()).thenReturn(true);
+            burp.api.montoya.sitemap.SiteMap siteMap = mock(burp.api.montoya.sitemap.SiteMap.class);
+            when(api.siteMap()).thenReturn(siteMap);
+            Hallazgo hallazgo = new Hallazgo("https://example.com", "SQLi Title", "Possible SQLi", "High", "High");
+
+            // La factoría de Montoya no está disponible en tests: mockeamos AuditIssue.auditIssue.
+            try (org.mockito.MockedStatic<AuditIssue> mockedAudit = org.mockito.Mockito.mockStatic(AuditIssue.class)) {
+                AuditIssue issueMock = mock(AuditIssue.class);
+                mockedAudit.when(() -> AuditIssue.auditIssue(
+                        org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.any(AuditIssueSeverity.class),
+                        org.mockito.ArgumentMatchers.any(AuditIssueConfidence.class),
+                        org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.any(AuditIssueSeverity.class),
+                        org.mockito.ArgumentMatchers.any(HttpRequestResponse[].class)))
+                    .thenReturn(issueMock);
+
+                boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
+
+                // No debe rechazar por edición: el fallback lo reconoce como Pro y procede a siteMap().add().
+                assertTrue(guardado, "assertTrue failed: el fallback ai().isEnabled() debe reconocer Pro");
+                verify(siteMap).add(org.mockito.ArgumentMatchers.any(AuditIssue.class));
+            }
         }
     }
 

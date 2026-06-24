@@ -1,10 +1,7 @@
 package com.burpia.evidence;
 
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
-import burp.api.montoya.http.message.requests.HttpRequest;
-import burp.api.montoya.http.message.responses.HttpResponse;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.model.Hallazgo;
@@ -86,16 +83,16 @@ public class EvidenceManager {
         }
         
         if (!esBurpProfessional) {
-            GESTOR_LOGGING.info(ORIGEN_LOG, I18nLogs.Evidence.ISSUES_SOLO_PRO());
+            GESTOR_LOGGING.warning(ORIGEN_LOG, I18nLogs.Evidence.ISSUES_SOLO_PRO());
             return false;
         }
-        
+
         try {
-            // La evidencia HTTP es opcional: si no se resuelve, igual se crea el issue.
-            // Burp acepta issues sin request/response (crearAuditIssueDesdeHallazgo usa
-            // HttpRequestResponse[0]). Antes se rechazaba aquí y el hallazgo no llegaba.
+            // Resolvemos la evidencia completa si existe (request+response); si no,
+            // ExtensionBurpIA.resolverEvidenciaIssue sintetiza un par desde el request
+            // para que Burp ancle el issue al nodo del Site Map correspondiente.
             HttpRequestResponse evidencia = obtenerEvidenciaParaIssue(hallazgo, evidenciaId);
-            
+
             boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidencia);
             if (guardado) {
                 GESTOR_LOGGING.info(ORIGEN_LOG, I18nLogs.Evidence.AUDIT_ISSUE_CREADO() + hallazgo.obtenerTitulo());
@@ -148,25 +145,19 @@ public class EvidenceManager {
         if (hallazgo == null) {
             return null;
         }
-        
+
+        // Re-resolución desde el almacén (cache LRU → disco). La síntesis final a
+        // partir del request cuando no hay evidencia completa la centraliza
+        // ExtensionBurpIA.resolverEvidenciaIssue (DRY), que es el punto terminal.
         HttpRequestResponse evidenciaDirecta = hallazgo.obtenerEvidenciaHttp();
         if (evidenciaDirecta != null) {
             return evidenciaDirecta;
         }
-        
+
         if (Normalizador.noEsVacio(evidenciaId)) {
-            HttpRequestResponse desdeAlmacen = obtenerEvidencia(evidenciaId);
-            if (desdeAlmacen != null) {
-                return desdeAlmacen;
-            }
+            return obtenerEvidencia(evidenciaId);
         }
-        
-        HttpRequest solicitudHttp = hallazgo.obtenerSolicitudHttp();
-        if (solicitudHttp != null) {
-            HttpResponse respuestaVacia = HttpResponse.httpResponse(ByteArray.byteArray(new byte[0]));
-            return HttpRequestResponse.httpRequestResponse(solicitudHttp, respuestaVacia);
-        }
-        
+
         return null;
     }
     
