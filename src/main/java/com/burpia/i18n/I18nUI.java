@@ -498,6 +498,16 @@ public final class I18nUI {
             return trf("Completado: %d hallazgos", "Completed: %d findings", cantidad);
         }
 
+        public static String MSG_COMPLETADO_CON_FALLOS(int hallazgos, int proveedoresFallidos) {
+            return trf("Completado: %d hallazgos · %d proveedores fallaron",
+                       "Completed: %d findings · %d providers failed", hallazgos, proveedoresFallidos);
+        }
+
+        public static String MSG_TODOS_PROVEEDORES_FALLARON(int proveedoresFallidos) {
+            return trf("Sin hallazgos · %d proveedores fallaron",
+                       "No findings · %d providers failed", proveedoresFallidos);
+        }
+
         public static String MSG_CANCELADO_USUARIO() {
             return tr("Cancelado por usuario", "Canceled by user");
         }

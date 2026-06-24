@@ -124,6 +124,47 @@ class GestorMultiProveedorTest {
 
 
     @Test
+    @DisplayName("Un proveedor interrumpido (sin cancelar) no aborta a los demás")
+    void testProveedorInterrumpidoNoAbortaLosDemas() throws Exception {
+        ConfiguracionAPI config = crearConfiguracionValida(PROVEEDOR_OPENAI, MODELO_OPENAI);
+        config.establecerProveedoresMultiConsulta(List.of(PROVEEDOR_OPENAI, "Z.ai", "minimax"));
+        config.establecerModeloParaProveedor("Z.ai", "glm-5");
+        config.establecerApiKeyParaProveedor("Z.ai", "z-key");
+        config.establecerUrlBaseParaProveedor("Z.ai", "https://api.z.ai/api/paas/v4");
+        config.establecerModeloParaProveedor("minimax", "minimax-m3");
+        config.establecerApiKeyParaProveedor("minimax", "mm-key");
+        config.establecerUrlBaseParaProveedor("minimax", "https://api.minimax.io/v1");
+
+        SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com/multi", "GET", "hash-multi-fail");
+        String jsonHallazgo = "{\"hallazgos\":[{\"titulo\":\"X\",\"descripcion\":\"d\",\"severidad\":\"Low\",\"confianza\":\"High\",\"evidencia\":\"e\"}]}";
+
+        try (MockedConstruction<AnalizadorHTTP> mocked = mockConstruction(
+                AnalizadorHTTP.class,
+                (mock, context) -> {
+                    if (context.getCount() == 2) {
+                        // Proveedor #2: interrumpido (timeout/backoff), NO cancelación del usuario.
+                        lenient().when(mock.llamarAPI(anyString())).thenThrow(new InterruptedException("timeout simulado"));
+                    } else {
+                        lenient().when(mock.llamarAPI(anyString())).thenReturn(jsonHallazgo);
+                    }
+                })) {
+            GestorMultiProveedor gestor = new GestorMultiProveedor(
+                solicitud, config, stdout, stderr, null,
+                () -> false,   // tareaCancelada = false: NO es cancelación del usuario
+                () -> false, null);
+
+            ResultadoAnalisisMultiple resultado = gestor.ejecutarAnalisisMultiProveedor();
+
+            assertEquals(3, mocked.constructed().size(),
+                "Los 3 proveedores deben intentarse; el #2 interrumpido no debe abortar el #3");
+            assertEquals(2, resultado.obtenerNumeroHallazgos(),
+                "Deben conservarse los hallazgos de los proveedores #1 y #3");
+            assertEquals(List.of("Z.ai"), resultado.obtenerProveedoresFallidos(),
+                "El proveedor #2 interrumpido debe reportarse como fallido, no abortar el run");
+        }
+    }
+
+    @Test
     @DisplayName("Aplica delay entre proveedores aunque el primero no produzca hallazgos")
     void testAplicaDelayEntreProveedoresConPrimerResultadoVacio() throws Exception {
         ConfiguracionAPI config = crearConfiguracionValida(PROVEEDOR_OPENAI, MODELO_OPENAI);

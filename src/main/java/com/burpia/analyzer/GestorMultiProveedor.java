@@ -143,12 +143,19 @@ public class GestorMultiProveedor {
                 todosHallazgos.addAll(hallazgosProveedor);
 
             } catch (InterruptedException ie) {
-                // Cancelación del usuario: restaurar flag y propagar para
-                // que el orquestador corte el resto de proveedores. Antes
-                // estaba siendo tragada por el catch Exception siguiente
-                // (M1 audit) → la cancelación no surtía efecto en multi-mode.
-                Thread.currentThread().interrupt();
-                throw ie;
+                // Solo abortar todo el multi-run si el usuario canceló de verdad.
+                // InterruptedException también surge de la propia llamada/backoff de
+                // ESTE proveedor (timeout que interrumpe el sleep, future.cancel, etc.).
+                // En ese caso NO debe matar a los demás: antes cualquier interrupción
+                // abortaba el run y el 3er proveedor nunca se ejecutaba. Se trata como
+                // fallo de este proveedor y se continúa, igual que cualquier otro error.
+                if (control.esCancelada()) {
+                    Thread.currentThread().interrupt();
+                    throw ie;
+                }
+                Thread.interrupted(); // limpiar el flag para no envenenar al siguiente proveedor
+                registrar(I18nLogs.MultiProveedor.PROVEEDOR_ERROR(proveedor, ie.getMessage()));
+                proveedoresFallidos.add(proveedor);
             } catch (Exception e) {
                 registrar(I18nLogs.MultiProveedor.PROVEEDOR_ERROR(proveedor, e.getMessage()));
                 proveedoresFallidos.add(proveedor);

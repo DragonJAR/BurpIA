@@ -546,8 +546,21 @@ public class TaskExecutionManager {
                 }
 
                 if (gestorTareas != null && Normalizador.noEsVacio(id)) {
-                    gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
-                            I18nUI.Tareas.MSG_COMPLETADO_HALLAZGOS(resultado != null ? resultado.obtenerNumeroHallazgos() : 0));
+                    int numHallazgos = resultado != null ? resultado.obtenerNumeroHallazgos() : 0;
+                    boolean huboFallos = resultado != null && resultado.huboErroresParciales();
+                    int numFallidos = huboFallos ? resultado.obtenerProveedoresFallidos().size() : 0;
+                    if (huboFallos && numHallazgos == 0) {
+                        // Algún proveedor falló y no hay hallazgos: NO es un análisis limpio.
+                        // Marcar ERROR para no confundir "todo falló" con "sin vulnerabilidades".
+                        gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR,
+                                I18nUI.Tareas.MSG_TODOS_PROVEEDORES_FALLARON(numFallidos));
+                    } else if (huboFallos) {
+                        gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
+                                I18nUI.Tareas.MSG_COMPLETADO_CON_FALLOS(numHallazgos, numFallidos));
+                    } else {
+                        gestorTareas.actualizarTarea(id, Tarea.ESTADO_COMPLETADO,
+                                I18nUI.Tareas.MSG_COMPLETADO_HALLAZGOS(numHallazgos));
+                    }
                 }
 
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Análisis completado: %s", url));
