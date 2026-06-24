@@ -48,14 +48,17 @@ public class ParseadorRespuestasAI {
         String respuestaOriginal = respuestaJson != null ? respuestaJson : "";
 
         try {
-            String respuestaNormalizada = ParserRespuestasAI.limpiarContenidoModelo(respuestaOriginal);
-            String jsonReparado = ReparadorJson.repararJson(respuestaNormalizada);
+            // No limpiar el envelope crudo aquí: extraerContenido ya quita los <think>
+            // del contenido del modelo, y repararJson tolera el envelope tal cual.
+            // Limpiarlo antes era trabajo doble y arriesgaba borrar estructura JSON si
+            // el contenido analizado traía literalmente etiquetas <think> (M1b).
+            String jsonReparado = ReparadorJson.repararJson(respuestaOriginal);
             String respuestaProcesada;
-            if (jsonReparado != null && !jsonReparado.equals(respuestaNormalizada)) {
+            if (jsonReparado != null && !jsonReparado.equals(respuestaOriginal)) {
                 rastrear("JSON reparado exitosamente");
                 respuestaProcesada = jsonReparado;
             } else {
-                respuestaProcesada = respuestaNormalizada;
+                respuestaProcesada = respuestaOriginal;
             }
 
             String proveedorNormalizado = proveedor != null ? proveedor : "";
@@ -64,15 +67,12 @@ public class ParseadorRespuestasAI {
                 contenido = ParserRespuestasAI.limpiarContenidoModelo(respuestaProcesada);
             }
 
-            // M9: extraer el contenido de comparación sobre la respuesta
-            // NORMALIZADA (sin <think>), no sobre la original cruda. Antes, el
-            // path de comparación re-extraía del original, lo que reintroducía
-            // el bloque de razonamiento: si ese <think> contenía seudohallazgos,
-            // debePreferirHallazgosOriginales podía reemplazar los hallazgos
-            // buenos por basura derivada del razonamiento del modelo.
-            String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaNormalizada, proveedorNormalizado);
+            // M9: contenido de comparación sobre el original (extraerContenido ya quita
+            // los <think> del contenido extraído). Si la reparación pierde hallazgos,
+            // debePreferirHallazgosOriginales conserva el parseo no estricto del original.
+            String contenidoOriginal = ParserRespuestasAI.extraerContenido(respuestaOriginal, proveedorNormalizado);
             if (Normalizador.esVacio(contenidoOriginal)) {
-                contenidoOriginal = respuestaNormalizada;
+                contenidoOriginal = respuestaOriginal;
             }
 
             rastrear(I18nLogs.trf("Contenido extraído - Longitud: %d caracteres", contenido.length()));
@@ -635,7 +635,10 @@ public class ParseadorRespuestasAI {
         if (valor == null) {
             return porDefecto != null ? porDefecto : "";
         }
-        String normalizado = Normalizador.normalizarTexto(valor);
+        // No re-desescapar: los valores llegan ya desescapados (Gson en la ruta
+        // principal; extraerCampoNoEstricto en el fallback). Volver a desescapar aquí
+        // corrompía evidencia con secuencias \n/\r/\t literales (rutas Windows, regex).
+        String normalizado = valor.trim();
         if (normalizado.isEmpty()) {
             return porDefecto != null ? porDefecto : "";
         }
@@ -652,7 +655,10 @@ public class ParseadorRespuestasAI {
 
     private List<Hallazgo> parsearTextoPlano(String contenido, SolicitudAnalisis solicitud) {
         List<Hallazgo> hallazgos = new ArrayList<>();
-        if (Normalizador.esVacio(contenido)) {
+        // Respuesta vacía explícita del modelo ("sin hallazgos") → 0 hallazgos.
+        // Antes la guarda estaba más abajo y nunca protegía: el bloque de acumulación
+        // ya había creado un "Hallazgo Plano" fantasma con el JSON crudo como descripción.
+        if (Normalizador.esVacio(contenido) || esRespuestaVaciaExplicita(contenido)) {
             return hallazgos;
         }
 
@@ -702,8 +708,7 @@ public class ParseadorRespuestasAI {
                 agregarHallazgoDesdeDescripcion(hallazgos, descripcion.toString(), severidad, confianza, solicitud);
             }
 
-            if (hallazgos.isEmpty() && contenido.trim().length() > 20
-                    && !esRespuestaVaciaExplicita(contenido)) {
+            if (hallazgos.isEmpty() && contenido.trim().length() > 20) {
                 String tituloContenido = contenido.trim();
                 if (tituloContenido.length() > MAX_LONGITUD_TITULO_RESUMIDO) {
                     tituloContenido = tituloContenido.substring(0, MAX_LONGITUD_TITULO_RESUMIDO) + "...";

@@ -82,45 +82,6 @@ class NormalizadorTest {
     }
 
     @Nested
-    @DisplayName("normalizarTextoConControlesEnEspacio")
-    class NormalizarTextoConControlesEnEspacio {
-        @ParameterizedTest
-        @NullAndEmptySource
-        @DisplayName("Maneja null y vacío consistentemente")
-        void manejaNullYVacio(String entrada) {
-            assertEquals("", Normalizador.normalizarTextoConControlesEnEspacio(entrada), "assertEquals failed at NormalizadorTest.java:86");
-        }
-
-        @Test
-        @DisplayName("Convierte controles en espacios")
-        void convierteControlesEnEspacios() {
-            assertEquals("linea1 linea2", Normalizador.normalizarTextoConControlesEnEspacio("linea1\\nlinea2"), "assertEquals failed at NormalizadorTest.java:92");
-            assertEquals("col1 col2", Normalizador.normalizarTextoConControlesEnEspacio("col1\\tcol2"), "assertEquals failed at NormalizadorTest.java:93");
-            assertEquals("texto1 texto2", Normalizador.normalizarTextoConControlesEnEspacio("texto1\\rtexto2"), "assertEquals failed at NormalizadorTest.java:94");
-        }
-
-        @Test
-        @DisplayName("Maneja secuencias mixtas con controles como espacio")
-        void manejaSecuenciasMixtas() {
-            String entrada = "Linea1\\nLinea2\\tcon\\\"comillas\\\" y \\\\barra";
-            String esperado = "Linea1 Linea2 con\"comillas\" y \\barra";
-            assertEquals(esperado, Normalizador.normalizarTextoConControlesEnEspacio(entrada), "assertEquals failed at NormalizadorTest.java:102");
-        }
-
-        @Test
-        @DisplayName("Recorta espacios después de conversión")
-        void recortaEspaciosDespuesConversion() {
-            assertEquals("a b", Normalizador.normalizarTextoConControlesEnEspacio("  a\\nb  "), "assertEquals failed at NormalizadorTest.java:108");
-        }
-
-        @Test
-        @DisplayName("Mantiene secuencias no reconocidas")
-        void mantieneSecuenciasNoReconocidas() {
-            assertEquals("test\\xvalor", Normalizador.normalizarTextoConControlesEnEspacio("test\\xvalor"), "assertEquals failed at NormalizadorTest.java:114");
-        }
-    }
-
-    @Nested
     @DisplayName("sanitizarApiKey")
     class SanitizarApiKey {
         @ParameterizedTest

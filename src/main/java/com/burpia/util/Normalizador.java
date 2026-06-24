@@ -37,24 +37,7 @@ public final class Normalizador {
      *         o cadena vacía si el input es {@code null}
      */
     public static String normalizarTexto(String valor) {
-        return desescaparSecuenciasBasicas(valor, false).trim();
-    }
-
-    /**
-     * Normaliza un texto convirtiendo caracteres de control en espacios y eliminando
-     * espacios en blanco al inicio y final.
-     * <p>
-     * A diferencia de {@link #normalizarTexto(String)}, este método convierte las
-     * secuencias de control ({@code \n}, {@code \r}, {@code \t}) en espacios en lugar
-     * de sus caracteres de control correspondientes.
-     * </p>
-     *
-     * @param valor el texto a normalizar, puede ser {@code null}
-     * @return el texto normalizado con controles convertidos a espacios y sin espacios extremos,
-     *         o cadena vacía si el input es {@code null}
-     */
-    public static String normalizarTextoConControlesEnEspacio(String valor) {
-        return desescaparSecuenciasBasicas(valor, true).trim();
+        return desescaparSecuenciasBasicas(valor).trim();
     }
 
     /**
@@ -194,10 +177,9 @@ public final class Normalizador {
      * </p>
      *
      * @param valor el texto con secuencias de escape
-     * @param controlesComoEspacio si es {@code true}, convierte \n, \r, \t en espacios
      * @return el texto con secuencias desescapadas
      */
-    private static String desescaparSecuenciasBasicas(String valor, boolean controlesComoEspacio) {
+    private static String desescaparSecuenciasBasicas(String valor) {
         if (valor == null) {
             return "";
         }
@@ -210,15 +192,15 @@ public final class Normalizador {
                 char siguiente = valor.charAt(indice + 1);
                 switch (siguiente) {
                     case 'n':
-                        sb.append(controlesComoEspacio ? ' ' : '\n');
+                        sb.append('\n');
                         indice += 2;
                         continue;
                     case 'r':
-                        sb.append(controlesComoEspacio ? ' ' : '\r');
+                        sb.append('\r');
                         indice += 2;
                         continue;
                     case 't':
-                        sb.append(controlesComoEspacio ? ' ' : '\t');
+                        sb.append('\t');
                         indice += 2;
                         continue;
                     case '"':

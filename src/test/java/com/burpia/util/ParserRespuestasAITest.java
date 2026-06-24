@@ -233,6 +233,16 @@ class ParserRespuestasAITest {
     }
 
     @Test
+    @DisplayName("M3: extraerArrayJsonInteligente ignora arrays de strings y toma el de hallazgos")
+    void testExtraerArrayInteligenteIgnoraArraysDeStrings() {
+        String contenido = "{\"tags\":[\"xss\",\"sqli\"],\"hallazgos\":[{\"titulo\":\"X\",\"descripcion\":\"d\"}]}";
+        JsonArray arr = ParserRespuestasAI.extraerArrayJsonInteligente(contenido, new Gson());
+        assertNotNull(arr, "Debe encontrar un array");
+        assertEquals(1, arr.size(), "Debe devolver el array de hallazgos (objetos), no el de tags (strings)");
+        assertTrue(arr.get(0).isJsonObject(), "El elemento debe ser un objeto hallazgo");
+    }
+
+    @Test
     @DisplayName("extraerHallazgosPorDelimitadores retorna null si no hay títulos")
     void testExtraerHallazgosPorDelimitadores_SinTitulos() {
         String sinTitulos = "{\"severidad\":\"High\", \"confianza\":\"Medium\"}";

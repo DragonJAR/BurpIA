@@ -115,10 +115,11 @@ public final class ParserRespuestasAI {
                 contenido = extraerContenidoGenerico(raiz);
             }
 
-            if (Normalizador.noEsVacio(contenido)) {
-                contenido = normalizarContenidoExtraido(contenido);
-            }
-
+            // No desescapar el contenido aquí: ya viene como JSON/texto válido tras
+            // el parseo del envelope (Gson desescapó un nivel). El desescape por-campo
+            // ocurre al final en agregarHallazgoNormalizado. Hacerlo aquí rompía el JSON
+            // cuyos valores llevan comillas (evidencia HTML/código): \" pasaba a " y el
+            // string cerraba antes de tiempo.
             return limpiarContenidoModelo(contenido != null ? contenido : "");
 
         } catch (Exception e) {
@@ -326,7 +327,16 @@ public final class ParserRespuestasAI {
         if (Normalizador.esVacio(texto)) {
             return "";
         }
-        String limpio = PATRON_BLOQUES_PENSAMIENTO.matcher(texto).replaceAll(" ");
+        java.util.regex.Matcher matcher = PATRON_BLOQUES_PENSAMIENTO.matcher(texto);
+        if (!matcher.find()) {
+            // Sin bloques <think>: no colapsar espacios. El replaceAll("\\s+", " ") global
+            // aplastaba la indentación/saltos de la evidencia y de los valores JSON, y dejaba
+            // muerto el parseo por líneas de texto plano (split("\n") sin saltos).
+            return texto.trim();
+        }
+        // Hay bloques que quitar: tras eliminarlos, sí se normalizan los espacios sueltos
+        // que quedan alrededor del hueco (replaceAll resetea el matcher internamente).
+        String limpio = matcher.replaceAll(" ");
         return limpio.replaceAll("\\s+", " ").trim();
     }
 
@@ -545,10 +555,6 @@ public final class ParserRespuestasAI {
         destino.append(texto);
     }
 
-    private static String normalizarContenidoExtraido(String valor) {
-        return Normalizador.normalizarTextoConControlesEnEspacio(valor);
-    }
-
     /**
      * Encuentra la posición del carácter que cierra un array JSON,
      * contando corchetes anidados y manejando strings correctamente.
@@ -655,9 +661,16 @@ public final class ParserRespuestasAI {
                 return elemento.getAsJsonArray();
             }
 
-            // Si es un objeto, buscar el primer array dentro
+            // Si es un objeto: preferir las claves de hallazgos conocidas; si no, el
+            // primer array de objetos (M3: no devolver arrays ajenos como "tags").
             if (elemento.isJsonObject()) {
-                return buscarPrimerArrayEnObjeto(elemento.getAsJsonObject());
+                JsonObject objeto = elemento.getAsJsonObject();
+                JsonElement campoHallazgos =
+                    JsonParserUtil.extraerPrimerCampoExistente(objeto, JsonParserUtil.CAMPOS_HALLAZGOS);
+                if (campoHallazgos != null && campoHallazgos.isJsonArray()) {
+                    return campoHallazgos.getAsJsonArray();
+                }
+                return buscarPrimerArrayEnObjeto(objeto);
             }
         } catch (Exception e) {
             GESTOR_LOGGING.warning("ParserRespuestasAI",
@@ -672,7 +685,7 @@ public final class ParserRespuestasAI {
     private static JsonArray buscarPrimerArrayEnObjeto(JsonObject objeto) {
         for (String key : objeto.keySet()) {
             JsonElement elemento = objeto.get(key);
-            if (elemento != null && elemento.isJsonArray()) {
+            if (elemento != null && elemento.isJsonArray() && esArrayDeObjetos(elemento.getAsJsonArray())) {
                 return elemento.getAsJsonArray();
             }
             if (elemento != null && elemento.isJsonObject()) {
@@ -683,6 +696,12 @@ public final class ParserRespuestasAI {
             }
         }
         return null;
+    }
+
+    /** Un array de hallazgos contiene objetos; ignora arrays de strings (p.ej. "tags")
+     *  que harían devolver el array equivocado y perder los hallazgos reales. */
+    private static boolean esArrayDeObjetos(JsonArray arr) {
+        return arr.size() > 0 && arr.get(0) != null && arr.get(0).isJsonObject();
     }
 
     /**
