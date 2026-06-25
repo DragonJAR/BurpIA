@@ -456,9 +456,9 @@ public class PestaniaPrincipal extends JPanel {
     /**
      * Establece el manejador para enviar hallazgos al agente.
      *
-     * @param manejador El predicado que recibe el hallazgo y devuelve true si se envió exitosamente
+     * @param manejador La función que recibe el hallazgo y devuelve el resultado de la inyección
      */
-    public void establecerManejadorEnviarAAgente(Predicate<Hallazgo> manejador) {
+    public void establecerManejadorEnviarAAgente(Function<Hallazgo, PanelAgente.ResultadoInyeccion> manejador) {
         panelHallazgos.establecerManejadorEnviarAAgente(manejador);
     }
 

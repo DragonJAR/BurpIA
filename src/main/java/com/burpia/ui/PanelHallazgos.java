@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -75,7 +76,7 @@ public class PanelHallazgos extends JPanel {
     private final AtomicBoolean actualizandoEstadoAutoIssues = new AtomicBoolean(false);
 
     private com.burpia.config.ConfiguracionAPI config;
-    private Predicate<Hallazgo> manejadorEnviarAAgente;
+    private Function<Hallazgo, PanelAgente.ResultadoInyeccion> manejadorEnviarAAgente;
     private Predicate<Hallazgo> manejadorGuardarIssue;
     private Runnable manejadorCambioAlertasEnviarA;
     private Runnable manejadorCambioFiltros;
@@ -803,14 +804,15 @@ public class PanelHallazgos extends JPanel {
                 if (hallazgo == null) {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_HALLAZGO_NO_DISPONIBLE());
                 }
-                boolean enviado = manejadorEnviarAAgente.test(hallazgo);
-                if (!enviado) {
+                PanelAgente.ResultadoInyeccion resultado = manejadorEnviarAAgente.apply(hallazgo);
+                if (resultado == PanelAgente.ResultadoInyeccion.DESCARTADO) {
                     throw new IllegalStateException(I18nUI.Hallazgos.ERROR_ENVIO_AGENTE(nombreAgente));
                 }
                 String url = resolverUrlReferencia(hallazgo);
-                return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
-                    url + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_AGENTE(nombreAgente)
-                );
+                String sufijo = resultado == PanelAgente.ResultadoInyeccion.ENCOLADO
+                    ? I18nUI.Hallazgos.SUFIJO_ENCOLADO_AGENTE(nombreAgente)
+                    : I18nUI.Hallazgos.SUFIJO_ENVIADO_AGENTE(nombreAgente);
+                return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(url + " " + sufijo);
             }
         );
     }
@@ -824,7 +826,10 @@ public class PanelHallazgos extends JPanel {
             true,
             false,
             (solicitud, hallazgo) -> {
-                String nombreTab = "BurpIA-" + (hallazgo != null ? hallazgo.obtenerSeveridad() : I18nUI.General.HALLAZGO_GENERICO());
+                String severidad = hallazgo != null ? hallazgo.obtenerSeveridad() : null;
+                String nombreTab = "BurpIA-" + (Normalizador.noEsVacio(severidad)
+                    ? severidad
+                    : I18nUI.General.HALLAZGO_GENERICO());
                 api.repeater().sendToRepeater(solicitud, nombreTab);
                 return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(solicitud.url());
             }
@@ -954,6 +959,13 @@ public class PanelHallazgos extends JPanel {
         try {
             return manejadorGuardarIssue.test(hallazgo);
         } catch (RuntimeException ex) {
+            // Auto-guardado de issues: no interrumpimos el flujo, pero dejamos
+            // constancia del fallo (y del stack) para que no quede silenciado.
+            if (api != null && api.logging() != null) {
+                api.logging().logToError(
+                    I18nLogs.Evidence.AUDIT_ISSUES_AUTO_GUARDADO_INCOMPLETO(0, 1),
+                    ex);
+            }
             return false;
         }
     }
@@ -1471,7 +1483,7 @@ public class PanelHallazgos extends JPanel {
         }
     }
 
-    public void establecerManejadorEnviarAAgente(Predicate<Hallazgo> manejador) {
+    public void establecerManejadorEnviarAAgente(Function<Hallazgo, PanelAgente.ResultadoInyeccion> manejador) {
         this.manejadorEnviarAAgente = manejador;
     }
 

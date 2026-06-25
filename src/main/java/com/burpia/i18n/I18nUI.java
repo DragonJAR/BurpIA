@@ -1042,6 +1042,11 @@ public final class I18nUI {
             return trf("(enviado a %s)", "(sent to %s)", agente);
         }
 
+        public static String SUFIJO_ENCOLADO_AGENTE(String agente) {
+            return trf("(encolado para %s: la terminal aún no está lista)",
+                       "(queued for %s: terminal not ready yet)", agente);
+        }
+
         public static String ERROR_ENVIO_AGENTE(String agente) {
             return trf("No se pudo enviar a %s", "Could not send to %s", agente);
         }

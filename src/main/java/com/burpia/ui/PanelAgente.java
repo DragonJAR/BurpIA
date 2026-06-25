@@ -36,6 +36,21 @@ import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PanelAgente extends JPanel {
 
+    /**
+     * Resultado de una inyección de comando en la terminal del agente.
+     * Permite distinguir un envío inmediato de uno diferido (encolado) para
+     * que los callers no reporten un éxito falso cuando la terminal aún no
+     * está lista.
+     */
+    public enum ResultadoInyeccion {
+        /** El texto se escribió en la terminal de inmediato. */
+        INYECTADO,
+        /** La terminal no estaba lista; el comando quedó encolado y se enviará cuando esté disponible. */
+        ENCOLADO,
+        /** El texto era vacío/nulo y se descartó sin llegar a la terminal. */
+        DESCARTADO
+    }
+
     private static final String ORIGEN_LOG = "PanelAgente";
     private final GestorLoggingUnificado gestorLogging;
 
@@ -373,20 +388,24 @@ public class PanelAgente extends JPanel {
      *
      * @param texto   El texto/comando a inyectar en la terminal
      * @param delayMs Milisegundos de espera antes de la inyección (0 para inyección inmediata)
+     * @return Resultado de la inyección: {@link ResultadoInyeccion#INYECTADO} si se escribió
+     *         de inmediato, {@link ResultadoInyeccion#ENCOLADO} si la terminal no estaba lista,
+     *         o {@link ResultadoInyeccion#DESCARTADO} si el texto era vacío.
      */
-    public void inyectarComando(String texto, int delayMs) {
+    public ResultadoInyeccion inyectarComando(String texto, int delayMs) {
         if (Normalizador.esVacio(texto)) {
-            return;
+            return ResultadoInyeccion.DESCARTADO;
         }
 
         asegurarConsolaIniciada();
         if (!estaPanelListoParaInyeccion()) {
             encolarInyeccionPendiente(texto, delayMs);
             inicializacionPendiente.set(true);
-            return;
+            return ResultadoInyeccion.ENCOLADO;
         }
 
         ejecutarInyeccionConOpciones(texto, delayMs);
+        return ResultadoInyeccion.INYECTADO;
     }
 
     /**

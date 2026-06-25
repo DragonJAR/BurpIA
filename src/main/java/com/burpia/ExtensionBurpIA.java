@@ -41,7 +41,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
@@ -227,11 +227,11 @@ public class ExtensionBurpIA implements BurpExtension {
             (Frame) SwingUtilities.getWindowAncestor(pestaniaPrincipal) : null;
     }
 
-    private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta,
+    private PanelAgente.ResultadoInyeccion enviarAAgente(HttpRequestResponse solicitudRespuesta,
             FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         if (solicitudRespuesta == null) {
             registrarError(I18nLogs.Agente.ERROR_SOLICITUD_NULA());
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
         try {
             registrarInicioContextualDetallado(
@@ -244,7 +244,7 @@ public class ExtensionBurpIA implements BurpExtension {
             String prompt = obtenerPromptAgenteDisponible();
             registrarPromptAgenteDetallado(prompt);
             if (prompt == null) {
-                return false;
+                return PanelAgente.ResultadoInyeccion.DESCARTADO;
             }
             boolean usaTokensHttp = contieneAlgunToken(prompt, TOKEN_REQUEST, TOKEN_RESPONSE);
             rastrearContextual(I18nLogs.ContextoMenu.PROMPT_USA_TOKENS_HTTP(usaTokensHttp));
@@ -258,16 +258,16 @@ public class ExtensionBurpIA implements BurpExtension {
                 contieneToken(prompt, TOKEN_RESPONSE) && !tieneResponseDisponible(solicitudRespuesta) ? 1 : 0
             );
             rastrearContextual(I18nLogs.ContextoMenu.LONGITUD_PAYLOAD_AGENTE(inputFinal.length()));
-            boolean enviado = enviarPayloadAgente(inputFinal);
-            rastrearContextual(I18nLogs.ContextoMenu.RESULTADO_INYECCION_AGENTE(enviado));
-            return enviado;
+            PanelAgente.ResultadoInyeccion resultado = enviarPayloadAgente(inputFinal);
+            rastrearContextual(I18nLogs.ContextoMenu.RESULTADO_INYECCION_AGENTE(resultado));
+            return resultado;
         } catch (Exception e) {
             registrarError(I18nLogs.Agente.ERROR_ENVIO(e.getMessage()));
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
     }
 
-    private boolean enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta,
+    private PanelAgente.ResultadoInyeccion enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta,
             FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
         try {
             registrarInicioContextualDetallado(
@@ -281,17 +281,17 @@ public class ExtensionBurpIA implements BurpExtension {
             String prompt = obtenerPromptAgenteDisponible();
             registrarPromptAgenteDetallado(prompt);
             if (prompt == null) {
-                return false;
+                return PanelAgente.ResultadoInyeccion.DESCARTADO;
             }
 
             List<HttpRequestResponse> solicitudesValidas = FlowAnalysisConstraints.filtrarSolicitudesValidas(solicitudesRespuesta);
             if (!FlowAnalysisConstraints.tieneMinimoValido(solicitudesRespuesta)) {
                 registrarError(I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS());
-                return false;
+                return PanelAgente.ResultadoInyeccion.DESCARTADO;
             }
             if (FlowAnalysisConstraints.excedeMaximoValido(solicitudesRespuesta)) {
                 registrarError(I18nUI.Contexto.MSG_FLUJO_MAXIMO_PETICIONES(FlowAnalysisConstraints.MAXIMO_PETICIONES_FLUJO));
-                return false;
+                return PanelAgente.ResultadoInyeccion.DESCARTADO;
             }
 
             boolean usaTokensHttp = ProcesadorPromptHTTP.contieneMarcadoresHttp(prompt);
@@ -304,26 +304,26 @@ public class ExtensionBurpIA implements BurpExtension {
                 contarResponsesOmitidasFlujo(prompt, solicitudesValidas)
             );
             rastrearContextual(I18nLogs.ContextoMenu.LONGITUD_PAYLOAD_AGENTE(inputFinal.length()));
-            boolean enviado = enviarPayloadAgente(inputFinal);
-            rastrearContextual(I18nLogs.ContextoMenu.RESULTADO_INYECCION_AGENTE(enviado));
-            return enviado;
+            PanelAgente.ResultadoInyeccion resultado = enviarPayloadAgente(inputFinal);
+            rastrearContextual(I18nLogs.ContextoMenu.RESULTADO_INYECCION_AGENTE(resultado));
+            return resultado;
         } catch (Exception e) {
             registrarError(I18nLogs.Agente.ERROR_FLUJO(e.getMessage()));
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
     }
 
     // PMD no rastrea que this::enviarAAgente (línea 215) resuelve a esta
-    // sobrecarga de 1 arg vía Predicate<HttpRequestResponse>; es un falso positivo.
+    // sobrecarga de 1 arg vía PredicateAgenteSolicitud; es un falso positivo.
     @SuppressWarnings("PMD.UnusedPrivateMethod")
-    private boolean enviarAAgente(HttpRequestResponse solicitudRespuesta) {
+    private PanelAgente.ResultadoInyeccion enviarAAgente(HttpRequestResponse solicitudRespuesta) {
         return enviarAAgente(solicitudRespuesta, null);
     }
 
     // PMD no rastrea que this::enviarFlujoAAgente (línea 216) resuelve a esta
-    // sobrecarga de 1 arg vía Predicate<List<HttpRequestResponse>>; es un falso positivo.
+    // sobrecarga de 1 arg vía PredicateAgenteFlujo; es un falso positivo.
     @SuppressWarnings("PMD.UnusedPrivateMethod")
-    private boolean enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta) {
+    private PanelAgente.ResultadoInyeccion enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta) {
         return enviarFlujoAAgente(solicitudesRespuesta, null);
     }
 
@@ -341,23 +341,23 @@ public class ExtensionBurpIA implements BurpExtension {
         return Normalizador.noEsVacio(tipoAgenteOperativo) ? tipoAgenteOperativo : cfg.obtenerTipoAgente();
     }
 
-    private boolean enviarHallazgoAAgente(Hallazgo hallazgo) {
+    private PanelAgente.ResultadoInyeccion enviarHallazgoAAgente(Hallazgo hallazgo) {
         if (configRef == null || configRef.obtener() == null) {
             registrarError(I18nLogs.Agente.ERROR_CONFIGURACION_NULA());
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
         if (!hayAgenteOperativoDisponible()) {
             registrar(I18nLogs.Agente.ERROR_DESHABILITADO());
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
         if (hallazgo == null) {
             registrarError(I18nLogs.Agente.ERROR_HALLAZGO_NULO());
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
         try {
             String prompt = obtenerPromptAgenteDisponible();
             if (prompt == null) {
-                return false;
+                return PanelAgente.ResultadoInyeccion.DESCARTADO;
             }
 
             HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
@@ -388,36 +388,34 @@ public class ExtensionBurpIA implements BurpExtension {
             return enviarPayloadAgente(inputFinal);
         } catch (Exception e) {
             registrarError(I18nLogs.Agente.ERROR_HALLAZGO_ENVIO(e.getMessage()));
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
     }
 
-    private boolean enfocarEInyectarEnAgente(PanelAgente panelAgente, String inputFinal) {
+    private PanelAgente.ResultadoInyeccion enfocarEInyectarEnAgente(PanelAgente panelAgente, String inputFinal) {
         if (panelAgente == null || pestaniaPrincipal == null) {
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
         if (SwingUtilities.isEventDispatchThread()) {
             pestaniaPrincipal.seleccionarPestaniaAgente();
-            panelAgente.inyectarComando(inputFinal, 0);
-            return true;
+            return panelAgente.inyectarComando(inputFinal, 0);
         }
-        AtomicBoolean enviado = new AtomicBoolean(false);
+        AtomicReference<PanelAgente.ResultadoInyeccion> resultado = new AtomicReference<>(PanelAgente.ResultadoInyeccion.DESCARTADO);
         try {
             SwingUtilities.invokeAndWait(() -> {
                 if (pestaniaPrincipal == null) {
                     return;
                 }
                 pestaniaPrincipal.seleccionarPestaniaAgente();
-                panelAgente.inyectarComando(inputFinal, 0);
-                enviado.set(true);
+                resultado.set(panelAgente.inyectarComando(inputFinal, 0));
             });
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         } catch (InvocationTargetException e) {
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
-        return enviado.get();
+        return resultado.get();
     }
 
     private String aplicarTokensPromptAgente(String prompt, String request, String response, String idioma) {
@@ -560,10 +558,10 @@ public class ExtensionBurpIA implements BurpExtension {
         return serializadas;
     }
 
-    private boolean enviarPayloadAgente(String inputFinal) {
+    private PanelAgente.ResultadoInyeccion enviarPayloadAgente(String inputFinal) {
         PanelAgente panelAgente = obtenerPanelAgenteDisponible();
         if (panelAgente == null) {
-            return false;
+            return PanelAgente.ResultadoInyeccion.DESCARTADO;
         }
         return enfocarEInyectarEnAgente(panelAgente, inputFinal);
     }

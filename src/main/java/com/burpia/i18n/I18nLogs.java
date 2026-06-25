@@ -767,11 +767,19 @@ public final class I18nLogs {
             );
         }
 
-        public static String RESULTADO_INYECCION_AGENTE(boolean encolado) {
+        public static String RESULTADO_INYECCION_AGENTE(com.burpia.ui.PanelAgente.ResultadoInyeccion resultado) {
+            String etiqueta;
+            if (resultado == com.burpia.ui.PanelAgente.ResultadoInyeccion.INYECTADO) {
+                etiqueta = I18nUI.tr("inyectado", "injected");
+            } else if (resultado == com.burpia.ui.PanelAgente.ResultadoInyeccion.ENCOLADO) {
+                etiqueta = I18nUI.tr("encolado", "queued");
+            } else {
+                etiqueta = I18nUI.tr("fallido", "failed");
+            }
             return I18nUI.trf(
                 "Resultado de inyección a agente: %s",
                 "Agent injection result: %s",
-                encolado ? I18nUI.tr("encolado", "queued") : I18nUI.tr("fallido", "failed")
+                etiqueta
             );
         }
 

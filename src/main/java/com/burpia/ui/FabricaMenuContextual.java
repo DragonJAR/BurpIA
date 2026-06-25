@@ -48,11 +48,11 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
 
     public interface PredicateAgenteSolicitud {
-        boolean enviar(HttpRequestResponse solicitudRespuesta, ContextoInvocacion contextoInvocacion);
+        PanelAgente.ResultadoInyeccion enviar(HttpRequestResponse solicitudRespuesta, ContextoInvocacion contextoInvocacion);
     }
 
     public interface PredicateAgenteFlujo {
-        boolean enviar(List<HttpRequestResponse> solicitudesRespuesta, ContextoInvocacion contextoInvocacion);
+        PanelAgente.ResultadoInyeccion enviar(List<HttpRequestResponse> solicitudesRespuesta, ContextoInvocacion contextoInvocacion);
     }
 
     public FabricaMenuContextual(MontoyaApi api,
@@ -95,9 +95,13 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             config,
             manejadorAgenteSolicitud != null
                 ? (solicitudRespuesta, contextoInvocacion) -> manejadorAgenteSolicitud.test(solicitudRespuesta)
+                    ? PanelAgente.ResultadoInyeccion.INYECTADO
+                    : PanelAgente.ResultadoInyeccion.DESCARTADO
                 : null,
             manejadorAgenteFlujo != null
                 ? (solicitudesRespuesta, contextoInvocacion) -> manejadorAgenteFlujo.test(solicitudesRespuesta)
+                    ? PanelAgente.ResultadoInyeccion.INYECTADO
+                    : PanelAgente.ResultadoInyeccion.DESCARTADO
                 : null,
             manejadorCambioAlertasEnviarA,
             parentFrame
@@ -259,8 +263,8 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 continue;
             }
             try {
-                boolean enviada = manejadorAgenteSolicitud.enviar(rr, contextoInvocacion);
-                if (enviada) {
+                PanelAgente.ResultadoInyeccion resultado = manejadorAgenteSolicitud.enviar(rr, contextoInvocacion);
+                if (resultado != PanelAgente.ResultadoInyeccion.DESCARTADO) {
                     exitosas++;
                 } else {
                     fallidas++;
@@ -325,7 +329,8 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
         boolean enviada;
         try {
-            enviada = manejadorAgenteFlujo.enviar(new ArrayList<>(seleccion), contextoInvocacion);
+            PanelAgente.ResultadoInyeccion resultado = manejadorAgenteFlujo.enviar(new ArrayList<>(seleccion), contextoInvocacion);
+            enviada = resultado != PanelAgente.ResultadoInyeccion.DESCARTADO;
         } catch (Exception ex) {
             api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()));
             enviada = false;

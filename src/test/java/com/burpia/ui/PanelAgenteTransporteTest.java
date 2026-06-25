@@ -402,6 +402,60 @@ class PanelAgenteTransporteTest {
     }
 
     @Test
+    @DisplayName("inyectarComando devuelve ENCOLADO cuando la terminal no está lista (no falso positivo)")
+    void testInyectarComandoDevuelveEncoladoCuandoTerminalNoLista() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+        config.establecerAgentePreflightPrompt("");
+        config.establecerAgenteDelay(0);
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), "droid-test");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            TtyConnector connector = mock(TtyConnector.class);
+            when(connector.isConnected()).thenReturn(true);
+            inyectarTtyConnector(panel, connector);
+            marcarConsolaArrancando(panel, true);
+
+            // La terminal está arrancando: la inyección debe encolarse y devolver ENCOLADO,
+            // no INYECTADO. Esto evita el falso positivo de "enviado" reportado en F1.
+            PanelAgente.ResultadoInyeccion resultado = panel.inyectarComando("PAYLOAD_PENDIENTE", 0);
+
+            assertEquals(PanelAgente.ResultadoInyeccion.ENCOLADO, resultado,
+                "Cuando la terminal no está lista, inyectarComando debe devolver ENCOLADO (no INYECTADO)");
+            assertEquals(1, contarInyeccionesPendientes(panel),
+                "El payload debe quedar en la cola de pendientes");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
+    @DisplayName("inyectarComando devuelve DESCARTADO cuando el texto es vacío")
+    void testInyectarComandoDevuelveDescartadoCuandoTextoVacio() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
+        config.establecerAgentePreflightPrompt("");
+        config.establecerAgenteDelay(0);
+        config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), "droid-test");
+
+        PanelAgente panel = crearPanelSinConsola(config);
+        try {
+            PanelAgente.ResultadoInyeccion resultadoNulo = panel.inyectarComando(null, 0);
+            PanelAgente.ResultadoInyeccion resultadoVacio = panel.inyectarComando("   ", 0);
+
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultadoNulo,
+                "Texto null debe descartarse");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultadoVacio,
+                "Texto vacío/blanco debe descartarse");
+            assertEquals(0, contarInyeccionesPendientes(panel),
+                "Nada debe encolarse cuando el texto se descarta");
+        } finally {
+            panel.destruir();
+        }
+    }
+
+    @Test
     @DisplayName("Arranque normaliza rutas de binario con tilde y comillas")
     void testArranqueNormalizaRutaBinarioConTildeYComillas() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();

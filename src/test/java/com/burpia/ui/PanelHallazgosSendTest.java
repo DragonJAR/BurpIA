@@ -383,7 +383,7 @@ class PanelHallazgosSendTest {
         panel.establecerManejadorEnviarAAgente(h -> {
             enviados.incrementAndGet();
             latch.countDown();
-            return true;
+            return PanelAgente.ResultadoInyeccion.INYECTADO;
         });
 
         invocarMetodoPrivado(panel, "enviarAAgente", new int[]{0, 1});
@@ -411,13 +411,43 @@ class PanelHallazgosSendTest {
             assertNotNull(h, "El hallazgo no debe ser null");
             assertEquals("https://example.com/test", h.obtenerUrl(), "assertEquals failed at PanelHallazgosSendTest.java:184");
             latch.countDown();
-            return true;
+            return PanelAgente.ResultadoInyeccion.INYECTADO;
         });
 
         invocarMetodoPrivado(panel, "enviarAAgente", new int[]{0});
 
         assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS), "assertTrue failed at PanelHallazgosSendTest.java:191");
         assertEquals(1, enviados.get(), "assertEquals failed at PanelHallazgosSendTest.java:192");
+    }
+
+    @Test
+    @DisplayName("Enviar a agente con terminal no lista (ENCOLADO) no reporta fallo")
+    void testEnviarAAgenteEncoladoNoReportaFallo() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerAgenteHabilitado(true);
+        panel.establecerConfiguracion(config);
+
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/queued");
+        agregarHallazgoConRequest(panel, request, "https://example.com/queued");
+        flushEdt();
+
+        AtomicInteger invocaciones = new AtomicInteger(0);
+        CountDownLatch latch = new CountDownLatch(1);
+        // El manejador devuelve ENCOLADO: la terminal del agente aún no está lista.
+        // El handler debe tratarlo como aceptado (no lanzar IllegalStateException),
+        // para no reportar un fallo falso cuando el payload quedó encolado.
+        panel.establecerManejadorEnviarAAgente(h -> {
+            invocaciones.incrementAndGet();
+            latch.countDown();
+            return PanelAgente.ResultadoInyeccion.ENCOLADO;
+        });
+
+        invocarMetodoPrivado(panel, "enviarAAgente", new int[]{0});
+
+        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
+            "El manejador debe invocarse aunque la terminal no esté lista");
+        assertEquals(1, invocaciones.get(), "El hallazgo debe procesarse una sola vez");
     }
 
     @Test
@@ -432,7 +462,7 @@ class PanelHallazgosSendTest {
         when(config.obtenerTipoAgenteOperativo()).thenReturn("OPEN_CODE");
         when(config.obtenerTipoAgente()).thenReturn("FACTORY_DROID");
         panel.establecerConfiguracion(config);
-        panel.establecerManejadorEnviarAAgente(h -> true);
+        panel.establecerManejadorEnviarAAgente(h -> PanelAgente.ResultadoInyeccion.INYECTADO);
 
         HttpRequest request = mock(HttpRequest.class);
         when(request.url()).thenReturn("https://example.com/menu");

@@ -288,17 +288,8 @@ class ExtensionBurpIATest {
         @Test
         @DisplayName("Severidad crítica (ES 'crítica' y EN 'Critical') se mapea a HIGH en ambos idiomas")
         void testSeveridadCriticaSeMapeaAHighIndependientementeDelIdioma() {
-            HttpRequest solicitud = mock(HttpRequest.class);
-
-            Hallazgo hallazgoEs = new Hallazgo(
-                "https://example.com", "Título", "Desc", "crítica", "alta", solicitud);
-            Hallazgo hallazgoEn = new Hallazgo(
-                "https://example.com", "Title", "Desc", "Critical", "High", solicitud);
-
-            // Capturamos el severity que se pasa a AuditIssue.auditIssue en ambos idiomas.
-            // Como la factoría no está disponible, la propia factory lanza; interceptamos
-            // la severidad antes vía reflexión sobre el conversor privado para no acoplarnos
-            // a la factoría. Validamos el contrato real de normalización.
+            // Validamos el contrato real de normalización del conversor privado
+            // (vía reflexión), sin acoplarnos a la factoría de Montoya ni a Hallazgo.
             assertEquals(AuditIssueSeverity.HIGH, invocarConvertirSeveridad("crítica"),
                 "La severidad 'crítica' (ES) debe mapearse a HIGH");
             assertEquals(AuditIssueSeverity.HIGH, invocarConvertirSeveridad("Critical"),
@@ -447,7 +438,7 @@ class ExtensionBurpIATest {
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
             enviarAAgente.setAccessible(true);
             Object resultado = enviarAAgente.invoke(extension, (Object) null);
-            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:330");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "assertEquals failed at ExtensionBurpIATest.java:330");
         }
 
         @Test
@@ -462,7 +453,7 @@ class ExtensionBurpIATest {
             enviarAAgente.setAccessible(true);
 
             Object resultado = enviarAAgente.invoke(extension, mock(HttpRequestResponse.class));
-            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:345");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "assertEquals failed at ExtensionBurpIATest.java:345");
         }
 
         @Test
@@ -517,7 +508,7 @@ class ExtensionBurpIATest {
             // Verifica el null-guard de ExtensionBurpIA.enviarAAgente: retorna false
             // y no propaga NPE cuando la solicitud-respuesta es null.
             Object resultado = enviarAAgente.invoke(extension, (Object) null);
-            assertFalse((Boolean) resultado, "Con solicitud nula debe retornar false (no NPE ni true)");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "Con solicitud nula debe retornar DESCARTADO (no NPE ni INYECTADO)");
         }
 
         @Test
@@ -536,7 +527,7 @@ class ExtensionBurpIATest {
             when(solicitudRespuesta.request()).thenReturn(mock(HttpRequest.class));
 
             Object resultado = enviarAAgente.invoke(extension, solicitudRespuesta);
-            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:378");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "assertEquals failed at ExtensionBurpIATest.java:378");
         }
 
         @Test
@@ -546,7 +537,7 @@ class ExtensionBurpIATest {
             Method enviarHallazgo = ExtensionBurpIA.class.getDeclaredMethod("enviarHallazgoAAgente", Hallazgo.class);
             enviarHallazgo.setAccessible(true);
             Object resultado = enviarHallazgo.invoke(extension, new Hallazgo("url", "t", "d", "High", "High"));
-            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:397");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "assertEquals failed at ExtensionBurpIATest.java:397");
         }
 
         @Test
@@ -748,7 +739,7 @@ class ExtensionBurpIATest {
             Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
             enviarFlujoAAgente.setAccessible(true);
             Object resultado = enviarFlujoAAgente.invoke(extension, List.of());
-            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:597");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "assertEquals failed at ExtensionBurpIATest.java:597");
         }
 
         @Test
@@ -762,7 +753,7 @@ class ExtensionBurpIATest {
             Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
             enviarFlujoAAgente.setAccessible(true);
             Object resultado = enviarFlujoAAgente.invoke(extension, List.of());
-            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:610");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "assertEquals failed at ExtensionBurpIATest.java:610");
         }
 
         @Test
@@ -780,7 +771,7 @@ class ExtensionBurpIATest {
             Method enviarFlujoAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarFlujoAAgente", List.class);
             enviarFlujoAAgente.setAccessible(true);
             Object resultado = enviarFlujoAAgente.invoke(extension, List.of(invalida));
-            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:626");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "assertEquals failed at ExtensionBurpIATest.java:626");
         }
 
         @Test
@@ -794,6 +785,8 @@ class ExtensionBurpIATest {
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
+            when(panelAgente.inyectarComando(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(PanelAgente.ResultadoInyeccion.INYECTADO);
             when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
             establecerCampo(extension, "pestaniaPrincipal", pestania);
 
@@ -836,6 +829,8 @@ class ExtensionBurpIATest {
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
+            when(panelAgente.inyectarComando(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(PanelAgente.ResultadoInyeccion.INYECTADO);
             when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
             establecerCampo(extension, "pestaniaPrincipal", pestania);
 
@@ -918,7 +913,7 @@ class ExtensionBurpIATest {
             );
 
             Object resultado = enviarFlujoAAgente.invoke(extension, solicitudes);
-            assertFalse((Boolean) resultado, "assertFalse failed at ExtensionBurpIATest.java:726");
+            assertEquals(PanelAgente.ResultadoInyeccion.DESCARTADO, resultado, "assertEquals failed at ExtensionBurpIATest.java:726");
         }
 
         @Test
@@ -936,6 +931,8 @@ class ExtensionBurpIATest {
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
+            when(panelAgente.inyectarComando(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(PanelAgente.ResultadoInyeccion.INYECTADO);
             when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
             establecerCampo(extension, "pestaniaPrincipal", pestania);
 
@@ -959,7 +956,7 @@ class ExtensionBurpIATest {
                 crearContextoInvocacion(InvocationType.PROXY_HISTORY, ToolType.PROXY, 1)
             );
 
-            assertTrue((Boolean) resultado, "Debe inyectar el payload al panel");
+            assertEquals(PanelAgente.ResultadoInyeccion.INYECTADO, resultado, "Debe inyectar el payload al panel");
             String logs = stdoutBuffer.toString();
             assertTrue(logs.contains("PROXY_HISTORY"), logs);
             assertTrue(logs.contains("Response omitida en serialización de agente"), logs);
@@ -982,6 +979,8 @@ class ExtensionBurpIATest {
 
             PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
             PanelAgente panelAgente = mock(PanelAgente.class);
+            when(panelAgente.inyectarComando(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(PanelAgente.ResultadoInyeccion.INYECTADO);
             when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
             establecerCampo(extension, "pestaniaPrincipal", pestania);
 
@@ -1014,7 +1013,7 @@ class ExtensionBurpIATest {
                 crearContextoInvocacion(InvocationType.SEARCH_RESULTS, ToolType.LOGGER, 2)
             );
 
-            assertTrue((Boolean) resultado, "Debe inyectar el flujo al panel");
+            assertEquals(PanelAgente.ResultadoInyeccion.INYECTADO, resultado, "Debe inyectar el flujo al panel");
             String logs = stdoutBuffer.toString();
             assertTrue(logs.contains("SEARCH_RESULTS"), logs);
             assertTrue(logs.contains("responses omitidas=1"), logs);
