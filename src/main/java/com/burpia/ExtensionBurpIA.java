@@ -1134,9 +1134,7 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar(I18nLogs.Extension.DESCARGADA_OK());
     }
 
-    public static burp.api.montoya.scanner.audit.issues.AuditIssue crearAuditIssueDesdeHallazgo(
-            Hallazgo hallazgo,
-            HttpRequestResponse solicitudRespuestaEvidencia) {
+    public static burp.api.montoya.scanner.audit.issues.AuditIssue crearAuditIssueDesdeHallazgo(Hallazgo hallazgo) {
 
         if (hallazgo == null) {
             return null;
@@ -1153,19 +1151,19 @@ public class ExtensionBurpIA implements BurpExtension {
         burp.api.montoya.scanner.audit.issues.AuditIssueConfidence confidence = convertirConfianza(
                 hallazgo.obtenerConfianza());
 
-        HttpRequestResponse evidenciaFinal = resolverEvidenciaIssue(hallazgo, solicitudRespuestaEvidencia);
-
-        HttpRequestResponse[] evidencias = evidenciaFinal != null
-                ? new HttpRequestResponse[] { evidenciaFinal }
-                : new HttpRequestResponse[0];
-
         String remediationDetail = I18nUI.Hallazgos.REMEDIACION_ISSUE();
         String background = I18nUI.Hallazgos.BACKGROUND_ISSUE();
         String remediationBackground = I18nUI.Hallazgos.REMEDIACION_BACKGROUND_ISSUE();
 
+        // El issue se arma SOLO con los 5 campos editables del hallazgo (los mismos del
+        // diálogo de doble clic): título, descripción, URL, severidad y confianza. NO se
+        // adjunta evidencia HTTP: un request/response reconstruido o sintetizado hace
+        // lanzar a siteMap().add (el hallazgo manual, sin evidencia, sí guarda). El texto
+        // del LLM se codifica a entidades HTML (guía de PortSwigger) y el baseUrl va CRUDO
+        // (Burp lo parsea como URL). La evidencia sigue accesible en la UI de BurpIA.
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
-                hallazgo.obtenerTitulo(),
-                hallazgo.obtenerHallazgo() + "\n\nURL: " + hallazgo.obtenerUrl(),
+                escaparHtml(hallazgo.obtenerTitulo()),
+                escaparHtml(hallazgo.obtenerHallazgo()) + "\n\nURL: " + hallazgo.obtenerUrl(),
                 remediationDetail,
                 hallazgo.obtenerUrl(),
                 severity,
@@ -1173,9 +1171,34 @@ public class ExtensionBurpIA implements BurpExtension {
                 background,
                 remediationBackground,
                 severity,
-                evidencias);
+                new HttpRequestResponse[0]);
     }
 
+    /**
+     * Traduce texto no confiable (generado por el LLM) a entidades HTML, que es lo que
+     * Burp soporta en los campos de texto de un AuditIssue. Evita que metacaracteres
+     * rompan el render o inyecten HTML en la vista de issues. El orden importa: '&'
+     * debe sustituirse primero. Null -> "" (defensivo: auditIssue no acepta name nulo).
+     */
+    static String escaparHtml(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        return texto
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
+    }
+
+    /**
+     * Resuelve el par request/response de un hallazgo: la evidencia directa pasada, si
+     * no la almacenada (cache/disco), y si no, sintetiza un par desde el request con
+     * response vacía. Lo usa el flujo "Enviar a Agente" para incluir el HTTP en el
+     * prompt. NOTA: el issue de Burp ya NO usa evidencia (se arma solo con los campos
+     * editables del hallazgo); este método queda para el agente.
+     */
     static HttpRequestResponse resolverEvidenciaIssue(Hallazgo hallazgo,
             HttpRequestResponse solicitudRespuestaEvidencia) {
         if (solicitudRespuestaEvidencia != null) {
@@ -1185,24 +1208,17 @@ public class ExtensionBurpIA implements BurpExtension {
             return null;
         }
 
-        // Re-resolución lazy de la evidencia almacenada (request+response completos).
         HttpRequestResponse evidenciaResuelta = hallazgo.obtenerEvidenciaHttp();
         if (evidenciaResuelta != null) {
             return evidenciaResuelta;
         }
 
-        // Sin evidencia completa, pero con request: sintetizamos un par con response
-        // vacía para que Burp ancle el issue al nodo del Site Map correspondiente.
-        // Sin este HttpRequestResponse, el issue se agrega pero NO aparece en
-        // Target → Site map → Issues (queda huérfano).
         HttpRequest solicitud = hallazgo.obtenerSolicitudHttp();
         if (solicitud != null) {
             try {
                 HttpResponse respuestaVacia = HttpResponse.httpResponse(ByteArray.byteArray(new byte[0]));
                 return HttpRequestResponse.httpRequestResponse(solicitud, respuestaVacia);
             } catch (Exception ignored) {
-                // Si la factoría de Montoya no está disponible o falla, mejor crear el
-                // issue sin evidencia (array vacío) que abortar el guardado completo.
                 return null;
             }
         }
@@ -1210,10 +1226,7 @@ public class ExtensionBurpIA implements BurpExtension {
         return null;
     }
 
-    public static boolean guardarAuditIssueDesdeHallazgo(
-            MontoyaApi api,
-            Hallazgo hallazgo,
-            HttpRequestResponse solicitudRespuestaEvidencia) {
+    public static boolean guardarAuditIssueDesdeHallazgo(MontoyaApi api, Hallazgo hallazgo) {
         if (api == null) {
             GestorLoggingUnificado.crearMinimal(null, null).warning(
                     "ExtensionBurpIA", I18nLogs.Evidence.API_MONTOYA_NO_DISPONIBLE());
@@ -1238,22 +1251,12 @@ public class ExtensionBurpIA implements BurpExtension {
             logger.warning("ExtensionBurpIA", I18nLogs.Evidence.HALLAZGO_SIN_URL());
             return false;
         }
-        // Resolvemos la evidencia una sola vez y la reutilizamos para crear el issue y
-        // para anclarlo (DRY): crearAuditIssueDesdeHallazgo la recibe ya resuelta.
-        HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, solicitudRespuestaEvidencia);
-        burp.api.montoya.scanner.audit.issues.AuditIssue issue = crearAuditIssueDesdeHallazgo(hallazgo, evidencia);
+        burp.api.montoya.scanner.audit.issues.AuditIssue issue = crearAuditIssueDesdeHallazgo(hallazgo);
         if (issue == null) {
             logger.warning("ExtensionBurpIA", I18nLogs.Evidence.AUDIT_ISSUE_NO_CREADO());
             return false;
         }
         try {
-            // Registrar primero el request/response crea el nodo del host/URL en el Site Map
-            // para que el issue ancle ahí. Un issue con solo baseUrl puede quedar huérfano y
-            // no mostrarse en Target -> Site map -> Issues. Alineado con el modelo de Montoya
-            // (SiteMap: se añaden requests y además se añade el issue).
-            if (evidencia != null) {
-                api.siteMap().add(evidencia);
-            }
             api.siteMap().add(issue);
         } catch (Exception e) {
             logger.error("ExtensionBurpIA", I18nLogs.Evidence.ERROR_AGREGAR_ISSUE_SITEMAP(), e);

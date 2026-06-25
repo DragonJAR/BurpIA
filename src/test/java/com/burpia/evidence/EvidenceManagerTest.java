@@ -19,7 +19,6 @@ import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 public class EvidenceManagerTest {
@@ -139,15 +138,15 @@ public class EvidenceManagerTest {
         
         try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
             mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
-            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any(), any()))
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any()))
                           .thenReturn(true);
             
             EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
-            String evidenciaId = evidenceManagerPro.almacenarEvidencia(mockEvidence);
-            assertTrue(evidenceManagerPro.guardarHallazgoComoIssue(mockApi, mockHallazgo, evidenciaId));
-            
+            evidenceManagerPro.almacenarEvidencia(mockEvidence);
+            assertTrue(evidenceManagerPro.guardarHallazgoComoIssue(mockApi, mockHallazgo));
+
             mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
-                any(MontoyaApi.class), any(Hallazgo.class), any(HttpRequestResponse.class))
+                any(MontoyaApi.class), any(Hallazgo.class))
             );
         }
     }
@@ -160,15 +159,15 @@ public class EvidenceManagerTest {
 
         try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
             mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
-            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any(), any()))
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any()))
                           .thenReturn(true);
 
             EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
             // Sin evidencia HTTP resoluble: debe enviarse igual (la evidencia es opcional).
-            assertTrue(evidenceManagerPro.guardarHallazgoComoIssue(mockApi, mockHallazgo, null));
+            assertTrue(evidenceManagerPro.guardarHallazgoComoIssue(mockApi, mockHallazgo));
 
             mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
-                any(MontoyaApi.class), any(Hallazgo.class), isNull()));
+                any(MontoyaApi.class), any(Hallazgo.class)));
         }
     }
 
@@ -183,11 +182,11 @@ public class EvidenceManagerTest {
 
         try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
             mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
-            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any(), any()))
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any()))
                           .thenReturn(true);
 
             EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
-            assertTrue(evidenceManagerPro.guardarHallazgoComoIssue(mockApi, mockHallazgo, null));
+            assertTrue(evidenceManagerPro.guardarHallazgoComoIssue(mockApi, mockHallazgo));
 
             verify(mockLogging, atLeastOnce()).logToOutput(any());
         }
@@ -200,7 +199,7 @@ public class EvidenceManagerTest {
         
         EvidenceManager evidenceManagerCommunity = new EvidenceManager(mockApiCommunity);
         
-        boolean resultado = evidenceManagerCommunity.guardarHallazgoComoIssue(mockApiCommunity, mockHallazgo, "test-id");
+        boolean resultado = evidenceManagerCommunity.guardarHallazgoComoIssue(mockApiCommunity, mockHallazgo);
         
         assertFalse(resultado);
     }
@@ -214,7 +213,7 @@ public class EvidenceManagerTest {
         
         try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
             mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
-            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any(), any()))
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any()))
                           .thenReturn(true);
             
             EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
@@ -242,7 +241,7 @@ public class EvidenceManagerTest {
             evidenceManagerPro.guardarHallazgosComoIssues(mockApi, Arrays.asList(hallazgo1, hallazgo2));
             
             mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
-                any(MontoyaApi.class), any(Hallazgo.class), any(HttpRequestResponse.class)), times(2)
+                any(MontoyaApi.class), any(Hallazgo.class)), times(2)
             );
         }
     }

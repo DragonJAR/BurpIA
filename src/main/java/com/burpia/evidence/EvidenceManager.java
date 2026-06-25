@@ -80,24 +80,21 @@ public class EvidenceManager {
         }
     }
     
-    public boolean guardarHallazgoComoIssue(MontoyaApi api, Hallazgo hallazgo, String evidenciaId) {
+    public boolean guardarHallazgoComoIssue(MontoyaApi api, Hallazgo hallazgo) {
         if (hallazgo == null) {
             gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.HALLAZGO_NULO_ISSUE());
             return false;
         }
-        
+
         if (!esBurpProfessional) {
             gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.ISSUES_SOLO_PRO());
             return false;
         }
 
         try {
-            // Resolvemos la evidencia completa si existe (request+response); si no,
-            // ExtensionBurpIA.resolverEvidenciaIssue sintetiza un par desde el request
-            // para que Burp ancle el issue al nodo del Site Map correspondiente.
-            HttpRequestResponse evidencia = obtenerEvidenciaParaIssue(hallazgo, evidenciaId);
-
-            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, evidencia);
+            // El issue se arma solo con los campos editables del hallazgo (sin evidencia
+            // HTTP adjunta). La evidencia sigue accesible desde la UI de BurpIA.
+            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo);
             if (guardado) {
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.Evidence.AUDIT_ISSUE_CREADO() + hallazgo.obtenerTitulo());
             } else {
@@ -121,8 +118,7 @@ public class EvidenceManager {
                 continue;
             }
             
-            String evidenciaId = hallazgo.obtenerEvidenciaId();
-            if (guardarHallazgoComoIssue(api, hallazgo, evidenciaId)) {
+            if (guardarHallazgoComoIssue(api, hallazgo)) {
                 guardados++;
             }
         }
@@ -143,26 +139,6 @@ public class EvidenceManager {
     
     public long obtenerContadorEvidencias() {
         return contadorEvidencias.get();
-    }
-    
-    private HttpRequestResponse obtenerEvidenciaParaIssue(Hallazgo hallazgo, String evidenciaId) {
-        if (hallazgo == null) {
-            return null;
-        }
-
-        // Re-resolución desde el almacén (cache LRU → disco). La síntesis final a
-        // partir del request cuando no hay evidencia completa la centraliza
-        // ExtensionBurpIA.resolverEvidenciaIssue (DRY), que es el punto terminal.
-        HttpRequestResponse evidenciaDirecta = hallazgo.obtenerEvidenciaHttp();
-        if (evidenciaDirecta != null) {
-            return evidenciaDirecta;
-        }
-
-        if (Normalizador.noEsVacio(evidenciaId)) {
-            return obtenerEvidencia(evidenciaId);
-        }
-
-        return null;
     }
     
     private String abreviarId(String id) {

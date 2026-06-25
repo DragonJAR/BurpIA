@@ -676,8 +676,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public boolean guardarHallazgoComoIssue(Hallazgo hallazgo) {
-        return evidenceManager.guardarHallazgoComoIssue(api, hallazgo,
-                hallazgo != null ? hallazgo.obtenerEvidenciaId() : null);
+        return evidenceManager.guardarHallazgoComoIssue(api, hallazgo);
     }
 
     public boolean estaCapturaActiva() {

@@ -62,7 +62,7 @@ public class EvidenceManagerIntegrationTest {
         
         try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
             mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
-            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any(), any()))
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any()))
                           .thenReturn(true);
             
             EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
@@ -84,11 +84,11 @@ public class EvidenceManagerIntegrationTest {
                 mockRequest
             ).conEvidenciaId(evidenciaId);
             
-            boolean guardado = evidenceManagerPro.guardarHallazgoComoIssue(mockApi, hallazgo, evidenciaId);
+            boolean guardado = evidenceManagerPro.guardarHallazgoComoIssue(mockApi, hallazgo);
             assertTrue(guardado);
-            
+
             mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
-                eq(mockApi), eq(hallazgo), any(HttpRequestResponse.class))
+                eq(mockApi), eq(hallazgo))
             );
             
             evidenceManagerPro.eliminarEvidencia(evidenciaId);
@@ -112,7 +112,7 @@ public class EvidenceManagerIntegrationTest {
         
         try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
             mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
-            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any(), any()))
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any()))
                           .thenReturn(true);
             
             EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
@@ -133,7 +133,7 @@ public class EvidenceManagerIntegrationTest {
             evidenceManagerPro.guardarHallazgosComoIssues(mockApi, hallazgos);
             
             mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
-                eq(mockApi), any(Hallazgo.class), any(HttpRequestResponse.class)), times(3)
+                eq(mockApi), any(Hallazgo.class)), times(3)
             );
         }
     }

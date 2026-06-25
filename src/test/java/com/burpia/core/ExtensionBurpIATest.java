@@ -217,19 +217,18 @@ class ExtensionBurpIATest {
         @Test
         @DisplayName("crearAuditIssueDesdeHallazgo retorna null cuando hallazgo es null")
         void testCrearAuditIssueConHallazgoNull() {
-            assertNull(ExtensionBurpIA.crearAuditIssueDesdeHallazgo(null, null), "assertNull failed at ExtensionBurpIATest.java:190");
+            assertNull(ExtensionBurpIA.crearAuditIssueDesdeHallazgo(null), "crearAuditIssueDesdeHallazgo(null) debe retornar null");
         }
 
         @Test
-        @DisplayName("Issue sin evidencia HTTP pero con request incluye el HttpRequest (anclaje al Site Map)")
-        void testCrearAuditIssueSinEvidenciaHttpConRequestIncluyeRequest() {
+        @DisplayName("resolverEvidenciaIssue sintetiza un par desde el request cuando no hay evidencia (flujo Agente)")
+        void testResolverEvidenciaSintetizaDesdeRequest() {
             HttpRequest solicitud = mock(HttpRequest.class);
             Hallazgo hallazgo = new Hallazgo(
                 "https://example.com", "SQLi Title", "Possible SQLi", "High", "High", solicitud);
 
-            // La factoría de Montoya no está disponible en unit tests. Testeamos el contrato
-            // de resolverEvidenciaIssue (package-private) mockeando ByteArray, HttpResponse e
-            // HttpRequestResponse para que la síntesis no toque la factoría real.
+            // La factoría de Montoya no está disponible en unit tests: mockeamos ByteArray,
+            // HttpResponse e HttpRequestResponse para que la síntesis no toque la factoría real.
             HttpRequestResponse evidenciaSintetizada;
             try (org.mockito.MockedStatic<burp.api.montoya.core.ByteArray> mockedBa =
                      org.mockito.Mockito.mockStatic(burp.api.montoya.core.ByteArray.class);
@@ -253,21 +252,21 @@ class ExtensionBurpIATest {
             }
 
             assertNotNull(evidenciaSintetizada,
-                "Debe sintetizarse un HttpRequestResponse cuando hay request, para anclar el issue al Site Map");
+                "Debe sintetizarse un HttpRequestResponse cuando hay request");
             assertEquals(solicitud, evidenciaSintetizada.request(),
                 "El request de la evidencia sintetizada debe ser el del hallazgo");
         }
 
         @Test
-        @DisplayName("Sin evidencia ni request, resolverEvidenciaIssue retorna null (degradación elegante)")
-        void testResolverEvidenciaIssueSinDatosRetornaNull() {
+        @DisplayName("resolverEvidenciaIssue retorna null sin evidencia ni request (degradación elegante)")
+        void testResolverEvidenciaSinDatosRetornaNull() {
             Hallazgo hallazgo = new Hallazgo(
                 "https://example.com", "Title", "Desc", "High", "High");
 
             HttpRequestResponse resultado = invocarResolverEvidenciaIssue(hallazgo, null);
 
             assertNull(resultado,
-                "Sin evidencia ni request, no hay nada que anclar: retorna null");
+                "Sin evidencia ni request, no hay nada que resolver: retorna null");
         }
 
         /**
@@ -319,6 +318,33 @@ class ExtensionBurpIATest {
             assertEquals(AuditIssueSeverity.INFORMATION, invocarConvertirSeveridad("info"));
         }
 
+        @Test
+        @DisplayName("escaparHtml traduce metacaracteres del LLM a entidades y null a vacío")
+        void testEscaparHtmlCodificaMetacaracteres() {
+            assertEquals("&lt;script&gt;", invocarEscaparHtml("<script>"),
+                "< y > deben ir como entidades");
+            assertEquals("a &amp; b", invocarEscaparHtml("a & b"),
+                "& debe ir como entidad");
+            assertEquals("&quot;x&quot;", invocarEscaparHtml("\"x\""),
+                "comillas dobles como entidad");
+            assertEquals("it&#39;s", invocarEscaparHtml("it's"),
+                "comilla simple como entidad");
+            assertEquals("", invocarEscaparHtml(null),
+                "null -> cadena vacía (auditIssue no acepta name nulo)");
+            assertEquals("&lt;a&gt; &amp; &lt;b&gt;", invocarEscaparHtml("<a> & <b>"),
+                "'&' se codifica primero para no doble-codificar las demás entidades");
+        }
+
+        private String invocarEscaparHtml(String texto) {
+            try {
+                Method metodo = ExtensionBurpIA.class.getDeclaredMethod("escaparHtml", String.class);
+                metodo.setAccessible(true);
+                return (String) metodo.invoke(null, texto);
+            } catch (Exception e) {
+                throw new AssertionError("No se pudo invocar escaparHtml: " + e.getMessage(), e);
+            }
+        }
+
         /**
          * Invoca el conversor privado convertirSeveridad por reflexión. Es la forma
          * de testear el mapeo de idioma sin depender de la factoría de Montoya.
@@ -352,7 +378,7 @@ class ExtensionBurpIATest {
         @DisplayName("Guardar AuditIssue retorna false cuando API es null")
         void testGuardarAuditIssueConApiNull() {
             Hallazgo hallazgo = new Hallazgo("https://example.com", "SQLi Title", "Possible SQLi", "High", "High");
-            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(null, hallazgo, null);
+            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(null, hallazgo);
             assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:278");
         }
 
@@ -364,7 +390,7 @@ class ExtensionBurpIATest {
             when(api.siteMap()).thenReturn(null);
             Hallazgo hallazgo = new Hallazgo("https://example.com", "SQLi Title", "Possible SQLi", "High", "High");
 
-            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
+            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo);
 
             assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:291");
         }
@@ -375,7 +401,7 @@ class ExtensionBurpIATest {
             MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
             when(api.burpSuite().version().edition()).thenReturn(BurpSuiteEdition.PROFESSIONAL);
 
-            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, null, null);
+            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, null);
 
             assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:302");
         }
@@ -389,7 +415,7 @@ class ExtensionBurpIATest {
             when(api.ai().isEnabled()).thenReturn(false);
             Hallazgo hallazgo = new Hallazgo("https://example.com", "SQLi Title", "Possible SQLi", "High", "High");
 
-            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
+            boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo);
 
             assertFalse(guardado, "assertFalse failed at ExtensionBurpIATest.java:315");
         }
@@ -418,7 +444,7 @@ class ExtensionBurpIATest {
                         org.mockito.ArgumentMatchers.any(HttpRequestResponse[].class)))
                     .thenReturn(issueMock);
 
-                boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo, null);
+                boolean guardado = ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(api, hallazgo);
 
                 // No debe rechazar por edición: el fallback lo reconoce como Pro y procede a siteMap().add().
                 assertTrue(guardado, "assertTrue failed: el fallback ai().isEnabled() debe reconocer Pro");
