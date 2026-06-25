@@ -898,10 +898,12 @@ public final class UIUtils {
                 }
                 int fila = tabla.rowAtPoint(e.getPoint());
                 if (fila < 0) {
+                    // Clic fuera de cualquier fila: se limpia la selecciÃ³n previa, pero
+                    // aÃºn asÃ­ se delega al proveedor si quiere mostrar un menÃº (p.ej.
+                    // PanelHallazgos muestra "Agregar hallazgo" en el espacio vacÃ­o).
+                    // Si el proveedor devuelve null, no se muestra nada (PanelTareas).
                     tabla.clearSelection();
-                    return;
-                }
-                if (!tabla.isRowSelected(fila)) {
+                } else if (!tabla.isRowSelected(fila)) {
                     if (!e.isControlDown()) {
                         tabla.setRowSelectionInterval(fila, fila);
                     } else {

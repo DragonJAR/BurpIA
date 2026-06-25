@@ -7,6 +7,7 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.logging.Logging;
 import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.SwingUtilities;
 import javax.swing.JTable;
+import java.awt.Rectangle;
+import java.awt.event.MouseEvent;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -489,6 +492,138 @@ class PanelHallazgosSendTest {
         }
 
         assertTrue(encontrado, "assertTrue failed at PanelHallazgosSendTest.java:227");
+    }
+
+    @Test
+    @DisplayName("Clic derecho sobre una fila muestra el menÃº contextual con las acciones de envÃ­o")
+    void testClicDerechoMuestraMenuContextualConAcciones() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        panel.establecerConfiguracion(config);
+
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/right-click");
+        agregarHallazgoConRequest(panel, request, "https://example.com/right-click");
+        flushEdt();
+
+        JTable tabla = obtenerTabla(panel);
+        // El menÃº necesita la tabla visible (JPopupMenu.show lo requiere).
+        javax.swing.JFrame frame = new javax.swing.JFrame();
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                frame.add(tabla);
+                frame.pack();
+                frame.setVisible(true);
+            });
+            flushEdt();
+
+            // Sin selecciÃ³n previa: el clic derecho debe seleccionar la fila y construir el menÃº.
+            SwingUtilities.invokeAndWait(() -> tabla.clearSelection());
+            flushEdt();
+            assertEquals(0, tabla.getSelectedRowCount(), "No debe haber selecciÃ³n inicial");
+
+            // Simular el clic derecho (popup trigger) sobre la fila 0, como lo harÃ­a
+            // UIUtils.instalarMenuContextualTabla en el listener real.
+            Rectangle celda = tabla.getCellRect(0, 0, false);
+            SwingUtilities.invokeAndWait(() -> {
+                MouseEvent popup = new MouseEvent(
+                    tabla, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(),
+                    java.awt.event.InputEvent.BUTTON3_DOWN_MASK,
+                    celda.x + 2, celda.y + 2, 1, true);
+                for (java.awt.event.MouseListener listener : tabla.getMouseListeners()) {
+                    listener.mousePressed(popup);
+                }
+            });
+            flushEdt();
+
+            // Tras el clic derecho, la fila debe quedar seleccionada.
+            assertEquals(1, tabla.getSelectedRowCount(),
+                "El clic derecho debe seleccionar la fila bajo el cursor");
+
+            // Y el menÃº contextual debe construirse con las acciones de envÃ­o (no solo "Agregar").
+            Method metodo = PanelHallazgos.class.getDeclaredMethod("construirMenuContextualDinamico");
+            metodo.setAccessible(true);
+            javax.swing.JPopupMenu menu = (javax.swing.JPopupMenu) metodo.invoke(panel);
+            assertNotNull(menu, "El menÃº contextual no debe ser null");
+
+            int items = 0;
+            for (java.awt.Component componente : menu.getComponents()) {
+                if (componente instanceof javax.swing.JMenuItem) {
+                    items++;
+                }
+            }
+            // Con selecciÃ³n debe haber al menos: Agregar + Repeater + Intruder (+ otros).
+            assertTrue(items >= 3,
+                "El menÃº tras clic derecho debe incluir varias acciones, encontradas: " + items);
+        } finally {
+            SwingUtilities.invokeAndWait(() -> frame.dispose());
+        }
+    }
+
+    @Test
+    @DisplayName("Clic derecho en espacio vacÃ­o limpia selecciÃ³n pero sigue mostrando 'Agregar hallazgo'")
+    void testClicDerechoEspacioVacioMuestraMenuConAgregar() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        panel.establecerConfiguracion(config);
+
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/row");
+        agregarHallazgoConRequest(panel, request, "https://example.com/row");
+        flushEdt();
+
+        JTable tabla = obtenerTabla(panel);
+        javax.swing.JFrame frame = new javax.swing.JFrame();
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                frame.add(tabla);
+                frame.pack();
+                frame.setVisible(true);
+            });
+            flushEdt();
+
+            // SelecciÃ³n previa para verificar que se limpia.
+            SwingUtilities.invokeAndWait(() -> tabla.setRowSelectionInterval(0, 0));
+            flushEdt();
+            assertEquals(1, tabla.getSelectedRowCount());
+
+            // Clic derecho DEBAJO de la Ãºltima fila (espacio vacÃ­o): rowAtPoint < 0.
+            int yFueraFilas = tabla.getHeight() + 50;
+            SwingUtilities.invokeAndWait(() -> {
+                MouseEvent popup = new MouseEvent(
+                    tabla, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(),
+                    java.awt.event.InputEvent.BUTTON3_DOWN_MASK,
+                    5, yFueraFilas, 1, true);
+                for (java.awt.event.MouseListener listener : tabla.getMouseListeners()) {
+                    listener.mousePressed(popup);
+                }
+            });
+            flushEdt();
+
+            // La selecciÃ³n previa debe quedar limpia.
+            assertEquals(0, tabla.getSelectedRowCount(),
+                "El clic en espacio vacÃ­o debe limpiar la selecciÃ³n previa");
+
+            // Pero el menÃº debe seguir construyÃ©ndose con la opciÃ³n 'Agregar hallazgo',
+            // ya que esa opciÃ³n no depende de selecciÃ³n (regresiÃ³n del refactor D4).
+            Method metodo = PanelHallazgos.class.getDeclaredMethod("construirMenuContextualDinamico");
+            metodo.setAccessible(true);
+            javax.swing.JPopupMenu menu = (javax.swing.JPopupMenu) metodo.invoke(panel);
+            assertNotNull(menu, "El menÃº debe construirse aÃºn sin selecciÃ³n");
+
+            boolean tieneAgregar = false;
+            for (java.awt.Component componente : menu.getComponents()) {
+                if (componente instanceof javax.swing.JMenuItem) {
+                    String texto = ((javax.swing.JMenuItem) componente).getText();
+                    if (texto != null && texto.equals(I18nUI.Hallazgos.MENU_AGREGAR_HALLAZGO())) {
+                        tieneAgregar = true;
+                        break;
+                    }
+                }
+            }
+            assertTrue(tieneAgregar,
+                "El menÃº en espacio vacÃ­o debe incluir 'Agregar hallazgo'");
+        } finally {
+            SwingUtilities.invokeAndWait(() -> frame.dispose());
+        }
     }
 
     @Test
