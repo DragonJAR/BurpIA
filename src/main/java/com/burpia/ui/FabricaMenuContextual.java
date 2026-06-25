@@ -13,7 +13,6 @@ import com.burpia.flow.FlowAnalysisConstraints;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.Normalizador;
 
-import javax.swing.*;
 import java.awt.Component;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
@@ -116,16 +115,6 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         descargado = true;
     }
 
-    private static JMenuItem crearMenuItem(String texto, String tooltip, java.awt.event.ActionListener accion) {
-        JMenuItem menuItem = new JMenuItem(texto);
-        menuItem.setFont(EstilosUI.FUENTE_ESTANDAR);
-        menuItem.setToolTipText(tooltip);
-        if (accion != null) {
-            menuItem.addActionListener(accion);
-        }
-        return menuItem;
-    }
-
     @Override
     public List<Component> provideMenuItems(ContextMenuEvent evento) {
         if (descargado) {
@@ -141,13 +130,13 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         final ContextoInvocacion contextoInvocacion = construirContextoInvocacion(evento, cantidadSeleccionada);
 
         if (cantidadSeleccionada == 1) {
-            itemsMenu.add(crearMenuItem(
+            itemsMenu.add(UIUtils.crearMenuItemContextual(
                 I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD(),
                 I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD(),
                 e -> manejarAnalisisSeleccion(seleccion, contextoInvocacion)
             ));
         } else if (cantidadSeleccionada >= 2) {
-            itemsMenu.add(crearMenuItem(
+            itemsMenu.add(UIUtils.crearMenuItemContextual(
                 I18nUI.Contexto.ITEM_ANALIZAR_FLUJO(),
                 I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO(),
                 e -> manejarAnalisisFlujo(seleccion, contextoInvocacion)
@@ -155,18 +144,15 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         }
 
         if (config != null && config.hayAlgunAgenteHabilitado()) {
-            String nombreAgente = AgenteTipo.obtenerNombreVisible(
-                config.obtenerTipoAgenteOperativo(),
-                I18nUI.General.AGENTE_GENERICO()
-            );
+            String nombreAgente = AgenteTipo.obtenerNombreVisible(config, I18nUI.General.AGENTE_GENERICO());
             if (cantidadSeleccionada == 1 && manejadorAgenteSolicitud != null) {
-                itemsMenu.add(crearMenuItem(
+                itemsMenu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Contexto.ITEM_ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente),
                     I18nUI.Tooltips.Contexto.ANALIZAR_SOLICITUD_CON_AGENTE(nombreAgente),
                     e -> manejarEnvioAgenteSolicitud(seleccion, nombreAgente, contextoInvocacion)
                 ));
             } else if (cantidadSeleccionada >= 2 && manejadorAgenteFlujo != null) {
-                itemsMenu.add(crearMenuItem(
+                itemsMenu.add(UIUtils.crearMenuItemContextual(
                     I18nUI.Contexto.ITEM_ANALIZAR_FLUJO_CON_AGENTE(nombreAgente),
                     I18nUI.Tooltips.Contexto.ANALIZAR_FLUJO_CON_AGENTE(nombreAgente),
                     e -> manejarEnvioAgenteFlujo(seleccion, nombreAgente, contextoInvocacion)
@@ -285,7 +271,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 }
             } catch (Exception ex) {
                 fallidas++;
-                api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()));
+                api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()), ex);
             }
         }
 
@@ -346,7 +332,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             PanelAgente.ResultadoInyeccion resultado = manejadorAgenteFlujo.enviar(new ArrayList<>(seleccion), contextoInvocacion);
             enviada = resultado != PanelAgente.ResultadoInyeccion.DESCARTADO;
         } catch (Exception ex) {
-            api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()));
+            api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()), ex);
             enviada = false;
         }
 
@@ -473,19 +459,16 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
 
     private boolean alertasEnviarAHabilitadas() {
-        return (config == null || config.alertasClickDerechoEnviarAHabilitadas())
-            && AlertasOptOutHelper.debeMostrarAlerta(AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A, config);
+        return AlertasOptOutHelper.evaluarAlertaEnviarA(
+            AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A, config,
+            config == null ? () -> true : config::alertasClickDerechoEnviarAHabilitadas);
     }
 
     private void deshabilitarAlertasEnviarA() {
-        if (config == null || !config.alertasClickDerechoEnviarAHabilitadas()) {
-            return;
-        }
-        AlertasOptOutHelper.registrarDeshabilitacion(AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A, config);
-        config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
-        if (manejadorCambioAlertasEnviarA != null) {
-            manejadorCambioAlertasEnviarA.run();
-        }
+        AlertasOptOutHelper.deshabilitarAlertaEnviarA(
+            AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A, config,
+            config != null && config.alertasClickDerechoEnviarAHabilitadas(),
+            manejadorCambioAlertasEnviarA);
     }
 
     private static final class RegistroClic {

@@ -994,7 +994,7 @@ public class PanelHallazgos extends JPanel {
                     String detalleError = url + I18nUI.Hallazgos.SUFIJO_ERROR_INLINE() + mensaje + ")";
                     detalle.append(I18nUI.Hallazgos.LINEA_ESTADO_ERROR_ALERTA(detalleError)).append("\n");
                     if (registrarErroresScanner && api != null) {
-                        api.logging().logToError(I18nUI.Hallazgos.LOG_ERROR_ENVIAR_SCANNER() + mensaje);
+                        api.logging().logToError(I18nUI.Hallazgos.LOG_ERROR_ENVIAR_SCANNER() + mensaje, ex);
                     }
                 }
             }
@@ -1542,13 +1542,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private String obtenerNombreAgenteVisible() {
-        if (config == null) {
-            return I18nUI.General.AGENTE_GENERICO();
-        }
-        return AgenteTipo.obtenerNombreVisible(
-            config.obtenerTipoAgenteOperativo(),
-            I18nUI.General.AGENTE_GENERICO()
-        );
+        return AgenteTipo.obtenerNombreVisible(config, I18nUI.General.AGENTE_GENERICO());
     }
 
     private void mostrarInfoEnviarA(String titulo, String mensaje) {
@@ -1572,19 +1566,16 @@ public class PanelHallazgos extends JPanel {
     }
 
     private boolean alertasEnviarAHabilitadas() {
-        return (config == null || config.alertasClickDerechoEnviarAHabilitadas())
-            && AlertasOptOutHelper.debeMostrarAlerta(AlertasOptOutHelper.ALERTA_HALLAZGOS_ENVIAR_A, config);
+        return AlertasOptOutHelper.evaluarAlertaEnviarA(
+            AlertasOptOutHelper.ALERTA_HALLAZGOS_ENVIAR_A, config,
+            config == null ? () -> true : config::alertasClickDerechoEnviarAHabilitadas);
     }
 
     private void deshabilitarAlertasEnviarA() {
-        if (config == null || !config.alertasClickDerechoEnviarAHabilitadas()) {
-            return;
-        }
-        AlertasOptOutHelper.registrarDeshabilitacion(AlertasOptOutHelper.ALERTA_HALLAZGOS_ENVIAR_A, config);
-        config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
-        if (manejadorCambioAlertasEnviarA != null) {
-            manejadorCambioAlertasEnviarA.run();
-        }
+        AlertasOptOutHelper.deshabilitarAlertaEnviarA(
+            AlertasOptOutHelper.ALERTA_HALLAZGOS_ENVIAR_A, config,
+            config != null && config.alertasClickDerechoEnviarAHabilitadas(),
+            manejadorCambioAlertasEnviarA);
     }
 
     /**

@@ -66,10 +66,10 @@ public final class AlertasOptOutHelper {
     }
 
     /**
-     * Registra que el usuario ha desactivado una alerta específica.
+     * Registra que el usuario ha desactivado una alerta especÃ­fica.
      *
-     * @param claveAlerta clave única de la alerta (ver constantes de clase)
-     * @param config      configuración activa
+     * @param claveAlerta clave Ãºnica de la alerta (ver constantes de clase)
+     * @param config      configuraciÃ³n activa
      */
     public static void registrarDeshabilitacion(String claveAlerta, ConfiguracionAPI config) {
         if (config == null || Normalizador.esVacio(claveAlerta)) {
@@ -78,8 +78,51 @@ public final class AlertasOptOutHelper {
         config.agregarAlertaDeshabilitada(claveAlerta);
     }
 
+    /**
+     * EvalÃºa si las alertas de "enviar a" deben mostrarse, combinando el flag
+     * global de config con el opt-out especÃ­fico de la clave.
+     *
+     * <p>Unifica el wrapper privado duplicado en FabricaMenuContextual y
+     * PanelHallazgos.
+     *
+     * @param claveAlerta        Clave de opt-out (p.ej. {@link #ALERTA_MENU_ENVIAR_A}).
+     * @param config             ConfiguraciÃ³n activa (null-safe).
+     * @param flagHabilitado     Supplier que indica si el flag global de config deja
+     *                           mostrar la alerta; se invoca solo si config no es null.
+     * @return {@code true} si la alerta debe mostrarse.
+     */
+    public static boolean evaluarAlertaEnviarA(String claveAlerta, ConfiguracionAPI config,
+            java.util.function.BooleanSupplier flagHabilitado) {
+        boolean flag = (config == null) || flagHabilitado.getAsBoolean();
+        return flag && debeMostrarAlerta(claveAlerta, config);
+    }
+
+    /**
+     * Deshabilita las alertas de "enviar a" para una clave, persistiendo el opt-out
+     * y bajando el flag global de config.
+     *
+     * <p>Unifica el wrapper privado duplicado en FabricaMenuContextual y
+     * PanelHallazgos.
+     *
+     * @param claveAlerta        Clave de opt-out.
+     * @param config             ConfiguraciÃ³n activa.
+     * @param flagEstaba         Estado actual del flag global; si es false, no hace nada.
+     * @param onChange           Callback a ejecutar tras deshabilitar (puede ser null).
+     */
+    public static void deshabilitarAlertaEnviarA(String claveAlerta, ConfiguracionAPI config,
+            boolean flagEstaba, Runnable onChange) {
+        if (config == null || !flagEstaba) {
+            return;
+        }
+        registrarDeshabilitacion(claveAlerta, config);
+        config.establecerAlertasClickDerechoEnviarAHabilitadas(false);
+        if (onChange != null) {
+            onChange.run();
+        }
+    }
+
     // alertasEnviarAHabilitadas(String, ConfiguracionAPI) removed (orphan):
-    // método estático bypassed por wrappers privados (sin args) en
+    // mÃ©todo estÃ¡tico bypassed por wrappers privados (sin args) en
     // FabricaMenuContextual y PanelHallazgos. Los callers reales usan
     // debeMostrarAlerta(claveAlerta, config) directamente, lo que hace este
     // wrapper redundante.

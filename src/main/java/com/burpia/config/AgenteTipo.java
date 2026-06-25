@@ -113,4 +113,21 @@ public enum AgenteTipo {
         AgenteTipo tipo = desdeCodigo(codigo, null);
         return tipo != null ? tipo.obtenerNombreVisible() : porDefecto;
     }
+
+    /**
+     * Wrapper null-safe de {@link #obtenerNombreVisible(String, String)} que toma
+     * el cÃÂ³digo operativo desde una configuraciÃÂ³n. Unifica el patrÃÂ³n que antes vivÃÂ­a
+     * duplicado (con guards de null distintos) en FabricaMenuContextual y PanelHallazgos.
+     *
+     * @param config       ConfiguraciÃÂ³n de la que extraer el tipo de agente operativo; si es
+     *                     null se devuelve el valor por defecto.
+     * @param porDefecto   Nombre visible a retornar si no hay agente operativo vÃÂ¡lido.
+     * @return Nombre visible del agente, o {@code porDefecto}.
+     */
+    public static String obtenerNombreVisible(ConfiguracionAPI config, String porDefecto) {
+        if (config == null) {
+            return porDefecto;
+        }
+        return obtenerNombreVisible(config.obtenerTipoAgenteOperativo(), porDefecto);
+    }
 }
