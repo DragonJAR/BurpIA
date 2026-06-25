@@ -1,6 +1,5 @@
 package com.burpia.model;
 
-import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import org.junit.jupiter.api.DisplayName;
@@ -35,8 +34,6 @@ class HallazgoTest {
             assertEquals("High", hallazgo.obtenerSeveridad(), "assertEquals failed at HallazgoTest.java:37");
             assertEquals("Medium", hallazgo.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:38");
             assertNull(hallazgo.obtenerSolicitudHttp(), "assertNull failed at HallazgoTest.java:39");
-            assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:40");
-            assertNull(hallazgo.obtenerEvidenciaId(), "assertNull failed at HallazgoTest.java:41");
         }
 
         @Test
@@ -54,7 +51,6 @@ class HallazgoTest {
 
             assertNotNull(hallazgo, "assertNotNull failed at HallazgoTest.java:57");
             assertSame(solicitud, hallazgo.obtenerSolicitudHttp(), "assertSame failed at HallazgoTest.java:58");
-            assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:59");
         }
 
         @Test
@@ -71,54 +67,6 @@ class HallazgoTest {
             );
 
             assertEquals("10:20:30", hallazgo.obtenerHoraDescubrimiento(), "assertEquals failed at HallazgoTest.java:75");
-        }
-
-        @Test
-        @DisplayName("Crear hallazgo completo con todos los parametros")
-        void testCrearHallazgoCompleto() {
-            HttpRequest solicitud = mock(HttpRequest.class);
-            HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
-
-            Hallazgo hallazgo = new Hallazgo(
-                "10:20:30",
-                "https://example.com/test",
-                "SSRF",
-                "Server-Side Request Forgery",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA,
-                solicitud,
-                evidencia
-            );
-
-            assertEquals("10:20:30", hallazgo.obtenerHoraDescubrimiento(), "assertEquals failed at HallazgoTest.java:95");
-            assertEquals("https://example.com/test", hallazgo.obtenerUrl(), "assertEquals failed at HallazgoTest.java:96");
-            assertEquals("SSRF", hallazgo.obtenerTitulo(), "assertEquals failed at HallazgoTest.java:97");
-            assertEquals("Server-Side Request Forgery", hallazgo.obtenerHallazgo(), "assertEquals failed at HallazgoTest.java:98");
-            assertEquals(Hallazgo.SEVERIDAD_HIGH, hallazgo.obtenerSeveridad(), "assertEquals failed at HallazgoTest.java:99");
-            assertEquals(Hallazgo.CONFIANZA_ALTA, hallazgo.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:100");
-            assertSame(solicitud, hallazgo.obtenerSolicitudHttp(), "assertSame failed at HallazgoTest.java:101");
-            assertSame(evidencia, hallazgo.obtenerEvidenciaHttp(), "assertSame failed at HallazgoTest.java:102");
-        }
-
-        @Test
-        @DisplayName("Crear hallazgo con evidencia ID")
-        void testCrearHallazgoConEvidenciaId() {
-            HttpRequest solicitud = mock(HttpRequest.class);
-
-            Hallazgo hallazgo = new Hallazgo(
-                "10:20:30",
-                "https://example.com/test",
-                "LFI",
-                "Local File Inclusion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_MEDIA,
-                solicitud,
-                null,
-                "evidencia-123"
-            );
-
-            assertEquals("evidencia-123", hallazgo.obtenerEvidenciaId(), "assertEquals failed at HallazgoTest.java:122");
-            assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:123");
         }
 
         @Test
@@ -397,10 +345,9 @@ class HallazgoTest {
     class Edicion {
 
         @Test
-        @DisplayName("Editar mantiene evidencia y solicitud HTTP asociada")
-        void testEditarMantieneEvidenciaYSolicitud() {
+        @DisplayName("Editar mantiene la solicitud HTTP asociada")
+        void testEditarMantieneSolicitud() {
             HttpRequest solicitud = mock(HttpRequest.class);
-            HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
 
             Hallazgo original = new Hallazgo(
                 "10:20:30",
@@ -409,8 +356,7 @@ class HallazgoTest {
                 "Descripcion original",
                 Hallazgo.SEVERIDAD_LOW,
                 Hallazgo.CONFIANZA_MEDIA,
-                solicitud,
-                evidencia
+                solicitud
             );
 
             Hallazgo editado = original.editar(
@@ -424,7 +370,6 @@ class HallazgoTest {
             // Verificar que mantiene los datos inmutables
             assertEquals("10:20:30", editado.obtenerHoraDescubrimiento(), "assertEquals failed at HallazgoTest.java:427");
             assertSame(solicitud, editado.obtenerSolicitudHttp(), "assertSame failed at HallazgoTest.java:428");
-            assertSame(evidencia, editado.obtenerEvidenciaHttp(), "assertSame failed at HallazgoTest.java:429");
 
             // Verificar que actualiza los datos editables
             assertEquals("https://example.com/editado", editado.obtenerUrl(), "assertEquals failed at HallazgoTest.java:432");
@@ -468,8 +413,7 @@ class HallazgoTest {
                 "Descripcion",
                 Hallazgo.SEVERIDAD_HIGH,
                 Hallazgo.CONFIANZA_ALTA,
-                solicitud,
-                null
+                solicitud
             );
 
             Hallazgo editado = original.editar(
@@ -488,243 +432,6 @@ class HallazgoTest {
             assertEquals(Hallazgo.CONFIANZA_MEDIA, editado.obtenerConfianza(), "assertEquals failed at HallazgoTest.java:490");
             // Mantiene solicitud original
             assertSame(solicitud, editado.obtenerSolicitudHttp(), "assertSame failed at HallazgoTest.java:492");
-        }
-    }
-
-    @Nested
-    @DisplayName("Gestion de evidencia")
-    class GestionEvidencia {
-
-        @Test
-        @DisplayName("conEvidenciaHttp con nueva evidencia crea nuevo hallazgo")
-        void testConEvidenciaHttpNueva() {
-            Hallazgo original = new Hallazgo(
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA
-            );
-
-            HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
-            Hallazgo conEvidencia = original.conEvidenciaHttp(evidencia);
-
-            assertNotSame(original, conEvidencia, "assertNotSame failed at HallazgoTest.java:514");
-            assertSame(evidencia, conEvidencia.obtenerEvidenciaHttp(), "assertSame failed at HallazgoTest.java:515");
-        }
-
-        @Test
-        @DisplayName("conEvidenciaHttp con null devuelve mismo objeto")
-        void testConEvidenciaHttpNull() {
-            Hallazgo original = new Hallazgo(
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA
-            );
-
-            Hallazgo resultado = original.conEvidenciaHttp(null);
-
-            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:531");
-        }
-
-        @Test
-        @DisplayName("conEvidenciaHttp con misma evidencia devuelve mismo objeto")
-        void testConEvidenciaHttpMisma() {
-            HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
-
-            Hallazgo original = new Hallazgo(
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA,
-                null,
-                evidencia
-            );
-
-            Hallazgo resultado = original.conEvidenciaHttp(evidencia);
-
-            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:551");
-        }
-
-        @Test
-        @DisplayName("conEvidenciaId con nuevo ID crea nuevo hallazgo")
-        void testConEvidenciaIdNuevo() {
-            Hallazgo original = new Hallazgo(
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA
-            );
-
-            Hallazgo conEvidenciaId = original.conEvidenciaId("evidencia-456");
-
-            assertNotSame(original, conEvidenciaId, "assertNotSame failed at HallazgoTest.java:567");
-            assertEquals("evidencia-456", conEvidenciaId.obtenerEvidenciaId(), "assertEquals failed at HallazgoTest.java:568");
-        }
-
-        @Test
-        @DisplayName("conEvidenciaId con null devuelve mismo objeto")
-        void testConEvidenciaIdNull() {
-            Hallazgo original = new Hallazgo(
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA
-            );
-
-            Hallazgo resultado = original.conEvidenciaId(null);
-
-            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:584");
-        }
-
-        @Test
-        @DisplayName("conEvidenciaId con vacio devuelve mismo objeto")
-        void testConEvidenciaIdVacio() {
-            Hallazgo original = new Hallazgo(
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA
-            );
-
-            Hallazgo resultado = original.conEvidenciaId("");
-
-            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:600");
-        }
-
-        @Test
-        @DisplayName("conEvidenciaId con mismo ID devuelve mismo objeto")
-        void testConEvidenciaIdMismo() {
-            Hallazgo original = new Hallazgo(
-                "10:20:30",
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA,
-                null,
-                null,
-                "evidencia-123"
-            );
-
-            Hallazgo resultado = original.conEvidenciaId("evidencia-123");
-
-            assertSame(original, resultado, "assertSame failed at HallazgoTest.java:620");
-        }
-
-        @Test
-        @DisplayName("obtenerEvidenciaHttp resuelve lazy con resolutor")
-        void testObtenerEvidenciaHttpLazyResolution() {
-            HttpRequestResponse evidenciaResuelta = mock(HttpRequestResponse.class);
-
-            // Configurar resolutor
-            Hallazgo.ResolutorEvidencia resolutor = id -> {
-                if ("evidencia-789".equals(id)) {
-                    return evidenciaResuelta;
-                }
-                return null;
-            };
-            Hallazgo.establecerResolutorEvidencia(resolutor);
-
-            try {
-                Hallazgo hallazgo = new Hallazgo(
-                    "10:20:30",
-                    "https://example.com/test",
-                    "Titulo",
-                    "Descripcion",
-                    Hallazgo.SEVERIDAD_HIGH,
-                    Hallazgo.CONFIANZA_ALTA,
-                    null,
-                    null,
-                    "evidencia-789"
-                );
-
-                // Primera llamada resuelve lazy
-                HttpRequestResponse resultado = hallazgo.obtenerEvidenciaHttp();
-                assertSame(evidenciaResuelta, resultado, "assertSame failed at HallazgoTest.java:652");
-
-                // Segunda llamada usa cache
-                HttpRequestResponse resultadoCacheado = hallazgo.obtenerEvidenciaHttp();
-                assertSame(evidenciaResuelta, resultadoCacheado, "assertSame failed at HallazgoTest.java:656");
-            } finally {
-                // Limpiar resolutor
-                Hallazgo.establecerResolutorEvidencia(null);
-            }
-        }
-
-        @Test
-        @DisplayName("obtenerEvidenciaHttp devuelve null sin resolutor")
-        void testObtenerEvidenciaHttpSinResolutor() {
-            // Asegurar que no hay resolutor
-            Hallazgo.establecerResolutorEvidencia(null);
-
-            Hallazgo hallazgo = new Hallazgo(
-                "10:20:30",
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA,
-                null,
-                null,
-                "evidencia-123"
-            );
-
-            assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:681");
-        }
-
-        @Test
-        @DisplayName("obtenerEvidenciaHttp maneja excepcion del resolutor")
-        void testObtenerEvidenciaHttpConExcepcion() {
-            // Configurar resolutor que lanza excepcion
-            Hallazgo.ResolutorEvidencia resolutor = id -> {
-                throw new RuntimeException("Error simulado");
-            };
-            Hallazgo.establecerResolutorEvidencia(resolutor);
-
-            try {
-                Hallazgo hallazgo = new Hallazgo(
-                    "10:20:30",
-                    "https://example.com/test",
-                    "Titulo",
-                    "Descripcion",
-                    Hallazgo.SEVERIDAD_HIGH,
-                    Hallazgo.CONFIANZA_ALTA,
-                    null,
-                    null,
-                    "evidencia-error"
-                );
-
-                // No debe lanzar excepcion, debe devolver null
-                assertNull(hallazgo.obtenerEvidenciaHttp(), "assertNull failed at HallazgoTest.java:707");
-            } finally {
-                // Limpiar resolutor
-                Hallazgo.establecerResolutorEvidencia(null);
-            }
-        }
-
-        @Test
-        @DisplayName("obtenerEvidenciaHttp devuelve evidencia directa si existe")
-        void testObtenerEvidenciaHttpDirecta() {
-            HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
-
-            Hallazgo hallazgo = new Hallazgo(
-                "https://example.com/test",
-                "Titulo",
-                "Descripcion",
-                Hallazgo.SEVERIDAD_HIGH,
-                Hallazgo.CONFIANZA_ALTA,
-                null,
-                evidencia
-            );
-
-            assertSame(evidencia, hallazgo.obtenerEvidenciaHttp(), "assertSame failed at HallazgoTest.java:729");
         }
     }
 
@@ -785,9 +492,7 @@ class HallazgoTest {
                 "Descripcion",
                 Hallazgo.SEVERIDAD_HIGH,
                 Hallazgo.CONFIANZA_ALTA,
-                null,
-                null,
-                "evidencia-123"
+                (HttpRequest) null
             );
 
             Hallazgo hallazgo2 = new Hallazgo(
@@ -797,9 +502,7 @@ class HallazgoTest {
                 "Descripcion",
                 Hallazgo.SEVERIDAD_HIGH,
                 Hallazgo.CONFIANZA_ALTA,
-                null,
-                null,
-                "evidencia-123"
+                (HttpRequest) null
             );
 
             assertEquals(hallazgo1, hallazgo2, "assertEquals failed at HallazgoTest.java:807");
@@ -892,9 +595,7 @@ class HallazgoTest {
                 "Descripcion",
                 Hallazgo.SEVERIDAD_HIGH,
                 Hallazgo.CONFIANZA_ALTA,
-                null,
-                null,
-                "evidencia-123"
+                (HttpRequest) null
             );
 
             Hallazgo hallazgo2 = new Hallazgo(
@@ -904,9 +605,7 @@ class HallazgoTest {
                 "Descripcion",
                 Hallazgo.SEVERIDAD_HIGH,
                 Hallazgo.CONFIANZA_ALTA,
-                null,
-                null,
-                "evidencia-123"
+                (HttpRequest) null
             );
 
             assertEquals(hallazgo1.hashCode(), hallazgo2.hashCode(), "assertEquals failed at HallazgoTest.java:914");

@@ -306,27 +306,6 @@ class HttpRequestProcessorTest {
     }
 
     @Test
-    void testConstruirEvidenciaHttp_ConRequestNull_ReturnsNull() {
-        HttpRequestResponse resultado = processor.construirEvidenciaHttp(null, response);
-        assertNull(resultado);
-    }
-
-    @Test
-    void testConstruirEvidenciaHttp_ConResponseNull_ReturnsNull() {
-        HttpRequestResponse resultado = processor.construirEvidenciaHttp(request, null);
-        assertNull(resultado);
-    }
-
-    @Test
-    void testNormalizarEvidenciaManual_ConSolicitudRespuestaOriginalNull_ReturnsNull() {
-        HttpRequestResponse resultado = processor.normalizarEvidenciaManual(request, null);
-        assertNull(resultado);
-        if (gestorLogging != null) {
-            verify(gestorLogging).info(eq("HttpRequestProcessor"), eq("Analisis manual sin solicitud/respuesta original: se registraran hallazgos, pero no Issue."));
-        }
-    }
-
-    @Test
     void testInspeccionarSolicitudContextual_ConRequestYResponse_RetornaResumenValido() {
         HttpRequestResponse solicitudRespuesta = mock(HttpRequestResponse.class);
         ByteArray cuerpoRequest = mock(ByteArray.class);

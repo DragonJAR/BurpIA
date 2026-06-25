@@ -655,7 +655,7 @@ class PerformanceBenchmarkTest {
                     new LimitadorTasa(1),
                     null
                 );
-                String tareaId = manager.programarAnalisis(solicitud, null, "Analisis HTTP");
+                String tareaId = manager.programarAnalisis(solicitud, "Analisis HTTP");
                 assertNotNull(tareaId, "assertNotNull failed at PerformanceBenchmarkTest.java:599");
                 assertNotNull(gestor.obtenerTarea(tareaId), "assertNotNull failed at PerformanceBenchmarkTest.java:600");
                 manager.shutdown();

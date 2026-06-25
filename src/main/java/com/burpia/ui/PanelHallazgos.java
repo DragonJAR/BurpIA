@@ -1,6 +1,5 @@
 package com.burpia.ui;
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.scanner.AuditConfiguration;
 import burp.api.montoya.scanner.BuiltInAuditConfiguration;
@@ -1089,17 +1088,9 @@ public class PanelHallazgos extends JPanel {
                 continue;
             }
             Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
+            // El request es la única fuente de verdad del hallazgo; si es null no se
+            // fabrica uno inexistente (ejecutarAccionBurp lo reporta como "sin request").
             HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
-            if (solicitud == null && hallazgo != null) {
-                // Fallback: recuperar el request desde la evidencia almacenada (cache/disco).
-                // Permite enviar a Scanner/Repeater/Intruder hallazgos cuyo solicitudHttp
-                // directo es null pero cuya evidencia sí resuelve. Si no hay evidencia
-                // resoluble, solicitud sigue null (no se fabrica un request inexistente).
-                HttpRequestResponse evidencia = hallazgo.obtenerEvidenciaHttp();
-                if (evidencia != null) {
-                    solicitud = evidencia.request();
-                }
-            }
             String urlReferencia = resolverUrlReferencia(hallazgo);
             entradas.add(new EntradaAccion(solicitud, hallazgo, urlReferencia));
         }

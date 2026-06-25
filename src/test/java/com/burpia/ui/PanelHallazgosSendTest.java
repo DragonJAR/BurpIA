@@ -2,7 +2,6 @@ package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
-import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.logging.Logging;
 import burp.api.montoya.scanner.audit.Audit;
@@ -30,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -72,7 +72,6 @@ class PanelHallazgosSendTest {
             panel.destruir();
             panel = null;
         }
-        Hallazgo.establecerResolutorEvidencia(null);
         TestDialogUtils.desregistrarCapturaDialogos();
     }
 
@@ -126,8 +125,8 @@ class PanelHallazgosSendTest {
     }
 
     @Test
-    @DisplayName("Enviar a Issues usa el manejador centralizado con evidencia directa")
-    void testEnviarAIssuesUsaManejadorCentralizadoConEvidenciaDirecta() throws Exception {
+    @DisplayName("Enviar a Issues usa el manejador centralizado con la solicitud HTTP")
+    void testEnviarAIssuesUsaManejadorCentralizadoConSolicitudHttp() throws Exception {
         burp.api.montoya.sitemap.SiteMap siteMap = mock(burp.api.montoya.sitemap.SiteMap.class);
         when(api.burpSuite().version().edition()).thenReturn(BurpSuiteEdition.PROFESSIONAL);
         when(api.ai().isEnabled()).thenReturn(true);
@@ -137,7 +136,6 @@ class PanelHallazgosSendTest {
         SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
 
         HttpRequest request = mock(HttpRequest.class);
-        HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
         when(request.url()).thenReturn("https://example.com/issues");
         agregarHallazgo(panel, new Hallazgo(
             "https://example.com/issues",
@@ -145,15 +143,14 @@ class PanelHallazgosSendTest {
             "Descripcion",
             "High",
             "High",
-            request,
-            evidencia
+            request
         ));
         assertTrue(panel.obtenerModelo().getRowCount() >= 1, "assertTrue failed at PanelHallazgosSendTest.java:131");
 
         CountDownLatch latch = new CountDownLatch(1);
         panel.establecerManejadorGuardarIssue(hallazgo -> {
-            assertEquals(evidencia, hallazgo.obtenerEvidenciaHttp(),
-                "El flujo manual debe entregar la evidencia directa al manejador centralizado");
+            assertSame(request, hallazgo.obtenerSolicitudHttp(),
+                "El flujo manual debe entregar la solicitud HTTP al manejador centralizado");
             latch.countDown();
             return true;
         });
@@ -161,39 +158,6 @@ class PanelHallazgosSendTest {
         assertDoesNotThrow(() -> invocarMetodoPrivado(panel, "enviarAIssues", new int[]{0}));
         assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
             "El manejador centralizado de Issues debe ejecutarse");
-    }
-
-    @Test
-    @DisplayName("Enviar a Issues permite resolver evidencia lazy por evidenciaId")
-    void testEnviarAIssuesPermiteResolverEvidenciaPorId() throws Exception {
-        HttpRequest request = mock(HttpRequest.class);
-        HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
-        when(request.url()).thenReturn("https://example.com/issues-id");
-        Hallazgo hallazgo = new Hallazgo(
-            "https://example.com/issues-id",
-            "Titulo",
-            "Descripcion",
-            "High",
-            "High",
-            request
-        ).conEvidenciaId("evidencia-issues-id");
-        Hallazgo.establecerResolutorEvidencia(id -> "evidencia-issues-id".equals(id) ? evidencia : null);
-        agregarHallazgo(panel, hallazgo);
-
-        CountDownLatch latch = new CountDownLatch(1);
-        panel.establecerManejadorGuardarIssue(h -> {
-            assertEquals("evidencia-issues-id", h.obtenerEvidenciaId(),
-                "El hallazgo debe conservar el evidenciaId");
-            assertEquals(evidencia, h.obtenerEvidenciaHttp(),
-                "El manejador centralizado debe poder resolver evidencia lazy");
-            latch.countDown();
-            return true;
-        });
-
-        invocarMetodoPrivado(panel, "enviarAIssues", new int[]{0});
-
-        assertTrue(latch.await(TIMEOUT_LATCH_SEGUNDOS, TimeUnit.SECONDS),
-            "El manejador debe ejecutarse para hallazgos con evidenciaId");
     }
 
     @Test
@@ -643,38 +607,6 @@ class PanelHallazgosSendTest {
         Object entrada = entradas.get(0);
         HttpRequest solicitud = obtenerCampo(entrada, "solicitud", HttpRequest.class);
         assertNull(solicitud, "La solicitud debe ser null cuando no hay evidencia original");
-    }
-
-    @Test
-    @DisplayName("Captura resuelve el request desde la evidencia cuando solicitudHttp es null")
-    void testCapturaResuelveRequestDesdeEvidencia() throws Exception {
-        HttpRequest request = mock(HttpRequest.class);
-        HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
-        when(evidencia.request()).thenReturn(request);
-
-        // Hallazgo SIN solicitudHttp directa (constructor de 5 args) pero con evidenciaId resoluble.
-        Hallazgo hallazgo = new Hallazgo(
-            "https://example.com/desde-evidencia",
-            "Titulo",
-            "Descripcion",
-            "High",
-            "High"
-        ).conEvidenciaId("evidencia-captura-id");
-        Hallazgo.establecerResolutorEvidencia(id -> "evidencia-captura-id".equals(id) ? evidencia : null);
-        panel.obtenerModelo().agregarHallazgo(hallazgo);
-        esperarFilas(panel, 1);
-
-        Object captura = invocarMetodoPrivadoRetorno(panel, "capturarEntradasAccion", new int[]{0});
-        assertNotNull(captura, "La captura no debe ser null");
-
-        List<?> entradas = obtenerCampoLista(captura, "entradas");
-        assertEquals(1, entradas.size(), "Debe haber una entrada");
-
-        Object entrada = entradas.get(0);
-        HttpRequest solicitud = obtenerCampo(entrada, "solicitud", HttpRequest.class);
-        assertNotNull(solicitud,
-            "La solicitud debe resolverse desde la evidencia cuando solicitudHttp directa es null");
-        assertEquals(request, solicitud, "Debe ser el request de la evidencia resuelta");
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.burpia.execution;
 
-import burp.api.montoya.http.message.HttpRequestResponse;
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
@@ -8,7 +7,6 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.model.Tarea;
 import com.burpia.ui.PestaniaPrincipal;
-import com.burpia.util.AlmacenEvidenciaHttp;
 import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
@@ -47,7 +45,6 @@ public class TaskExecutionManager {
     private final PrintWriter stderr;
     private final LimitadorTasa limitador;
     private final ControlBackpressureGlobal controlBackpressure;
-    private final AlmacenEvidenciaHttp almacenEvidencia;
     private final GestorLoggingUnificado gestorLogging;
 
     private final ThreadPoolExecutor executorService;
@@ -64,12 +61,10 @@ public class TaskExecutionManager {
 
     private static final class ContextoReintento {
         private final SolicitudAnalisis solicitudAnalisis;
-        private final String evidenciaId;
         private final long creadoMs;
 
-        private ContextoReintento(SolicitudAnalisis solicitudAnalisis, String evidenciaId) {
+        private ContextoReintento(SolicitudAnalisis solicitudAnalisis) {
             this.solicitudAnalisis = solicitudAnalisis;
-            this.evidenciaId = evidenciaId;
             this.creadoMs = System.currentTimeMillis();
         }
     }
@@ -86,7 +81,6 @@ public class TaskExecutionManager {
         this.stderr = stderr != null ? stderr : new PrintWriter(System.err, true);
         this.limitador = limitador != null ? limitador : new LimitadorTasa(10);
         this.controlBackpressure = controlBackpressure;
-        this.almacenEvidencia = new AlmacenEvidenciaHttp();
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
         this.contextosReintento = new ConcurrentHashMap<>();
         this.ejecucionesActivas = new ConcurrentHashMap<>();
@@ -110,7 +104,7 @@ public class TaskExecutionManager {
         gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("TaskExecutionManager inicializado con %d hilos", maxThreads));
     }
 
-    public String programarAnalisis(SolicitudAnalisis solicitudAnalisis, HttpRequestResponse evidenciaHttp, String tipoTarea) {
+    public String programarAnalisis(SolicitudAnalisis solicitudAnalisis, String tipoTarea) {
         if (solicitudAnalisis == null) {
             gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo programar analisis: solicitud null"));
             return null;
@@ -121,7 +115,6 @@ public class TaskExecutionManager {
         final AtomicReference<String> tareaIdRef = new AtomicReference<>();
 
         if (gestorTareas != null) {
-            final String evidenciaId = almacenarEvidenciaSiDisponible(evidenciaHttp);
             Tarea tarea = gestorTareas.crearTarea(
                     tipoTarea,
                     url,
@@ -130,8 +123,8 @@ public class TaskExecutionManager {
             tareaIdRef.set(tarea.obtenerId());
             contextosReintento.put(
                     tarea.obtenerId(),
-                    new ContextoReintento(solicitudAnalisis, evidenciaId));
-            ejecutarAnalisisExistente(tarea.obtenerId(), solicitudAnalisis, evidenciaId);
+                    new ContextoReintento(solicitudAnalisis));
+            ejecutarAnalisisExistente(tarea.obtenerId(), solicitudAnalisis);
         }
         return tareaIdRef.get();
     }
@@ -158,8 +151,7 @@ public class TaskExecutionManager {
 
         ejecutarAnalisisExistente(
                 tareaId,
-                contexto.solicitudAnalisis,
-                contexto.evidenciaId);
+                contexto.solicitudAnalisis);
 
         gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Tarea reencolada: %s", tareaId));
         return true;
@@ -185,7 +177,7 @@ public class TaskExecutionManager {
         }
     }
 
-    private void ejecutarAnalisisExistente(String tareaId, SolicitudAnalisis solicitudAnalisis, String evidenciaId) {
+    private void ejecutarAnalisisExistente(String tareaId, SolicitudAnalisis solicitudAnalisis) {
         if (Normalizador.esVacio(tareaId) || solicitudAnalisis == null) {
             return;
         }
@@ -212,7 +204,7 @@ public class TaskExecutionManager {
                 stdout,
                 stderr,
                 limitador,
-                new ManejadorResultadoAI(tareaIdRef, url, evidenciaId),
+                new ManejadorResultadoAI(tareaIdRef, url),
                 () -> {
                     if (gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal)) {
                         boolean marcada = gestorTareas.marcarTareaAnalizando(
@@ -247,7 +239,6 @@ public class TaskExecutionManager {
             analizadoresActivos.remove(id);
             finalizarEjecucionActiva(id);
             contextosReintento.remove(id);
-            eliminarEvidenciaSiDisponible(evidenciaId);
             if (gestorTareas != null) {
                 gestorTareas.actualizarTarea(id, Tarea.ESTADO_ERROR, I18nUI.Tareas.MSG_DESCARTADA_SATURACION());
             }
@@ -260,7 +251,6 @@ public class TaskExecutionManager {
             }
             finalizarEjecucionActiva(id);
             contextosReintento.remove(id);
-            eliminarEvidenciaSiDisponible(evidenciaId);
             gestorLogging.error(ORIGEN_LOG, I18nLogs.trf("Error al iniciar análisis para %s", url), ex);
         }
     }
@@ -326,10 +316,6 @@ public class TaskExecutionManager {
                     (ttlAplicable != Long.MAX_VALUE &&
                             (ahora - contexto.creadoMs) > ttlAplicable);
 
-            if (debePurgar) {
-                eliminarEvidenciaSiDisponible(contexto.evidenciaId);
-            }
-
             return debePurgar;
         });
 
@@ -346,10 +332,7 @@ public class TaskExecutionManager {
             if (entry == null) {
                 continue;
             }
-            ContextoReintento contexto = contextosReintento.remove(entry.getKey());
-            if (contexto != null) {
-                eliminarEvidenciaSiDisponible(contexto.evidenciaId);
-            }
+            contextosReintento.remove(entry.getKey());
         }
     }
 
@@ -380,30 +363,6 @@ public class TaskExecutionManager {
                         executorService.getCompletedTaskCount()));
     }
 
-    private String almacenarEvidenciaSiDisponible(HttpRequestResponse evidenciaHttp) {
-        if (evidenciaHttp == null) {
-            gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.EVIDENCIA_NO_ALMACENADA());
-            return null;
-        }
-        try {
-            return almacenEvidencia.guardar(evidenciaHttp);
-        } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo persistir evidencia HTTP"), e);
-            return null;
-        }
-    }
-
-    private void eliminarEvidenciaSiDisponible(String evidenciaId) {
-        if (Normalizador.esVacio(evidenciaId)) {
-            return;
-        }
-        try {
-            almacenEvidencia.eliminar(evidenciaId);
-        } catch (Exception e) {
-            gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo eliminar evidencia HTTP"), e);
-        }
-    }
-
     public void shutdown() {
         // Marcar cierre inmediatamente: los workers que completen tras el
         // awaitTermination no postearán a la UI destruida.
@@ -423,7 +382,6 @@ public class TaskExecutionManager {
         }
         ejecucionesActivas.clear();
         contextosReintento.clear();
-        almacenEvidencia.limpiarCacheMemoria();
 
         if (executorService != null && !executorService.isShutdown()) {
             gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Deteniendo ExecutorService de TaskExecutionManager..."));
@@ -502,12 +460,10 @@ public class TaskExecutionManager {
     private class ManejadorResultadoAI implements AnalizadorAI.Callback {
         private final AtomicReference<String> tareaIdRef;
         private final String url;
-        private final String evidenciaId;
 
-        ManejadorResultadoAI(AtomicReference<String> tareaIdRef, String url, String evidenciaId) {
+        ManejadorResultadoAI(AtomicReference<String> tareaIdRef, String url) {
             this.tareaIdRef = tareaIdRef;
             this.url = url;
-            this.evidenciaId = evidenciaId;
         }
 
         @Override
@@ -536,8 +492,7 @@ public class TaskExecutionManager {
                 // Agregar hallazgos al modelo de la tabla
                 if (resultado != null && resultado.obtenerHallazgos() != null
                         && !resultado.obtenerHallazgos().isEmpty()) {
-                    List<com.burpia.model.Hallazgo> hallazgos =
-                            enriquecerHallazgosConEvidencia(resultado.obtenerHallazgos(), evidenciaId);
+                    List<com.burpia.model.Hallazgo> hallazgos = resultado.obtenerHallazgos();
                     ejecutarEnEdt(() -> {
                         if (pestaniaPrincipal != null) {
                             pestaniaPrincipal.agregarHallazgos(hallazgos);
@@ -573,33 +528,6 @@ public class TaskExecutionManager {
             } finally {
                 limpiarRecursosTarea(id);
             }
-        }
-
-        private List<com.burpia.model.Hallazgo> enriquecerHallazgosConEvidencia(
-                List<com.burpia.model.Hallazgo> hallazgos,
-                String evidenciaId) {
-            if (Normalizador.esVacia(hallazgos) || Normalizador.esVacio(evidenciaId)) {
-                if (!Normalizador.esVacia(hallazgos)) {
-                    gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.HALLAZGOS_SIN_EVIDENCIA(hallazgos.size()));
-                }
-                return hallazgos;
-            }
-
-            List<com.burpia.model.Hallazgo> hallazgosEnriquecidos = new ArrayList<>(hallazgos.size());
-            for (com.burpia.model.Hallazgo hallazgo : hallazgos) {
-                hallazgosEnriquecidos.add(asociarEvidencia(hallazgo, evidenciaId));
-            }
-            return hallazgosEnriquecidos;
-        }
-
-        private com.burpia.model.Hallazgo asociarEvidencia(com.burpia.model.Hallazgo hallazgo, String evidenciaId) {
-            if (hallazgo == null || Normalizador.esVacio(evidenciaId)) {
-                return hallazgo;
-            }
-
-            HttpRequestResponse evidenciaExistente = hallazgo.obtenerEvidenciaHttp();
-            com.burpia.model.Hallazgo hallazgoConId = hallazgo.conEvidenciaId(evidenciaId);
-            return evidenciaExistente != null ? hallazgoConId.conEvidenciaHttp(evidenciaExistente) : hallazgoConId;
         }
 
         @Override

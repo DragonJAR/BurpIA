@@ -98,7 +98,7 @@ class TaskExecutionManagerConcurrenciaTest {
                                     "",
                                     "hash-" + threadNum + "-" + j
                             );
-                            String tareaId = manager.programarAnalisis(solicitud, null, "test");
+                            String tareaId = manager.programarAnalisis(solicitud, "test");
                             synchronized (tareaIds) {
                                 if (tareaId != null) {
                                     tareaIds.add(tareaId);
@@ -140,7 +140,7 @@ class TaskExecutionManagerConcurrenciaTest {
                 "hash-retry"
         );
 
-        String tareaId = manager.programarAnalisis(solicitud, null, "test");
+        String tareaId = manager.programarAnalisis(solicitud, "test");
 
         int threadCount = 5;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
@@ -282,7 +282,7 @@ class TaskExecutionManagerConcurrenciaTest {
                 "hash-cancel"
         );
 
-        String tareaId = manager.programarAnalisis(solicitud, null, "test");
+        String tareaId = manager.programarAnalisis(solicitud, "test");
 
         int threadCount = 5;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);

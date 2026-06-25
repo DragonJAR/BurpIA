@@ -6,7 +6,6 @@ import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
-import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -228,10 +227,9 @@ class GestorMultiProveedorTest {
     }
 
     @Test
-    @DisplayName("Etiquetar resultado multi proveedor conserva evidencia HTTP e ID")
-    void testEtiquetarResultadoConservaEvidenciaHttpEId() throws Exception {
+    @DisplayName("Etiquetar resultado multi proveedor conserva la solicitud HTTP")
+    void testEtiquetarResultadoConservaSolicitudHttp() throws Exception {
         ConfiguracionAPI config = crearConfiguracionValida(PROVEEDOR_OPENAI, MODELO_OPENAI);
-        HttpRequestResponse evidencia = org.mockito.Mockito.mock(HttpRequestResponse.class);
         Hallazgo hallazgo = new Hallazgo(
             "12:00:00",
             "https://example.com/evidencia",
@@ -239,9 +237,7 @@ class GestorMultiProveedorTest {
             "Descripcion",
             Hallazgo.SEVERIDAD_HIGH,
             Hallazgo.CONFIANZA_ALTA,
-            solicitudHttp,
-            evidencia,
-            "evidencia-multi"
+            solicitudHttp
         );
         ResultadoAnalisisMultiple resultado = new ResultadoAnalisisMultiple(
             "https://example.com/evidencia",
@@ -268,10 +264,6 @@ class GestorMultiProveedorTest {
         );
 
         Hallazgo hallazgoEtiquetado = etiquetado.obtenerHallazgos().get(0);
-        assertEquals("evidencia-multi", hallazgoEtiquetado.obtenerEvidenciaId(),
-            "El etiquetado multi proveedor debe conservar evidenciaId");
-        assertSame(evidencia, hallazgoEtiquetado.obtenerEvidenciaHttp(),
-            "El etiquetado multi proveedor debe conservar evidencia directa");
         assertSame(solicitudHttp, hallazgoEtiquetado.obtenerSolicitudHttp(),
             "El etiquetado multi proveedor debe conservar la solicitud HTTP");
     }

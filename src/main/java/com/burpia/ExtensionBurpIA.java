@@ -360,7 +360,8 @@ public class ExtensionBurpIA implements BurpExtension {
                 return PanelAgente.ResultadoInyeccion.DESCARTADO;
             }
 
-            HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, null);
+            HttpRequestResponse evidencia = obtenerEvidenciaAgente(
+                    hallazgo.obtenerSolicitudHttp(), contieneToken(prompt, TOKEN_RESPONSE));
             String request = serializarSolicitudSiNecesario(prompt, evidencia, hallazgo.obtenerUrl());
             String response = serializarRespuestaSiNecesario(prompt, evidencia);
             String tituloValor = Normalizador.valorSeguro(hallazgo.obtenerTitulo());
@@ -579,6 +580,38 @@ public class ExtensionBurpIA implements BurpExtension {
 
     private boolean tieneResponseDisponible(HttpRequestResponse evidencia) {
         return obtenerProcesadorSolicitudes().tieneResponseDisponible(evidencia);
+    }
+
+    /**
+     * Evidencia HTTP para el prompt del agente SIN almacenar nada: el HttpRequest del
+     * hallazgo es la única fuente de verdad y la response se deriva re-emitiendo la
+     * petición, pero solo si el prompt la usa ({@code {{RESPONSE}}}); así no hay I/O de
+     * red innecesaria.
+     *
+     * <p>ponytail: re-emitir repite la petición — efectos en requests no idempotentes y
+     * la response puede diferir de la original (sesión/nonce caducados). Es el costo de
+     * no almacenar, coherente con enviar a Repeater/Scanner. Si falla, degrada a
+     * request-only (response vacía) en vez de fabricar datos.</p>
+     */
+    private HttpRequestResponse obtenerEvidenciaAgente(HttpRequest solicitud, boolean necesitaResponse) {
+        if (solicitud == null) {
+            return null;
+        }
+        if (necesitaResponse && api != null) {
+            try {
+                HttpRequestResponse reemitida = api.http().sendRequest(solicitud);
+                if (reemitida != null && reemitida.response() != null) {
+                    registrar(I18nLogs.trf("Petición re-emitida al objetivo para el agente: %s", solicitud.url()));
+                    return reemitida;
+                }
+                registrarError(I18nLogs.trf("Re-emisión sin response para el agente: %s", solicitud.url()));
+            } catch (Exception e) {
+                registrarError(I18nLogs.trf("Error re-emitiendo la petición para el agente (%s): %s",
+                        solicitud.url(), e.getMessage()));
+            }
+        }
+        return HttpRequestResponse.httpRequestResponse(solicitud,
+                HttpResponse.httpResponse(ByteArray.byteArray(new byte[0])));
     }
 
     private boolean contieneAlgunToken(String prompt, String... tokens) {
@@ -1187,40 +1220,6 @@ public class ExtensionBurpIA implements BurpExtension {
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&#39;");
-    }
-
-    /**
-     * Resuelve el par request/response de un hallazgo: la evidencia directa pasada, si
-     * no la almacenada (cache/disco), y si no, sintetiza un par desde el request con
-     * response vacía. Lo usa el flujo "Enviar a Agente" para incluir el HTTP en el
-     * prompt. NOTA: el issue de Burp ya NO usa evidencia (se arma solo con los campos
-     * editables del hallazgo); este método queda para el agente.
-     */
-    static HttpRequestResponse resolverEvidenciaIssue(Hallazgo hallazgo,
-            HttpRequestResponse solicitudRespuestaEvidencia) {
-        if (solicitudRespuestaEvidencia != null) {
-            return solicitudRespuestaEvidencia;
-        }
-        if (hallazgo == null) {
-            return null;
-        }
-
-        HttpRequestResponse evidenciaResuelta = hallazgo.obtenerEvidenciaHttp();
-        if (evidenciaResuelta != null) {
-            return evidenciaResuelta;
-        }
-
-        HttpRequest solicitud = hallazgo.obtenerSolicitudHttp();
-        if (solicitud != null) {
-            try {
-                HttpResponse respuestaVacia = HttpResponse.httpResponse(ByteArray.byteArray(new byte[0]));
-                return HttpRequestResponse.httpRequestResponse(solicitud, respuestaVacia);
-            } catch (Exception ignored) {
-                return null;
-            }
-        }
-
-        return null;
     }
 
     public static boolean guardarAuditIssueDesdeHallazgo(MontoyaApi api, Hallazgo hallazgo) {

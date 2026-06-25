@@ -83,7 +83,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         ConfiguracionAPI configSnapshot = configRefSegura.obtener();
         this.taskExecutionManager = new TaskExecutionManager(configRefSegura.obtener(), gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador, controlBackpressure);
         this.alertasConfiguracionEmitidas = new ConcurrentHashMap<>();
-        Hallazgo.establecerResolutorEvidencia(evidenceManager::obtenerEvidencia);
         int maxThreads = configSnapshot.obtenerMaximoConcurrente() > 0 ? configSnapshot.obtenerMaximoConcurrente() : 10;
         this.limitador = limitador != null ? limitador : new LimitadorTasa(maxThreads);
         this.logLock = new Object();
@@ -169,7 +168,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        final HttpResponseReceived respuestaCapturada = respuestaRecibida;
         final String url = respuestaRecibida.initiatingRequest().url() != null ? 
                 respuestaRecibida.initiatingRequest().url() : "[URL NULL]";
         final String metodo = respuestaRecibida.initiatingRequest().method() != null ? 
@@ -244,12 +242,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         // Usar HttpRequestProcessor para crear SolicitudAnalisis
         SolicitudAnalisis solicitudAnalisis = httpRequestProcessor.crearSolicitudAnalisisDesdeRespuesta(respuestaRecibida);
-        HttpRequestResponse evidenciaHttp = httpRequestProcessor.construirEvidenciaHttp(
-                respuestaCapturada.initiatingRequest(), respuestaCapturada);
-        
         programarAnalisis(
                 solicitudAnalisis,
-                evidenciaHttp,
                 "Analisis HTTP");
 
         return ResponseReceivedAction.continueWith(respuestaRecibida);
@@ -292,10 +286,8 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         registrar(I18nLogs.trf("Analisis forzado solicitado desde menu contextual: %s %s", metodo, url));
-        HttpRequestResponse evidenciaHttp = httpRequestProcessor.normalizarEvidenciaManual(solicitud, solicitudRespuestaOriginal);
         programarAnalisis(
                 solicitudAnalisis,
-                evidenciaHttp,
                 "Analisis Manual");
     }
 
@@ -353,7 +345,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         rastrearContextual(I18nLogs.ContextoMenu.CONSOLIDANDO_FLUJO(solicitudesFlujo.size()));
         registrar(I18nUI.Contexto.LOG_FLUJO_INICIADO(solicitudesFlujo.size()));
-        programarAnalisis(solicitudFlujo, solicitudesValidas.get(0), "Analisis Flujo");
+        programarAnalisis(solicitudFlujo, "Analisis Flujo");
     }
 
     public boolean reencolarTarea(String tareaId) {
@@ -371,7 +363,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private String programarAnalisis(SolicitudAnalisis solicitudAnalisis,
-            HttpRequestResponse evidenciaHttp,
             String tipoTarea) {
         if (solicitudAnalisis == null) {
             registrarError(I18nLogs.Manejador.ERROR_PROGRAMAR_ANALISIS());
@@ -382,7 +373,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
 
         // Usar TaskExecutionManager para programar análisis
-        return taskExecutionManager.programarAnalisis(solicitudAnalisis, evidenciaHttp, tipoTarea);
+        return taskExecutionManager.programarAnalisis(solicitudAnalisis, tipoTarea);
     }
 
 
@@ -625,7 +616,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         taskExecutionManager.shutdown();
         
         alertasConfiguracionEmitidas.clear();
-        evidenceManager.limpiarEvidenciasAntiguas();
     }
 
     public void pausarCaptura() {

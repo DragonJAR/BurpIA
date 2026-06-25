@@ -1,10 +1,6 @@
 package com.burpia.execution;
 
 import com.burpia.analyzer.AnalizadorAI;
-import burp.api.montoya.core.ByteArray;
-import burp.api.montoya.http.message.HttpRequestResponse;
-import burp.api.montoya.http.message.requests.HttpRequest;
-import burp.api.montoya.http.message.responses.HttpResponse;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
@@ -59,7 +55,7 @@ class TaskExecutionManagerTest {
     void testProgramarAnalisisRetornaNullSiLaSolicitudEsNull() {
         manager = crearManager();
 
-        String tareaId = manager.programarAnalisis(null, null, "Analisis HTTP");
+        String tareaId = manager.programarAnalisis(null, "Analisis HTTP");
 
         assertNull(tareaId, "assertNull failed at TaskExecutionManagerTest.java:47");
     }
@@ -78,7 +74,7 @@ class TaskExecutionManagerTest {
         );
 
         try (MockedConstruction<AnalizadorAI> construccion = mockConstruction(AnalizadorAI.class)) {
-            String tareaId = manager.programarAnalisis(solicitud, null, "Analisis HTTP");
+            String tareaId = manager.programarAnalisis(solicitud, "Analisis HTTP");
             flushEdt();
 
             Tarea tarea = gestorTareas.obtenerTarea(tareaId);
@@ -119,7 +115,7 @@ class TaskExecutionManagerTest {
         );
 
         try (MockedConstruction<AnalizadorAI> construccion = mockConstruction(AnalizadorAI.class)) {
-            String tareaId = manager.programarAnalisis(solicitud, null, "Analisis HTTP");
+            String tareaId = manager.programarAnalisis(solicitud, "Analisis HTTP");
             flushEdt();
             establecerEjecucionActiva(tareaId);
 
@@ -132,9 +128,9 @@ class TaskExecutionManagerTest {
     }
 
     @Test
-    @DisplayName("Hallazgos completados heredan evidenciaId de la tarea")
+    @DisplayName("Hallazgos completados se reenvian conservando la solicitud HTTP")
     @SuppressWarnings("unchecked")
-    void testHallazgosCompletadosHeredanEvidenciaId() throws Exception {
+    void testHallazgosCompletadosConservanSolicitud() throws Exception {
         PestaniaPrincipal pestaniaPrincipal = mock(PestaniaPrincipal.class);
         manager = crearManager(pestaniaPrincipal);
 
@@ -150,22 +146,8 @@ class TaskExecutionManagerTest {
         try (MockedConstruction<AnalizadorAI> construccion = mockConstruction(
                 AnalizadorAI.class,
                 (mock, context) -> callbackRef.set((AnalizadorAI.Callback) context.arguments().get(5)))) {
-            HttpRequestResponse evidenciaHttp = mock(HttpRequestResponse.class);
-            HttpRequest request = mock(HttpRequest.class);
-            HttpResponse response = mock(HttpResponse.class);
-            ByteArray requestBytes = mock(ByteArray.class);
-            ByteArray responseBytes = mock(ByteArray.class);
-
-            when(evidenciaHttp.request()).thenReturn(request);
-            when(evidenciaHttp.response()).thenReturn(response);
-            when(request.toByteArray()).thenReturn(requestBytes);
-            when(response.toByteArray()).thenReturn(responseBytes);
-            when(requestBytes.getBytes()).thenReturn("request".getBytes());
-            when(responseBytes.getBytes()).thenReturn("response".getBytes());
-
             String tareaId = manager.programarAnalisis(
                 solicitud,
-                evidenciaHttp,
                 "Analisis HTTP"
             );
             flushEdt();
@@ -199,8 +181,6 @@ class TaskExecutionManagerTest {
 
             assertEquals(1, hallazgosEnviados.size(),
                 "assertEquals failed at TaskExecutionManagerTest.java:evidencia:hallazgos");
-            assertNotNull(hallazgosEnviados.get(0).obtenerEvidenciaId(),
-                "assertNotNull failed at TaskExecutionManagerTest.java:evidencia:evidenciaId");
         }
     }
 

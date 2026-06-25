@@ -205,54 +205,6 @@ public final class HttpRequestProcessor {
                 cuerpoRespuesta);
     }
     
-    public HttpRequestResponse construirEvidenciaHttp(HttpRequest solicitud, HttpResponse respuesta) {
-        if (solicitud == null || respuesta == null) {
-            return null;
-        }
-        try {
-            return HttpRequestResponse.httpRequestResponse(solicitud, respuesta);
-        } catch (Exception e) {
-            if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo construir HttpRequestResponse para evidencia de Issue"), e);
-            }
-            return null;
-        }
-    }
-    
-    public HttpRequestResponse normalizarEvidenciaManual(HttpRequest solicitud, HttpRequestResponse solicitudRespuestaOriginal) {
-        if (solicitudRespuestaOriginal == null) {
-            if (gestorLogging != null) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analisis manual sin solicitud/respuesta original: se registraran hallazgos, pero no Issue."));
-            }
-            return null;
-        }
-
-        try {
-            if (!solicitudRespuestaOriginal.hasResponse()) {
-                if (gestorLogging != null) {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Analisis manual sin response asociada: se registraran hallazgos, pero no Issue."));
-                }
-                return null;
-            }
-            if (solicitudRespuestaOriginal.request() != null && solicitudRespuestaOriginal.response() != null) {
-                return solicitudRespuestaOriginal;
-            }
-        } catch (Exception e) {
-            if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo reutilizar la evidencia original del analisis manual"), e);
-            }
-        }
-
-        try {
-            return construirEvidenciaHttp(solicitud, solicitudRespuestaOriginal.response());
-        } catch (Exception e) {
-            if (gestorLogging != null) {
-                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("No se pudo construir evidencia desde analisis manual"), e);
-            }
-            return null;
-        }
-    }
-    
     private String obtenerUrlSegura(HttpRequest solicitud) {
         String tempUrl = solicitud != null ? solicitud.url() : null;
         return tempUrl != null ? tempUrl : "[URL NULL]";

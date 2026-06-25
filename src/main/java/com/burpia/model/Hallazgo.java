@@ -1,5 +1,4 @@
 package com.burpia.model;
-import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.Normalizador;
@@ -19,13 +18,6 @@ public class Hallazgo {
     public static final String CONFIANZA_MEDIA = "Medium";
     public static final String CONFIANZA_BAJA = "Low";
 
-    @FunctionalInterface
-    public interface ResolutorEvidencia {
-        HttpRequestResponse resolver(String evidenciaId);
-    }
-
-    private static volatile ResolutorEvidencia resolutorEvidencia;
-
     private final String horaDescubrimiento;
     private final String url;
     private final String titulo;
@@ -33,28 +25,12 @@ public class Hallazgo {
     private final String severidad;
     private final String confianza;
     private final HttpRequest solicitudHttp;
-    private final String evidenciaId;
-    private transient volatile HttpRequestResponse evidenciaHttp;
-
-    public static void establecerResolutorEvidencia(ResolutorEvidencia resolutor) {
-        resolutorEvidencia = resolutor;
-    }
 
     public Hallazgo(String url, String titulo, String hallazgo, String severidad, String confianza) {
-        this(url, titulo, hallazgo, severidad, confianza, (HttpRequest) null, (HttpRequestResponse) null);
+        this(url, titulo, hallazgo, severidad, confianza, null);
     }
 
     public Hallazgo(String url, String titulo, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
-        this(url, titulo, hallazgo, severidad, confianza, solicitudHttp, null);
-    }
-
-    public Hallazgo(String url,
-                    String titulo,
-                    String hallazgo,
-                    String severidad,
-                    String confianza,
-                    HttpRequest solicitudHttp,
-                    HttpRequestResponse evidenciaHttp) {
         this(
             LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")),
             url,
@@ -62,36 +38,17 @@ public class Hallazgo {
             hallazgo,
             severidad,
             confianza,
-            solicitudHttp,
-            evidenciaHttp,
-            null
+            solicitudHttp
         );
     }
 
-    public Hallazgo(String horaDescubrimiento, String url, String titulo, String hallazgo, String severidad, String confianza, HttpRequest solicitudHttp) {
-        this(horaDescubrimiento, url, titulo, hallazgo, severidad, confianza, solicitudHttp, null);
-    }
-
     public Hallazgo(String horaDescubrimiento,
                     String url,
                     String titulo,
                     String hallazgo,
                     String severidad,
                     String confianza,
-                    HttpRequest solicitudHttp,
-                    HttpRequestResponse evidenciaHttp) {
-        this(horaDescubrimiento, url, titulo, hallazgo, severidad, confianza, solicitudHttp, evidenciaHttp, null);
-    }
-
-    public Hallazgo(String horaDescubrimiento,
-                    String url,
-                    String titulo,
-                    String hallazgo,
-                    String severidad,
-                    String confianza,
-                    HttpRequest solicitudHttp,
-                    HttpRequestResponse evidenciaHttp,
-                    String evidenciaId) {
+                    HttpRequest solicitudHttp) {
         this.horaDescubrimiento = horaDescubrimiento;
         this.url = url;
         this.titulo = titulo;
@@ -99,8 +56,6 @@ public class Hallazgo {
         this.severidad = normalizarSeveridad(severidad);
         this.confianza = normalizarConfianza(confianza);
         this.solicitudHttp = solicitudHttp;
-        this.evidenciaHttp = evidenciaHttp;
-        this.evidenciaId = evidenciaId;
     }
 
     public String obtenerHoraDescubrimiento() {
@@ -131,74 +86,6 @@ public class Hallazgo {
         return solicitudHttp;
     }
 
-    public HttpRequestResponse obtenerEvidenciaHttp() {
-        HttpRequestResponse evidenciaActual = evidenciaHttp;
-        if (evidenciaActual != null) {
-            return evidenciaActual;
-        }
-
-        synchronized (this) {
-            evidenciaActual = evidenciaHttp;
-            if (evidenciaActual != null) {
-                return evidenciaActual;
-            }
-
-            String id = evidenciaId;
-            ResolutorEvidencia resolutor = resolutorEvidencia;
-            if (Normalizador.esVacio(id) || resolutor == null) {
-                return null;
-            }
-            try {
-                evidenciaActual = resolutor.resolver(id);
-                evidenciaHttp = evidenciaActual;
-                return evidenciaActual;
-            } catch (Exception e) {
-                return null;
-            }
-        }
-    }
-
-    public String obtenerEvidenciaId() {
-        return evidenciaId;
-    }
-
-    public Hallazgo conEvidenciaHttp(HttpRequestResponse evidenciaHttp) {
-        if (evidenciaHttp == null || this.evidenciaHttp == evidenciaHttp) {
-            return this;
-        }
-        return new Hallazgo(
-            horaDescubrimiento,
-            url,
-            titulo,
-            hallazgo,
-            severidad,
-            confianza,
-            solicitudHttp,
-            evidenciaHttp,
-            evidenciaId
-        );
-    }
-
-    public Hallazgo conEvidenciaId(String nuevoEvidenciaId) {
-        if (Normalizador.esVacio(nuevoEvidenciaId)) {
-            return this;
-        }
-        if (nuevoEvidenciaId.equals(this.evidenciaId)) {
-            return this;
-        }
-        return new Hallazgo(
-            horaDescubrimiento,
-            url,
-            titulo,
-            hallazgo,
-            severidad,
-            confianza,
-            solicitudHttp,
-            null,
-            nuevoEvidenciaId
-        );
-    }
-
     public Hallazgo editar(String nuevaUrl, String nuevoTitulo, String nuevaDescripcion, String nuevaSeveridad, String nuevaConfianza) {
         return new Hallazgo(
             horaDescubrimiento,
@@ -207,9 +94,7 @@ public class Hallazgo {
             nuevaDescripcion,
             nuevaSeveridad,
             nuevaConfianza,
-            solicitudHttp,
-            evidenciaHttp,
-            evidenciaId
+            solicitudHttp
         );
     }
 
@@ -320,11 +205,9 @@ public class Hallazgo {
     /**
      * Compara hallazgos por contenido semántico, no por referencia de solicitud HTTP.
      * <p>
-     * Nota: solicitudHttp y evidenciaHttp NO se incluyen en equals/hashCode porque:
-     * <ul>
-     *   <li>HttpRequest no implementa equals/hashCode de forma consistente</li>
-     *   <li>Dos hallazgos con el mismo contenido pero diferentes requests deben considerarse iguales</li>
-     * </ul>
+     * Nota: solicitudHttp NO se incluye en equals/hashCode porque HttpRequest no implementa
+     * equals/hashCode de forma consistente y dos hallazgos con el mismo contenido pero
+     * distinto request deben considerarse iguales.
      * </p>
      */
     @Override
@@ -337,13 +220,12 @@ public class Hallazgo {
                Objects.equals(titulo, other.titulo) &&
                Objects.equals(hallazgo, other.hallazgo) &&
                Objects.equals(severidad, other.severidad) &&
-               Objects.equals(confianza, other.confianza) &&
-               Objects.equals(evidenciaId, other.evidenciaId);
+               Objects.equals(confianza, other.confianza);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(horaDescubrimiento, url, titulo, hallazgo, severidad, confianza, evidenciaId);
+        return Objects.hash(horaDescubrimiento, url, titulo, hallazgo, severidad, confianza);
     }
 
     @Override
