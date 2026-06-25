@@ -1151,25 +1151,22 @@ public class ExtensionBurpIA implements BurpExtension {
         burp.api.montoya.scanner.audit.issues.AuditIssueConfidence confidence = convertirConfianza(
                 hallazgo.obtenerConfianza());
 
-        String remediationDetail = I18nUI.Hallazgos.REMEDIACION_ISSUE();
-        String background = I18nUI.Hallazgos.BACKGROUND_ISSUE();
-        String remediationBackground = I18nUI.Hallazgos.REMEDIACION_BACKGROUND_ISSUE();
-
         // El issue se arma SOLO con los 5 campos editables del hallazgo (los mismos del
-        // diálogo de doble clic): título, descripción, URL, severidad y confianza. NO se
-        // adjunta evidencia HTTP: un request/response reconstruido o sintetizado hace
-        // lanzar a siteMap().add (el hallazgo manual, sin evidencia, sí guarda). El texto
-        // del LLM se codifica a entidades HTML (guía de PortSwigger) y el baseUrl va CRUDO
-        // (Burp lo parsea como URL). La evidencia sigue accesible en la UI de BurpIA.
+        // diálogo de doble clic): título, descripción, URL, severidad y confianza. El
+        // texto del LLM se codifica a entidades HTML (escaparHtml, guía de PortSwigger) y
+        // el baseUrl va CRUDO (Burp lo parsea como URL). NO se adjunta evidencia HTTP (un
+        // r/r reconstruido/sintetizado hace lanzar a siteMap().add; sigue accesible en la
+        // UI de BurpIA) y NO se añaden textos estáticos de remediation/background (van
+        // null): así el issue refleja únicamente lo que editas, sin contenido fijo.
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
                 escaparHtml(hallazgo.obtenerTitulo()),
                 escaparHtml(hallazgo.obtenerHallazgo()) + "\n\nURL: " + hallazgo.obtenerUrl(),
-                remediationDetail,
+                null,
                 hallazgo.obtenerUrl(),
                 severity,
                 confidence,
-                background,
-                remediationBackground,
+                null,
+                null,
                 severity,
                 new HttpRequestResponse[0]);
     }
