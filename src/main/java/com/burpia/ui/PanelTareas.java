@@ -10,8 +10,6 @@ import com.burpia.util.GestorTareas;
 import com.burpia.util.Normalizador;
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -173,64 +171,22 @@ public class PanelTareas extends JPanel {
     }
 
     private void crearMenuContextual() {
-        tabla.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                mostrarMenuContextualSiAplica(e);
-            }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                mostrarMenuContextualSiAplica(e);
-            }
-        });
-    }
-
-    private void mostrarMenuContextualSiAplica(MouseEvent e) {
-        if (!e.isPopupTrigger()) {
-            return;
-        }
-
-        int fila = tabla.rowAtPoint(e.getPoint());
-        if (fila < 0) {
-            return;
-        }
-        if (!tabla.isRowSelected(fila)) {
-            if (!e.isControlDown()) {
-                tabla.setRowSelectionInterval(fila, fila);
-            } else {
-                tabla.addRowSelectionInterval(fila, fila);
-            }
-        }
-        mostrarMenuContextualDinamico(e.getX(), e.getY());
+        UIUtils.instalarMenuContextualTabla(tabla, this::construirMenuContextualDinamico);
     }
 
     /**
-     * Actualiza el texto y tooltip del botón Pausar/Reanudar según el estado de
-     * tareas.
+     * Construye el menÃº contextual segÃºn la selecciÃ³n actual de la tabla.
      *
-     * @param tareasPausadas Número de tareas pausadas
+     * @return el JPopupMenu a mostrar, o null si no hay selecciÃ³n vÃ¡lida.
      */
-    private void actualizarBotonPausarReanudar(int tareasPausadas) {
-        if (tareasPausadas > 0) {
-            UIUtils.actualizarTextoYTooltip(botonPausarReanudar,
-                    I18nUI.Tareas.BOTON_REANUDAR_TODO(),
-                    I18nUI.Tooltips.Tareas.REANUDAR_TODO());
-        } else {
-            UIUtils.actualizarTextoYTooltip(botonPausarReanudar,
-                    I18nUI.Tareas.BOTON_PAUSAR_TODO(),
-                    I18nUI.Tooltips.Tareas.PAUSAR_TODO());
-        }
-    }
-
-    private void mostrarMenuContextualDinamico(int x, int y) {
+    private JPopupMenu construirMenuContextualDinamico() {
         int[] filas = tabla.getSelectedRows();
         if (filas.length == 0)
-            return;
+            return null;
 
         List<TareaSeleccionada> seleccion = capturarSeleccion(filas);
         if (seleccion.isEmpty()) {
-            return;
+            return null;
         }
 
         JPopupMenu menuContextual = new JPopupMenu();
@@ -241,7 +197,19 @@ public class PanelTareas extends JPanel {
             crearMenuMultipleTareas(menuContextual, seleccion);
         }
 
-        menuContextual.show(tabla, x, y);
+        return menuContextual;
+    }
+
+    private void actualizarBotonPausarReanudar(int tareasPausadas) {
+        if (tareasPausadas > 0) {
+            UIUtils.actualizarTextoYTooltip(botonPausarReanudar,
+                    I18nUI.Tareas.BOTON_REANUDAR_TODO(),
+                    I18nUI.Tooltips.Tareas.REANUDAR_TODO());
+        } else {
+            UIUtils.actualizarTextoYTooltip(botonPausarReanudar,
+                    I18nUI.Tareas.BOTON_PAUSAR_TODO(),
+                    I18nUI.Tooltips.Tareas.PAUSAR_TODO());
+        }
     }
 
     private void crearMenuUnaTarea(JPopupMenu menu, TareaSeleccionada seleccion) {
@@ -523,11 +491,8 @@ public class PanelTareas extends JPanel {
             return new ArrayList<>();
         }
 
-        return java.util.stream.IntStream.of(filasVista)
-                .filter(f -> f >= 0 && f < tabla.getRowCount())
-                .map(tabla::convertRowIndexToModel)
-                .filter(f -> f >= 0 && f < modelo.getRowCount())
-                .distinct()
+        return java.util.stream.IntStream.of(UIUtils.convertirFilasVistaAModelo(tabla, filasVista))
+                .filter(f -> f < modelo.getRowCount())
                 .mapToObj(f -> new TareaSeleccionada(
                         modelo.obtenerIdTarea(f),
                         valorCeldaTexto(f, COLUMNA_ESTADO),

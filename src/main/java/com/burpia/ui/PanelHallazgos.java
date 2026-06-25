@@ -602,6 +602,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private void crearMenuContextual() {
+        // Doble-clic izquierdo para editar el hallazgo (independiente del popup).
         tabla.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -611,13 +612,12 @@ public class PanelHallazgos extends JPanel {
                         abrirDialogoEdicion(filaVista);
                     }
                 }
-                mostrarMenuContextualSiAplica(e);
             }
-
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                mostrarMenuContextualSiAplica(e);
-            }
+        });
+        // Popup contextual (clic derecho) + ajuste de selecciÃ³n unificado en UIUtils.
+        UIUtils.instalarMenuContextualTabla(tabla, () -> {
+            JPopupMenu menu = construirMenuContextualDinamico();
+            return menu;
         });
     }
 
@@ -639,31 +639,6 @@ public class PanelHallazgos extends JPanel {
             modelo.agregarHallazgo(nuevoHallazgo);
         });
         dialogo.setVisible(true);
-    }
-
-    private void mostrarMenuContextualSiAplica(MouseEvent e) {
-        if (!e.isPopupTrigger()) {
-            return;
-        }
-        int fila = tabla.rowAtPoint(e.getPoint());
-        ajustarSeleccionParaMenuContextual(fila, e.isControlDown());
-        JPopupMenu menu = construirMenuContextualDinamico();
-        menu.show(tabla, e.getX(), e.getY());
-    }
-
-    private void ajustarSeleccionParaMenuContextual(int fila, boolean controlPresionado) {
-        if (fila < 0) {
-            tabla.clearSelection();
-            return;
-        }
-        if (tabla.isRowSelected(fila)) {
-            return;
-        }
-        if (!controlPresionado) {
-            tabla.setRowSelectionInterval(fila, fila);
-        } else {
-            tabla.addRowSelectionInterval(fila, fila);
-        }
     }
 
     /**
@@ -1088,16 +1063,7 @@ public class PanelHallazgos extends JPanel {
     }
 
     private int[] convertirFilasVistaAModelo(int... filasVista) {
-        if (filasVista == null || filasVista.length == 0) {
-            return new int[0];
-        }
-
-        return IntStream.of(filasVista)
-            .filter(f -> f >= 0 && f < tabla.getRowCount())
-            .map(tabla::convertRowIndexToModel)
-            .filter(f -> f >= 0)
-            .distinct()
-            .toArray();
+        return UIUtils.convertirFilasVistaAModelo(tabla, filasVista);
     }
 
     private int[] convertirFilasVistaAModeloOrdenDesc(int... filasVista) {

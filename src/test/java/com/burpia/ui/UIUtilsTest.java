@@ -294,4 +294,40 @@ class UIUtilsTest {
             ));
         }
     }
+
+    @Nested
+    @DisplayName("convertirFilasVistaAModelo")
+    class ConvertirFilasVistaAModeloTests {
+
+        private JTable crearTablaSinFiltros(int filas) {
+            javax.swing.table.DefaultTableModel modelo = new javax.swing.table.DefaultTableModel(filas, 1);
+            return new JTable(modelo);
+        }
+
+        @Test
+        @DisplayName("convierte filas de vista a modelo filtrando invÃ¡lidas y duplicados")
+        void convierteFiltrandoInvalidasYDuplicados() {
+            JTable tabla = crearTablaSinFiltros(5);
+            int[] resultado = UIUtils.convertirFilasVistaAModelo(tabla, 0, 2, 2, -1, 99);
+            assertArrayEquals(new int[]{0, 2}, resultado,
+                "Debe filtrar Ã­ndices fuera de rango (-1, 99) y descartar duplicados (2,2)");
+        }
+
+        @Test
+        @DisplayName("retorna array vacÃ­o para entrada nula o vacÃ­a")
+        void retornaVacioParaEntradaNulaOVacia() {
+            JTable tabla = crearTablaSinFiltros(3);
+            assertArrayEquals(new int[0], UIUtils.convertirFilasVistaAModelo(tabla, (int[]) null),
+                "Entrada null debe retornar array vacÃ­o");
+            assertArrayEquals(new int[0], UIUtils.convertirFilasVistaAModelo(tabla),
+                "Sin filas debe retornar array vacÃ­o");
+        }
+
+        @Test
+        @DisplayName("retorna array vacÃ­o para tabla null")
+        void retornaVacioParaTablaNull() {
+            assertArrayEquals(new int[0], UIUtils.convertirFilasVistaAModelo(null, 0, 1),
+                "Tabla null debe retornar array vacÃ­o de forma segura");
+        }
+    }
 }

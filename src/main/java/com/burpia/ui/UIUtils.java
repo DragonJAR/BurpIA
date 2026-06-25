@@ -861,4 +861,79 @@ public final class UIUtils {
             dialogo.setVisible(true);
         });
     }
+
+    /**
+     * Instala un menÃº contextual (clic derecho) sobre una tabla, unificando el
+     * patrÃ³n de detecciÃ³n del popup-trigger y el ajuste de selecciÃ³n que antes
+     * se duplicaba panel a panel.
+     *
+     * <p>Comportamiento ante un clic derecho:
+     * <ul>
+     *   <li>Si la fila no estÃ¡ seleccionada, la selecciona (o la aÃ±ade a la
+     *       selecciÃ³n si se mantiene Control).</li>
+     *   <li>Invoca {@code proveedorMenu} para construir el JPopupMenu y lo muestra.</li>
+     * </ul>
+     *
+     * @param tabla          Tabla sobre la que se instala el menÃº.
+     * @param proveedorMenu  Devuelve el menÃº a mostrar; si retorna null no se muestra nada.
+     */
+    public static void instalarMenuContextualTabla(JTable tabla, java.util.function.Supplier<JPopupMenu> proveedorMenu) {
+        if (tabla == null || proveedorMenu == null) {
+            return;
+        }
+        tabla.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                mostrarPopupSiAplica(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                mostrarPopupSiAplica(e);
+            }
+
+            private void mostrarPopupSiAplica(MouseEvent e) {
+                if (!e.isPopupTrigger()) {
+                    return;
+                }
+                int fila = tabla.rowAtPoint(e.getPoint());
+                if (fila < 0) {
+                    tabla.clearSelection();
+                    return;
+                }
+                if (!tabla.isRowSelected(fila)) {
+                    if (!e.isControlDown()) {
+                        tabla.setRowSelectionInterval(fila, fila);
+                    } else {
+                        tabla.addRowSelectionInterval(fila, fila);
+                    }
+                }
+                JPopupMenu menu = proveedorMenu.get();
+                if (menu != null) {
+                    menu.show(tabla, e.getX(), e.getY());
+                }
+            }
+        });
+    }
+
+    /**
+     * Convierte Ã­ndices de fila de vista a Ã­ndices de modelo, filtrando los
+     * invÃ¡lidos y descartando duplicados. Unifica el pipeline que antes vivÃ­a
+     * duplicado en PanelHallazgos y PanelTareas.
+     *
+     * @param tabla       Tabla origen de la conversiÃ³n.
+     * @param filasVista  Ãndices de vista a convertir.
+     * @return Ãndices de modelo Ãºnicos y vÃ¡lidos, o un array vacÃ­o si no hay entrada.
+     */
+    public static int[] convertirFilasVistaAModelo(JTable tabla, int... filasVista) {
+        if (tabla == null || filasVista == null || filasVista.length == 0) {
+            return new int[0];
+        }
+        return java.util.stream.IntStream.of(filasVista)
+            .filter(f -> f >= 0 && f < tabla.getRowCount())
+            .map(tabla::convertRowIndexToModel)
+            .filter(f -> f >= 0)
+            .distinct()
+            .toArray();
+    }
 }
