@@ -645,6 +645,38 @@ class PanelHallazgosSendTest {
         assertNull(solicitud, "La solicitud debe ser null cuando no hay evidencia original");
     }
 
+    @Test
+    @DisplayName("Captura resuelve el request desde la evidencia cuando solicitudHttp es null")
+    void testCapturaResuelveRequestDesdeEvidencia() throws Exception {
+        HttpRequest request = mock(HttpRequest.class);
+        HttpRequestResponse evidencia = mock(HttpRequestResponse.class);
+        when(evidencia.request()).thenReturn(request);
+
+        // Hallazgo SIN solicitudHttp directa (constructor de 5 args) pero con evidenciaId resoluble.
+        Hallazgo hallazgo = new Hallazgo(
+            "https://example.com/desde-evidencia",
+            "Titulo",
+            "Descripcion",
+            "High",
+            "High"
+        ).conEvidenciaId("evidencia-captura-id");
+        Hallazgo.establecerResolutorEvidencia(id -> "evidencia-captura-id".equals(id) ? evidencia : null);
+        panel.obtenerModelo().agregarHallazgo(hallazgo);
+        esperarFilas(panel, 1);
+
+        Object captura = invocarMetodoPrivadoRetorno(panel, "capturarEntradasAccion", new int[]{0});
+        assertNotNull(captura, "La captura no debe ser null");
+
+        List<?> entradas = obtenerCampoLista(captura, "entradas");
+        assertEquals(1, entradas.size(), "Debe haber una entrada");
+
+        Object entrada = entradas.get(0);
+        HttpRequest solicitud = obtenerCampo(entrada, "solicitud", HttpRequest.class);
+        assertNotNull(solicitud,
+            "La solicitud debe resolverse desde la evidencia cuando solicitudHttp directa es null");
+        assertEquals(request, solicitud, "Debe ser el request de la evidencia resuelta");
+    }
+
     /**
      * Crea una instancia de PanelHallazgos para testing.
      *

@@ -1,5 +1,6 @@
 package com.burpia.ui;
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.scanner.AuditConfiguration;
 import burp.api.montoya.scanner.BuiltInAuditConfiguration;
@@ -1017,7 +1018,10 @@ public class PanelHallazgos extends JPanel {
                 if (totalExitosos > 0) {
                     mostrarInfoEnviarA(titulo, mensajeFinal);
                 } else {
-                    mostrarAdvertenciaEnviarA(titulo, mensajeFinal);
+                    // Los fallos NUNCA se silencian por el opt-out: si la acción no produjo
+                    // ningún éxito (sin request, excepción, no se pudo guardar), el usuario
+                    // debe ver siempre el motivo. El opt-out solo aplica al éxito.
+                    UIUtils.mostrarAdvertencia(this, titulo, mensajeFinal);
                 }
             });
         };
@@ -1028,7 +1032,7 @@ public class PanelHallazgos extends JPanel {
                 tarea.run();
             });
         } catch (RejectedExecutionException ex) {
-            mostrarAdvertenciaEnviarA(titulo, I18nUI.Hallazgos.ERROR_PANEL_CERRANDO());
+            UIUtils.mostrarAdvertencia(this, titulo, I18nUI.Hallazgos.ERROR_PANEL_CERRANDO());
         }
     }
 
@@ -1086,6 +1090,16 @@ public class PanelHallazgos extends JPanel {
             }
             Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
             HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
+            if (solicitud == null && hallazgo != null) {
+                // Fallback: recuperar el request desde la evidencia almacenada (cache/disco).
+                // Permite enviar a Scanner/Repeater/Intruder hallazgos cuyo solicitudHttp
+                // directo es null pero cuya evidencia sí resuelve. Si no hay evidencia
+                // resoluble, solicitud sigue null (no se fabrica un request inexistente).
+                HttpRequestResponse evidencia = hallazgo.obtenerEvidenciaHttp();
+                if (evidencia != null) {
+                    solicitud = evidencia.request();
+                }
+            }
             String urlReferencia = resolverUrlReferencia(hallazgo);
             entradas.add(new EntradaAccion(solicitud, hallazgo, urlReferencia));
         }

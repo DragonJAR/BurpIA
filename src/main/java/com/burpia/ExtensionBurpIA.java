@@ -1219,28 +1219,44 @@ public class ExtensionBurpIA implements BurpExtension {
                     "ExtensionBurpIA", I18nLogs.Evidence.API_MONTOYA_NO_DISPONIBLE());
             return false;
         }
+        // Logger vivo: a partir de aquí api != null, así que los diagnósticos de la
+        // ruta de issues llegan a Extensions -> Output/Errors (antes se descartaban
+        // con crearMinimal(null,null) => api null => logToBurpApi no escribía nada).
+        GestorLoggingUnificado logger = GestorLoggingUnificado.crear(null, null, null, api, null);
         if (!esBurpProfessional(api)) {
-            GestorLoggingUnificado.crearMinimal(null, null).warning(
-                    "ExtensionBurpIA", I18nLogs.Evidence.ISSUES_SOLO_PRO());
+            logger.warning("ExtensionBurpIA", I18nLogs.Evidence.ISSUES_SOLO_PRO());
             return false;
         }
         if (api.siteMap() == null) {
-            GestorLoggingUnificado.crearMinimal(null, null).warning(
-                    "ExtensionBurpIA", I18nLogs.Evidence.SITEMAP_NO_DISPONIBLE());
+            logger.warning("ExtensionBurpIA", I18nLogs.Evidence.SITEMAP_NO_DISPONIBLE());
             return false;
         }
-        burp.api.montoya.scanner.audit.issues.AuditIssue issue = crearAuditIssueDesdeHallazgo(hallazgo,
-                solicitudRespuestaEvidencia);
+        // URL vacía es la causa más común de "no se creó el issue". El guard interno
+        // de crearAuditIssueDesdeHallazgo es static (sin api) y su log queda muerto;
+        // lo registramos aquí donde sí hay api para distinguirlo del resto.
+        if (hallazgo != null && Normalizador.esVacio(hallazgo.obtenerUrl())) {
+            logger.warning("ExtensionBurpIA", I18nLogs.Evidence.HALLAZGO_SIN_URL());
+            return false;
+        }
+        // Resolvemos la evidencia una sola vez y la reutilizamos para crear el issue y
+        // para anclarlo (DRY): crearAuditIssueDesdeHallazgo la recibe ya resuelta.
+        HttpRequestResponse evidencia = resolverEvidenciaIssue(hallazgo, solicitudRespuestaEvidencia);
+        burp.api.montoya.scanner.audit.issues.AuditIssue issue = crearAuditIssueDesdeHallazgo(hallazgo, evidencia);
         if (issue == null) {
-            GestorLoggingUnificado.crearMinimal(null, null).warning(
-                    "ExtensionBurpIA", I18nLogs.Evidence.AUDIT_ISSUE_NO_CREADO());
+            logger.warning("ExtensionBurpIA", I18nLogs.Evidence.AUDIT_ISSUE_NO_CREADO());
             return false;
         }
         try {
+            // Registrar primero el request/response crea el nodo del host/URL en el Site Map
+            // para que el issue ancle ahí. Un issue con solo baseUrl puede quedar huérfano y
+            // no mostrarse en Target -> Site map -> Issues. Alineado con el modelo de Montoya
+            // (SiteMap: se añaden requests y además se añade el issue).
+            if (evidencia != null) {
+                api.siteMap().add(evidencia);
+            }
             api.siteMap().add(issue);
         } catch (Exception e) {
-            GestorLoggingUnificado.crearMinimal(null, null).error(
-                    "ExtensionBurpIA", I18nLogs.Evidence.ERROR_AGREGAR_ISSUE_SITEMAP(), e);
+            logger.error("ExtensionBurpIA", I18nLogs.Evidence.ERROR_AGREGAR_ISSUE_SITEMAP(), e);
             return false;
         }
         return true;

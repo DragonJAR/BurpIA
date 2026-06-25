@@ -5,6 +5,7 @@ import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
+import burp.api.montoya.logging.Logging;
 import burp.api.montoya.sitemap.SiteMap;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.model.Hallazgo;
@@ -168,6 +169,27 @@ public class EvidenceManagerTest {
 
             mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
                 any(MontoyaApi.class), any(Hallazgo.class), isNull()));
+        }
+    }
+
+    @Test
+    void guardarHallazgoComoIssue_rutaIssues_logueaPorApiLogging() {
+        // Fix A: el logger de EvidenceManager ahora se construye con el api real,
+        // así que la ruta de issues escribe a Burp (Extensions -> Output) en vez de
+        // descartarse silenciosamente con crearMinimal(null,null).
+        Logging mockLogging = mock(Logging.class);
+        when(mockApi.logging()).thenReturn(mockLogging);
+        when(mockHallazgo.obtenerTitulo()).thenReturn("Test Finding");
+
+        try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
+            mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any(), any()))
+                          .thenReturn(true);
+
+            EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
+            assertTrue(evidenceManagerPro.guardarHallazgoComoIssue(mockApi, mockHallazgo, null));
+
+            verify(mockLogging, atLeastOnce()).logToOutput(any());
         }
     }
 
