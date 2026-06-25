@@ -284,6 +284,8 @@ public class PanelTareas extends JPanel {
                     e -> {
                         if (gestorTareas.pausarTarea(tareaId)) {
                             actualizarEstadisticas();
+                        } else {
+                            mostrarMensaje(I18nUI.Tareas.MSG_NO_PAUSADA());
                         }
                     }));
         }
@@ -295,6 +297,8 @@ public class PanelTareas extends JPanel {
                     e -> {
                         if (gestorTareas.reanudarTarea(tareaId)) {
                             actualizarEstadisticas();
+                        } else {
+                            mostrarMensaje(I18nUI.Tareas.MSG_NO_REANUDADA());
                         }
                     }));
         }
@@ -327,8 +331,14 @@ public class PanelTareas extends JPanel {
                     I18nUI.Tareas.MENU_ELIMINAR_LISTA(),
                     I18nUI.Tooltips.Tareas.MENU_ELIMINAR_UNA(),
                     e -> {
-                        if (gestorTareas.limpiarTarea(tareaId)) {
+                        boolean confirmacion = UIUtils.confirmarPregunta(
+                                PanelTareas.this,
+                                I18nUI.Tareas.TITULO_CONFIRMAR_ELIMINACION(),
+                                I18nUI.Tareas.MSG_CONFIRMAR_ELIMINAR_UNA_TAREA());
+                        if (confirmacion && gestorTareas.limpiarTarea(tareaId)) {
                             actualizarEstadisticas();
+                        } else if (confirmacion) {
+                            mostrarMensaje(I18nUI.Tareas.MSG_NO_ELIMINADA());
                         }
                     }));
         }

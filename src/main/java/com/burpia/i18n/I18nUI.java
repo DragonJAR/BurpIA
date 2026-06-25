@@ -464,6 +464,29 @@ public final class I18nUI {
             return trf("Tareas eliminadas: %d", "Tasks removed: %d", total);
         }
 
+        public static String TITULO_CONFIRMAR_ELIMINACION() {
+            return tr("Confirmar eliminación", "Confirm removal");
+        }
+
+        public static String MSG_CONFIRMAR_ELIMINAR_UNA_TAREA() {
+            return tr("¿Eliminar esta tarea de la lista?", "Remove this task from the list?");
+        }
+
+        public static String MSG_NO_PAUSADA() {
+            return tr("No se pudo pausar la tarea (puede que ya haya cambiado de estado).",
+                    "Could not pause the task (it may have already changed state).");
+        }
+
+        public static String MSG_NO_REANUDADA() {
+            return tr("No se pudo reanudar la tarea (puede que ya haya cambiado de estado).",
+                    "Could not resume the task (it may have already changed state).");
+        }
+
+        public static String MSG_NO_ELIMINADA() {
+            return tr("No se pudo eliminar la tarea de la lista.",
+                    "Could not remove the task from the list.");
+        }
+
         public static String MSG_ESPERANDO_ANALISIS() {
             return tr("Esperando análisis", "Waiting for analysis");
         }

@@ -8,12 +8,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import javax.swing.JButton;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JTable;
 import javax.swing.table.JTableHeader;
 import javax.swing.SwingUtilities;
+import java.awt.Component;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -390,5 +395,101 @@ class PanelTareasAccionesTest {
 
     private void flushEdt() throws Exception {
         SwingUtilities.invokeAndWait(() -> {});
+    }
+
+    /**
+     * Construye un menÃº contextual de una sola tarea por reflexiÃ³n, para una
+     * tarea con el estado indicado. Devuelve el JPopupMenu resultante.
+     */
+    private JPopupMenu construirMenuUnaTarea(String tareaId, String estado, String url) throws Exception {
+        Class<?> claseSeleccion = Class.forName("com.burpia.ui.PanelTareas$TareaSeleccionada");
+        Constructor<?> constructor = claseSeleccion.getDeclaredConstructor(String.class, String.class, String.class);
+        constructor.setAccessible(true);
+        Object seleccion = constructor.newInstance(tareaId, estado, url);
+
+        JPopupMenu menu = new JPopupMenu();
+        Method metodo = PanelTareas.class.getDeclaredMethod("crearMenuUnaTarea", JPopupMenu.class, claseSeleccion);
+        metodo.setAccessible(true);
+        metodo.invoke(panel, menu, seleccion);
+        return menu;
+    }
+
+    /**
+     * Busca y devuelve el primer JMenuItem del menÃº cuyo texto contiene el fragmento.
+     */
+    private JMenuItem buscarMenuItem(JPopupMenu menu, String fragmento) {
+        for (Component componente : menu.getComponents()) {
+            if (componente instanceof JMenuItem) {
+                JMenuItem item = (JMenuItem) componente;
+                if (item.getText() != null && item.getText().contains(fragmento)) {
+                    return item;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Test
+    @DisplayName("F5: 'Eliminar de la lista' pide confirmaciÃ³n antes de quitar la tarea")
+    void testEliminarUnaTareaPideConfirmacion() throws Exception {
+        TestDialogUtils.registrarCapturaDialogos();
+        try {
+            Tarea tarea = gestor.crearTarea("A", "https://example.com/done", Tarea.ESTADO_COMPLETADO, "");
+            flushEdt();
+            String tareaId = tarea.obtenerId();
+
+            JPopupMenu menu = construirMenuUnaTarea(tareaId, Tarea.ESTADO_COMPLETADO, "https://example.com/done");
+            JMenuItem itemEliminar = buscarMenuItem(menu, I18nUI.Tareas.MENU_ELIMINAR_LISTA());
+            assertNotNull(itemEliminar, "El menÃº de una tarea completada debe incluir 'Eliminar de la lista'");
+
+            TestDialogUtils.reiniciarDialogosMensajeCapturados();
+            TestDialogUtils.ejecutarConDialogoAutoCerrado(() ->
+                itemEliminar.getActionListeners()[0].actionPerformed(new ActionEvent(itemEliminar, 0, "")), 150);
+
+            // Debe haberse mostrado un diÃ¡logo de confirmaciÃ³n (tÃ­tulo "Confirmar eliminaciÃ³n").
+            assertTrue(TestDialogUtils.seCapturoDialogoMensaje(),
+                "Eliminar una tarea debe pedir confirmaciÃ³n (F5)");
+            TestDialogUtils.DialogoMensajeCapturado capturado = TestDialogUtils.obtenerUltimoDialogoMensajeCapturado();
+            assertNotNull(capturado, "Debe capturarse el diÃ¡logo de confirmaciÃ³n");
+            assertEquals(I18nUI.Tareas.TITULO_CONFIRMAR_ELIMINACION(), capturado.obtenerTitulo(),
+                "El tÃ­tulo del diÃ¡logo debe ser el de confirmaciÃ³n de eliminaciÃ³n");
+        } finally {
+            TestDialogUtils.desregistrarCapturaDialogos();
+        }
+    }
+
+    @Test
+    @DisplayName("F6: Pausar una tarea que no se puede pausar muestra feedback al usuario")
+    void testPausarTareaNoPausableMuestraFeedback() throws Exception {
+        TestDialogUtils.registrarCapturaDialogos();
+        try {
+            // Tarea en COLA: pausable, pero forzamos el rechazo limpiÃ¡ndola antes
+            // para que pausarTarea devuelva false y se muestre el feedback (F6).
+            Tarea tarea = gestor.crearTarea("A", "https://example.com/run", Tarea.ESTADO_EN_COLA, "");
+            flushEdt();
+            String tareaId = tarea.obtenerId();
+
+            JPopupMenu menu = construirMenuUnaTarea(tareaId, Tarea.ESTADO_EN_COLA, "https://example.com/run");
+            JMenuItem itemPausar = buscarMenuItem(menu, I18nUI.Tareas.MENU_PAUSAR());
+            assertNotNull(itemPausar, "El menÃº de una tarea en cola debe incluir 'Pausar'");
+
+            // Limpiar la tarea subyacente: pausarTarea ya no la encontrarÃ¡ y devolverÃ¡ false.
+            gestor.limpiarTarea(tareaId);
+            flushEdt();
+
+            TestDialogUtils.reiniciarDialogosMensajeCapturados();
+            TestDialogUtils.ejecutarConDialogoAutoCerrado(() ->
+                itemPausar.getActionListeners()[0].actionPerformed(new ActionEvent(itemPausar, 0, "")), 150);
+
+            // Debe mostrarse el mensaje de feedback (MSG_NO_PAUSADA).
+            assertTrue(TestDialogUtils.seCapturoDialogoMensaje(),
+                "Pausar una tarea que falla debe mostrar feedback al usuario (F6)");
+            TestDialogUtils.DialogoMensajeCapturado capturado = TestDialogUtils.obtenerUltimoDialogoMensajeCapturado();
+            assertNotNull(capturado, "Debe capturarse el diÃ¡logo de feedback");
+            assertTrue(capturado.obtenerMensaje().contains(I18nUI.Tareas.MSG_NO_PAUSADA().split("\\(")[0]),
+                "El mensaje de feedback debe indicar que no se pudo pausar la tarea");
+        } finally {
+            TestDialogUtils.desregistrarCapturaDialogos();
+        }
     }
 }
