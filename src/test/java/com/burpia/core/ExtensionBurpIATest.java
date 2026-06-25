@@ -436,10 +436,10 @@ class ExtensionBurpIATest {
                 AuditIssue issueMock = mock(AuditIssue.class);
                 mockedAudit.when(() -> AuditIssue.auditIssue(
                         org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
-                        org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.anyString(),
+                        org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
                         org.mockito.ArgumentMatchers.any(AuditIssueSeverity.class),
                         org.mockito.ArgumentMatchers.any(AuditIssueConfidence.class),
-                        org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull(),
+                        org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString(),
                         org.mockito.ArgumentMatchers.any(AuditIssueSeverity.class),
                         org.mockito.ArgumentMatchers.any(HttpRequestResponse[].class)))
                     .thenReturn(issueMock);

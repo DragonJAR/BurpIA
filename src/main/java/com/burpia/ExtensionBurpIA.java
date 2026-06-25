@@ -1151,22 +1151,22 @@ public class ExtensionBurpIA implements BurpExtension {
         burp.api.montoya.scanner.audit.issues.AuditIssueConfidence confidence = convertirConfianza(
                 hallazgo.obtenerConfianza());
 
-        // El issue se arma SOLO con los 5 campos editables del hallazgo (los mismos del
-        // diálogo de doble clic): título, descripción, URL, severidad y confianza. El
-        // texto del LLM se codifica a entidades HTML (escaparHtml, guía de PortSwigger) y
-        // el baseUrl va CRUDO (Burp lo parsea como URL). NO se adjunta evidencia HTTP (un
-        // r/r reconstruido/sintetizado hace lanzar a siteMap().add; sigue accesible en la
-        // UI de BurpIA) y NO se añaden textos estáticos de remediation/background (van
-        // null): así el issue refleja únicamente lo que editas, sin contenido fijo.
+        // El issue se arma con los 5 campos editables del hallazgo (los mismos del diálogo
+        // de doble clic): título, descripción, URL, severidad y confianza. El texto del LLM
+        // se codifica a entidades HTML (escaparHtml, guía de PortSwigger) y el baseUrl va
+        // CRUDO (Burp lo parsea como URL). NO se adjunta evidencia HTTP (un r/r
+        // reconstruido/sintetizado hace lanzar a siteMap().add; sigue accesible en la UI de
+        // BurpIA). remediation/background son guía i18n neutral (válida para hallazgos
+        // manuales y analizados).
         return burp.api.montoya.scanner.audit.issues.AuditIssue.auditIssue(
                 escaparHtml(hallazgo.obtenerTitulo()),
                 escaparHtml(hallazgo.obtenerHallazgo()) + "\n\nURL: " + hallazgo.obtenerUrl(),
-                null,
+                I18nUI.Hallazgos.REMEDIACION_ISSUE(),
                 hallazgo.obtenerUrl(),
                 severity,
                 confidence,
-                null,
-                null,
+                I18nUI.Hallazgos.BACKGROUND_ISSUE(),
+                I18nUI.Hallazgos.REMEDIACION_BACKGROUND_ISSUE(),
                 severity,
                 new HttpRequestResponse[0]);
     }
