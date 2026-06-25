@@ -66,8 +66,7 @@ class TaskExecutionManagerConcurrenciaTest {
                 pestaniaPrincipal,
                 stdout,
                 stderr,
-                new LimitadorTasa(5),
-                null
+                new LimitadorTasa(5)
         );
     }
 
@@ -184,7 +183,7 @@ class TaskExecutionManagerConcurrenciaTest {
 
         TaskExecutionManager manager1 = new TaskExecutionManager(
                 localConfig, null, null, null,
-                stdout, stderr, new LimitadorTasa(10), null
+                stdout, stderr, new LimitadorTasa(10)
         );
 
         try {
@@ -238,7 +237,7 @@ class TaskExecutionManagerConcurrenciaTest {
 
         TaskExecutionManager localManager = new TaskExecutionManager(
                 localConfig, null, null, null,
-                stdout, stderr, new LimitadorTasa(5), null
+                stdout, stderr, new LimitadorTasa(5)
         );
 
         int threadCount = 5;

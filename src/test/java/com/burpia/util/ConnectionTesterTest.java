@@ -54,60 +54,6 @@ class ConnectionTesterTest {
     }
 
     @Test
-    @DisplayName("Error de configuración nula lanza excepción")
-    void probarConexion_configNull_lanzaExcepcion() {
-        CompletableFuture<Boolean> resultado = new CompletableFuture<>();
-        
-        connectionTester.probarConexionProveedor(null, new ConnectionTester.CallbackConexion() {
-            @Override
-            public void alExito(String mensaje) {
-                resultado.complete(false);
-            }
-
-            @Override
-            public void alError(String error) {
-                // El mensaje está localizado, verificamos que no esté vacío y contenga palabras clave
-                resultado.complete(error != null && !error.isEmpty());
-            }
-        });
-
-        assertTrue(resultado.join(), "Debe indicar error cuando config es null");
-    }
-
-    @Test
-    @DisplayName("Error de callback nulo no lanza excepción pero maneja gracefully")
-    void probarConexion_callbackNull_noLanzaExcepcion() {
-        assertDoesNotThrow(() -> {
-            connectionTester.probarConexionProveedor(config, null);
-        }, "No debe lanzar excepción cuando callback es null");
-    }
-
-    @Test
-    @DisplayName("Conexión exitosa con configuración válida")
-    void probarConexion_configValida_retornaExito() throws Exception {
-        // Preparar respuesta mock
-        mockWebServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setBody("{\"data\": [{\"id\": \"gpt-3.5-turbo\"}]}"));
-
-        CompletableFuture<Boolean> resultado = new CompletableFuture<>();
-        
-        connectionTester.probarConexionProveedor(config, new ConnectionTester.CallbackConexion() {
-            @Override
-            public void alExito(String mensaje) {
-                resultado.complete(true);
-            }
-
-            @Override
-            public void alError(String error) {
-                resultado.complete(false);
-            }
-        });
-
-        assertTrue(resultado.get(5, TimeUnit.SECONDS), "Conexión debe ser exitosa con configuración válida");
-    }
-
-    @Test
     @DisplayName("Obtener modelos funciona para Ollama sin API key")
     void obtenerModelos_ollamaSinApiKey_retornaModelos() throws Exception {
         ConfiguracionAPI configOllama = new ConfiguracionAPI();
@@ -265,33 +211,6 @@ class ConnectionTesterTest {
         String error = resultado.get(5, TimeUnit.SECONDS);
         assertTrue(error.contains("Z.ai"),
             "El error debe explicar que Z.ai no soporta listado remoto documentado");
-    }
-
-    @Test
-    @DisplayName("Error cuando falta configuración requerida")
-    void probarConexion_configIncompleta_retornaError() {
-        ConfiguracionAPI configIncompleta = new ConfiguracionAPI();
-        configIncompleta.establecerProveedorAI("OpenAI");
-        configIncompleta.establecerUrlBaseParaProveedor("OpenAI", mockWebServer.url("/v1").toString());
-        configIncompleta.establecerModeloParaProveedor("OpenAI", "gpt-4o");
-        // No establecer API key para un proveedor que sí la requiere
-
-        CompletableFuture<Boolean> resultado = new CompletableFuture<>();
-        
-        connectionTester.probarConexionProveedor(configIncompleta, new ConnectionTester.CallbackConexion() {
-            @Override
-            public void alExito(String mensaje) {
-                resultado.complete(false);
-            }
-
-            @Override
-            public void alError(String error) {
-                // El mensaje está localizado, verificamos que no esté vacío
-                resultado.complete(error != null && !error.isEmpty());
-            }
-        });
-
-        assertTrue(resultado.join(), "Debe indicar error cuando falta configuración requerida");
     }
 
     @Test

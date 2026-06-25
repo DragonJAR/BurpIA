@@ -26,12 +26,6 @@ public class Estadisticas {
     private final AtomicInteger hallazgosCreados;
     private final AtomicInteger errores;
 
-    private final AtomicInteger hallazgosCritical;
-    private final AtomicInteger hallazgosHigh;
-    private final AtomicInteger hallazgosMedium;
-    private final AtomicInteger hallazgosLow;
-    private final AtomicInteger hallazgosInfo;
-    private final AtomicInteger hallazgosDesconocidos;
     private final AtomicInteger versionCambios;
 
     /**
@@ -45,12 +39,6 @@ public class Estadisticas {
         this.hallazgosCreados = new AtomicInteger(0);
         this.errores = new AtomicInteger(0);
 
-        this.hallazgosCritical = new AtomicInteger(0);
-        this.hallazgosHigh = new AtomicInteger(0);
-        this.hallazgosMedium = new AtomicInteger(0);
-        this.hallazgosLow = new AtomicInteger(0);
-        this.hallazgosInfo = new AtomicInteger(0);
-        this.hallazgosDesconocidos = new AtomicInteger(0);
         this.versionCambios = new AtomicInteger(0);
     }
 
@@ -104,44 +92,6 @@ public class Estadisticas {
     }
 
     /**
-     * Incrementa el contador de hallazgos según su severidad.
-     * <p>
-     * Si la severidad no es reconocida (no es Critical, High, Medium, Low o Info),
-     * se incrementa el contador de hallazgos desconocidos.
-     * </p>
-     *
-     * @param severidad la severidad del hallazgo (debe ser una de las constantes de {@link Hallazgo})
-     */
-    public void incrementarHallazgoSeveridad(String severidad) {
-        if (Hallazgo.esSeveridadValida(severidad)) {
-            switch (severidad) {
-                case Hallazgo.SEVERIDAD_CRITICAL:
-                    hallazgosCritical.incrementAndGet();
-                    break;
-                case Hallazgo.SEVERIDAD_HIGH:
-                    hallazgosHigh.incrementAndGet();
-                    break;
-                case Hallazgo.SEVERIDAD_MEDIUM:
-                    hallazgosMedium.incrementAndGet();
-                    break;
-                case Hallazgo.SEVERIDAD_LOW:
-                    hallazgosLow.incrementAndGet();
-                    break;
-                case Hallazgo.SEVERIDAD_INFO:
-                    hallazgosInfo.incrementAndGet();
-                    break;
-                default:
-                    hallazgosDesconocidos.incrementAndGet();
-                    break;
-            }
-        } else {
-            hallazgosDesconocidos.incrementAndGet();
-        }
-        hallazgosCreados.incrementAndGet();
-        versionCambios.incrementAndGet();
-    }
-
-    /**
      * Obtiene el total de solicitudes procesadas.
      *
      * @return número de solicitudes totales
@@ -160,15 +110,6 @@ public class Estadisticas {
     }
 
     /**
-     * Obtiene el total de hallazgos creados.
-     *
-     * @return número de hallazgos creados (incluye todos los niveles de severidad)
-     */
-    public int obtenerHallazgosCreados() {
-        return hallazgosCreados.get();
-    }
-
-    /**
      * Obtiene el total de errores de análisis.
      *
      * @return número de errores
@@ -184,60 +125,6 @@ public class Estadisticas {
      */
     public int obtenerTotalOmitidos() {
         return omitidosDuplicado.get() + omitidosBajaConfianza.get();
-    }
-
-    /**
-     * Obtiene el número de hallazgos con severidad Critical.
-     *
-     * @return número de hallazgos Critical
-     */
-    public int obtenerHallazgosCritical() {
-        return hallazgosCritical.get();
-    }
-
-    /**
-     * Obtiene el número de hallazgos con severidad High.
-     *
-     * @return número de hallazgos High
-     */
-    public int obtenerHallazgosHigh() {
-        return hallazgosHigh.get();
-    }
-
-    /**
-     * Obtiene el número de hallazgos con severidad Medium.
-     *
-     * @return número de hallazgos Medium
-     */
-    public int obtenerHallazgosMedium() {
-        return hallazgosMedium.get();
-    }
-
-    /**
-     * Obtiene el número de hallazgos con severidad Low.
-     *
-     * @return número de hallazgos Low
-     */
-    public int obtenerHallazgosLow() {
-        return hallazgosLow.get();
-    }
-
-    /**
-     * Obtiene el número de hallazgos con severidad Info.
-     *
-     * @return número de hallazgos Info
-     */
-    public int obtenerHallazgosInfo() {
-        return hallazgosInfo.get();
-    }
-
-    /**
-     * Obtiene el número de hallazgos con severidad desconocida o no reconocida.
-     *
-     * @return número de hallazgos con severidad desconocida
-     */
-    public int obtenerHallazgosDesconocidos() {
-        return hallazgosDesconocidos.get();
     }
 
     /**
@@ -271,12 +158,6 @@ public class Estadisticas {
         omitidosBajaConfianza.set(0);
         hallazgosCreados.set(0);
         errores.set(0);
-        hallazgosCritical.set(0);
-        hallazgosHigh.set(0);
-        hallazgosMedium.set(0);
-        hallazgosLow.set(0);
-        hallazgosInfo.set(0);
-        hallazgosDesconocidos.set(0);
         versionCambios.incrementAndGet();
     }
 }

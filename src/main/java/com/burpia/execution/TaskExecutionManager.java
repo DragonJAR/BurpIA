@@ -7,7 +7,6 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.model.Tarea;
 import com.burpia.ui.PestaniaPrincipal;
-import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
@@ -44,7 +43,6 @@ public class TaskExecutionManager {
     private final PrintWriter stdout;
     private final PrintWriter stderr;
     private final LimitadorTasa limitador;
-    private final ControlBackpressureGlobal controlBackpressure;
     private final GestorLoggingUnificado gestorLogging;
 
     private final ThreadPoolExecutor executorService;
@@ -71,8 +69,7 @@ public class TaskExecutionManager {
 
     public TaskExecutionManager(ConfiguracionAPI config, GestorTareas gestorTareas,
             GestorConsolaGUI gestorConsola, PestaniaPrincipal pestaniaPrincipal,
-            PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
-            ControlBackpressureGlobal controlBackpressure) {
+            PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador) {
         this.config = config != null ? config : new ConfiguracionAPI();
         this.gestorTareas = gestorTareas;
         this.gestorConsola = gestorConsola;
@@ -80,7 +77,6 @@ public class TaskExecutionManager {
         this.stdout = stdout != null ? stdout : new PrintWriter(System.out, true);
         this.stderr = stderr != null ? stderr : new PrintWriter(System.err, true);
         this.limitador = limitador != null ? limitador : new LimitadorTasa(10);
-        this.controlBackpressure = controlBackpressure;
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
         this.contextosReintento = new ConcurrentHashMap<>();
         this.ejecucionesActivas = new ConcurrentHashMap<>();
@@ -219,8 +215,7 @@ public class TaskExecutionManager {
                 () -> gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal)
                         && gestorTareas.estaTareaCancelada(tareaIdFinal),
                 () -> gestorTareas != null && Normalizador.noEsVacio(tareaIdFinal)
-                        && gestorTareas.estaTareaPausada(tareaIdFinal),
-                controlBackpressure);
+                        && gestorTareas.estaTareaPausada(tareaIdFinal));
 
         String id = tareaIdFinal;
 

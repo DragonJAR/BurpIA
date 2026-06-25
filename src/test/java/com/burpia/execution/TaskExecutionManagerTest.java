@@ -199,8 +199,7 @@ class TaskExecutionManagerTest {
             pestaniaPrincipal,
             new PrintWriter(new StringWriter(), true),
             new PrintWriter(new StringWriter(), true),
-            new LimitadorTasa(1),
-            null
+            new LimitadorTasa(1)
         );
     }
 

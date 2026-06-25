@@ -45,26 +45,6 @@ public final class ProcesadorPromptHTTP {
     }
     
     /**
-     * Procesa prompt para análisis individual.
-     * 
-     * @param promptBase Prompt del usuario con variables (puede ser null/vacío, se usa default)
-     * @param solicitud Datos HTTP a analizar (no puede ser null)
-     * @param config Configuración actual (no puede ser null)
-     * @return Prompt procesado con variables reemplazadas
-     * @throws IllegalArgumentException si solicitud o config son null
-     */
-    public static String procesarIndividual(String promptBase, SolicitudAnalisis solicitud, ConfiguracionAPI config) {
-        validarParametrosIndividuales(solicitud, config);
-        
-        String prompt = obtenerPromptEfectivo(promptBase);
-        
-        return prompt
-            .replace(TOKEN_REQUEST, construirRequest(solicitud))
-            .replace(TOKEN_RESPONSE, construirResponse(solicitud))
-            .replace(TOKEN_OUTPUT_LANGUAGE, obtenerIdiomaSalida(config));
-    }
-    
-    /**
      * Procesa prompt para análisis de flujo (múltiples transacciones).
      * 
      * <p>Si la lista de solicitudes está vacía, retorna el prompt con solo
@@ -134,37 +114,9 @@ public final class ProcesadorPromptHTTP {
 
         return resultado;
     }
-    
-    /**
-     * Detecta el modo de análisis basado en los datos.
-     * 
-     * @param solicitud Solicitud a analizar (no puede ser null)
-     * @return "SINGLE" si hay response, "REQUEST_ONLY" si no
-     * @throws IllegalArgumentException si solicitud es null
-     */
-    public static String detectarModo(SolicitudAnalisis solicitud) {
-        if (solicitud == null) {
-            throw new IllegalArgumentException(I18nUI.General.ERROR_SOLICITUD_NULA());
-        }
-        
-        boolean tieneResponse = solicitud.obtenerCodigoEstadoRespuesta() > 0 || 
-                                noEsVacio(solicitud.obtenerCuerpoRespuesta()) ||
-                                noEsVacio(solicitud.obtenerEncabezadosRespuesta());
-        
-        return tieneResponse ? "SINGLE" : "REQUEST_ONLY";
-    }
-    
+
     // ============ VALIDACIONES ============
-    
-    private static void validarParametrosIndividuales(SolicitudAnalisis solicitud, ConfiguracionAPI config) {
-        if (solicitud == null) {
-            throw new IllegalArgumentException(I18nUI.General.ERROR_SOLICITUD_NULA());
-        }
-        if (config == null) {
-            throw new IllegalArgumentException(I18nUI.General.ERROR_CONFIGURACION_NULA_ARGUMENTO());
-        }
-    }
-    
+
     private static void validarParametrosFlujo(List<SolicitudAnalisis> solicitudes, ConfiguracionAPI config) {
         if (solicitudes == null) {
             throw new IllegalArgumentException(I18nUI.General.ERROR_LISTA_SOLICITUDES_NULA());
@@ -280,34 +232,6 @@ public final class ProcesadorPromptHTTP {
         }
 
         return request.toString();
-    }
-
-    private static String construirResponse(SolicitudAnalisis solicitud) {
-        if (solicitud == null) {
-            return "HTTP/1.1 0";
-        }
-
-        String encabezadosRespuesta = Normalizador.valorSeguro(solicitud.obtenerEncabezadosRespuesta());
-        String cuerpoRespuesta = Normalizador.valorSeguro(solicitud.obtenerCuerpoRespuesta());
-        String lineaEstado = construirLineaEstado(solicitud.obtenerCodigoEstadoRespuesta());
-        StringBuilder response = new StringBuilder();
-
-        if (noEsVacio(encabezadosRespuesta)) {
-            if (encabezadosRespuesta.startsWith("HTTP/")) {
-                response.append(encabezadosRespuesta);
-            } else {
-                response.append(lineaEstado).append("\n").append(encabezadosRespuesta);
-            }
-        }
-
-        if (response.length() == 0) {
-            response.append(lineaEstado);
-        }
-        if (noEsVacio(cuerpoRespuesta)) {
-            response.append("\n").append(limitarCuerpo(cuerpoRespuesta));
-        }
-
-        return response.toString();
     }
 
     private static String construirResponseFlujo(SolicitudAnalisis solicitud) {

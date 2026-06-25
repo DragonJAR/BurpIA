@@ -6,7 +6,6 @@ import com.burpia.i18n.I18nLogs;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.GestorConsolaGUI;
-import com.burpia.util.ControlBackpressureGlobal;
 import com.burpia.util.ControlCancelacionPausa;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.GestorLoggingUnificado;
@@ -26,7 +25,6 @@ public class AnalizadorAI implements Runnable {
     private final Runnable alInicioAnalisis;
     private final GestorConsolaGUI gestorConsola;
     private final ControlCancelacionPausa controlCancelacionPausa;
-    private final ControlBackpressureGlobal controlBackpressure;
     private final GestorLoggingUnificado gestorLogging;
     private final OrquestadorAnalisis orquestador;
     private final ParseadorRespuestasAI parseador;
@@ -80,13 +78,10 @@ public class AnalizadorAI implements Runnable {
      *                            es null, siempre false)
      * @param tareaPausada        Supplier que indica si la tarea está pausada (si
      *                            es null, siempre false)
-     * @param controlBackpressure Control global de backpressure para rate limiting
-     *                            (puede ser null)
      */
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
             LimitadorTasa limitador, Callback callback, Runnable alInicioAnalisis,
-            GestorConsolaGUI gestorConsola, BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada,
-            ControlBackpressureGlobal controlBackpressure) {
+            GestorConsolaGUI gestorConsola, BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
         this.solicitud = solicitud;
         this.config = config != null ? config : new ConfiguracionAPI();
         this.stdout = stdout != null ? stdout : new PrintWriter(OutputStream.nullOutputStream(), true);
@@ -104,7 +99,6 @@ public class AnalizadorAI implements Runnable {
         this.alInicioAnalisis = alInicioAnalisis;
         this.gestorConsola = gestorConsola;
         this.controlCancelacionPausa = new ControlCancelacionPausa(tareaCancelada, tareaPausada);
-        this.controlBackpressure = controlBackpressure;
         
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
 
@@ -142,18 +136,17 @@ public class AnalizadorAI implements Runnable {
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
             LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola,
             BooleanSupplier tareaCancelada, BooleanSupplier tareaPausada) {
-        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, tareaCancelada, tareaPausada,
-                null);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, tareaCancelada, tareaPausada);
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
             LimitadorTasa limitador, Callback callback) {
-        this(solicitud, config, stdout, stderr, limitador, callback, null, null, null, null, null);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, null, null, null);
     }
 
     public AnalizadorAI(SolicitudAnalisis solicitud, ConfiguracionAPI config, PrintWriter stdout, PrintWriter stderr,
             LimitadorTasa limitador, Callback callback, GestorConsolaGUI gestorConsola) {
-        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, null, null, null);
+        this(solicitud, config, stdout, stderr, limitador, callback, null, gestorConsola, null, null);
     }
 
     /**
@@ -197,18 +190,6 @@ public class AnalizadorAI implements Runnable {
                 gestorLogging.error(ORIGEN_LOG, alertaConfiguracion);
                 callback.alErrorAnalisis(alertaConfiguracion);
                 return;
-            }
-
-            if (controlBackpressure != null && controlBackpressure.estaEnCooldown()) {
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("[%s] Backpressure activo, esperando cooldown...", nombreHilo));
-                while (controlBackpressure.estaEnCooldown()) {
-                    if (controlCancelacionPausa.esCancelada()) {
-                        callback.alCanceladoAnalisis();
-                        return;
-                    }
-                    Thread.sleep(500);
-                }
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("[%s] Backpressure expirado, continuando", nombreHilo));
             }
 
             gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Adquiriendo permiso del limitador (disponibles: %d)",

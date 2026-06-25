@@ -291,24 +291,31 @@ public final class ConstructorSolicitudesProveedor {
             return;
         }
 
-        CACHE_GEMINI.entrySet().removeIf(entry ->
-            entry == null
-                || entry.getValue() == null
-                || (ahoraMs - entry.getValue().timestampMs) >= CACHE_MODELOS_GEMINI_MS
-        );
+        // Collections.synchronizedMap exige sincronizar manualmente sobre el mapa al
+        // iterar sus vistas (entrySet().removeIf y new ArrayList<>(entrySet())); sin
+        // esto, otro hilo en listarModelosGemini (put/get) puede provocar
+        // ConcurrentModificationException. El mapa usa su propio monitor, así que
+        // synchronized(CACHE_GEMINI) hace la depuración atómica (lock reentrante).
+        synchronized (CACHE_GEMINI) {
+            CACHE_GEMINI.entrySet().removeIf(entry ->
+                entry == null
+                    || entry.getValue() == null
+                    || (ahoraMs - entry.getValue().timestampMs) >= CACHE_MODELOS_GEMINI_MS
+            );
 
-        int excedente = CACHE_GEMINI.size() - MAX_ENTRADAS_CACHE_GEMINI;
-        if (excedente <= 0) {
-            return;
-        }
+            int excedente = CACHE_GEMINI.size() - MAX_ENTRADAS_CACHE_GEMINI;
+            if (excedente <= 0) {
+                return;
+            }
 
-        List<Map.Entry<String, CacheModelosGemini>> entradas = new ArrayList<>(CACHE_GEMINI.entrySet());
-        entradas.sort(Comparator.comparingLong(entry -> entry.getValue().timestampMs));
+            List<Map.Entry<String, CacheModelosGemini>> entradas = new ArrayList<>(CACHE_GEMINI.entrySet());
+            entradas.sort(Comparator.comparingLong(entry -> entry.getValue().timestampMs));
 
-        for (int i = 0; i < excedente && i < entradas.size(); i++) {
-            Map.Entry<String, CacheModelosGemini> entry = entradas.get(i);
-            if (entry != null) {
-                CACHE_GEMINI.remove(entry.getKey(), entry.getValue());
+            for (int i = 0; i < excedente && i < entradas.size(); i++) {
+                Map.Entry<String, CacheModelosGemini> entry = entradas.get(i);
+                if (entry != null) {
+                    CACHE_GEMINI.remove(entry.getKey(), entry.getValue());
+                }
             }
         }
     }
@@ -387,10 +394,6 @@ public final class ConstructorSolicitudesProveedor {
             }
             return modelos;
         }
-    }
-
-    public static List<String> listarModelosOpenAI(String urlBase, String apiKey, OkHttpClient clienteHttp) throws IOException {
-        return listarModelosCompatiblesOpenAI(urlBase, apiKey, clienteHttp);
     }
 
     public static List<String> listarModelosCompatiblesOpenAI(String urlBase,

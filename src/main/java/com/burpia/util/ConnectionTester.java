@@ -62,59 +62,6 @@ public class ConnectionTester {
     }
     
     /**
-     * Tests connection to an AI provider
-     */
-    public void probarConexionProveedor(ConfiguracionAPI config, CallbackConexion callback) {
-        if (config == null || callback == null) {
-            if (callback != null) {
-                callback.alError(I18nUI.Conexion.ERROR_CONFIG_NULL());
-            }
-            return;
-        }
-        
-        String proveedor = config.obtenerProveedorAI();
-        String apiKey = config.obtenerApiKeyParaProveedor(proveedor);
-        String urlBase = config.obtenerUrlBaseParaProveedor(proveedor);
-
-        if (tieneConfiguracionProveedorIncompleta(proveedor, apiKey, urlBase)) {
-            callback.alError(I18nUI.Conexion.ERROR_MISSING_PROVIDER_CONFIG());
-            return;
-        }
-        
-        CompletableFuture.supplyAsync(() -> {
-            try {
-                OkHttpClient client = crearClienteParaConfiguracion(config);
-                Request request = crearSolicitudTestConexion(proveedor, apiKey, urlBase);
-                
-                try (Response response = client.newCall(request).execute()) {
-                    if (response.isSuccessful()) {
-                        return I18nUI.Conexion.EXITO_CONEXION_SIMPLE();
-                    } else {
-                        return I18nUI.Conexion.DETALLE_HTTP(response.code(), response.message());
-                    }
-                }
-            } catch (Exception e) {
-                return I18nUI.Conexion.ERROR_CONNECTION_FAILED(describirErrorVisible(e));
-            }
-        }, executorService).orTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        .whenComplete((resultado, throwable) -> {
-            if (throwable != null) {
-                if (esTimeout(throwable)) {
-                    callback.alError(I18nUI.Conexion.ERROR_CONNECTION_TIMEOUT(DEFAULT_TIMEOUT_SECONDS));
-                } else {
-                    callback.alError(I18nUI.Conexion.ERROR_CONNECTION_FAILED(describirErrorVisible(throwable)));
-                }
-            } else {
-                if (I18nUI.Conexion.EXITO_CONEXION_SIMPLE().equals(resultado)) {
-                    callback.alExito(resultado);
-                } else {
-                    callback.alError(resultado);
-                }
-            }
-        });
-    }
-    
-    /**
      * Fetches available models from AI provider
      */
     public void obtenerModelosDisponibles(ConfiguracionAPI config, CallbackModelos callback) {
@@ -422,52 +369,6 @@ public class ConnectionTester {
         return false;
     }
     
-    private Request crearSolicitudTestConexion(String proveedor, String apiKey, String urlBase) {
-        String endpoint;
-        Request.Builder builder = new Request.Builder()
-            .addHeader("Content-Type", "application/json")
-            .addHeader("Accept", "application/json");
-        
-        if ("OpenAI".equals(proveedor) || "Z.ai".equals(proveedor) || "minimax".equals(proveedor)
-                || "DeepSeek".equals(proveedor) || "xAI".equals(proveedor)) {
-            endpoint = urlBase + "/models";
-            if (Normalizador.noEsVacio(apiKey)) {
-                builder.addHeader("Authorization", "Bearer " + apiKey.trim());
-            }
-        } else if ("Claude".equals(proveedor)) {
-            endpoint = urlBase + "/models";
-            builder.addHeader("x-api-key", apiKey);
-            builder.addHeader("anthropic-version", "2023-06-01");
-        } else if ("Gemini".equals(proveedor)) {
-            // SECURITY (O1): la API key viaja por header x-goog-api-key, NO
-            // como query param (?key=...). Antes la key quedaba en logs de
-            // OkHttp, proxy history (este plugin corre dentro de Burp),
-            // middleware. El production path en ConstructorSolicitudesProveedor
-            // ya usa header — aquí lo igualamos.
-            endpoint = urlBase + "/models";
-            if (Normalizador.noEsVacio(apiKey)) {
-                builder.addHeader("x-goog-api-key", apiKey.trim());
-            }
-        } else if ("Ollama".equals(proveedor)) {
-            endpoint = urlBase + "/api/tags";
-            // Ollama local no requiere API key
-        } else if ("Ollama Cloud".equals(proveedor)) {
-            // Mismo endpoint que Ollama local (/api/tags) pero con Bearer auth.
-            endpoint = urlBase + "/api/tags";
-            if (Normalizador.noEsVacio(apiKey)) {
-                builder.addHeader("Authorization", "Bearer " + apiKey.trim());
-            }
-        } else {
-            // Default para proveedores custom (OpenAI-compatible)
-            endpoint = urlBase + "/models";
-            if (Normalizador.noEsVacio(apiKey)) {
-                builder.addHeader("Authorization", "Bearer " + apiKey.trim());
-            }
-        }
-        
-        return builder.url(endpoint).get().build();
-    }
-
     private List<String> listarModelosParaProveedor(String proveedor, String apiKey, String urlBase, ConfiguracionAPI config) {
         try {
             OkHttpClient client = crearClienteParaConfiguracion(config);
@@ -528,14 +429,6 @@ public class ConnectionTester {
 
         String tipo = error != null ? error.getClass().getSimpleName() : I18nUI.Conexion.ERROR_DESCONOCIDO();
         return I18nUI.Conexion.ERROR_RED_INESPERADO(tipo);
-    }
-    
-    /**
-     * Callback interface for connection testing
-     */
-    public interface CallbackConexion {
-        void alExito(String mensaje);
-        void alError(String error);
     }
     
     /**

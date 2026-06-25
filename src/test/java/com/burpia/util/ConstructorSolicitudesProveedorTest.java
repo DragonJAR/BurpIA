@@ -265,7 +265,7 @@ class ConstructorSolicitudesProveedorTest {
             servidor.enqueue(new MockResponse().setResponseCode(200).setBody(respuesta));
             servidor.start();
 
-            List<String> modelos = ConstructorSolicitudesProveedor.listarModelosOpenAI(
+            List<String> modelos = ConstructorSolicitudesProveedor.listarModelosCompatiblesOpenAI(
                 servidor.url("/v1").toString(), "test-key", clienteHttp);
 
             assertEquals(2, modelos.size(), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:265");
@@ -281,7 +281,7 @@ class ConstructorSolicitudesProveedorTest {
             servidor.enqueue(new MockResponse().setResponseCode(200).setBody(respuesta));
             servidor.start();
 
-            List<String> modelos = ConstructorSolicitudesProveedor.listarModelosOpenAI(
+            List<String> modelos = ConstructorSolicitudesProveedor.listarModelosCompatiblesOpenAI(
                 servidor.url("/v1").toString(), "test-key", clienteHttp);
 
             assertEquals(List.of("gpt-3.5-turbo", "gpt-4o", "gpt-4o-mini"), modelos, "assertEquals failed at ConstructorSolicitudesProveedorTest.java:281");
@@ -295,7 +295,7 @@ class ConstructorSolicitudesProveedorTest {
             servidor.enqueue(new MockResponse().setResponseCode(200).setBody(respuesta));
             servidor.start();
 
-            List<String> modelos = ConstructorSolicitudesProveedor.listarModelosOpenAI(
+            List<String> modelos = ConstructorSolicitudesProveedor.listarModelosCompatiblesOpenAI(
                 servidor.url("/v1").toString(), "test-key", clienteHttp);
 
             assertEquals(2, modelos.size(), "assertEquals failed at ConstructorSolicitudesProveedorTest.java:295");
@@ -309,7 +309,7 @@ class ConstructorSolicitudesProveedorTest {
             servidor.start();
 
             assertThrows(IOException.class, () ->
-                ConstructorSolicitudesProveedor.listarModelosOpenAI(
+                ConstructorSolicitudesProveedor.listarModelosCompatiblesOpenAI(
                     servidor.url("/v1").toString(), "test-key", clienteHttp));
         }
 
@@ -320,7 +320,7 @@ class ConstructorSolicitudesProveedorTest {
             servidor.start();
 
             assertThrows(IOException.class, () ->
-                ConstructorSolicitudesProveedor.listarModelosOpenAI(
+                ConstructorSolicitudesProveedor.listarModelosCompatiblesOpenAI(
                     servidor.url("/v1").toString(), "test-key", clienteHttp));
         }
 
@@ -328,7 +328,7 @@ class ConstructorSolicitudesProveedorTest {
         @DisplayName("Lanza IOException para URL base vacía")
         void lanzaExcepcionParaUrlVacia() {
             assertThrows(IOException.class, () ->
-                ConstructorSolicitudesProveedor.listarModelosOpenAI("", "test-key", clienteHttp));
+                ConstructorSolicitudesProveedor.listarModelosCompatiblesOpenAI("", "test-key", clienteHttp));
         }
 
         @Test
@@ -339,7 +339,7 @@ class ConstructorSolicitudesProveedorTest {
             servidor.enqueue(new MockResponse().setResponseCode(200).setBody(respuesta));
             servidor.start();
 
-            ConstructorSolicitudesProveedor.listarModelosOpenAI(
+            ConstructorSolicitudesProveedor.listarModelosCompatiblesOpenAI(
                 servidor.url("/v1").toString(), "my-api-key", clienteHttp);
 
             RecordedRequest request = servidor.takeRequest();
@@ -354,7 +354,7 @@ class ConstructorSolicitudesProveedorTest {
             servidor.enqueue(new MockResponse().setResponseCode(200).setBody(respuesta));
             servidor.start();
 
-            ConstructorSolicitudesProveedor.listarModelosOpenAI(
+            ConstructorSolicitudesProveedor.listarModelosCompatiblesOpenAI(
                 servidor.url("/v1").toString(), null, clienteHttp);
 
             RecordedRequest request = servidor.takeRequest();
