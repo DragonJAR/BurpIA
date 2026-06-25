@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTable;
@@ -364,23 +365,40 @@ class PanelHallazgosFiltrosTest {
         flushEdt();
 
         JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
-        SwingUtilities.invokeAndWait(() -> tabla.setRowSelectionInterval(0, 0));
-        assertEquals(1, tabla.getSelectedRowCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:211");
+        // El ajuste de selección ante un popup fuera de filas ahora lo centraliza
+        // UIUtils.instalarMenuContextualTabla. Como ese helper se invoca al construir
+        // el panel, verificamos el contrato equivalente: un punto fuera de filas
+        // (rowAtPoint < 0) provoca clearSelection. Lo reproducimos en una tabla visible.
+        JFrame frame = new JFrame();
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                frame.add(tabla);
+                frame.pack();
+                frame.setVisible(true);
+            });
+            flushEdt();
 
-        Method ajustarSeleccion = PanelHallazgos.class.getDeclaredMethod(
-            "ajustarSeleccionParaMenuContextual", int.class, boolean.class
-        );
-        ajustarSeleccion.setAccessible(true);
-        SwingUtilities.invokeAndWait(() -> {
-            try {
-                ajustarSeleccion.invoke(panel, -1, false);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-        flushEdt();
+            SwingUtilities.invokeAndWait(() -> tabla.setRowSelectionInterval(0, 0));
+            assertEquals(1, tabla.getSelectedRowCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:211");
 
-        assertEquals(0, tabla.getSelectedRowCount(), "assertEquals failed at PanelHallazgosFiltrosTest.java:226");
+            // Punto muy por debajo de la última fila → rowAtPoint devuelve -1.
+            int yFueraFilas = tabla.getHeight() + 50;
+            MouseEvent popupFueraFilas = new MouseEvent(
+                tabla, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(),
+                java.awt.event.InputEvent.BUTTON3_DOWN_MASK,
+                5, yFueraFilas, 1, true);
+            SwingUtilities.invokeAndWait(() -> {
+                for (java.awt.event.MouseListener listener : tabla.getMouseListeners()) {
+                    listener.mousePressed(popupFueraFilas);
+                }
+            });
+            flushEdt();
+
+            assertEquals(0, tabla.getSelectedRowCount(),
+                "Un popup fuera de filas debe limpiar la selección previa");
+        } finally {
+            SwingUtilities.invokeAndWait(() -> frame.dispose());
+        }
     }
 
     @Test
