@@ -209,22 +209,36 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     }
 
     private void manejarAnalisisSeleccion(List<HttpRequestResponse> seleccion, ContextoInvocacion contextoInvocacion) {
-        if (Normalizador.esVacia(seleccion)) {
+        int iniciadas;
+        int omitidas;
+        try {
+            if (Normalizador.esVacia(seleccion)) {
+                return;
+            }
+            iniciadas = 0;
+            omitidas = 0;
+            for (HttpRequestResponse rr : seleccion) {
+                if (rr == null) {
+                    omitidas++;
+                    continue;
+                }
+                HttpRequest solicitud = rr.request();
+                if (manejarClicConDebounce(solicitud, rr, contextoInvocacion)) {
+                    iniciadas++;
+                } else {
+                    omitidas++;
+                }
+            }
+        } catch (RuntimeException ex) {
+            // El handler corre en el EDT; sin este catch la excepción escaparía
+            // sin informar al usuario ni registrar el stack.
+            api.logging().logToError(I18nUI.Contexto.MSG_ERROR_ANALISIS(ex.getMessage()), ex);
+            if (!GraphicsEnvironment.isHeadless()) {
+                UIUtils.mostrarError(parentFrame,
+                    I18nUI.Contexto.TITULO_ERROR_ANALISIS(),
+                    I18nUI.Contexto.MSG_ERROR_ANALISIS(ex.getMessage()));
+            }
             return;
-        }
-        int iniciadas = 0;
-        int omitidas = 0;
-        for (HttpRequestResponse rr : seleccion) {
-            if (rr == null) {
-                omitidas++;
-                continue;
-            }
-            HttpRequest solicitud = rr.request();
-            if (manejarClicConDebounce(solicitud, rr, contextoInvocacion)) {
-                iniciadas++;
-            } else {
-                omitidas++;
-            }
         }
 
         if (GraphicsEnvironment.isHeadless()) {
@@ -418,7 +432,18 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             );
         }
 
-        manejadorAnalisisFlujo.analizarFlujo(solicitudesValidas, contextoInvocacion);
+        try {
+            manejadorAnalisisFlujo.analizarFlujo(solicitudesValidas, contextoInvocacion);
+        } catch (RuntimeException ex) {
+            // El handler corre en el EDT; sin este catch la excepción escaparía
+            // sin informar al usuario ni registrar el stack.
+            api.logging().logToError(I18nUI.Contexto.MSG_ERROR_ANALISIS(ex.getMessage()), ex);
+            if (!GraphicsEnvironment.isHeadless()) {
+                UIUtils.mostrarError(parentFrame,
+                    I18nUI.Contexto.TITULO_ERROR_ANALISIS(),
+                    I18nUI.Contexto.MSG_ERROR_ANALISIS(ex.getMessage()));
+            }
+        }
     }
 
     private ContextoInvocacion construirContextoInvocacion(ContextMenuEvent evento, int cantidadSeleccionada) {
@@ -430,14 +455,18 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                     tipoInvocacion = evento.invocationType();
                 }
             // Best-effort: invocationType() may not be available in all Burp editions
-            } catch (Exception ignored) {
+            } catch (RuntimeException ex) {
+                api.logging().logToOutput("[BurpIA] invocationType() no disponible en esta edición: "
+                    + ex.getMessage());
             }
             try {
                 if (evento.toolType() != null) {
                     tipoHerramienta = evento.toolType();
                 }
             // Best-effort: toolType() may not be available in all Burp editions
-            } catch (Exception ignored) {
+            } catch (RuntimeException ex) {
+                api.logging().logToOutput("[BurpIA] toolType() no disponible en esta edición: "
+                    + ex.getMessage());
             }
         }
         return new ContextoInvocacion(tipoInvocacion, tipoHerramienta, cantidadSeleccionada);

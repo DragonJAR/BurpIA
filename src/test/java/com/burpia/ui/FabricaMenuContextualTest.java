@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -640,6 +641,54 @@ class FabricaMenuContextualTest {
 
             boolean habilitadas = (boolean) metodo.invoke(fabrica);
             assertFalse(habilitadas, "assertFalse failed at FabricaMenuContextualTest.java:424");
+        }
+    }
+
+    @Nested
+    @DisplayName("Fiabilidad: excepciones del manejador no escapan (F2)")
+    class FiabilidadExcepcionesAnalisisTests {
+
+        @Test
+        @DisplayName("manejarAnalisisSeleccion captura excepción del manejador sin propagarla")
+        void manejarAnalisisSeleccionCapturaExcepcionSinPropagar() throws Exception {
+            FabricaMenuContextual.ConsumerSolicitudSinContexto manejadorQueFalla =
+                (solicitud, forzar, solicitudRespuestaOriginal) -> {
+                    throw new RuntimeException("Fallo simulado del pipeline de análisis");
+                };
+            FabricaMenuContextual fabrica = crearFabricaCompleta(manejadorQueFalla, null, null, null);
+
+            HttpRequestResponse rr = mock(HttpRequestResponse.class);
+            when(rr.request()).thenReturn(mock(HttpRequest.class));
+
+            Method metodo = FabricaMenuContextual.class.getDeclaredMethod(
+                "manejarAnalisisSeleccion", List.class, FabricaMenuContextual.ContextoInvocacion.class);
+            metodo.setAccessible(true);
+
+            // En headless no se muestran diálogos; el catch debe registrar el error
+            // y retornar normalmente en lugar de propagar la RuntimeException.
+            assertDoesNotThrow(() -> metodo.invoke(fabrica, List.of(rr), null),
+                "manejarAnalisisSeleccion no debe propagar la excepción del manejador");
+        }
+
+        @Test
+        @DisplayName("manejarAnalisisFlujo captura excepción del manejador sin propagarla")
+        void manejarAnalisisFlujoCapturaExcepcionSinPropagar() throws Exception {
+            java.util.function.Consumer<List<HttpRequestResponse>> manejadorQueFalla = solicitudes -> {
+                throw new RuntimeException("Fallo simulado del análisis de flujo");
+            };
+            FabricaMenuContextual fabrica = crearFabricaCompleta(null, null, manejadorQueFalla, null);
+
+            HttpRequestResponse rr1 = mock(HttpRequestResponse.class);
+            when(rr1.request()).thenReturn(mock(HttpRequest.class));
+            HttpRequestResponse rr2 = mock(HttpRequestResponse.class);
+            when(rr2.request()).thenReturn(mock(HttpRequest.class));
+
+            Method metodo = FabricaMenuContextual.class.getDeclaredMethod(
+                "manejarAnalisisFlujo", List.class, FabricaMenuContextual.ContextoInvocacion.class);
+            metodo.setAccessible(true);
+
+            assertDoesNotThrow(() -> metodo.invoke(fabrica, List.of(rr1, rr2), null),
+                "manejarAnalisisFlujo no debe propagar la excepción del manejador");
         }
     }
 

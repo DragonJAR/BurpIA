@@ -2565,7 +2565,17 @@ public final class I18nUI {
                     "[BurpIA] Error sending request to agent: %s",
                     error);
         }
-        
+
+        public static String TITULO_ERROR_ANALISIS() {
+            return tr("Error al iniciar el análisis", "Error starting analysis");
+        }
+
+        public static String MSG_ERROR_ANALISIS(String detalle) {
+            return trf("No se pudo iniciar el análisis desde el menú contextual: %s",
+                    "Could not start analysis from the context menu: %s",
+                    detalle);
+        }
+
         public static String ITEM_ANALIZAR_FLUJO() {
             return tr("🔗 Analizar como Flujo...", "🔗 Analyze as Flow...");
         }
