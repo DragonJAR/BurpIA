@@ -123,41 +123,31 @@ public class PanelTareas extends JPanel {
         });
 
         botonCancelar.addActionListener(e -> {
-            ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
-            int activas = estadisticas.obtenerActivas();
-
-            if (activas == 0) {
-                UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
-                return;
-            }
-
-            boolean confirmacion = UIUtils.confirmarAdvertencia(
-                    this,
-                    I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
-                    I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(activas));
-            if (confirmacion) {
-                gestorTareas.cancelarTodas();
-                actualizarEstadisticas();
-            }
+            int activas = obtenerEstadisticasSeguras().obtenerActivas();
+            confirmarYEjecutarLote(
+                activas,
+                I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR(),
+                I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
+                I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(activas),
+                false,
+                () -> {
+                    gestorTareas.cancelarTodas();
+                    actualizarEstadisticas();
+                });
         });
 
         botonLimpiarCompletadas.addActionListener(e -> {
-            ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();
-            int completadas = estadisticas.obtenerFinalizadas();
-
-            if (completadas == 0) {
-                UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
-                return;
-            }
-
-            boolean confirmacion = UIUtils.confirmarPregunta(
-                    this,
-                    I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
-                    I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(completadas));
-            if (confirmacion) {
-                gestorTareas.limpiarCompletadas();
-                actualizarEstadisticas();
-            }
+            int completadas = obtenerEstadisticasSeguras().obtenerFinalizadas();
+            confirmarYEjecutarLote(
+                completadas,
+                I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR(),
+                I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
+                I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(completadas),
+                false,
+                () -> {
+                    gestorTareas.limpiarCompletadas();
+                    actualizarEstadisticas();
+                });
         });
 
         timerActualizacion = new Timer(INTERVALO_ACTUALIZACION_MS, e -> actualizarEstadisticas());
@@ -416,40 +406,60 @@ public class PanelTareas extends JPanel {
 
     private void cancelarTareas(List<TareaSeleccionada> seleccion) {
         int total = contarSeleccion(seleccion, Tarea::esEstadoCancelable);
-        if (total <= 0) {
-            UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR());
-            return;
-        }
-
-        boolean confirmacion = UIUtils.confirmarPregunta(
-                this,
-                I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
-                I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(total));
-        if (!confirmacion)
-            return;
-
-        int contador = procesarSeleccion(seleccion, Tarea::esEstadoCancelable, gestorTareas::cancelarTarea);
-        actualizarEstadisticas();
-        mostrarMensaje(I18nUI.Tareas.MSG_CANCELADAS(contador));
+        confirmarYEjecutarLote(
+            total,
+            I18nUI.Tareas.INFO_SIN_TAREAS_CANCELAR(),
+            I18nUI.Tareas.TITULO_CONFIRMAR_CANCELACION(),
+            I18nUI.Tareas.MSG_CONFIRMAR_CANCELAR_TAREAS(total),
+            false,
+            () -> {
+                int contador = procesarSeleccion(seleccion, Tarea::esEstadoCancelable, gestorTareas::cancelarTarea);
+                actualizarEstadisticas();
+                mostrarMensaje(I18nUI.Tareas.MSG_CANCELADAS(contador));
+            });
     }
 
     private void eliminarTareasSeleccionadas(List<TareaSeleccionada> seleccion) {
         int total = contarSeleccion(seleccion, Tarea::esEstadoEliminable);
+        confirmarYEjecutarLote(
+            total,
+            I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR(),
+            I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
+            I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(total),
+            false,
+            () -> {
+                int contador = procesarSeleccion(seleccion, Tarea::esEstadoEliminable, gestorTareas::limpiarTarea);
+                actualizarEstadisticas();
+                mostrarMensaje(I18nUI.Tareas.MSG_ELIMINADAS(contador));
+            });
+    }
+
+    /**
+     * PatrÃ³n unificado de confirmaciÃ³n + acciÃ³n sobre un lote de tareas.
+     *
+     * <p>Reemplaza la secuencia repetida "verificar total â si cero, info â confirmar â
+     * ejecutar" que vivÃ­a copiada en los botones de cancelar/limpiar y en las
+     * acciones de lote del menÃº contextual.
+     *
+     * @param total            Cantidad de tareas candidatas; si es â¤ 0, muestra info y retorna.
+     * @param msgSinTareas     Mensaje informativo cuando no hay tareas.
+     * @param tituloConfirmar  TÃ­tulo del diÃ¡logo de confirmaciÃ³n.
+     * @param msgConfirmar     Mensaje del diÃ¡logo de confirmaciÃ³n.
+     * @param esAdvertencia    Si true usa confirmarAdvertencia; si false, confirmarPregunta.
+     * @param accion           AcciÃ³n a ejecutar tras confirmar.
+     */
+    private void confirmarYEjecutarLote(int total, String msgSinTareas, String tituloConfirmar,
+            String msgConfirmar, boolean esAdvertencia, Runnable accion) {
         if (total <= 0) {
-            UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), I18nUI.Tareas.INFO_SIN_TAREAS_LIMPIAR());
+            UIUtils.mostrarInfo(this, I18nUI.General.TITULO_INFORMACION(), msgSinTareas);
             return;
         }
-
-        boolean confirmacion = UIUtils.confirmarPregunta(
-                this,
-                I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
-                I18nUI.Tareas.MSG_CONFIRMAR_LIMPIAR_COMPLETADAS(total));
-        if (!confirmacion)
-            return;
-
-        int contador = procesarSeleccion(seleccion, Tarea::esEstadoEliminable, gestorTareas::limpiarTarea);
-        actualizarEstadisticas();
-        mostrarMensaje(I18nUI.Tareas.MSG_ELIMINADAS(contador));
+        boolean confirmacion = esAdvertencia
+            ? UIUtils.confirmarAdvertencia(this, tituloConfirmar, msgConfirmar)
+            : UIUtils.confirmarPregunta(this, tituloConfirmar, msgConfirmar);
+        if (confirmacion) {
+            accion.run();
+        }
     }
 
     private int contarSeleccion(List<TareaSeleccionada> seleccion, Predicate<String> estadoPermitido) {
