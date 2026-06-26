@@ -127,16 +127,15 @@ public final class ProveedorAI {
     static {
         PROVEEDORES.put("Ollama", new ConfiguracionProveedor(
                 "http://localhost:11434",
-                "gemma3:12b",
+                "qwen3",
                 Arrays.asList(
-                        "gemma3:12b",
-                        "deepseek-v3.2",
+                        "qwen3",
+                        "qwen3-coder",
+                        "llama3.3",
+                        "gemma3",
+                        "deepseek-r1", "deepseek-v3.2",
                         "phi4",
-                        "llama3.3", "llama3.2",
-                        "deepseek-r1", "deepseek-coder",
-                        "qwen2.5", "qwen2.5-coder",
-                        "mistral", "mixtral",
-                        "codellama"),
+                        "mistral"),
                 false,
                 4096));
 
@@ -146,96 +145,97 @@ public final class ProveedorAI {
         // Authorization: Bearer.
         PROVEEDORES.put("Ollama Cloud", new ConfiguracionProveedor(
                 "https://ollama.com",
-                "llama3.2",
+                "qwen3",
                 Arrays.asList(
-                        "llama3.2",
+                        "qwen3",
                         "llama3.3",
-                        "gemma3:12b",
+                        "gemma3",
                         "deepseek-v3.2",
-                        "qwen2.5",
-                        "qwen2.5-coder",
+                        "deepseek-r1",
                         "mistral"),
                 true,
                 4096));
 
         PROVEEDORES.put("OpenAI", new ConfiguracionProveedor(
                 "https://api.openai.com/v1",
-                "gpt-5.2-pro",
+                "gpt-5.5",
                 Arrays.asList(
+                        "gpt-5.5",
+                        "gpt-5.5-pro",
+                        "gpt-5.4",
+                        "gpt-5.4-mini",
+                        "gpt-5.4-nano",
                         "gpt-5.3-codex",
-                        "gpt-5.2-pro",
-                        "gpt-5.2-thinking",
-                        "gpt-5-mini",
-                        "gpt-4o", "gpt-4o-mini",
-                        "o1", "o1-mini", "o1-preview",
-                        "gpt-4-turbo", "gpt-3.5-turbo"),
+                        "gpt-5.2",
+                        "gpt-4o", "gpt-4o-mini"),
                 true,
                 4096));
 
         PROVEEDORES.put("Claude", new ConfiguracionProveedor(
                 "https://api.anthropic.com/v1",
-                "claude-sonnet-4-6",
+                "claude-fable-5",
                 Arrays.asList(
+                        "claude-fable-5",
+                        "claude-opus-4-8",
                         "claude-sonnet-4-6",
-                        "claude-3-sonnet-20260217",
-                        "claude-3-opus-20260205",
-                        "claude-3-haiku-202511",
+                        "claude-haiku-4-5-20251001",
                         "claude-3-5-sonnet-20241022",
-                        "claude-3-5-haiku-20241022",
-                        "claude-3-opus-20240229"),
+                        "claude-3-5-haiku-20241022"),
                 true,
                 8192));
 
         PROVEEDORES.put("Gemini", new ConfiguracionProveedor(
                 "https://generativelanguage.googleapis.com/v1beta",
-                "gemini-1.5-pro-002",
+                "gemini-3.5-flash",
                 Arrays.asList(
-                        "gemini-1.5-pro-002",
-                        "gemini-1.5-flash-002"),
+                        "gemini-3.5-flash",
+                        "gemini-3.1-pro-preview",
+                        "gemini-3-flash-preview",
+                        "gemini-3.1-flash-lite",
+                        "gemini-2.5-pro",
+                        "gemini-2.5-flash",
+                        "gemini-2.5-flash-lite"),
                 true,
                 8192));
 
         PROVEEDORES.put("Z.ai", new ConfiguracionProveedor(
                 "https://api.z.ai/api/paas/v4",
-                "glm-5",
+                "glm-5.2",
                 Arrays.asList(
+                        "glm-5.2",
+                        "glm-5.1",
+                        "glm-5-turbo",
                         "glm-5",
-                        "glm-4.7-thinking",
-                        "glm-4.5",
-                        "glm-4-plus", "glm-4-air", "glm-4-flash",
-                        "glm-4-long"),
+                        "glm-4.7",
+                        "glm-4.6",
+                        "glm-4.5-air",
+                        "glm-4-air"),
                 true,
                 4096));
 
         PROVEEDORES.put("minimax", new ConfiguracionProveedor(
                 "https://api.minimax.io/v1",
-                "minimax-m2.5",
+                "minimax-m3",
                 Arrays.asList(
+                        "minimax-m3",
+                        "minimax-m2.7",
                         "minimax-m2.5",
-                        "minimax-m2.5-lightning",
-                        "minimax-m2.1-codex",
-                        "abab6.5s-chat",
-                        "abab6-chat"),
+                        "minimax-m2.5-highspeed",
+                        "minimax-m2.1"),
                 true,
                 4096));
 
         PROVEEDORES.put("Moonshot (Kimi)", new ConfiguracionProveedor(
                 "https://api.moonshot.ai/v1",
-                "kimi-k2.5",
+                "kimi-k2.6",
                 Arrays.asList(
+                        "kimi-k2.7",
+                        "kimi-k2.6",
                         "kimi-k2.5",
                         "kimi-latest",
-                        "kimi-k2-thinking",
-                        "kimi-k2-thinking-turbo",
-                        "kimi-k2-0905",
-                        "kimi-k2-turbo",
                         "moonshot-v1-128k",
-                        "moonshot-v1-128k-vision",
                         "moonshot-v1-32k",
-                        "moonshot-v1-32k-vision",
-                        "moonshot-v1-8k",
-                        "moonshot-v1-8k-vision",
-                        "moonshot-v1-auto"),
+                        "moonshot-v1-8k"),
                 true,
                 4096));
 
@@ -243,10 +243,10 @@ public final class ProveedorAI {
         // Endpoint /chat/completions. Bearer auth.
         PROVEEDORES.put("DeepSeek", new ConfiguracionProveedor(
                 "https://api.deepseek.com",
-                "deepseek-v4-flash",
+                "deepseek-v4-pro",
                 Arrays.asList(
-                        "deepseek-v4-flash",
                         "deepseek-v4-pro",
+                        "deepseek-v4-flash",
                         "deepseek-chat",
                         "deepseek-reasoner"),
                 true,
@@ -259,10 +259,9 @@ public final class ProveedorAI {
                 "grok-4.3",
                 Arrays.asList(
                         "grok-4.3",
-                        "grok-4",
-                        "grok-3",
-                        "grok-2",
-                        "grok-2-vision"),
+                        "grok-4.20-0309-reasoning",
+                        "grok-4.20-0309-non-reasoning",
+                        "grok-build-0.1"),
                 true,
                 4096));
 
@@ -270,10 +269,10 @@ public final class ProveedorAI {
         // Endpoint /chat/completions. Bearer auth. Modelos fugu y fugu-ultra.
         PROVEEDORES.put("Sakana", new ConfiguracionProveedor(
                 "https://api.sakana.ai/v1",
-                "fugu",
+                "fugu-ultra",
                 Arrays.asList(
-                        "fugu",
-                        "fugu-ultra"),
+                        "fugu-ultra",
+                        "fugu"),
                 true,
                 4096));
 
@@ -288,12 +287,12 @@ public final class ProveedorAI {
         // tiene un formato de request/response distinto).
         PROVEEDORES.put("LM Studio", new ConfiguracionProveedor(
                 "http://localhost:1234/v1",
-                "qwen2.5-coder-7b-instruct",
+                "qwen3-8b",
                 Arrays.asList(
+                        "qwen3-8b",
                         "qwen2.5-coder-7b-instruct",
-                        "qwen2.5-7b-instruct",
-                        "llama-3.1-8b-instruct",
-                        "phi-3.5-mini-instruct",
+                        "llama-3.3-8b-instruct",
+                        "phi-4",
                         "mistral-7b-instruct",
                         "deepseek-r1-distill-qwen-7b"),
                 false,

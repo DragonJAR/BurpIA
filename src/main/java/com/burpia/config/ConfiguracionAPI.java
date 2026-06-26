@@ -1923,19 +1923,38 @@ public class ConfiguracionAPI {
             return 4000;
         }
         String m = modelo.toLowerCase(Locale.ROOT);
+        // ponytail: estimación por familia (no exacto); el primer match gana y el
+        // fallback final es 4000. Familias nuevas (jun-2026) antes de los catch-all.
+        if (m.contains("gpt-5")) return 400000;
         if (m.contains("gpt-4o") || m.contains("gpt-4-32k")) return 128000;
         if (m.contains("gpt-4-turbo")) return 128000;
         if (m.contains("gpt-4")) return 8192;
         if (m.contains("gpt-3.5-turbo-16k")) return 16384;
         if (m.contains("gpt-3.5")) return 4096;
+        if (m.contains("claude-fable") || m.contains("claude-opus-4")
+                || m.contains("claude-sonnet-4") || m.contains("claude-haiku-4")) return 200000;
         if (m.contains("claude-3-5-sonnet") || m.contains("claude-3-opus")) return 200000;
         if (m.contains("claude-3-haiku")) return 200000;
         if (m.contains("claude-3")) return 100000;
         if (m.contains("claude")) return 100000;
+        if (m.contains("gemini-3")) return 1000000;
         if (m.contains("gemini-2")) return 1000000;
         if (m.contains("gemini-1.5-pro")) return 2000000;
         if (m.contains("gemini-1.5-flash")) return 1000000;
         if (m.contains("gemini")) return 32000;
+        if (m.contains("glm-5")) return 1000000;
+        if (m.contains("glm")) return 200000;
+        if (m.contains("grok-4.3")) return 1000000;
+        if (m.contains("grok-4")) return 256000;
+        if (m.contains("grok")) return 131072;
+        if (m.contains("deepseek-v4")) return 1000000;
+        if (m.contains("deepseek")) return 131072;
+        if (m.contains("kimi") || m.contains("moonshot")) return 262144;
+        if (m.contains("minimax-m3")) return 1000000;
+        if (m.contains("minimax")) return 200000;
+        if (m.contains("qwen")) return 131072;
+        if (m.contains("gemma")) return 131072;
+        if (m.contains("fugu")) return 200000;
         if (m.contains("llama-3") || m.contains("llama3")) return 8000;
         if (m.contains("llama")) return 4096;
         if (m.contains("mistral-large")) return 128000;
