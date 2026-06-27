@@ -86,6 +86,26 @@ public class Hallazgo {
         return solicitudHttp;
     }
 
+    /**
+     * Request para enviar a las herramientas de Burp (Scanner/Repeater/Intruder). Usa el
+     * request real en memoria si existe (método/cabeceras/cuerpo + httpService reales); si
+     * no, lo deriva de la URL del hallazgo (GET con httpService válido vía
+     * {@code httpRequestFromUrl}). Devuelve null si no hay request ni URL usable.
+     */
+    public HttpRequest obtenerSolicitudParaBurp() {
+        if (solicitudHttp != null) {
+            return solicitudHttp;
+        }
+        if (Normalizador.esVacio(url)) {
+            return null;
+        }
+        try {
+            return HttpRequest.httpRequestFromUrl(url);
+        } catch (Exception e) {
+            return null; // URL inválida para derivar el httpService
+        }
+    }
+
     public Hallazgo editar(String nuevaUrl, String nuevoTitulo, String nuevaDescripcion, String nuevaSeveridad, String nuevaConfianza) {
         return new Hallazgo(
             horaDescubrimiento,

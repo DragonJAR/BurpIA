@@ -35,12 +35,48 @@ public class DialogoDetalleHallazgo extends JDialog {
 
         inicializarComponentes();
         cargarDatos();
+        instalarIndicadorSucio();
+    }
+
+    private static final String SUFIJO_SUCIO = " •";
+
+    /**
+     * Marca el título con un sufijo cuando el usuario edita algún campo, para señalar
+     * visualmente que hay cambios sin guardar antes de cerrar/cancelar.
+     */
+    private void instalarIndicadorSucio() {
+        javax.swing.event.DocumentListener marcador = UIUtils.crearDocumentListener(() -> marcarTituloSucio(true));
+        txtUrl.getDocument().addDocumentListener(marcador);
+        txtTitulo.getDocument().addDocumentListener(marcador);
+        txtDescripcion.getDocument().addDocumentListener(marcador);
+        comboSeveridad.addActionListener(e -> marcarTituloSucio(true));
+        comboConfianza.addActionListener(e -> marcarTituloSucio(true));
+    }
+
+    private void marcarTituloSucio(boolean sucio) {
+        String base = I18nUI.DetalleHallazgo.TITULO_DIALOGO();
+        String actual = getTitle();
+        boolean yaSucio = actual != null && actual.endsWith(SUFIJO_SUCIO);
+        if (sucio && !yaSucio) {
+            setTitle(base + SUFIJO_SUCIO);
+        } else if (!sucio && yaSucio) {
+            setTitle(base);
+        }
     }
 
     private void inicializarComponentes() {
         setLayout(new BorderLayout(10, 10));
         setSize(700, 500);
+        setMinimumSize(new Dimension(500, 360));
         setLocationRelativeTo(getParent());
+        // Evitar descarte silencioso: la X y el botón Cancelar pasan por el mismo confirmar.
+        setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                cerrarConConfirmacionSiSucio();
+            }
+        });
 
         JPanel panelContenido = new JPanel(new GridBagLayout());
         panelContenido.setBorder(UIUtils.crearBordeTitulado(
@@ -56,12 +92,14 @@ public class DialogoDetalleHallazgo extends JDialog {
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblUrl = new JLabel(I18nUI.DetalleHallazgo.LABEL_URL());
         lblUrl.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.URL());
+        lblUrl.setLabelFor(txtUrl);
         panelContenido.add(lblUrl, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
-        txtUrl = new JTextField();
+        txtUrl = new JTextField(30);
         txtUrl.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         txtUrl.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.URL());
+        txtUrl.setInputVerifier(UIUtils.crearInputVerifierUrl());
         panelContenido.add(txtUrl, gbc);
 
         fila++;
@@ -69,10 +107,11 @@ public class DialogoDetalleHallazgo extends JDialog {
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblTitulo = new JLabel(I18nUI.DetalleHallazgo.LABEL_TITULO());
         lblTitulo.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.TITULO());
+        lblTitulo.setLabelFor(txtTitulo);
         panelContenido.add(lblTitulo, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
-        txtTitulo = new JTextField();
+        txtTitulo = new JTextField(30);
         txtTitulo.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         txtTitulo.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.TITULO());
         panelContenido.add(txtTitulo, gbc);
@@ -136,7 +175,7 @@ public class DialogoDetalleHallazgo extends JDialog {
         JButton btnCancelar = new JButton(I18nUI.DetalleHallazgo.BOTON_CANCELAR());
         btnCancelar.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnCancelar.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.CANCELAR());
-        btnCancelar.addActionListener(e -> dispose());
+        btnCancelar.addActionListener(e -> cerrarConConfirmacionSiSucio());
 
         panelBotones.add(btnGuardar);
         panelBotones.add(btnCancelar);
@@ -165,8 +204,10 @@ public class DialogoDetalleHallazgo extends JDialog {
         String nuevaSeveridad = (String) comboSeveridad.getSelectedItem();
         String nuevaConfianza = (String) comboConfianza.getSelectedItem();
 
-        if (Normalizador.esVacio(nuevaUrl) || Normalizador.esVacio(nuevaDescripcion) || Normalizador.esVacio(nuevoTitulo)) {
-            UIUtils.mostrarError(this, I18nUI.DetalleHallazgo.TITULO_ERROR_VALIDACION(), I18nUI.DetalleHallazgo.MSG_VALIDACION());
+        // Validación por campo: indica exactamente qué campo falló, no un mensaje genérico.
+        String errorCampo = validarCampos(nuevaUrl, nuevoTitulo, nuevaDescripcion);
+        if (errorCampo != null) {
+            UIUtils.mostrarError(this, I18nUI.DetalleHallazgo.TITULO_ERROR_VALIDACION(), errorCampo);
             return;
         }
 
@@ -180,6 +221,53 @@ public class DialogoDetalleHallazgo extends JDialog {
         if (alGuardar != null) {
             alGuardar.accept(resultado);
         }
+        UIUtils.mostrarInfo(this, I18nUI.DetalleHallazgo.TITULO_DIALOGO(), I18nUI.DetalleHallazgo.MSG_GUARDADO_OK());
         dispose();
+    }
+
+    /**
+     * Valida los campos obligatorios y devuelve el mensaje de error del primer campo inválido,
+     * o null si todos son válidos.
+     */
+    private static String validarCampos(String url, String titulo, String descripcion) {
+        if (Normalizador.esVacio(url)) {
+            return I18nUI.DetalleHallazgo.MSG_VALIDACION_URL();
+        }
+        if (Normalizador.esVacio(titulo)) {
+            return I18nUI.DetalleHallazgo.MSG_VALIDACION_TITULO();
+        }
+        if (Normalizador.esVacio(descripcion)) {
+            return I18nUI.DetalleHallazgo.MSG_VALIDACION_DESCRIPCION();
+        }
+        return null;
+    }
+
+    /**
+     * Cierra el diálogo descartando cambios, pero solo tras confirmar si el usuario editó algo.
+     */
+    private void cerrarConConfirmacionSiSucio() {
+        if (tieneCambiosSinGuardar() && !UIUtils.confirmarAdvertencia(
+                this,
+                I18nUI.DetalleHallazgo.TITULO_CONFIRMAR_DESCARTE(),
+                I18nUI.DetalleHallazgo.MSG_CONFIRMAR_DESCARTE())) {
+            return;
+        }
+        dispose();
+    }
+
+    private boolean tieneCambiosSinGuardar() {
+        if (hallazgoOriginal == null) {
+            // Hallazgo nuevo: cualquier contenido cuenta como cambio.
+            return Normalizador.noEsVacio(txtUrl.getText())
+                    || Normalizador.noEsVacio(txtTitulo.getText())
+                    || txtDescripcion.getDocument().getLength() > 0;
+        }
+        return !java.util.Objects.equals(txtUrl.getText(), valorONulo(hallazgoOriginal.obtenerUrl()))
+                || !java.util.Objects.equals(txtTitulo.getText(), valorONulo(hallazgoOriginal.obtenerTitulo()))
+                || !java.util.Objects.equals(txtDescripcion.getText(), valorONulo(hallazgoOriginal.obtenerHallazgo()));
+    }
+
+    private static String valorONulo(String valor) {
+        return valor != null ? valor : "";
     }
 }

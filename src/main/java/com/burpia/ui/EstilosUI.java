@@ -73,8 +73,12 @@ public class EstilosUI {
         FUENTE_MONO = new Font(nombreMono, Font.PLAIN, tamanioMono);
         FUENTE_MONO_NEGRITA = new Font(nombreMono, Font.BOLD, tamanioMono);
 
-        // Aliases - referencian las bases actualizadas
-        FUENTE_TABLA = FUENTE_ESTANDAR;
+        // Aliases - referencian las bases actualizadas.
+        // FUENTE_TABLA se deriva siempre de la fuente MONO aunque el usuario haya
+        // elegido una fuente proporcional para FUENTE_ESTANDAR: las tablas contienen
+        // columnas numéricas (tokens, conteos, IDs) que pierden alineación tabular
+        // con fuentes proporcionales.
+        FUENTE_TABLA = new Font(nombreMono, Font.PLAIN, tamanioMono);
         FUENTE_CAMPO_TEXTO = FUENTE_ESTANDAR;
         FUENTE_BOTON_PRINCIPAL = FUENTE_MONO_NEGRITA;
 
@@ -98,7 +102,6 @@ public class EstilosUI {
     }
 
     public static final Color COLOR_FONDO_PANEL = new Color(245, 245, 245);
-    public static final Color COLOR_TEXTO_NORMAL = Color.BLACK;
 
     public static final Color COLOR_CRITICAL = new Color(156, 39, 176);
     public static final Color COLOR_HIGH = new Color(220, 53, 69);
@@ -117,8 +120,82 @@ public class EstilosUI {
     public static final int MARGEN_PANEL = 10;
     public static final int ESPACIADO_COMPONENTES = 5;
 
+    // Padding centralizado para píldoras/badges de renderizadores (evita literales dispersos).
+    public static final int PADDING_PILDORA_X = 12;
+    public static final int PADDING_PILDORA_Y = 4;
+
     public static final double CONTRASTE_AA_NORMAL = 4.5d;
     public static final double CONTRASTE_AA_GRANDE = 3.0d;
+
+    // Paleta propia de confianza: familia cian/azul, deliberadamente DISTINTA de la
+    // paleta de severidad (rojo/ámbar/verde/púrpura) para que el usuario distinga
+    // "severidad Critical" de "confianza Alta" por color sin ambigüedad.
+    private static final Color COLOR_CONFIANZA_ALTA = new Color(0, 137, 123);   // teal
+    private static final Color COLOR_CONFIANZA_MEDIA = new Color(2, 119, 189);  // azul
+    private static final Color COLOR_CONFIANZA_BAJA = new Color(121, 134, 203); // azul lavanda
+
+    /**
+     * Color de texto principal resuelto contra el fondo real del tema actual.
+     * Sustituye al antiguo COLOR_TEXTO_NORMAL (que siempre era negro) en
+     * componentes cuyo foreground se fijaba sin consultar el tema, volviéndose
+     * ilegible en el tema oscuro de Burp.
+     */
+    public static Color colorTextoPrincipalTema() {
+        return colorTextoPrimario(obtenerFondoPanel());
+    }
+
+    /**
+     * Color asociado a un nivel de confianza, ajustado a contraste mínimo AA frente al fondo.
+     * Usa la paleta propia de confianza (familia cian/azul) para no colisionar con severidad.
+     *
+     * @param bg          color de fondo contra el que se ajusta el contraste
+     * @param nivelAlta   true si el nivel traducido corresponde a confianza Alta
+     * @param nivelMedia  true si corresponde a confianza Media
+     * @param nivelBaja   true si corresponde a confianza Baja
+     * @return color accesible para el nivel indicado
+     */
+    public static Color colorConfianza(Color bg, boolean nivelAlta, boolean nivelMedia, boolean nivelBaja) {
+        Color fondo = normalizarColor(bg, obtenerColorFondoBase());
+        Color base;
+        if (nivelAlta) {
+            base = COLOR_CONFIANZA_ALTA;
+        } else if (nivelMedia) {
+            base = COLOR_CONFIANZA_MEDIA;
+        } else if (nivelBaja) {
+            base = COLOR_CONFIANZA_BAJA;
+        } else {
+            // Desconocido: color neutro accesible en vez de Color.GRAY crudo.
+            return colorTextoSecundario(fondo);
+        }
+        return ajustarParaContrasteMinimo(base, fondo, CONTRASTE_AA_GRANDE);
+    }
+
+    /**
+     * Color neutro accesible para valores "desconocido", alternativo a {@link Color#GRAY}
+     * crudo (que no pasa por ajuste de contraste y puede ser ilegible sobre fondos coloreados).
+     */
+    public static Color colorDesconocidoAccesible(Color bg) {
+        return colorTextoSecundario(normalizarColor(bg, obtenerColorFondoBase()));
+    }
+
+    /**
+     * Color base de selección (p.ej. para terminales), bifurcado por tema, ya ajustado a contraste.
+     * Centraliza el literal que antes vivía inline en AgentTerminalSettingsProvider.
+     */
+    public static Color colorSeleccionTerminal(Color bg) {
+        Color fondo = normalizarColor(bg, obtenerColorFondoBase());
+        Color base = esTemaOscuro(fondo) ? new Color(65, 102, 157) : new Color(190, 220, 255);
+        return ajustarParaContrasteMinimo(base, fondo, CONTRASTE_AA_GRANDE);
+    }
+
+    /**
+     * Color base de resaltado de búsqueda en terminal, bifurcado por tema, ya ajustado a contraste.
+     */
+    public static Color colorBusquedaTerminal(Color bg) {
+        Color fondo = normalizarColor(bg, obtenerColorFondoBase());
+        Color base = esTemaOscuro(fondo) ? new Color(151, 123, 34) : new Color(255, 231, 145);
+        return ajustarParaContrasteMinimo(base, fondo, CONTRASTE_AA_GRANDE);
+    }
 
     public static Color obtenerColorTextoContraste(Color colorFondo) {
         Color fondo = normalizarColor(colorFondo, Color.WHITE);

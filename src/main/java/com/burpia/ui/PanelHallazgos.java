@@ -68,6 +68,7 @@ public class PanelHallazgos extends JPanel {
     private JPanel panelGuardarProyecto;
     private JPanel panelTablaWrapper;
     private JLabel etiquetaBusqueda;
+    private JLabel etiquetaEmptyState;
 
     private TableRowSorter<ModeloTablaHallazgos> sorter;
     private JCheckBox chkGuardarEnIssues;
@@ -130,6 +131,7 @@ public class PanelHallazgos extends JPanel {
         campoBusqueda = new JTextField(15);
         campoBusqueda.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Hallazgos.BUSQUEDA());
+        etiquetaBusqueda.setLabelFor(campoBusqueda);
 
         comboSeveridad = new JComboBox<>(I18nUI.Hallazgos.OPCIONES_FILTRO_SEVERIDAD());
         comboSeveridad.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -206,7 +208,14 @@ public class PanelHallazgos extends JPanel {
 
         JScrollPane panelDesplazable = new JScrollPane(tabla);
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        panelTablaWrapper.add(panelDesplazable, BorderLayout.CENTER);
+
+        etiquetaEmptyState = UIUtils.crearEmptyState(I18nUI.Hallazgos.MSG_EMPTY_STATE());
+        // OverlayLayout para apilar el empty state sobre el scroll.
+        panelTablaWrapper.setLayout(new OverlayLayout(panelTablaWrapper));
+        panelTablaWrapper.add(etiquetaEmptyState);
+        panelTablaWrapper.add(panelDesplazable);
+        tabla.getModel().addTableModelListener(e -> actualizarEmptyStateHallazgos());
+        actualizarEmptyStateHallazgos();
 
         campoBusqueda.getDocument().addDocumentListener(UIUtils.crearDocumentListener(this::aplicarFiltros));
 
@@ -280,6 +289,32 @@ public class PanelHallazgos extends JPanel {
 
         programarPersistenciaFiltros();
         notificarFiltrosAplicados();
+        actualizarEmptyStateHallazgos();
+    }
+
+    /**
+     * Refresca el empty state distinguiendo "sin hallazgos" de "0 resultados de filtro".
+     */
+    private void actualizarEmptyStateHallazgos() {
+        if (etiquetaEmptyState == null) {
+            return;
+        }
+        int filasModelo = modelo.getRowCount();
+        int filasVista = tabla.getRowCount();
+        String mensaje;
+        boolean vacio;
+        if (filasModelo == 0) {
+            mensaje = I18nUI.Hallazgos.MSG_EMPTY_STATE();
+            vacio = true;
+        } else if (filasVista == 0) {
+            mensaje = I18nUI.Hallazgos.MSG_EMPTY_STATE_FILTRO();
+            vacio = true;
+        } else {
+            mensaje = "";
+            vacio = false;
+        }
+        UIUtils.actualizarEmptyState(tabla, etiquetaEmptyState, mensaje);
+        etiquetaEmptyState.setVisible(vacio);
     }
 
     private void limpiarFiltros() {
@@ -851,7 +886,22 @@ public class PanelHallazgos extends JPanel {
                         auditoriaActiva = api.scanner().startAudit(configScanner);
                     }
                     auditoriaActiva.addRequest(solicitud);
-                    api.logging().logToOutput(I18nUI.Hallazgos.LOG_PETICION_ENVIADA_SCANNER() + solicitud.url());
+                    // Diagnóstico: qué le mandamos al audit (método, URL, httpService) y qué
+                    // hace el audit. Un httpService NULL o 0 insertionPoints explican el "no
+                    // dispara". (api.logging va al panel Output de la extensión.)
+                    // Solo en modo registro detallado para no ensuciar el Output en uso normal.
+                    if (config != null && config.esDetallado()) {
+                        api.logging().logToOutput(I18nUI.Hallazgos.LOG_PETICION_ENVIADA_SCANNER() + solicitud.url()
+                            + " | metodo=" + solicitud.method()
+                            + " | httpService=" + (solicitud.httpService() != null
+                                ? solicitud.httpService().host() + ":" + solicitud.httpService().port()
+                                  + " secure=" + solicitud.httpService().secure()
+                                : "NULL (sin servicio: el audit no tiene a donde escanear)")
+                            + " | audit.estado=" + auditoriaActiva.statusMessage()
+                            + " | audit.insertionPoints=" + auditoriaActiva.insertionPointCount()
+                            + " | audit.requests=" + auditoriaActiva.requestCount()
+                            + " | audit.errores=" + auditoriaActiva.errorCount());
+                    }
                     return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
                         solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_SCANNER()
                     );
@@ -1088,9 +1138,10 @@ public class PanelHallazgos extends JPanel {
                 continue;
             }
             Hallazgo hallazgo = modelo.obtenerHallazgo(filaModelo);
-            // El request es la única fuente de verdad del hallazgo; si es null no se
-            // fabrica uno inexistente (ejecutarAccionBurp lo reporta como "sin request").
-            HttpRequest solicitud = modelo.obtenerSolicitudHttp(filaModelo);
+            // Request para las herramientas de Burp: el real en memoria si existe; si no,
+            // se deriva de la URL del hallazgo (obtenerSolicitudParaBurp). Si no hay URL
+            // usable queda null y ejecutarAccionBurp lo reporta como "sin request".
+            HttpRequest solicitud = hallazgo != null ? hallazgo.obtenerSolicitudParaBurp() : null;
             String urlReferencia = resolverUrlReferencia(hallazgo);
             entradas.add(new EntradaAccion(solicitud, hallazgo, urlReferencia));
         }

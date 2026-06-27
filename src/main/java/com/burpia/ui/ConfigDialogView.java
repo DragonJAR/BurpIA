@@ -98,41 +98,54 @@ public class ConfigDialogView {
     private void inicializarCamposConfiguracion() {
         txtRetraso = crearCampoTexto();
         txtRetraso.setToolTipText(I18nUI.Tooltips.Configuracion.RETRASO());
+        txtRetraso.setInputVerifier(UIUtils.crearInputVerifierNumerico(
+                ConfiguracionAPI.MINIMO_RETRASO_SEGUNDOS, ConfiguracionAPI.MAXIMO_RETRASO_SEGUNDOS));
 
         txtMaximoConcurrente = crearCampoTexto();
         txtMaximoConcurrente.setToolTipText(I18nUI.Tooltips.Configuracion.MAXIMO_CONCURRENTE());
+        txtMaximoConcurrente.setInputVerifier(UIUtils.crearInputVerifierNumerico(
+                ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE, ConfiguracionAPI.MAXIMO_MAXIMO_CONCURRENTE));
 
         txtUrl = crearCampoTexto(30);
         txtUrl.setToolTipText(I18nUI.Tooltips.Configuracion.URL_API());
+        txtUrl.setInputVerifier(UIUtils.crearInputVerifierUrl());
 
         // Preview en vivo del endpoint final calculado. Lo actualiza ConfigDialogController
         // via DocumentListener sobre txtUrl + cambio de proveedor/modelo.
         lblPreviewEndpoint = new JLabel(" ");
         lblPreviewEndpoint.setFont(lblPreviewEndpoint.getFont().deriveFont(java.awt.Font.ITALIC, 11f));
-        lblPreviewEndpoint.setForeground(java.awt.Color.GRAY);
+        lblPreviewEndpoint.setForeground(EstilosUI.colorTextoSecundario(EstilosUI.obtenerFondoPanel()));
         lblPreviewEndpoint.setToolTipText(I18nUI.Tooltips.Configuracion.URL_API());
 
         txtClave = new JPasswordField(30);
         txtClave.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         txtClave.setToolTipText(I18nUI.Tooltips.Configuracion.CLAVE_API());
+        txtClave.setInputVerifier(UIUtils.crearInputVerifierApiKey());
 
         txtMaxTokens = crearCampoTexto();
         txtMaxTokens.setToolTipText(I18nUI.Tooltips.Configuracion.MAX_TOKENS());
+        txtMaxTokens.setInputVerifier(UIUtils.crearInputVerifierNumerico(1, 200000));
 
         txtTimeoutModelo = crearCampoTexto();
         txtTimeoutModelo.setToolTipText(I18nUI.Tooltips.Configuracion.TIMEOUT_MODELO());
+        txtTimeoutModelo.setInputVerifier(UIUtils.crearInputVerifierNumerico(
+                ConfiguracionAPI.TIEMPO_ESPERA_MIN_SEGUNDOS, ConfiguracionAPI.TIEMPO_ESPERA_MAX_SEGUNDOS));
 
         txtMaximoHallazgosTabla = crearCampoTexto();
         txtMaximoHallazgosTabla.setToolTipText(
                 I18nUI.Tooltips.Configuracion.MAXIMO_HALLAZGOS() + " (" +
                         ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA + "-" +
                         ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA + ")");
+        txtMaximoHallazgosTabla.setInputVerifier(UIUtils.crearInputVerifierNumerico(
+                ConfiguracionAPI.MINIMO_HALLAZGOS_TABLA, ConfiguracionAPI.MAXIMO_HALLAZGOS_TABLA));
 
         txtMaximoTareas = crearCampoTexto();
         txtMaximoTareas.setToolTipText(
                 I18nUI.Tooltips.Configuracion.MAXIMO_TAREAS() + " (" +
                         ConfiguracionAPI.MINIMO_TAREAS_TABLA + "-" +
                         ConfiguracionAPI.MAXIMO_TAREAS_TABLA + ")");
+        txtMaximoTareas.setInputVerifier(UIUtils.crearInputVerifierNumerico(
+                ConfiguracionAPI.MINIMO_TAREAS_TABLA, ConfiguracionAPI.MAXIMO_TAREAS_TABLA));
 
         chkDetallado = crearCheckBox(I18nUI.Configuracion.CHECK_DETALLADO());
         chkDetallado.setToolTipText(I18nUI.Tooltips.Configuracion.DETALLADO());
@@ -224,18 +237,24 @@ public class ConfigDialogView {
         chkHabilitarMultiProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.HABILITAR_MULTI_PROVEEDOR());
 
         btnAgregarProveedor = new JButton("→");
+        btnAgregarProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnAgregarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_AGREGAR());
+        UIUtils.aplicarTamanoMinimoBoton(btnAgregarProveedor, 44, 32);
 
         btnQuitarProveedor = new JButton("←");
+        btnQuitarProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnQuitarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_QUITAR());
+        UIUtils.aplicarTamanoMinimoBoton(btnQuitarProveedor, 44, 32);
 
         btnSubirProveedor = new JButton("↑");
         btnSubirProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnSubirProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_SUBIR());
+        UIUtils.aplicarTamanoMinimoBoton(btnSubirProveedor, 44, 32);
 
         btnBajarProveedor = new JButton("↓");
         btnBajarProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
         btnBajarProveedor.setToolTipText(I18nUI.Tooltips.Configuracion.MULTI_PROVEEDOR_BAJAR());
+        UIUtils.aplicarTamanoMinimoBoton(btnBajarProveedor, 44, 32);
 
         lblEstadoMultiProveedor = new JLabel(I18nUI.Configuracion.TXT_MULTI_PROVEEDOR_DESHABILITADO());
         lblEstadoMultiProveedor.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -318,7 +337,17 @@ public class ConfigDialogView {
         gbc.gridx = 1;
         gbc.gridwidth = GridBagConstraints.REMAINDER;
         gbc.weightx = 1.0;
-        panel.add(txtClave, gbc);
+        JPanel panelClave = new JPanel(new BorderLayout(6, 0));
+        panelClave.setOpaque(false);
+        panelClave.add(txtClave, BorderLayout.CENTER);
+        JCheckBox chkMostrarClave = new JCheckBox(I18nUI.Configuracion.CHECK_MOSTRAR_CLAVE());
+        chkMostrarClave.setFont(EstilosUI.FUENTE_ESTANDAR);
+        chkMostrarClave.setOpaque(false);
+        chkMostrarClave.setToolTipText(I18nUI.Configuracion.TOOLTIP_MOSTRAR_CLAVE());
+        chkMostrarClave.addActionListener(e -> txtClave.setEchoChar(
+                chkMostrarClave.isSelected() ? (char) 0 : '•'));
+        panelClave.add(chkMostrarClave, BorderLayout.EAST);
+        panel.add(panelClave, gbc);
 
         fila++;
 

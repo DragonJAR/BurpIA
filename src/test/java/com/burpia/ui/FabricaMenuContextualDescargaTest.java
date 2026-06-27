@@ -61,10 +61,11 @@ class FabricaMenuContextualDescargaTest {
         FabricaMenuContextual fabrica = crearFabricaBasica();
         ContextMenuEvent evento = crearEventoConSolicitud("GET /test HTTP/1.1");
 
-        // Before: should return items
+        // Before: should return items (análisis + ítem de agente deshabilitado, ya que el mock
+        // reporta ningún agente habilitado y la UX ahora muestra un ítem deshabilitado explicativo).
         List<Component> itemsBefore = fabrica.provideMenuItems(evento);
         assertNotNull(itemsBefore, "assertNotNull failed at FabricaMenuContextualDescargaTest.java:59");
-        assertEquals(1, itemsBefore.size(), "assertEquals failed at FabricaMenuContextualDescargaTest.java:60");
+        assertEquals(2, itemsBefore.size(), "assertEquals failed at FabricaMenuContextualDescargaTest.java:60");
 
         // Mark as downloaded
         fabrica.marcarDescargado();
@@ -83,7 +84,7 @@ class FabricaMenuContextualDescargaTest {
         List<Component> items = fabrica.provideMenuItems(evento);
 
         assertNotNull(items, "assertNotNull failed at FabricaMenuContextualDescargaTest.java:75");
-        assertEquals(1, items.size(), "assertEquals failed at FabricaMenuContextualDescargaTest.java:76");
+        assertEquals(2, items.size(), "assertEquals failed at FabricaMenuContextualDescargaTest.java:76");
         Component item = items.get(0);
         assertTrue(item instanceof JMenuItem, "assertTrue failed at FabricaMenuContextualDescargaTest.java:77");
         assertFalse(((JMenuItem) item).getText().isEmpty(),

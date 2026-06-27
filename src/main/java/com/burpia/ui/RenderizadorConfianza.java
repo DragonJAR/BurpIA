@@ -91,27 +91,22 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
 
     /**
      * Obtiene el color asociado a un nivel de confianza traducido.
-     * 
-     * <p>Mapeo de colores coherente con el nivel de confianza:
-     * <ul>
-     *   <li>ALTA - COLOR_CRITICAL (púrpura) - máxima confianza merece máxima atención</li>
-     *   <li>MEDIA - COLOR_MEDIUM (naranja) - confianza intermedia</li>
-     *   <li>BAJA - COLOR_LOW (verde) - baja confianza, menor urgencia</li>
-     * </ul>
-     * 
+     *
+     * <p>Usa la paleta propia de confianza (familia cian/azul) deliberadamente distinta de la
+     * paleta de severidad, para que el usuario distinga "severidad Critical" de "confianza Alta"
+     * por color sin ambigüedad.
+     *
      * @param confTraducida Nivel de confianza traducido
-     * @return Color correspondiente al nivel de confianza
+     * @return Color accesible correspondiente al nivel de confianza
      */
     private Color obtenerColorConfianzaTraducida(String confTraducida) {
         if (Normalizador.esVacio(confTraducida)) {
-            return Color.GRAY;
+            return EstilosUI.colorDesconocidoAccesible(getBackground());
         }
-
-        if (confTraducida.equals(I18nUI.Hallazgos.CONFIANZA_ALTA())) return EstilosUI.COLOR_CRITICAL;
-        if (confTraducida.equals(I18nUI.Hallazgos.CONFIANZA_MEDIA())) return EstilosUI.COLOR_MEDIUM;
-        if (confTraducida.equals(I18nUI.Hallazgos.CONFIANZA_BAJA())) return EstilosUI.COLOR_LOW;
-
-        return Color.GRAY;
+        boolean alta = confTraducida.equals(I18nUI.Hallazgos.CONFIANZA_ALTA());
+        boolean media = confTraducida.equals(I18nUI.Hallazgos.CONFIANZA_MEDIA());
+        boolean baja = confTraducida.equals(I18nUI.Hallazgos.CONFIANZA_BAJA());
+        return EstilosUI.colorConfianza(getBackground(), alta, media, baja);
     }
 
     /**
@@ -156,11 +151,6 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
             int filledSegments = obtenerSegmentos(confianzaStr);
 
             Color colorBase = obtenerColorConfianzaTraducida(confianzaStr);
-            colorBase = EstilosUI.ajustarParaContrasteMinimo(
-                    colorBase,
-                    tableBg,
-                    EstilosUI.CONTRASTE_AA_GRANDE
-            );
             if (isIgnorado) {
                 colorBase = EstilosUI.colorFondoIgnorado(tableBg);
             }

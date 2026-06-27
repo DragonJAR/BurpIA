@@ -16,6 +16,7 @@ import com.burpia.util.Normalizador;
 import java.awt.Component;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
+import javax.swing.JMenuItem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -117,15 +118,56 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
 
     @Override
     public List<Component> provideMenuItems(ContextMenuEvent evento) {
+        // Burp traga las excepciones de provideMenuItems y muestra el menú vacío sin avisar.
+        // Las registramos para no quedar a ciegas (p.ej. por qué no sale en Repeater).
+        try {
+            return construirItemsMenu(evento);
+        } catch (RuntimeException ex) {
+            if (api != null && api.logging() != null) {
+                api.logging().logToError(
+                        "[FabricaMenuContextual] provideMenuItems lanzó; menú no mostrado: " + ex.getMessage(), ex);
+            }
+            return List.of();
+        }
+    }
+
+    private List<Component> construirItemsMenu(ContextMenuEvent evento) {
         if (descargado) {
             return List.of();
         }
 
         List<Component> itemsMenu = new ArrayList<>();
-        if (evento == null || Normalizador.esVacia(evento.selectedRequestResponses())) {
+        // Fuente de selección: preferimos la selección tabular; si no hay (p.ej. en un editor
+        // individual de Repeater sin selección de filas), usamos el request del editor activo.
+        List<HttpRequestResponse> baseSeleccion = evento != null ? evento.selectedRequestResponses() : null;
+        if (Normalizador.esVacia(baseSeleccion) && evento != null
+                && evento.messageEditorRequestResponse() != null
+                && evento.messageEditorRequestResponse().isPresent()) {
+            baseSeleccion = java.util.Collections.singletonList(
+                    evento.messageEditorRequestResponse().get().requestResponse());
+        }
+        if (Normalizador.esVacia(baseSeleccion)) {
+            // Diagnóstico: por qué no se produce menú (p.ej. Repeater). Best-effort.
+            // Solo en modo registro detallado para no ensuciar el Output en uso normal.
+            if (config != null && config.esDetallado() && api != null && api.logging() != null) {
+                try {
+                    int sel = evento != null && evento.selectedRequestResponses() != null
+                            ? evento.selectedRequestResponses().size() : -1;
+                    boolean editor = evento != null && evento.messageEditorRequestResponse() != null
+                            && evento.messageEditorRequestResponse().isPresent();
+                    api.logging().logToOutput("[FabricaMenuContextual] sin seleccion -> menu vacio."
+                            + " selectedRequestResponses=" + sel
+                            + " editorPresente=" + editor
+                            + " tool=" + (evento != null ? String.valueOf(evento.toolType()) : "null")
+                            + " invocation=" + (evento != null ? String.valueOf(evento.invocationType()) : "null"));
+                } catch (RuntimeException diagEx) {
+                    api.logging().logToOutput(
+                            "[FabricaMenuContextual] sin seleccion -> menu vacio (diag err: " + diagEx.getMessage() + ")");
+                }
+            }
             return itemsMenu;
         }
-        final List<HttpRequestResponse> seleccion = new ArrayList<>(evento.selectedRequestResponses());
+        final List<HttpRequestResponse> seleccion = new ArrayList<>(baseSeleccion);
         int cantidadSeleccionada = seleccion.size();
         final ContextoInvocacion contextoInvocacion = construirContextoInvocacion(evento, cantidadSeleccionada);
 
@@ -143,7 +185,8 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             ));
         }
 
-        if (config != null && config.hayAlgunAgenteHabilitado()) {
+        boolean agenteHabilitado = config != null && config.hayAlgunAgenteHabilitado();
+        if (agenteHabilitado) {
             String nombreAgente = AgenteTipo.obtenerNombreVisible(config, I18nUI.General.AGENTE_GENERICO());
             if (cantidadSeleccionada == 1 && manejadorAgenteSolicitud != null) {
                 itemsMenu.add(UIUtils.crearMenuItemContextual(
@@ -158,6 +201,17 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                     e -> manejarEnvioAgenteFlujo(seleccion, nombreAgente, contextoInvocacion)
                 ));
             }
+        } else if (config != null) {
+            // Con config presente pero sin agente habilitado: ítem deshabilitado (no oculto) con
+            // tooltip explicativo, para que el usuario descubra la función y sepa cómo activarla.
+            // (Cuando config es null —caso degenerado— se omite, manteniendo el contrato existente.)
+            JMenuItem itemDeshabilitado = UIUtils.crearMenuItemContextual(
+                I18nUI.Contexto.ITEM_AGENTE_DESHABILITADO(),
+                I18nUI.Contexto.TOOLTIP_AGENTE_DESHABILITADO(),
+                null
+            );
+            itemDeshabilitado.setEnabled(false);
+            itemsMenu.add(itemDeshabilitado);
         }
 
         return itemsMenu;
@@ -233,7 +287,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         String mensaje = I18nUI.Contexto.MSG_ANALISIS_INICIADO_RESULTADO(iniciadas, seleccion.size(), omitidas);
         if (iniciadas > 0) {
             UIUtils.mostrarInfoConOptOutMenuContextual(
-                null,
+                parentFrame,
                 I18nUI.Contexto.TITULO_ANALISIS_INICIADO(),
                 mensaje,
                 alertasEnviarAHabilitadas(),
@@ -241,7 +295,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             );
         } else {
             UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
-                null,
+                parentFrame,
                 I18nUI.Contexto.TITULO_ANALISIS_INICIADO(),
                 mensaje,
                 alertasEnviarAHabilitadas(),
@@ -253,6 +307,12 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
     private void manejarEnvioAgenteSolicitud(List<HttpRequestResponse> seleccion, String nombreAgente,
             ContextoInvocacion contextoInvocacion) {
         if (Normalizador.esVacia(seleccion) || manejadorAgenteSolicitud == null) {
+            return;
+        }
+        // Confirmar antes de enviar a un agente (ejecuta binarios externos sobre la solicitud).
+        if (!UIUtils.confirmarAdvertencia(parentFrame,
+                I18nUI.Contexto.TITULO_CONFIRMAR_ENVIO_AGENTE(),
+                I18nUI.Contexto.MSG_CONFIRMAR_ENVIO_AGENTE_SOLICITUD(nombreAgente))) {
             return;
         }
         int exitosas = 0;
@@ -281,19 +341,18 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         String mensaje = I18nUI.Contexto.MSG_ENVIO_AGENTE_RESULTADO(nombreAgente, exitosas, seleccion.size(), fallidas);
         if (exitosas > 0) {
             UIUtils.mostrarInfoConOptOutMenuContextual(
-                null,
+                parentFrame,
                 I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
                 mensaje,
                 alertasEnviarAHabilitadas(),
                 this::deshabilitarAlertasEnviarA
             );
         } else {
-            UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
-                null,
+            // Las advertencias de fallo no son silenciables: el usuario no debe perder señales de error.
+            UIUtils.mostrarAdvertencia(
+                parentFrame,
                 I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
-                mensaje,
-                alertasEnviarAHabilitadas(),
-                this::deshabilitarAlertasEnviarA
+                mensaje
             );
         }
     }
@@ -327,6 +386,12 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             }
             return;
         }
+        // Confirmar antes de enviar múltiples solicitudes a un agente (binarios externos).
+        if (!UIUtils.confirmarAdvertencia(parentFrame,
+                I18nUI.Contexto.TITULO_CONFIRMAR_ENVIO_AGENTE(),
+                I18nUI.Contexto.MSG_CONFIRMAR_ENVIO_AGENTE_FLUJO(nombreAgente, seleccion.size()))) {
+            return;
+        }
         boolean enviada;
         try {
             PanelAgente.ResultadoInyeccion resultado = manejadorAgenteFlujo.enviar(new ArrayList<>(seleccion), contextoInvocacion);
@@ -344,19 +409,18 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             : I18nUI.Contexto.MSG_ENVIO_AGENTE_FLUJO_ERROR(nombreAgente, seleccion.size());
         if (enviada) {
             UIUtils.mostrarInfoConOptOutMenuContextual(
-                null,
+                parentFrame,
                 I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
                 mensaje,
                 alertasEnviarAHabilitadas(),
                 this::deshabilitarAlertasEnviarA
             );
         } else {
-            UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
-                null,
+            // Las advertencias de fallo no son silenciables: el usuario no debe perder señales de error.
+            UIUtils.mostrarAdvertencia(
+                parentFrame,
                 I18nUI.Contexto.TITULO_ENVIO_AGENTE(),
-                mensaje,
-                alertasEnviarAHabilitadas(),
-                this::deshabilitarAlertasEnviarA
+                mensaje
             );
         }
     }
@@ -367,7 +431,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 return;
             }
             UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
-                null,
+                parentFrame,
                 I18nUI.Contexto.TITULO_FLUJO_REQUIERE_MULTIPLES(),
                 I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES(),
                 alertasEnviarAHabilitadas(),
@@ -382,7 +446,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 return;
             }
             UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
-                null,
+                parentFrame,
                 I18nUI.Contexto.TITULO_FLUJO_REQUIERE_MULTIPLES(),
                 I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS(),
                 alertasEnviarAHabilitadas(),
@@ -395,7 +459,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 return;
             }
             UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
-                null,
+                parentFrame,
                 I18nUI.Contexto.TITULO_FLUJO_REQUIERE_MULTIPLES(),
                 I18nUI.Contexto.MSG_FLUJO_MAXIMO_PETICIONES(FlowAnalysisConstraints.MAXIMO_PETICIONES_FLUJO),
                 alertasEnviarAHabilitadas(),
@@ -410,7 +474,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
 
         if (!GraphicsEnvironment.isHeadless()) {
             UIUtils.mostrarInfoConOptOutMenuContextual(
-                null,
+                parentFrame,
                 I18nUI.Contexto.TITULO_FLUJO_INICIADO(),
                 I18nUI.Contexto.MSG_FLUJO_INICIADO(solicitudesValidas.size()),
                 alertasEnviarAHabilitadas(),
@@ -442,8 +506,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 }
             // Best-effort: invocationType() may not be available in all Burp editions
             } catch (RuntimeException ex) {
-                api.logging().logToOutput("[BurpIA] invocationType() no disponible en esta edición: "
-                    + ex.getMessage());
+                api.logging().logToOutput(I18nUI.Contexto.LOG_INVOCATION_TYPE_NO_DISPONIBLE(ex.getMessage()));
             }
             try {
                 if (evento.toolType() != null) {
@@ -451,8 +514,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 }
             // Best-effort: toolType() may not be available in all Burp editions
             } catch (RuntimeException ex) {
-                api.logging().logToOutput("[BurpIA] toolType() no disponible en esta edición: "
-                    + ex.getMessage());
+                api.logging().logToOutput(I18nUI.Contexto.LOG_TOOL_TYPE_NO_DISPONIBLE(ex.getMessage()));
             }
         }
         return new ContextoInvocacion(tipoInvocacion, tipoHerramienta, cantidadSeleccionada);

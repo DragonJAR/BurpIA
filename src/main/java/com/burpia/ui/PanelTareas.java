@@ -94,7 +94,8 @@ public class PanelTareas extends JPanel {
 
         panelControles.add(panelTodosControles);
 
-        panelTablaWrapper = new JPanel(new BorderLayout());
+        panelTablaWrapper = new JPanel();
+        panelTablaWrapper.setLayout(new OverlayLayout(panelTablaWrapper));
         panelTablaWrapper.setBorder(UIUtils.crearBordeTitulado(
                 I18nUI.Tareas.TITULO_LISTA(), 12, 16));
 
@@ -103,11 +104,18 @@ public class PanelTareas extends JPanel {
         tabla.setRowHeight(EstilosUI.ALTURA_FILA_TABLA);
         tabla.setFont(EstilosUI.FUENTE_TABLA);
         tabla.setToolTipText(I18nUI.Tooltips.Tareas.TABLA());
+        tabla.setFillsViewportHeight(true);
         configurarColumnasTabla(null);
 
         JScrollPane panelDesplazable = new JScrollPane(tabla);
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        panelTablaWrapper.add(panelDesplazable, BorderLayout.CENTER);
+
+        JLabel etiquetaEmpty = UIUtils.crearEmptyState(I18nUI.Tareas.MSG_EMPTY_STATE());
+        // OverlayLayout apila: el label (visible solo en vacío) queda sobre el scroll.
+        panelTablaWrapper.add(etiquetaEmpty);
+        panelTablaWrapper.add(panelDesplazable);
+        tabla.getModel().addTableModelListener(e -> UIUtils.actualizarEmptyState(tabla, etiquetaEmpty, I18nUI.Tareas.MSG_EMPTY_STATE()));
+        UIUtils.actualizarEmptyState(tabla, etiquetaEmpty, I18nUI.Tareas.MSG_EMPTY_STATE());
 
         botonPausarReanudar.addActionListener(e -> {
             ContadorEstadosTareas estadisticas = obtenerEstadisticasSeguras();

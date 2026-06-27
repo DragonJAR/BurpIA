@@ -1044,6 +1044,7 @@ public class ExtensionBurpIA implements BurpExtension {
             guardarConfiguracionSilenciosa("auto-scroll");
         });
         pestaniaPrincipal.establecerManejadorAlertasEnviarA(() -> guardarConfiguracionSilenciosa("alertas-enviar-a"));
+        com.burpia.ui.UIUtils.configurarAlertas(config, () -> guardarConfiguracionSilenciosa("alertas-optout"));
 
         PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
         if (panelAgente != null) {

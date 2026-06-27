@@ -49,6 +49,10 @@ public class RenderizadorEstado extends DefaultTableCellRenderer {
 
         String estado = (value != null) ? value.toString() : "";
 
+        // Forzamos la fuente tabular centralizada para consistencia con los demás
+        // renderizadores (la tabla podría no tenerla asignada explícitamente).
+        setFont(EstilosUI.FUENTE_TABLA);
+
         if (!isSelected) {
             Color colorFondo = Tarea.obtenerColorEstado(estado);
             setBackground(colorFondo);

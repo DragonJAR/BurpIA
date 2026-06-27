@@ -7,10 +7,12 @@ import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.ContextMenuEvent;
 import burp.api.montoya.ui.contextmenu.InvocationType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import javax.swing.JMenuItem;
 import java.awt.Component;
@@ -26,7 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -93,10 +97,14 @@ class FabricaMenuContextualTest {
             FabricaMenuContextual fabrica = crearFabricaBasica();
             List<Component> items = fabrica.provideMenuItems(evento);
 
-            assertEquals(1, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:90");
+            // Config presente sin agente habilitado: item Analizar (habilitado) + placeholder de
+            // agente deshabilitado (informativo, no oculto) que enseña cómo activar la función.
+            assertEquals(2, items.size(), "assertEquals failed at FabricaMenuContextualTest.java:90");
             JMenuItem item = (JMenuItem) items.get(0);
             assertNotNull(item.getText(), "assertNotNull failed at FabricaMenuContextualTest.java:92");
             assertFalse(item.getText().isEmpty(), "assertFalse failed at FabricaMenuContextualTest.java:93");
+            assertTrue(item.isEnabled(), "el item de analisis debe estar habilitado");
+            assertFalse(((JMenuItem) items.get(1)).isEnabled(), "el placeholder de agente debe estar deshabilitado");
         }
 
         @Test
@@ -343,6 +351,26 @@ class FabricaMenuContextualTest {
     @Nested
     @DisplayName("Envio a agente")
     class EnvioAgenteTests {
+
+        private MockedStatic<UIUtils> uiUtilsMock;
+
+        @BeforeEach
+        void silenciarDialogos() {
+            // El JVM de gradle NO es headless: confirmar/mostrarAdvertencia abrirían diálogos
+            // modales que cuelgan la suite esperando que alguien pulse "Aceptar" (flaky: a veces
+            // retornan solos, a veces bloquean). Mock por defecto (NO CALLS_REAL_METHODS, que
+            // ejecutaría el método real con nulls durante el stubbing y colgaría aquí mismo):
+            // auto-aceptamos la confirmación; los mostrar* (void) quedan no-op por defecto;
+            // crearMenuItemContextual se mantiene real para poder construir el menú.
+            uiUtilsMock = mockStatic(UIUtils.class);
+            uiUtilsMock.when(() -> UIUtils.crearMenuItemContextual(any(), any(), any())).thenCallRealMethod();
+            uiUtilsMock.when(() -> UIUtils.confirmarAdvertencia(any(), any(), any())).thenReturn(true);
+        }
+
+        @AfterEach
+        void cerrarUiUtilsMock() {
+            uiUtilsMock.close();
+        }
 
         @Test
         @DisplayName("ejecuta callback de envio al hacer click")

@@ -31,24 +31,14 @@ final class AgentTerminalSettingsProvider extends DefaultSettingsProvider {
         this.textoTerminal = EstilosUI.colorTextoPrimario(fondoTerminal);
         this.colorEnlace = EstilosUI.colorEnlaceAccesible(fondoTerminal);
 
-        Color seleccionBase = temaOscuro ? new Color(65, 102, 157) : new Color(190, 220, 255);
-        this.colorSeleccionFondo = EstilosUI.ajustarParaContrasteMinimo(
-            seleccionBase,
-            fondoTerminal,
-            EstilosUI.CONTRASTE_AA_GRANDE
-        );
+        this.colorSeleccionFondo = EstilosUI.colorSeleccionTerminal(fondoTerminal);
         this.colorSeleccionTexto = EstilosUI.ajustarParaContrasteMinimo(
             EstilosUI.obtenerColorTextoContraste(colorSeleccionFondo),
             colorSeleccionFondo,
             EstilosUI.CONTRASTE_AA_NORMAL
         );
 
-        Color busquedaBase = temaOscuro ? new Color(151, 123, 34) : new Color(255, 231, 145);
-        this.colorBusquedaFondo = EstilosUI.ajustarParaContrasteMinimo(
-            busquedaBase,
-            fondoTerminal,
-            EstilosUI.CONTRASTE_AA_GRANDE
-        );
+        this.colorBusquedaFondo = EstilosUI.colorBusquedaTerminal(fondoTerminal);
         this.colorBusquedaTexto = EstilosUI.ajustarParaContrasteMinimo(
             EstilosUI.obtenerColorTextoContraste(colorBusquedaFondo),
             colorBusquedaFondo,

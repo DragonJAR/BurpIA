@@ -459,23 +459,29 @@ class TareaTest {
         }
 
         @Test
-        @DisplayName("Obtener color estado con estado nulo devuelve negro")
+        @DisplayName("Obtener color estado con estado nulo devuelve color neutro accesible (no negro)")
         void testObtenerColorEstadoNulo() {
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado(null), "assertEquals failed at TareaTest.java:464");
+            // UX: estado inválido ya no devuelve Color.BLACK (ilegible en tema oscuro), sino un
+            // color neutro accesible. Debe ser legible y nunca null.
+            Color color = Tarea.obtenerColorEstado(null);
+            assertNotNull(color, "assertNotNull failed at TareaTest.java:464");
+            assertNotEquals(Color.BLACK, color, "assertNotEquals failed at TareaTest.java:465");
         }
 
         @Test
-        @DisplayName("Obtener color estado con estado vacio devuelve negro")
+        @DisplayName("Obtener color estado con estado vacio devuelve color neutro accesible (no negro)")
         void testObtenerColorEstadoVacio() {
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado(""), "assertEquals failed at TareaTest.java:470");
+            Color color = Tarea.obtenerColorEstado("");
+            assertNotNull(color, "assertNotNull failed at TareaTest.java:470");
+            assertNotEquals(Color.BLACK, color, "assertNotEquals failed at TareaTest.java:471");
         }
 
         @Test
-        @DisplayName("Obtener color estado con estado invalido devuelve negro")
+        @DisplayName("Obtener color estado con estado invalido devuelve color neutro accesible (no negro)")
         void testObtenerColorEstadoInvalido() {
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Invalido"), "assertEquals failed at TareaTest.java:476");
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Running"), "assertEquals failed at TareaTest.java:477");
-            assertEquals(Color.BLACK, Tarea.obtenerColorEstado("Paused"), "assertEquals failed at TareaTest.java:478");
+            assertNotEquals(Color.BLACK, Tarea.obtenerColorEstado("Invalido"), "assertNotEquals failed at TareaTest.java:476");
+            assertNotEquals(Color.BLACK, Tarea.obtenerColorEstado("Running"), "assertNotEquals failed at TareaTest.java:477");
+            assertNotEquals(Color.BLACK, Tarea.obtenerColorEstado("Paused"), "assertNotEquals failed at TareaTest.java:478");
         }
     }
 }

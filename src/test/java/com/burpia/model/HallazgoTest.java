@@ -13,6 +13,44 @@ import static org.mockito.Mockito.mock;
 class HallazgoTest {
 
     @Nested
+    @DisplayName("obtenerSolicitudParaBurp")
+    class ObtenerSolicitudParaBurp {
+
+        @Test
+        @DisplayName("Devuelve el request en memoria si existe")
+        void testDevuelveRequestEnMemoria() {
+            HttpRequest solicitud = mock(HttpRequest.class);
+            Hallazgo hallazgo = new Hallazgo(
+                "https://example.com/x", "T", "D", "High", "High", solicitud);
+            assertSame(solicitud, hallazgo.obtenerSolicitudParaBurp(),
+                "Debe devolver el request real en memoria cuando existe");
+        }
+
+        @Test
+        @DisplayName("Sin request en memoria, construye desde la URL")
+        void testConstruyeDesdeUrl() {
+            Hallazgo hallazgo = new Hallazgo(
+                "https://example.com/x", "T", "D", "Low", "Low");
+            HttpRequest construido = mock(HttpRequest.class);
+            try (org.mockito.MockedStatic<HttpRequest> mockedReq =
+                     org.mockito.Mockito.mockStatic(HttpRequest.class)) {
+                mockedReq.when(() -> HttpRequest.httpRequestFromUrl("https://example.com/x"))
+                    .thenReturn(construido);
+                assertSame(construido, hallazgo.obtenerSolicitudParaBurp(),
+                    "Sin request en memoria, debe construirlo desde la URL del hallazgo");
+            }
+        }
+
+        @Test
+        @DisplayName("Sin request en memoria ni URL, devuelve null")
+        void testSinRequestNiUrlDevuelveNull() {
+            Hallazgo hallazgo = new Hallazgo(null, "T", "D", "Low", "Low");
+            assertNull(hallazgo.obtenerSolicitudParaBurp(),
+                "Sin request ni URL no hay nada que construir");
+        }
+    }
+
+    @Nested
     @DisplayName("Constructores")
     class Constructores {
 

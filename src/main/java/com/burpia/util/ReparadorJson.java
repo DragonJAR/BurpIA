@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -289,8 +290,11 @@ public final class ReparadorJson {
      * Busca un campo en el texto (case insensitive)
      */
     private static int buscarCampo(String texto, String campo, int desde) {
-        String textoLower = texto.toLowerCase();
-        String campoLower = "\"" + campo.toLowerCase() + "\"";
+        // Locale.ROOT: con el locale por defecto turco/azerí, "EVIDENCE".toLowerCase()
+        // produce "evıdence" (I sin punto) y no coincide con "evidence". Consistente
+        // con el resto del codebase (p.ej. ParserRespuestasAI usa Locale.ROOT).
+        String textoLower = texto.toLowerCase(Locale.ROOT);
+        String campoLower = "\"" + campo.toLowerCase(Locale.ROOT) + "\"";
         return textoLower.indexOf(campoLower, desde);
     }
 

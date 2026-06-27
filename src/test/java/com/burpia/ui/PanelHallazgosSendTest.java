@@ -28,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -591,22 +590,29 @@ class PanelHallazgosSendTest {
     }
 
     @Test
-    @DisplayName("Captura no reconstruye request cuando falta evidencia original")
-    void testCapturaNoReconstruyeRequestSinEvidenciaOriginal() throws Exception {
+    @DisplayName("Captura construye el request desde la URL cuando no hay request en memoria")
+    void testCapturaConstruyeRequestDesdeUrlSinRequestEnMemoria() throws Exception {
         panel.obtenerModelo().agregarHallazgo(
             new Hallazgo("https://example.com/sin-request", "Titulo", "Descripcion", "Low", "Low")
         );
         esperarFilas(panel, 1);
 
-        Object captura = invocarMetodoPrivadoRetorno(panel, "capturarEntradasAccion", new int[]{0});
-        assertNotNull(captura, "La captura no debe ser null");
+        HttpRequest construido = mock(HttpRequest.class);
+        try (org.mockito.MockedStatic<HttpRequest> mockedReq = org.mockito.Mockito.mockStatic(HttpRequest.class)) {
+            mockedReq.when(() -> HttpRequest.httpRequestFromUrl("https://example.com/sin-request"))
+                .thenReturn(construido);
 
-        List<?> entradas = obtenerCampoLista(captura, "entradas");
-        assertEquals(1, entradas.size(), "assertEquals failed at PanelHallazgosSendTest.java:207");
+            Object captura = invocarMetodoPrivadoRetorno(panel, "capturarEntradasAccion", new int[]{0});
+            assertNotNull(captura, "La captura no debe ser null");
 
-        Object entrada = entradas.get(0);
-        HttpRequest solicitud = obtenerCampo(entrada, "solicitud", HttpRequest.class);
-        assertNull(solicitud, "La solicitud debe ser null cuando no hay evidencia original");
+            List<?> entradas = obtenerCampoLista(captura, "entradas");
+            assertEquals(1, entradas.size(), "Debe haber una entrada");
+
+            Object entrada = entradas.get(0);
+            HttpRequest solicitud = obtenerCampo(entrada, "solicitud", HttpRequest.class);
+            assertSame(construido, solicitud,
+                "Sin request en memoria, la solicitud se construye desde la URL del hallazgo");
+        }
     }
 
     /**

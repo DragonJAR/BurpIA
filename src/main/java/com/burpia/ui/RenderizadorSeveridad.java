@@ -73,7 +73,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
      */
     private Color obtenerColorSeveridadTraducida(String sevTraducida) {
         if (Normalizador.esVacio(sevTraducida)) {
-            return Color.GRAY;
+            return EstilosUI.colorDesconocidoAccesible(getBackground());
         }
 
         if (sevTraducida.equals(I18nUI.Hallazgos.SEVERIDAD_CRITICAL())) return EstilosUI.COLOR_CRITICAL;
@@ -82,7 +82,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         if (sevTraducida.equals(I18nUI.Hallazgos.SEVERIDAD_LOW())) return EstilosUI.COLOR_LOW;
         if (sevTraducida.equals(I18nUI.Hallazgos.SEVERIDAD_INFO())) return EstilosUI.COLOR_INFO;
 
-        return Color.GRAY;
+        return EstilosUI.colorDesconocidoAccesible(getBackground());
     }
 
     /**
@@ -156,8 +156,8 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
             }
 
             int textWidth = fm.stringWidth(displayText);
-            int paddingX = 12;
-            int paddingY = 4;
+            int paddingX = EstilosUI.PADDING_PILDORA_X;
+            int paddingY = EstilosUI.PADDING_PILDORA_Y;
 
             int badgeWidth = textWidth + paddingX * 2;
             int badgeHeight = fm.getHeight() + paddingY * 2;

@@ -29,6 +29,8 @@ public class RenderizadorCentrado extends DefaultTableCellRenderer {
 
         super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
         setHorizontalAlignment(SwingConstants.CENTER);
+        // Fuente tabular centralizada para alineación consistente con los demás renderizadores.
+        setFont(EstilosUI.FUENTE_TABLA);
         return this;
     }
 }

@@ -30,6 +30,7 @@ public class PanelConsola extends JPanel {
     private final JPanel panelConsolaWrapper;
     private Consumer<Boolean> manejadorCambioAutoScroll;
     private volatile boolean autoScrollActivo;
+    private JLabel etiquetaEmptyStateConsola;
 
     // CONFIABILIDAD: Componentes de búsqueda
     private final JTextField campoBusqueda;
@@ -105,6 +106,7 @@ public class PanelConsola extends JPanel {
         campoBusqueda = new JTextField(15);
         campoBusqueda.setFont(EstilosUI.FUENTE_MONO);
         campoBusqueda.setToolTipText(I18nUI.Tooltips.Consola.CAMPO_BUSCAR());
+        etiquetaBuscar.setLabelFor(campoBusqueda);
 
         botonBuscar = new JButton(I18nUI.Consola.BOTON_BUSCAR());
         botonBuscar.setFont(EstilosUI.FUENTE_ESTANDAR);
@@ -149,6 +151,14 @@ public class PanelConsola extends JPanel {
         JScrollPane panelDesplazable = new JScrollPane(consola);
         panelDesplazable.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
 
+        etiquetaEmptyStateConsola = UIUtils.crearEmptyState(I18nUI.Consola.MSG_CONSOLA_VACIA_PLACEHOLDER());
+        panelConsolaWrapper.setLayout(new OverlayLayout(panelConsolaWrapper));
+        panelConsolaWrapper.add(etiquetaEmptyStateConsola);
+        panelConsolaWrapper.add(panelDesplazable);
+        consola.getDocument().addDocumentListener(UIUtils.crearDocumentListener(() ->
+                UIUtils.actualizarEmptyState(consola, etiquetaEmptyStateConsola, I18nUI.Consola.MSG_CONSOLA_VACIA_PLACEHOLDER())));
+        UIUtils.actualizarEmptyState(consola, etiquetaEmptyStateConsola, I18nUI.Consola.MSG_CONSOLA_VACIA_PLACEHOLDER());
+
         gestorConsola.establecerConsola(consola);
         gestorConsola.establecerAutoScroll(false);
         autoScrollActivo = false;
@@ -168,7 +178,7 @@ public class PanelConsola extends JPanel {
                 return;
             }
 
-            boolean confirmacion = UIUtils.confirmarPregunta(
+            boolean confirmacion = UIUtils.confirmarAdvertencia(
                 this,
                 I18nUI.General.TITULO_CONFIRMAR_LIMPIEZA(),
                 I18nUI.Consola.MSG_CONFIRMAR_LIMPIEZA(total)
@@ -188,6 +198,17 @@ public class PanelConsola extends JPanel {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     e.consume();
                     ejecutarBusqueda();
+                } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    e.consume();
+                    campoBusqueda.setText("");
+                    limpiarBusqueda();
+                } else if (e.getKeyCode() == KeyEvent.VK_F3) {
+                    e.consume();
+                    if (e.isShiftDown()) {
+                        buscarAnterior();
+                    } else {
+                        buscarSiguiente();
+                    }
                 }
             }
         });
@@ -198,8 +219,6 @@ public class PanelConsola extends JPanel {
 
         timerActualizacion = new Timer(DELAY_ACTUALIZACION_MS, e -> actualizarResumen(false));
         timerActualizacion.start();
-
-        panelConsolaWrapper.add(panelDesplazable, BorderLayout.CENTER);
 
         add(panelControles, BorderLayout.NORTH);
         add(panelConsolaWrapper, BorderLayout.CENTER);

@@ -570,7 +570,8 @@ class PanelAgenteTransporteTest {
             assertEquals(AgenteTipo.FACTORY_DROID.name(), config.obtenerTipoAgente(),
                 "assertEquals failed at PanelAgenteTransporteTest.java:463");
             assertTrue(focoSolicitado.get(), "assertTrue failed at PanelAgenteTransporteTest.java:464");
-            assertTrue(TestDialogUtils.contarVentanasPendientes() >= 2,
+            // UX: los agentes sin binario se consolidan en un único diálogo (antes un modal por agente).
+            assertTrue(TestDialogUtils.contarVentanasPendientes() >= 1,
                 "assertTrue failed at PanelAgenteTransporteTest.java:465");
         } finally {
             panel.destruir();
@@ -602,7 +603,8 @@ class PanelAgenteTransporteTest {
             assertEquals(AgenteTipo.OPEN_CODE.name(), config.obtenerTipoAgente(),
                 "assertEquals failed at PanelAgenteTransporteTest.java:487");
             assertFalse(focoSolicitado.get(), "assertFalse failed at PanelAgenteTransporteTest.java:488");
-            assertTrue(TestDialogUtils.contarVentanasPendientes() >= 3,
+            // UX: los 3 agentes sin binario se consolidan en un único diálogo (antes 3 modales).
+            assertTrue(TestDialogUtils.contarVentanasPendientes() >= 1,
                 "assertTrue failed at PanelAgenteTransporteTest.java:489");
         } finally {
             panel.destruir();

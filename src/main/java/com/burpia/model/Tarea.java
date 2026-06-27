@@ -244,11 +244,11 @@ public class Tarea {
      * Obtiene el color asociado a un estado de tarea.
      *
      * @param estado el estado de la tarea
-     * @return el color correspondiente al estado, o negro si el estado es inválido
+     * @return el color correspondiente al estado, o un color neutro accesible al tema si el estado es inválido
      */
     public static Color obtenerColorEstado(String estado) {
         if (Normalizador.esVacio(estado) || !esEstadoValido(estado)) {
-            return Color.BLACK;
+            return EstilosUI.colorDesconocidoAccesible(EstilosUI.obtenerFondoPanel());
         }
 
         switch (estado) {
@@ -265,7 +265,7 @@ public class Tarea {
             case ESTADO_PAUSADO:
                 return EstilosUI.COLOR_TASK_PAUSADO;
             default:
-                return Color.BLACK;
+                return EstilosUI.colorDesconocidoAccesible(EstilosUI.obtenerFondoPanel());
         }
     }
 

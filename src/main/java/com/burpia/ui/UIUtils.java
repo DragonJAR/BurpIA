@@ -1,5 +1,6 @@
 package com.burpia.ui;
 
+import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorLoggingUnificado;
@@ -14,6 +15,7 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableColumn;
+import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
@@ -41,6 +43,36 @@ public final class UIUtils {
     private static final int DIALOGO_ALTO_MIN_CONFIRMACION = 156;
     private static final int DIALOGO_ALTO_EXTRA_OPT_OUT = 16;
     private static final int DIALOGO_DELAY_MENU_CONTEXTO_MS = 140;
+
+    // ponytail: handle estático single-instance; lo instala ExtensionBurpIA al iniciar
+    // (UIUtils es utilidad estática y hay una sola extensión/config activa).
+    private static volatile ConfiguracionAPI configAlertas;
+    private static volatile Runnable persistirAlertas;
+
+    /** Instala la config activa y el guardado para el opt-out global de alertas/notificaciones. */
+    public static void configurarAlertas(ConfiguracionAPI config, Runnable persistir) {
+        configAlertas = config;
+        persistirAlertas = persistir;
+    }
+
+    /** Null-safe: si no se instaló config (p.ej. en tests), las alertas se muestran. */
+    static boolean alertasGloballyOn() {
+        ConfiguracionAPI c = configAlertas;
+        return c == null || c.alertasHabilitadas();
+    }
+
+    /** Aplica el opt-out global ("no mostrar alertas ni notificaciones"): baja el flag y persiste. */
+    static void aplicarOptOutGlobal() {
+        ConfiguracionAPI c = configAlertas;
+        if (c == null) {
+            return;
+        }
+        c.establecerAlertasHabilitadas(false);
+        Runnable p = persistirAlertas;
+        if (p != null) {
+            p.run();
+        }
+    }
 
     private UIUtils() {
     }
@@ -317,6 +349,244 @@ public final class UIUtils {
         };
     }
 
+    /**
+     * Crea una etiqueta de estado vacío (empty state) para mostrar sobre una tabla/área vacía.
+     * La etiqueta es no opaca, centrada y con color accesible al tema. Su visibilidad se gestiona
+     * con {@link #actualizarEmptyState(JTable, JLabel, String)}; el llamador decide dónde colocarla
+     * (típicamente como vista alternativa en un panel con CardLayout, o superpuesta en el puerto).
+     *
+     * @param mensajeVacio texto a mostrar cuando no hay datos
+     * @return la etiqueta creada (no instalada en ningún contenedor)
+     */
+    public static JLabel crearEmptyState(String mensajeVacio) {
+        JLabel etiqueta = new JLabel(mensajeVacio != null ? mensajeVacio : "");
+        etiqueta.setHorizontalAlignment(SwingConstants.CENTER);
+        etiqueta.setFont(EstilosUI.FUENTE_ESTANDAR);
+        etiqueta.setForeground(EstilosUI.colorTextoSecundario(EstilosUI.obtenerFondoPanel()));
+        etiqueta.setOpaque(false);
+        etiqueta.setVisible(false);
+        return etiqueta;
+    }
+
+    /**
+     * Actualiza la visibilidad y el texto de un empty state según el número de filas/contenido.
+     *
+     * @param tabla      tabla asociada (si es null, se trata como vacío)
+     * @param etiqueta   etiqueta creada con {@link #crearEmptyState}
+     * @param mensaje    texto a mostrar cuando está vacío
+     */
+    public static void actualizarEmptyState(JTable tabla, JLabel etiqueta, String mensaje) {
+        if (etiqueta == null) {
+            return;
+        }
+        boolean vacio = tabla == null || tabla.getRowCount() == 0;
+        etiqueta.setText(mensaje != null ? mensaje : "");
+        etiqueta.setVisible(vacio);
+        if (tabla != null) {
+            // La tabla y su scroll deben ceder el repintado cuando el overlay se muestra.
+            tabla.revalidate();
+        }
+    }
+
+    /**
+     * Sobrecarga de empty state para componentes de texto (consola de logs).
+     */
+    public static void actualizarEmptyState(JTextComponent componente, JLabel etiqueta, String mensaje) {
+        if (etiqueta == null) {
+            return;
+        }
+        boolean vacio = componente == null || componente.getDocument() == null
+                || componente.getDocument().getLength() == 0;
+        etiqueta.setText(mensaje != null ? mensaje : "");
+        etiqueta.setVisible(vacio);
+        if (componente != null) {
+            componente.revalidate();
+        }
+    }
+
+    /**
+     * InputVerifier para URLs. Permite vacío (la validación obligatoria se hace al guardar);
+     * valida formato solo cuando hay contenido, para dar feedback temprano sin bloquear.
+     */
+    public static InputVerifier crearInputVerifierUrl() {
+        return new InputVerifier() {
+            @Override
+            public boolean verify(JComponent input) {
+                if (!(input instanceof JTextComponent)) {
+                    return true;
+                }
+                String texto = ((JTextComponent) input).getText();
+                if (Normalizador.esVacio(texto)) {
+                    limpiarTooltipError(input);
+                    return true;
+                }
+                boolean valido = esUrlValida(texto.trim());
+                marcarTooltipError(input, valido, I18nUI.Configuracion.ERROR_URL_INVALIDA());
+                return valido;
+            }
+        };
+    }
+
+    /**
+     * InputVerifier para campos numéricos enteros dentro de un rango [min, max].
+     */
+    public static InputVerifier crearInputVerifierNumerico(int min, int max) {
+        return new InputVerifier() {
+            @Override
+            public boolean verify(JComponent input) {
+                if (!(input instanceof JTextComponent)) {
+                    return true;
+                }
+                String texto = ((JTextComponent) input).getText();
+                if (Normalizador.esVacio(texto)) {
+                    limpiarTooltipError(input);
+                    return true;
+                }
+                boolean valido;
+                try {
+                    int valor = Integer.parseInt(texto.trim());
+                    valido = valor >= min && valor <= max;
+                } catch (NumberFormatException ex) {
+                    valido = false;
+                }
+                marcarTooltipError(input, valido,
+                        I18nUI.trf("Debe ser un número entre %d y %d", "Must be a number between %d and %d", min, max));
+                return valido;
+            }
+        };
+    }
+
+    /**
+     * InputVerifier para API keys: válido si no está vacío (la fortaleza la decide el proveedor).
+     */
+    public static InputVerifier crearInputVerifierApiKey() {
+        return new InputVerifier() {
+            @Override
+            public boolean verify(JComponent input) {
+                if (!(input instanceof JTextComponent)) {
+                    return true;
+                }
+                String texto = new String(((JTextComponent) input).getText());
+                boolean valido = Normalizador.noEsVacio(texto);
+                marcarTooltipError(input, valido, I18nUI.Configuracion.ERROR_CLAVE_REQUERIDA());
+                return valido;
+            }
+        };
+    }
+
+    private static boolean esUrlValida(String url) {
+        try {
+            URI uri = new URI(url);
+            String host = uri.getHost();
+            String scheme = uri.getScheme();
+            return Normalizador.noEsVacio(host) && (EsquemaUrl.esValido(scheme));
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    private enum EsquemaUrl {
+        HTTP("http"), HTTPS("https");
+
+        private final String valor;
+
+        EsquemaUrl(String valor) {
+            this.valor = valor;
+        }
+
+        static boolean esValido(String scheme) {
+            if (scheme == null) {
+                return false;
+            }
+            String normalizado = scheme.trim().toLowerCase(java.util.Locale.ROOT);
+            for (EsquemaUrl esquema : values()) {
+                if (esquema.valor.equals(normalizado)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static void marcarTooltipError(JComponent input, boolean valido, String mensajeError) {
+        if (valido) {
+            limpiarTooltipError(input);
+        } else if (Normalizador.noEsVacio(mensajeError)) {
+            input.putClientProperty("burpia.tooltipOriginal", input.getToolTipText());
+            input.setToolTipText("⚠ " + mensajeError);
+        }
+    }
+
+    private static void limpiarTooltipError(JComponent input) {
+        Object original = input.getClientProperty("burpia.tooltipOriginal");
+        if (original != null) {
+            input.setToolTipText((String) original);
+            input.putClientProperty("burpia.tooltipOriginal", null);
+        }
+    }
+
+    /**
+     * Aplica un tamaño mínimo consistente a un botón para garantizar un área de click cómoda.
+     * Útil para botones de icono/flecha cuyo tamaño por defecto es demasiado pequeño.
+     */
+    public static void aplicarTamanoMinimoBoton(AbstractButton boton, int ancho, int alto) {
+        if (boton == null) {
+            return;
+        }
+        Dimension min = new Dimension(ancho, alto);
+        boton.setMinimumSize(min);
+        boton.setPreferredSize(min);
+    }
+
+    /**
+     * Configura un diálogo para que recuerde su geometría (tamaño/posición) entre sesiones,
+     * persistiéndola en un mapa de preferencias. Par a DRY de {@code setSize}/{@code setLocationRelativeTo}.
+     *
+     * @param dialogo       diálogo a instrumentar
+     * @param prefijollave  prefijo único de persistencia para este diálogo
+     * @param persistidor   proveedor de carga/guardado (típicamente UIStateManager)
+     */
+    public static void recordarGeometriaDialogo(JDialog dialogo, String prefijollave,
+            PersistenciaGeometria persistidor) {
+        if (dialogo == null || persistidor == null || Normalizador.esVacio(prefijollave)) {
+            return;
+        }
+        String anchoK = prefijollave + ".ancho";
+        String altoK = prefijollave + ".alto";
+        String xK = prefijollave + ".x";
+        String yK = prefijollave + ".y";
+        Integer ancho = persistidor.leerEntero(anchoK);
+        Integer alto = persistidor.leerEntero(altoK);
+        Integer x = persistidor.leerEntero(xK);
+        Integer y = persistidor.leerEntero(yK);
+        if (ancho != null && alto != null && ancho > 0 && alto > 0) {
+            dialogo.setSize(ancho, alto);
+        }
+        if (x != null && y != null) {
+            dialogo.setLocation(x, y);
+        }
+        dialogo.addComponentListener(new java.awt.event.ComponentAdapter() {
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                persistidor.guardarEntero(anchoK, dialogo.getWidth());
+                persistidor.guardarEntero(altoK, dialogo.getHeight());
+            }
+
+            @Override
+            public void componentMoved(java.awt.event.ComponentEvent e) {
+                persistidor.guardarEntero(xK, dialogo.getX());
+                persistidor.guardarEntero(yK, dialogo.getY());
+            }
+        });
+    }
+
+    /** Proveedor de persistencia para {@link #recordarGeometriaDialogo}. */
+    public interface PersistenciaGeometria {
+        Integer leerEntero(String clave);
+
+        void guardarEntero(String clave, int valor);
+    }
+
     public static void mostrarErrorBinarioAgenteNoEncontrado(Component parent,
             String titulo,
             String mensajePrincipal,
@@ -473,8 +743,11 @@ public final class UIUtils {
                     tipoMensaje,
                     JOptionPane.DEFAULT_OPTION);
 
-            if (contenido.chkNoMostrar != null && contenido.chkNoMostrar.isSelected() && onDeshabilitar != null) {
-                onDeshabilitar.run();
+            if (contenido.chkNoMostrar != null && contenido.chkNoMostrar.isSelected()) {
+                aplicarOptOutGlobal();
+                if (onDeshabilitar != null) {
+                    onDeshabilitar.run();
+                }
             }
         }, delayMs);
     }
@@ -515,7 +788,7 @@ public final class UIUtils {
         areaMensaje.setRows(calcularFilasSugeridas(mensaje, columnas));
         areaMensaje.setFont(resolverFuenteUI("Label.font", EstilosUI.FUENTE_ESTANDAR));
         Color fg = UIManager.getColor("Label.foreground");
-        areaMensaje.setForeground(fg != null ? fg : EstilosUI.COLOR_TEXTO_NORMAL);
+        areaMensaje.setForeground(fg != null ? fg : EstilosUI.colorTextoPrincipalTema());
         areaMensaje.setFocusable(false);
         return areaMensaje;
     }
@@ -563,14 +836,23 @@ public final class UIUtils {
         if (GraphicsEnvironment.isHeadless()) {
             return;
         }
+        // Solo info/avisos son suprimibles por el opt-out global; los errores SIEMPRE se muestran.
+        boolean suprimible = (tipoMensaje == JOptionPane.INFORMATION_MESSAGE
+                || tipoMensaje == JOptionPane.WARNING_MESSAGE);
+        if (suprimible && !alertasGloballyOn()) {
+            return;
+        }
         ejecutarEnEdt(() -> {
-            DialogoContenido contenido = crearContenidoDialogo(mensaje, false);
+            DialogoContenido contenido = crearContenidoDialogo(mensaje, suprimible);
             mostrarDialogoConContenido(
                     parent,
                     titulo,
                     contenido,
                     tipoMensaje,
                     JOptionPane.DEFAULT_OPTION);
+            if (suprimible && contenido.chkNoMostrar != null && contenido.chkNoMostrar.isSelected()) {
+                aplicarOptOutGlobal();
+            }
         });
     }
 
@@ -805,7 +1087,7 @@ public final class UIUtils {
             JLabel lblTitulo = new JLabel(
                     I18nUI.Tareas.ENCABEZADO_DETALLES_ERROR());
             lblTitulo.setFont(EstilosUI.FUENTE_NEGRITA);
-            lblTitulo.setForeground(EstilosUI.COLOR_TEXTO_NORMAL);
+            lblTitulo.setForeground(EstilosUI.colorTextoPrincipalTema());
 
             JTextField txtUrl = new JTextField(url);
             txtUrl.setEditable(false);
@@ -824,7 +1106,7 @@ public final class UIUtils {
             areaError.setWrapStyleWord(true);
             areaError.setFont(EstilosUI.FUENTE_MONO);
             areaError.setBackground(EstilosUI.colorFondoSecundario(panelPrincipal.getBackground()));
-            areaError.setForeground(EstilosUI.COLOR_TEXTO_NORMAL);
+            areaError.setForeground(EstilosUI.colorTextoPrincipalTema());
             areaError.setCaretPosition(0);
 
             JScrollPane scroll = new JScrollPane(areaError);
@@ -863,19 +1145,19 @@ public final class UIUtils {
     }
 
     /**
-     * Instala un menÃº contextual (clic derecho) sobre una tabla, unificando el
-     * patrÃ³n de detecciÃ³n del popup-trigger y el ajuste de selecciÃ³n que antes
+     * Instala un menú contextual (clic derecho) sobre una tabla, unificando el
+     * patrón de detección del popupTrigger y el ajuste de selección que antes
      * se duplicaba panel a panel.
      *
      * <p>Comportamiento ante un clic derecho:
      * <ul>
-     *   <li>Si la fila no estÃ¡ seleccionada, la selecciona (o la aÃ±ade a la
-     *       selecciÃ³n si se mantiene Control).</li>
+     *   <li>Si la fila no está seleccionada, la selecciona (o la añade a la
+     *       selección si se mantiene Control).</li>
      *   <li>Invoca {@code proveedorMenu} para construir el JPopupMenu y lo muestra.</li>
      * </ul>
      *
-     * @param tabla          Tabla sobre la que se instala el menÃº.
-     * @param proveedorMenu  Devuelve el menÃº a mostrar; si retorna null no se muestra nada.
+     * @param tabla          Tabla sobre la que se instala el menú.
+     * @param proveedorMenu  Devuelve el menú a mostrar; si retorna null no se muestra nada.
      */
     public static void instalarMenuContextualTabla(JTable tabla, java.util.function.Supplier<JPopupMenu> proveedorMenu) {
         if (tabla == null || proveedorMenu == null) {
@@ -898,9 +1180,9 @@ public final class UIUtils {
                 }
                 int fila = tabla.rowAtPoint(e.getPoint());
                 if (fila < 0) {
-                    // Clic fuera de cualquier fila: se limpia la selecciÃ³n previa, pero
-                    // aÃºn asÃ­ se delega al proveedor si quiere mostrar un menÃº (p.ej.
-                    // PanelHallazgos muestra "Agregar hallazgo" en el espacio vacÃ­o).
+                    // Clic fuera de cualquier fila: se limpia la selección previa, pero
+                    // aún así se delega al proveedor si quiere mostrar un menú (p.ej.
+                    // PanelHallazgos muestra "Agregar hallazgo" en el espacio vacío).
                     // Si el proveedor devuelve null, no se muestra nada (PanelTareas).
                     tabla.clearSelection();
                 } else if (!tabla.isRowSelected(fila)) {
@@ -919,13 +1201,13 @@ public final class UIUtils {
     }
 
     /**
-     * Convierte Ã­ndices de fila de vista a Ã­ndices de modelo, filtrando los
-     * invÃ¡lidos y descartando duplicados. Unifica el pipeline que antes vivÃ­a
+     * Convierte índices de fila de vista a índices de modelo, filtrando los
+     * inválidos y descartando duplicados. Unifica el pipeline que antes vivía
      * duplicado en PanelHallazgos y PanelTareas.
      *
-     * @param tabla       Tabla origen de la conversiÃ³n.
-     * @param filasVista  Ãndices de vista a convertir.
-     * @return Ãndices de modelo Ãºnicos y vÃ¡lidos, o un array vacÃ­o si no hay entrada.
+     * @param tabla       Tabla origen de la conversión.
+     * @param filasVista  Índices de vista a convertir.
+     * @return Índices de modelo únicos y válidos, o un array vacío si no hay entrada.
      */
     public static int[] convertirFilasVistaAModelo(JTable tabla, int... filasVista) {
         if (tabla == null || filasVista == null || filasVista.length == 0) {

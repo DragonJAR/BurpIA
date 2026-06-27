@@ -126,11 +126,13 @@ public final class I18nUI {
         }
 
         public static String CHECK_NO_VOLVER_MOSTRAR_ALERTA() {
-            return tr("No volver a mostrar este mensaje", "Do not show this message again");
+            return tr("No volver a mostrar alertas ni notificaciones",
+                    "Stop showing alerts and notifications");
         }
 
         public static String TOOLTIP_NO_VOLVER_MOSTRAR_ALERTA() {
-            return tr("Desactiva futuros avisos de esta acción.", "Disable future notices for this action.");
+            return tr("Desactiva todas las alertas y notificaciones. Se reactivan en Configuración → Habilitar alertas.",
+                    "Disables all alerts and notifications. Re-enable in Settings → Enable alerts.");
         }
 
         public static String HILO_HALLAZGOS() {
@@ -351,6 +353,11 @@ public final class I18nUI {
         public static String INFO_SIN_TAREAS_LIMPIAR() {
             return tr("No hay tareas completadas para limpiar.",
                     "There are no completed tasks to clear.");
+        }
+
+        public static String MSG_EMPTY_STATE() {
+            return tr("No hay tareas. El tráfico en el Scope de Burp generará análisis aquí.",
+                    "No tasks. Traffic within the Burp Scope will generate analysis here.");
         }
 
         public static String ENCABEZADO_DETALLES_ERROR() {
@@ -740,6 +747,16 @@ public final class I18nUI {
             return tr("No hay hallazgos para limpiar.", "There are no findings to clear.");
         }
 
+        public static String MSG_EMPTY_STATE() {
+            return tr("Sin hallazgos. Los análisis de vulnerabilidades aparecerán aquí.",
+                    "No findings. Vulnerability analyses will appear here.");
+        }
+
+        public static String MSG_EMPTY_STATE_FILTRO() {
+            return tr("Ningún hallazgo coincide con los filtros actuales.",
+                    "No findings match the current filters.");
+        }
+
         public static String MSG_CONFIRMAR_LIMPIEZA(int total) {
             return trf("¿Estas seguro de que deseas limpiar todos los hallazgos (%d)?",
                     "Are you sure you want to clear all findings (%d)?",
@@ -1116,6 +1133,17 @@ public final class I18nUI {
             return tr("Error de PTY", "PTY Error");
         }
 
+        public static String MSG_ERROR_PTY_DETALLE(String causa) {
+            return trf(
+                    "No se pudo iniciar la consola del agente.\n\nCausa: %s\n\n"
+                            + "Verifica que el binario del agente esté instalado, que la ruta configurada "
+                            + "sea correcta y que tengas permisos de ejecución.",
+                    "Could not start the agent console.\n\nCause: %s\n\n"
+                            + "Check that the agent binary is installed, that the configured path is correct, "
+                            + "and that you have execution permissions.",
+                    causa);
+        }
+
         public static String NOTA_SCOPE_ANALISIS() {
             return tr(
                     "NOTA: BurpIA solo analiza tráfico DENTRO del Scope de Burp Suite.",
@@ -1296,6 +1324,39 @@ public final class I18nUI {
 
         public static String BOTON_CAMBIAR_AGENTE_GENERICO() {
             return tr("Cambiar Agente", "Switch Agent");
+        }
+
+        public static String TITULO_CONFIRMAR_REINICIAR() {
+            return tr("Confirmar reinicio", "Confirm restart");
+        }
+
+        public static String MSG_CONFIRMAR_REINICIAR() {
+            return tr(
+                    "Se cerrará la sesión actual del agente y se perderá su historial/ contexto. ¿Deseas continuar?",
+                    "The current agent session will be closed and its history/context lost. Do you want to continue?");
+        }
+
+        public static String MSG_CONFIRMAR_CAMBIAR_AGENTE(String destino) {
+            return trf(
+                    "Cambiar al agente %s cerrará la sesión actual y se perderá su historial/ contexto. ¿Deseas continuar?",
+                    "Switching to agent %s will close the current session and its history/context will be lost. Do you want to continue?",
+                    destino);
+        }
+
+        public static String TITULO_AGENTES_NO_DISPONIBLES() {
+            return tr("Agentes no disponibles", "Unavailable agents");
+        }
+
+        public static String MSG_AGENTES_NO_DISPONIBLES(int cantidad) {
+            return trf(
+                    "%d agente(s) habilitado(s) no tienen binario instalado y fueron omitidos.",
+                    "%d enabled agent(s) have no installed binary and were skipped.",
+                    cantidad);
+        }
+
+        public static String MSG_CONSOLA_VACIA_PLACEHOLDER() {
+            return tr("Sin actividad. Los logs aparecerán aquí.",
+                    "No activity. Logs will appear here.");
         }
 
         public static String MSG_URL_GUIA_AGENTE(String url) {
@@ -1591,13 +1652,34 @@ public final class I18nUI {
             return tr("❌ Cancelar", "❌ Cancel");
         }
 
-        public static String MSG_VALIDACION() {
-            return tr("La URL y la descripción no pueden estar vacías.",
-                    "URL and description cannot be empty.");
-        }
-
         public static String TITULO_ERROR_VALIDACION() {
             return tr("Error de validación", "Validation error");
+        }
+
+        public static String MSG_VALIDACION_URL() {
+            return tr("La URL no puede estar vacía.", "URL cannot be empty.");
+        }
+
+        public static String MSG_VALIDACION_TITULO() {
+            return tr("El título no puede estar vacío.", "Title cannot be empty.");
+        }
+
+        public static String MSG_VALIDACION_DESCRIPCION() {
+            return tr("La descripción no puede estar vacía.", "Description cannot be empty.");
+        }
+
+        public static String TITULO_CONFIRMAR_DESCARTE() {
+            return tr("Descartar cambios", "Discard changes");
+        }
+
+        public static String MSG_CONFIRMAR_DESCARTE() {
+            return tr(
+                    "Hay cambios sin guardar. ¿Descartarlos y cerrar?",
+                    "There are unsaved changes. Discard them and close?");
+        }
+
+        public static String MSG_GUARDADO_OK() {
+            return tr("Hallazgo guardado.", "Finding saved.");
         }
     }
 
@@ -1828,8 +1910,29 @@ public final class I18nUI {
             return tr("Proveedor de AI es requerido", "AI provider is required");
         }
 
+        public static String CHECK_MOSTRAR_CLAVE() {
+            return tr("Mostrar", "Show");
+        }
+
+        public static String PREFIJO_EJEMPLO() {
+            return tr("Ejemplo: ", "Example: ");
+        }
+
+        public static String TOOLTIP_MOSTRAR_CLAVE() {
+            return tr("Mostrar u ocultar la clave de API", "Show or hide the API key");
+        }
+
         public static String ERROR_MODELO_REQUERIDO() {
             return tr("Modelo es requerido", "Model is required");
+        }
+
+        public static String ERROR_URL_INVALIDA() {
+            return tr("La URL no es válida (debe incluir http/https y host)",
+                    "URL is not valid (must include http/https and host)");
+        }
+
+        public static String ERROR_CLAVE_REQUERIDA() {
+            return tr("La clave de API es requerida", "API key is required");
         }
 
         public static String ERROR_PROMPT_REQUERIDO() {
@@ -2110,38 +2213,24 @@ public final class I18nUI {
             return "BurpIA (" + version + ")";
         }
 
-        private static final String INTRO_DESCRIPCION_ES = "BurpIA es una extensión profesional para Burp Suite que aprovecha diferentes "
-                +
-                "modelos de Inteligencia Artificial para analizar tráfico HTTP e identificar " +
-                "vulnerabilidades de seguridad de forma automatizada con validación manual asistida por agentes.";
+        private static final String INTRO_DESCRIPCION_ES = "BurpIA usa modelos de IA para analizar tráfico HTTP en Burp Suite "
+                + "e identificar vulnerabilidades, con validación manual asistida por agentes.";
 
-        private static final String INTRO_DESCRIPCION_EN = "BurpIA is a professional Burp Suite extension that leverages different "
-                +
-                "Artificial Intelligence models to analyze HTTP traffic and identify " +
-                "security vulnerabilities automatically with agentic manual validation.";
+        private static final String INTRO_DESCRIPCION_EN = "BurpIA uses AI models to analyze HTTP traffic in Burp Suite "
+                + "and identify vulnerabilities, with agent-assisted manual validation.";
 
         private static final String[] CARACTERISTICAS_APP_ES = {
-                "Detección de forma pasiva de problemas de seguridad con IA Generativa",
-                "IA basada en agentes integrada en la interfaz del plugin",
-                "Compatibilidad con OpenAI, Claude, Gemini, Z.ai, Minimax, Moonshot (Kimi), DeepSeek, xAI Grok, Ollama y Ollama Cloud",
-                "De-duplicación inteligente de peticiones para optimizar la cuota de API",
-                "Gestión asíncrona mediante colas de tareas paralelizables",
-                "Integración con site map (Issues), Repeater, Intruder y Scanner Pro",
-                "Prompt totalmente configurable para análisis a medida",
-                "Exportación nativa de reportes de hallazgos a CSV y JSON",
-                "Multiidioma en inglés y español."
+                "Análisis pasivo de tráfico HTTP con IA Generativa y validación asistida por agentes integrados",
+                "Compatible con los principales LLM: OpenAI, Claude, Gemini, Grok, DeepSeek, Moonshot, Ollama y más",
+                "De-duplicación, colas asíncronas e integración con Burp (Issues, Repeater, Intruder, Scanner Pro)",
+                "Prompt configurable, exportación a CSV/JSON y soporte multiidioma (ES/EN)"
         };
 
         private static final String[] CARACTERISTICAS_APP_EN = {
-                "Passive detection of security issues with Generative AI",
-                "Agentic AI integrated into the plugin interface",
-                "Compatibility with OpenAI, Claude, Gemini, Z.ai, Minimax, Moonshot (Kimi), DeepSeek, xAI Grok, Ollama, and Ollama Cloud",
-                "Smart request deduplication to optimize API quota",
-                "Asynchronous task management through parallel queues",
-                "Integration with site map (Issues), Repeater, Intruder, and Scanner Pro",
-                "Fully configurable prompt for tailored analysis",
-                "Native findings export to CSV and JSON",
-                "Bilingual support in English and Spanish."
+                "Passive HTTP traffic analysis with Generative AI and integrated agent-assisted validation",
+                "Compatible with major LLMs: OpenAI, Claude, Gemini, Grok, DeepSeek, Moonshot, Ollama, and more",
+                "Deduplication, async queues, and Burp integration (Issues, Repeater, Intruder, Scanner Pro)",
+                "Configurable prompt, CSV/JSON export, and bilingual support (EN/ES)"
         };
 
         public static String DESCRIPCION_APP() {
@@ -2153,7 +2242,13 @@ public final class I18nUI {
 
         private static String construirDescripcionApp(String introduccion, String titulo, String... caracteristicas) {
             StringBuilder descripcion = new StringBuilder();
-            descripcion.append(introduccion).append("\n\n").append(titulo).append(":\n");
+            // Sin intro (caso Novedades): NO anteponer el separador "\n\n". Antes dejaba 2
+            // líneas en blanco al inicio que empujaban el contenido y ocultaban el botón de
+            // validar nueva versión.
+            if (Normalizador.noEsVacio(introduccion)) {
+                descripcion.append(introduccion).append("\n\n");
+            }
+            descripcion.append(titulo).append(":\n");
             if (caracteristicas != null) {
                 for (String caracteristica : caracteristicas) {
                     if (Normalizador.esVacio(caracteristica)) {
@@ -2254,21 +2349,15 @@ public final class I18nUI {
         // los cambios de la versión vigente (el historial completo vive en
         // los READMEs del proyecto).
         private static final String[] NOVEDADES_VERSION_ES = {
-                "Nuevos proveedores LLM: DeepSeek, xAI Grok y Ollama Cloud.",
-                "Nuevo agente CLI integrado: Grok CLI en la pestaña Agentes.",
-                "Contrato verbatim para perfiles Custom: la URL base se usa tal cual la ingresás, sin manipulaciones.",
-                "UX per-proveedor en configuración: tooltips dinámicos, URL de ejemplo y validación de campos obligatorios sólo cuando aplica.",
-                "Refactor interno DRY: extracción de helpers para Ollama (local+cloud), endurecimiento de reglas PMD y limpieza de código huérfano.",
-                "Fix crítico de i18n: corregidos ~73 sitios donde la traducción al inglés quedaba en español por concatenación dentro de tr()."
+                "Nuevos proveedores LLM (DeepSeek, xAI Grok, Ollama Cloud) y agente Grok CLI.",
+                "Configuración por proveedor más clara y URL base verbatim en perfiles Custom.",
+                "Corrección de i18n (~73 textos) y refactor interno DRY."
         };
 
         private static final String[] NOVEDADES_VERSION_EN = {
-                "New LLM providers: DeepSeek, xAI Grok, and Ollama Cloud.",
-                "New integrated CLI agent: Grok CLI available in the Agents tab.",
-                "Verbatim contract for Custom profiles: the base URL is used as-is, no manipulations.",
-                "Per-provider UX in settings: dynamic tooltips, example URL hints, and required-field validation only when applicable.",
-                "Internal DRY refactor: extracted helpers for Ollama (local+cloud), tightened PMD rules, and removed orphan code.",
-                "Critical i18n fix: ~73 sites corrected where English translation was falling through to Spanish due to concatenation inside tr()."
+                "New LLM providers (DeepSeek, xAI Grok, Ollama Cloud) and a Grok CLI agent.",
+                "Clearer per-provider configuration and verbatim base URL for Custom profiles.",
+                "i18n fix (~73 strings) and internal DRY refactor."
         };
 
         public static String TITULO_NOVEDADES_VERSION(String version) {
@@ -2503,8 +2592,47 @@ public final class I18nUI {
             return trf("🤖 Analizar Flujo con %s", "🤖 Analyze Flow with %s", agente);
         }
 
+        public static String ITEM_AGENTE_DESHABILITADO() {
+            return tr("🤖 Analizar con agente (ninguno habilitado)",
+                    "🤖 Analyze with agent (none enabled)");
+        }
+
+        public static String TOOLTIP_AGENTE_DESHABILITADO() {
+            return tr(
+                    "Habilita un agente en Ajustes › Agentes para analizar con un agente CLI.",
+                    "Enable an agent in Settings › Agents to analyze with a CLI agent.");
+        }
+
+        public static String TITULO_CONFIRMAR_ENVIO_AGENTE() {
+            return tr("Confirmar envío a agente", "Confirm send to agent");
+        }
+
+        public static String MSG_CONFIRMAR_ENVIO_AGENTE_SOLICITUD(String agente) {
+            return trf(
+                    "Se enviará esta solicitud al agente %s, que ejecutará binarios externos. ¿Continuar?",
+                    "This request will be sent to agent %s, which runs external binaries. Continue?",
+                    agente);
+        }
+
+        public static String MSG_CONFIRMAR_ENVIO_AGENTE_FLUJO(String agente, int cantidad) {
+            return trf(
+                    "Se enviarán %d solicitudes al agente %s, que ejecutará binarios externos. ¿Continuar?",
+                    "%d requests will be sent to agent %s, which runs external binaries. Continue?",
+                    cantidad, agente);
+        }
+
         public static String LOG_DEBOUNCE_IGNORADO() {
             return tr("[BurpIA] Debounce: ignorando clic duplicado", "[BurpIA] Debounce: duplicate click ignored");
+        }
+
+        public static String LOG_INVOCATION_TYPE_NO_DISPONIBLE(String detalle) {
+            return trf("[BurpIA] invocationType() no disponible en esta edición: %s",
+                    "[BurpIA] invocationType() not available in this edition: %s", detalle);
+        }
+
+        public static String LOG_TOOL_TYPE_NO_DISPONIBLE(String detalle) {
+            return trf("[BurpIA] toolType() no disponible en esta edición: %s",
+                    "[BurpIA] toolType() not available in this edition: %s", detalle);
         }
 
         public static String LOG_ANALISIS_FORZADO() {

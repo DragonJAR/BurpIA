@@ -320,7 +320,7 @@ public class ConfigDialogController {
                 String ejemplo = I18nUI.Tooltips.Configuracion.URL_EJEMPLO_POR_PROVEEDOR(proveedor);
                 lblPreview.setText(ejemplo.isEmpty()
                         ? " "
-                        : I18nUI.tr("Ejemplo: ", "Example: ") + ejemplo);
+                        : I18nUI.Configuracion.PREFIJO_EJEMPLO() + ejemplo);
                 return;
             }
             String modelo = obtenerModeloSeleccionado();
@@ -884,6 +884,9 @@ public class ConfigDialogController {
                         if (alGuardar != null) {
                             alGuardar.run();
                         }
+                        // En un diálogo modal, cerrarse (dispose) al guardar es la señal de éxito
+                        // canónica; un diálogo adicional sería ruido. El callback alGuardar notifica
+                        // al contenedor (que sí puede registrar el éxito vía log si lo desea).
                         dialogo.dispose();
                     } else {
                         UIUtils.mostrarError(dialogo, I18nUI.Configuracion.TITULO_ERROR_GUARDAR(),
@@ -1107,6 +1110,12 @@ public class ConfigDialogController {
     }
 
     private void manejarRestaurarPromptAgenteInicial() {
+        if (!UIUtils.confirmarAdvertencia(
+                dialogo,
+                I18nUI.Configuracion.TITULO_CONFIRMAR_RESTAURACION(),
+                I18nUI.Configuracion.MSG_CONFIRMAR_RESTAURAR_PROMPT())) {
+            return;
+        }
         JTextArea txtAgentePromptInicial = dialogo.obtenerTxtAgentePromptInicial();
         if (txtAgentePromptInicial != null) {
             txtAgentePromptInicial.setText(ConfiguracionAPI.obtenerAgentePreflightPromptPorDefecto());
@@ -1114,6 +1123,12 @@ public class ConfigDialogController {
     }
 
     private void manejarRestaurarPromptAgente() {
+        if (!UIUtils.confirmarAdvertencia(
+                dialogo,
+                I18nUI.Configuracion.TITULO_CONFIRMAR_RESTAURACION(),
+                I18nUI.Configuracion.MSG_CONFIRMAR_RESTAURAR_PROMPT())) {
+            return;
+        }
         JTextArea txtAgentePrompt = dialogo.obtenerTxtAgentePrompt();
         if (txtAgentePrompt != null) {
             txtAgentePrompt.setText(ConfiguracionAPI.obtenerAgentePromptPorDefecto());

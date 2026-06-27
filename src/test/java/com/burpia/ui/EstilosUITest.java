@@ -220,6 +220,59 @@ class EstilosUITest {
     }
 
     @Nested
+    @DisplayName("Paleta de confianza y texto principal del tema")
+    class PaletaConfianzaTest {
+
+        @Test
+        @DisplayName("colorConfianza devuelve color distinto de la paleta de severidad (no púrpura de Critical)")
+        void colorConfianzaNoColisionaConSeveridad() {
+            Color fondo = new Color(248, 248, 248);
+            Color confianzaAlta = EstilosUI.colorConfianza(fondo, true, false, false);
+            Color severidadCritical = EstilosUI.COLOR_CRITICAL;
+            // La paleta de confianza es deliberadamente distinta de severidad para evitar ambigüedad.
+            assertFalse(confianzaAlta.equals(severidadCritical),
+                "assertFalse failed at EstilosUITest.java:confianza:noColision");
+        }
+
+        @Test
+        @DisplayName("colorConfianza produce colores accesibles para cada nivel")
+        void colorConfianzaAccesible() {
+            Color fondoClaro = new Color(248, 248, 248);
+            Color fondoOscuro = new Color(34, 36, 41);
+            for (boolean[] flags : new boolean[][]{{true, false, false}, {false, true, false}, {false, false, true}}) {
+                Color claro = EstilosUI.colorConfianza(fondoClaro, flags[0], flags[1], flags[2]);
+                Color oscuro = EstilosUI.colorConfianza(fondoOscuro, flags[0], flags[1], flags[2]);
+                assertTrue(EstilosUI.ratioContraste(claro, fondoClaro) >= EstilosUI.CONTRASTE_AA_GRANDE,
+                    "assertTrue failed at EstilosUITest.java:confianza:claroAA");
+                assertTrue(EstilosUI.ratioContraste(oscuro, fondoOscuro) >= EstilosUI.CONTRASTE_AA_GRANDE,
+                    "assertTrue failed at EstilosUITest.java:confianza:oscuroAA");
+            }
+        }
+
+        @Test
+        @DisplayName("colorDesconocidoAccesible nunca es negro puro (legible en tema oscuro)")
+        void colorDesconocidoNoEsNegro() {
+            Color fondo = new Color(34, 36, 41);
+            Color desconocido = EstilosUI.colorDesconocidoAccesible(fondo);
+            assertNotNull(desconocido, "assertNotNull failed at EstilosUITest.java:desconocido:notNull");
+            assertFalse(desconocido.equals(Color.BLACK),
+                "assertFalse failed at EstilosUITest.java:desconocido:noNegro");
+            assertTrue(EstilosUI.ratioContraste(desconocido, fondo) >= EstilosUI.CONTRASTE_AA_NORMAL,
+                "assertTrue failed at EstilosUITest.java:desconocido:AA");
+        }
+
+        @Test
+        @DisplayName("colorTextoPrincipalTema devuelve color accesible y nunca negro crudo")
+        void colorTextoPrincipalTemaAccesible() {
+            Color texto = EstilosUI.colorTextoPrincipalTema();
+            assertNotNull(texto, "assertNotNull failed at EstilosUITest.java:tema:notNull");
+            Color fondo = EstilosUI.obtenerFondoPanel();
+            assertTrue(EstilosUI.ratioContraste(texto, fondo) >= EstilosUI.CONTRASTE_AA_NORMAL,
+                "assertTrue failed at EstilosUITest.java:tema:AA");
+        }
+    }
+
+    @Nested
     @DisplayName("Colores de enlace y error")
     class ColoresEnlaceError {
 

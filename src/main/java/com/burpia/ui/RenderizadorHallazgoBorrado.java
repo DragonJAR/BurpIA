@@ -66,7 +66,8 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
         if (componente instanceof JLabel) {
             JLabel etiqueta = (JLabel) componente;
 
-            // Desactivar HTML por seguridad (DRY: una sola vez)
+            // Desactivar HTML siempre, por seguridad: el contenido proviene del LLM y podría
+            // contener marcado. Es una protección de defensa, no un detalle estético.
             etiqueta.putClientProperty("html.disable", Boolean.TRUE);
 
             if (modelo.estaIgnorado(filaModelo)) {
@@ -87,11 +88,16 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
      * @param table      La tabla para obtener colores base
      */
     private void aplicarEstiloIgnorado(JLabel etiqueta, boolean isSelected, JTable table) {
+        Color tableBg = table.getBackground();
         if (!isSelected) {
-            Color tableBg = table.getBackground();
+            // Sin selección: fondo atenuado + texto ignorado para diferenciar la fila.
             Color fondoIgnorado = EstilosUI.colorFondoIgnorado(tableBg);
             etiqueta.setBackground(fondoIgnorado);
             etiqueta.setForeground(EstilosUI.colorTextoIgnorado(fondoIgnorado));
+        } else {
+            // Con selección: el fondo nativo prevalece, pero atenuamos el texto para
+            // que una fila ignorada seleccionada siga distinguiéndose de una normal.
+            etiqueta.setForeground(EstilosUI.colorTextoIgnorado(tableBg));
         }
 
         // Aplicar fuente con tachado (cache invalidación por identidad de base).

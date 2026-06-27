@@ -213,6 +213,8 @@ public class PanelEstadisticas extends JPanel {
                 manejadorToggleCaptura.run();
             }
         });
+        // Nombre accesible textual (el emoji ⏸/▶ no verbaliza bien en lectores de pantalla).
+        botonCaptura.getAccessibleContext().setAccessibleName(I18nUI.Tooltips.Estadisticas.CAPTURA_PAUSAR());
         actualizarEstadoCapturaUI();
 
         botonConfiguracion.setText("⚙️");
@@ -221,6 +223,8 @@ public class PanelEstadisticas extends JPanel {
         botonConfiguracion.setFocusable(false);
         botonConfiguracion.setMargin(new Insets(0, 0, 0, 0));
         botonConfiguracion.putClientProperty("JButton.buttonType", "square");
+        // Nombre accesible textual para el botón de solo-icono.
+        botonConfiguracion.getAccessibleContext().setAccessibleName(I18nUI.Tooltips.Estadisticas.CONFIGURACION());
     }
 
     private void ajustarDimensionBotones() {
@@ -348,9 +352,11 @@ public class PanelEstadisticas extends JPanel {
         if (capturaActiva) {
             botonCaptura.setText("⏸️");
             botonCaptura.setToolTipText(I18nUI.Tooltips.Estadisticas.CAPTURA_PAUSAR());
+            botonCaptura.getAccessibleContext().setAccessibleName(I18nUI.Tooltips.Estadisticas.CAPTURA_PAUSAR());
         } else {
             botonCaptura.setText("▶️");
             botonCaptura.setToolTipText(I18nUI.Tooltips.Estadisticas.CAPTURA_REANUDAR());
+            botonCaptura.getAccessibleContext().setAccessibleName(I18nUI.Tooltips.Estadisticas.CAPTURA_REANUDAR());
         }
     }
 

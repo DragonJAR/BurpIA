@@ -545,7 +545,7 @@ public class PanelAgente extends JPanel {
 
     private JPanel crearPanelControles() {
         btnReiniciar = crearBoton(this::obtenerTextoBotonReiniciar,
-            I18nUI.Tooltips.Agente::REINICIAR, e -> reiniciarYSolicitarFoco());
+            I18nUI.Tooltips.Agente::REINICIAR, e -> reiniciarConfirmadoYSolicitarFoco());
 
         btnCtrlC = crearBoton(this::obtenerTextoBotonCtrlC,
             I18nUI.Tooltips.Agente::CTRL_C, e -> escribirComandoCrudo("\u0003"));
@@ -571,6 +571,7 @@ public class PanelAgente extends JPanel {
         spinnerDelay.setFont(EstilosUI.FUENTE_ESTANDAR);
         spinnerDelay.setToolTipText(I18nUI.Tooltips.Configuracion.DELAY_PROMPT_AGENTE());
         spinnerDelay.setPreferredSize(new Dimension(80, 24));
+        lblDelay.setLabelFor(spinnerDelay);
         spinnerDelay.addChangeListener(e -> {
             int nuevoDelay = ((Number) spinnerDelay.getValue()).intValue();
             config.establecerAgenteDelay(nuevoDelay);
@@ -614,6 +615,14 @@ public class PanelAgente extends JPanel {
                 return;
             }
 
+            // Cambiar de agente destruye la sesión en curso: confirmar si hay PTY viva.
+            if (haySesionActiva() && !UIUtils.confirmarAdvertencia(
+                    this,
+                    I18nUI.Consola.TITULO_CONFIRMAR_REINICIAR(),
+                    I18nUI.Consola.MSG_CONFIRMAR_CAMBIAR_AGENTE(destino.obtenerNombreVisible()))) {
+                return;
+            }
+
             config.establecerTipoAgente(destino.name());
             notificarCambioConfiguracionSiExiste();
             reiniciarYSolicitarFoco();
@@ -625,30 +634,66 @@ public class PanelAgente extends JPanel {
         }
     }
 
+    /**
+     * Indica si hay una sesión PTY activa que se perdería al reiniciar o cambiar de agente.
+     */
+    private boolean haySesionActiva() {
+        return process != null && process.isAlive();
+    }
+
+    /**
+     * Reinicia la terminal tras confirmar con el usuario si hay una sesión activa.
+     * La destrucción de la PTY actual es destructiva (pierde historial/contexto).
+     */
+    private void reiniciarConfirmadoYSolicitarFoco() {
+        if (haySesionActiva() && !UIUtils.confirmarAdvertencia(
+                this,
+                I18nUI.Consola.TITULO_CONFIRMAR_REINICIAR(),
+                I18nUI.Consola.MSG_CONFIRMAR_REINICIAR())) {
+            return;
+        }
+        reiniciarYSolicitarFoco();
+    }
+
+    /**
+     * Busca el siguiente agente disponible, acumulando los agentes sin binario en una sola
+     * lista y mostrando un único diálogo consolidado al final (en vez de un modal por agente).
+     */
     private AgenteTipo buscarSiguienteAgenteDisponible(AgenteTipo actual) {
         AgenteTipo candidato = actual;
+        java.util.List<AgenteTipo> agentesSinBinario = new java.util.ArrayList<>();
         for (int i = 0; i < AgenteTipo.values().length - 1; i++) {
             candidato = AgenteTipo.siguienteCircular(candidato);
             if (!config.agenteHabilitado(candidato.name())) {
                 continue;
             }
             if (config.tieneBinarioAgenteDisponible(candidato.name())) {
+                mostrarResumenAgentesNoDisponiblesSiHay(agentesSinBinario);
                 return candidato;
             }
-            mostrarErrorBinarioAgenteNoDisponible(candidato, resolverRutaBinario(candidato));
+            agentesSinBinario.add(candidato);
         }
+        mostrarResumenAgentesNoDisponiblesSiHay(agentesSinBinario);
         return null;
     }
 
-    private void mostrarErrorBinarioAgenteNoDisponible(AgenteTipo agente, String rutaBinario) {
-        String mensaje = UIUtils.construirMensajeBinarioAgenteNoEncontrado(agente.obtenerNombreVisible(), rutaBinario);
-        UIUtils.mostrarErrorBinarioAgenteNoEncontrado(
-            this,
-            agente.obtenerNombreVisible(),
-            mensaje,
-            I18nUI.Configuracion.Agentes.ENLACE_INSTALAR_AGENTE(agente.obtenerNombreVisible()),
-            agente.obtenerUrlDocPorIdioma(config.obtenerIdiomaUi())
-        );
+    /**
+     * Muestra un único diálogo con el resumen de agentes omitidos por falta de binario.
+     * DRY: evita la ráfaga de N modales secuenciales que generaba el bucle anterior.
+     */
+    private void mostrarResumenAgentesNoDisponiblesSiHay(java.util.List<AgenteTipo> agentes) {
+        if (agentes == null || agentes.isEmpty()) {
+            return;
+        }
+        StringBuilder detalle = new StringBuilder();
+        for (AgenteTipo agente : agentes) {
+            detalle.append("• ").append(agente.obtenerNombreVisible())
+                    .append(" — ").append(resolverRutaBinario(agente)).append('\n');
+        }
+        UIUtils.mostrarAdvertencia(
+                this,
+                I18nUI.Consola.TITULO_AGENTES_NO_DISPONIBLES(),
+                I18nUI.Consola.MSG_AGENTES_NO_DISPONIBLES(agentes.size()) + "\n\n" + detalle);
     }
 
     public String obtenerUltimoAgenteIniciado() {
@@ -1296,8 +1341,10 @@ public class PanelAgente extends JPanel {
             Thread.currentThread().interrupt();
         }
 
-        String mensaje = e.getMessage() != null ? e.getMessage() : I18nLogs.tr("Error desconocido PTY");
-        ejecutarEnEdt(() -> UIUtils.mostrarError(PanelAgente.this, I18nUI.Consola.TITULO_ERROR_PTY(), mensaje));
+        String causa = e.getMessage() != null ? e.getMessage() : mensajeLog;
+        ejecutarEnEdt(() -> UIUtils.mostrarError(PanelAgente.this,
+                I18nUI.Consola.TITULO_ERROR_PTY(),
+                I18nUI.Consola.MSG_ERROR_PTY_DETALLE(causa)));
     }
 
     private void solicitarFocoPestaniaAgente() {
