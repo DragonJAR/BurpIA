@@ -2,12 +2,14 @@ package com.burpia.ui;
 
 import burp.api.montoya.MontoyaApi;
 import com.burpia.model.Hallazgo;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
 import java.awt.event.ActionListener;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -18,6 +20,18 @@ class PanelHallazgosLimpiarTodoTest {
 
     private static final String CAMPO_BOTON_LIMPIAR_TODO = "botonLimpiarTodo";
     private static final String CAMPO_MODELO = "modelo";
+
+    private final List<PanelHallazgos> panelesCreados = new ArrayList<>();
+
+    @AfterEach
+    void destruirPaneles() {
+        // Cada PanelHallazgos arranca un Timer y un executor; sin destruirlos
+        // cada test fuga hilos que sobreviven al final de la clase.
+        for (PanelHallazgos panel : panelesCreados) {
+            panel.destruir();
+        }
+        panelesCreados.clear();
+    }
 
     @Test
     @DisplayName("Botón limpiar todo existe y es clickable")
@@ -114,6 +128,7 @@ class PanelHallazgosLimpiarTodoTest {
         SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, new ModeloTablaHallazgos(100), false));
         PanelHallazgos panel = holder[0];
         assertNotNull(panel, "El panel debe haberse creado correctamente");
+        panelesCreados.add(panel);
         return panel;
     }
 

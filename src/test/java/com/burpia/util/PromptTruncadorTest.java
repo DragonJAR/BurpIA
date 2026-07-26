@@ -170,11 +170,47 @@ class PromptTruncadorTest {
                 sb.append("abcdefghij"); // 50000 caracteres
             }
             String prompt = sb.toString();
-            
+
             String resultado = truncador.truncarPrompt(prompt, 100);
-            
-            assertTrue(resultado.contains("[TRUNCATED]") || resultado.contains("trunc"), 
+
+            assertTrue(resultado.contains("[TRUNCATED]") || resultado.contains("trunc"),
                 "Debe contener indicador de truncado");
+        }
+
+        @Test
+        @DisplayName("trunca bodies con marcadores en MAYÚSCULAS de ConstructorPrompts")
+        void truncaBodiesConMarcadoresMayusculas() {
+            // Regresión H2: ConstructorPrompts emite "BODY:"/"RESPONSE:" en mayúsculas;
+            // el truncador debe detectarlos (antes comparaba "Body:"/"Response:" y la
+            // estrategia 1 nunca se activaba sobre prompts reales).
+            com.burpia.config.ConfiguracionAPI config = new com.burpia.config.ConfiguracionAPI();
+            config.establecerIdiomaUi("en");
+            config.establecerPromptConfigurable("Analyze: {REQUEST}\n{RESPONSE}");
+
+            String cuerpoGrande = "x".repeat(4000);
+            com.burpia.model.SolicitudAnalisis solicitud = new com.burpia.model.SolicitudAnalisis(
+                "https://example.com/api",
+                "POST",
+                "Host: example.com",
+                cuerpoGrande,
+                "hash-trunc-test",
+                null,
+                200,
+                "Content-Type: text/plain",
+                cuerpoGrande
+            );
+
+            com.burpia.analyzer.ConstructorPrompts constructor = new com.burpia.analyzer.ConstructorPrompts(config);
+            String promptReal = constructor.construirPromptAnalisis(solicitud);
+            assertTrue(promptReal.contains(PromptTruncador.MARCADOR_BODY),
+                "El prompt real debe contener el marcador canónico BODY:");
+
+            String resultado = truncador.truncarPrompt(promptReal, 1000);
+
+            assertTrue(resultado.contains("[TRUNCATED]"),
+                "La estrategia 1 debe activarse y truncar los bodies del prompt real");
+            assertTrue(resultado.length() < promptReal.length(),
+                "El prompt truncado debe ser más corto que el original");
         }
     }
 

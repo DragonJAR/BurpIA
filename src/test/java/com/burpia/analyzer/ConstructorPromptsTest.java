@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -108,5 +109,48 @@ class ConstructorPromptsTest {
             "assertTrue failed at ConstructorPromptsTest.java:78");
         assertTrue(prompt.contains("OUTPUT LANGUAGE: English"),
             "assertTrue failed at ConstructorPromptsTest.java:80");
+    }
+
+    @Test
+    @DisplayName("Prompt individual no sustituye tokens literales dentro del body")
+    void testPromptIndividualNoSustituyeTokensEnBody() {
+        // Regresión H3: si el body contiene el literal "{RESPONSE}", no debe
+        // expandirse con el contenido de la respuesta (antes se duplicaba).
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerIdiomaUi("en");
+        I18nUI.establecerIdioma(IdiomaUI.EN);
+        config.establecerPromptConfigurable("{REQUEST}");
+        ConstructorPrompts constructor = new ConstructorPrompts(config);
+
+        SolicitudAnalisis solicitud = new SolicitudAnalisis(
+            "https://example.com/echo",
+            "POST",
+            "POST /echo HTTP/1.1\nHost: example.com",
+            "payload con {RESPONSE} literal",
+            "hash-4",
+            null,
+            200,
+            "HTTP/1.1 200 OK",
+            "{\"ok\":true}"
+        );
+
+        String prompt = constructor.construirPromptAnalisis(solicitud);
+
+        assertTrue(prompt.contains("payload con {RESPONSE} literal"),
+            "El literal {RESPONSE} dentro del body no debe ser sustituido");
+        assertTrue(prompt.contains("RESPONSE:\nSTATUS: 200"),
+            "La respuesta real se agrega una sola vez via bloque fallback");
+        assertEquals(1, contarOcurrencias(prompt, "{\"ok\":true}"),
+            "El contenido de la respuesta no debe duplicarse");
+    }
+
+    private static int contarOcurrencias(String texto, String buscado) {
+        int total = 0;
+        int indice = texto.indexOf(buscado);
+        while (indice >= 0) {
+            total++;
+            indice = texto.indexOf(buscado, indice + 1);
+        }
+        return total;
     }
 }

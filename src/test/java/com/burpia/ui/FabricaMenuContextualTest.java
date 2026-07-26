@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -633,7 +634,6 @@ class FabricaMenuContextualTest {
     @DisplayName("Callback cambio alertas")
     class CallbackCambioAlertasTests {
 
-        @SuppressWarnings("PMD.UnusedLocalVariable")
         @Test
         @DisplayName("llama callback de cambio cuando se deshabilitan alertas")
         void llamaCallbackCambio() {
@@ -652,9 +652,28 @@ class FabricaMenuContextualTest {
                 () -> cambios.incrementAndGet(),
                 null);
 
-            // Verificar que el callback esta configurado
-            assertNotNull(fabrica, "assertNotNull failed at FabricaMenuContextualTest.java:409");
-            assertEquals(0, cambios.get(), "assertEquals failed at FabricaMenuContextualTest.java:410");
+            // Flujo real: clic en "Analizar" -> manejarAnalisisSeleccion -> (JVM no headless)
+            // UIUtils.mostrarInfoConOptOutMenuContextual recibe la acción de opt-out
+            // (this::deshabilitarAlertasEnviarA) y la ejecuta cuando el usuario marca
+            // "No volver a mostrar". Stubamos el diálogo para que invoque esa acción,
+            // tal como hace la implementación real al aceptar el opt-out.
+            try (MockedStatic<UIUtils> uiUtilsMock = mockStatic(UIUtils.class)) {
+                uiUtilsMock.when(() -> UIUtils.crearMenuItemContextual(any(), any(), any())).thenCallRealMethod();
+                uiUtilsMock.when(() -> UIUtils.mostrarInfoConOptOutMenuContextual(
+                        any(), any(), any(), anyBoolean(), any(Runnable.class)))
+                    .thenAnswer(invocacion -> {
+                        invocacion.getArgument(4, Runnable.class).run();
+                        return null;
+                    });
+
+                JMenuItem itemAnalizar = (JMenuItem) fabrica.provideMenuItems(evento).get(0);
+                itemAnalizar.doClick();
+
+                assertEquals(1, cambios.get(),
+                    "El callback de cambio debe ejecutarse exactamente una vez al deshabilitar las alertas");
+                verify(config).agregarAlertaDeshabilitada(AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A);
+                verify(config).establecerAlertasClickDerechoEnviarAHabilitadas(false);
+            }
         }
 
         @Test

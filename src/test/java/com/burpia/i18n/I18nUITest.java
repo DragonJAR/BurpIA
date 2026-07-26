@@ -83,14 +83,19 @@ class I18nUITest {
     }
 
     @Test
-    @DisplayName("Logs se mantienen en español cuando idioma es español")
+    @DisplayName("Logs se mantienen sin cambios cuando idioma es español")
     void testLogsEspanol() {
         I18nUI.establecerIdioma("es");
         String mensaje = "Analisis completado: https://target";
         assertEquals(mensaje, I18nLogs.tr(mensaje), "assertEquals failed at I18nUITest.java:42");
-        assertEquals(mensaje, I18nLogs.tr("Analysis completed: https://target"), "assertEquals failed at I18nUITest.java:43");
-        assertEquals("Configuracion guardada exitosamente en: /tmp/.burpia/config.json",
-            I18nLogs.tr("Configuration saved successfully to: /tmp/.burpia/config.json"), "assertEquals failed at I18nUITest.java:44");
+        // F4: en modo ES, tr() es identidad salvo un conjunto explícito y
+        // acotado de préstamos técnicos — ya no invierte todo el diccionario.
+        assertEquals("Analysis completed: https://target",
+            I18nLogs.tr("Analysis completed: https://target"),
+            "En modo ES el texto inglés permanece sin cambios (sin re-hispanización)");
+        assertEquals("Configuration saved successfully to: /tmp/.burpia/config.json",
+            I18nLogs.tr("Configuration saved successfully to: /tmp/.burpia/config.json"),
+            "En modo ES el texto inglés permanece sin cambios (sin re-hispanización)");
     }
 
     @Test
@@ -245,6 +250,21 @@ class I18nUITest {
         assertFalse(ok.contains("✅"), "assertFalse failed at I18nUITest.java:197");
         assertFalse(aviso.contains("⚠"), "assertFalse failed at I18nUITest.java:198");
         assertFalse(error.contains("❌"), "assertFalse failed at I18nUITest.java:199");
+    }
+
+    @Test
+    @DisplayName("Tooltip INYECTAR_PAYLOAD usa 'initial prompt' de forma consistente (F8)")
+    void testInyectarPayloadPromptInicial() {
+        I18nUI.establecerIdioma("es");
+        assertTrue(I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD().contains("prompt inicial"),
+            "El slot ES debe decir 'prompt inicial'");
+
+        I18nUI.establecerIdioma("en");
+        String tooltipEn = I18nUI.Tooltips.Agente.INYECTAR_PAYLOAD();
+        assertTrue(tooltipEn.contains("initial prompt"),
+            "El slot EN debe decir 'initial prompt' (unificado con el ES). Valor real: " + tooltipEn);
+        assertFalse(tooltipEn.contains("original prompt"),
+            "El slot EN no debe decir 'original prompt'. Valor real: " + tooltipEn);
     }
 
     @Test

@@ -24,6 +24,11 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     private final Set<Integer> filasIgnoradas;
     private final ReentrantLock lock;
     private final List<EscuchaCambiosHallazgos> escuchas;
+    // Referencia del hallazgo de cada fila visible, en el mismo orden que
+    // dataVector. Solo se muta en el EDT, en los mismos puntos que la vista.
+    // Permite localizar la fila exacta al eliminar aunque un rebuild o bajas
+    // concurrentes hayan desplazado los indices.
+    private final List<Hallazgo> identidadesVista;
 
     public ModeloTablaHallazgos() {
         this(1000);
@@ -32,6 +37,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     public ModeloTablaHallazgos(int limiteFilas) {
         super(I18nUI.Tablas.COLUMNAS_HALLAZGOS(), 0);
         this.datos = new ArrayList<>();
+        this.identidadesVista = new ArrayList<>();
         this.limiteFilas = Math.max(1, limiteFilas);
         this.filasIgnoradas = new HashSet<>();
         this.lock = new ReentrantLock();
@@ -61,13 +67,13 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         ejecutarEnEdt(() -> {
             boolean huboCambios;
             boolean rebuildRequerido;
-            List<Object[]> snapshotParaRebuild = null;
+            List<Hallazgo> snapshotParaRebuild = null;
             lock.lock();
             try {
                 huboCambios = agregarHallazgoInterno(hallazgo);
                 rebuildRequerido = huboCambios && aplicarLimiteFilas();
                 if (rebuildRequerido) {
-                    snapshotParaRebuild = tomarSnapshotFilas();
+                    snapshotParaRebuild = tomarSnapshotDatos();
                 }
             } finally {
                 lock.unlock();
@@ -77,7 +83,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             if (rebuildRequerido) {
                 reconstruirTablaDesde(snapshotParaRebuild);
             } else if (huboCambios) {
-                addRow(hallazgo.aFilaTabla());
+                agregarFilaVista(hallazgo);
             }
             if (huboCambios) {
                 notificarCambios();
@@ -95,7 +101,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             boolean huboCambios = false;
             boolean rebuildRequerido;
             List<Hallazgo> agregadosSinTrim = new ArrayList<>();
-            List<Object[]> snapshotParaRebuild = null;
+            List<Hallazgo> snapshotParaRebuild = null;
             lock.lock();
             try {
                 for (Hallazgo hallazgo : hallazgos) {
@@ -106,7 +112,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                 }
                 rebuildRequerido = huboCambios && aplicarLimiteFilas();
                 if (rebuildRequerido) {
-                    snapshotParaRebuild = tomarSnapshotFilas();
+                    snapshotParaRebuild = tomarSnapshotDatos();
                 }
             } finally {
                 lock.unlock();
@@ -116,7 +122,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             } else {
                 // Sin trim: insertar fila por fila con notificación granular (preserva selección).
                 for (Hallazgo h : agregadosSinTrim) {
-                    addRow(h.aFilaTabla());
+                    agregarFilaVista(h);
                 }
             }
             if (huboCambios) {
@@ -151,17 +157,21 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     /**
-     * Toma un snapshot inmutable del estado actual de {@code datos} para reconstruir
-     * la JTable. Debe llamarse bajo lock.
+     * Toma un snapshot de las referencias actuales de {@code datos} para
+     * reconstruir la JTable y la lista de identidades de la vista.
+     * Debe llamarse bajo lock.
      */
-    private List<Object[]> tomarSnapshotFilas() {
-        List<Object[]> snapshot = new ArrayList<>(datos.size());
-        for (Hallazgo h : datos) {
-            if (h != null) {
-                snapshot.add(h.aFilaTabla());
-            }
-        }
-        return snapshot;
+    private List<Hallazgo> tomarSnapshotDatos() {
+        return new ArrayList<>(datos);
+    }
+
+    /**
+     * Agrega la fila de un hallazgo a la vista registrando su identidad.
+     * Debe llamarse desde el EDT.
+     */
+    private void agregarFilaVista(Hallazgo hallazgo) {
+        addRow(hallazgo.aFilaTabla());
+        identidadesVista.add(hallazgo);
     }
 
     /**
@@ -169,14 +179,15 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
      * emitiendo una única notificación coalescida en lugar de mutar dataVector directo
      * + fireTableDataChanged. Debe llamarse desde el EDT y fuera del lock.
      */
-    private void reconstruirTablaDesde(List<Object[]> filas) {
-        if (filas == null) {
-            filas = new ArrayList<>();
+    private void reconstruirTablaDesde(List<Hallazgo> hallazgos) {
+        List<Hallazgo> origen = hallazgos != null ? hallazgos : new ArrayList<>();
+        Object[][] filas = new Object[origen.size()][];
+        for (int i = 0; i < origen.size(); i++) {
+            filas[i] = origen.get(i).aFilaTabla();
         }
-        setDataVector(
-            filas.toArray(new Object[0][]),
-            I18nUI.Tablas.COLUMNAS_HALLAZGOS()
-        );
+        setDataVector(filas, I18nUI.Tablas.COLUMNAS_HALLAZGOS());
+        identidadesVista.clear();
+        identidadesVista.addAll(origen);
     }
 
     private boolean agregarHallazgoInterno(Hallazgo hallazgo) {
@@ -194,6 +205,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
                 datos.clear();
                 filasIgnoradas.clear();
                 dataVector.clear();
+                identidadesVista.clear();
                 fireTableDataChanged();
             } finally {
                 lock.unlock();
@@ -239,6 +251,16 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
             return;
         }
         ejecutarEnEdt(() -> {
+            lock.lock();
+            try {
+                // Revalidar rango dentro del EDT: si un rebuild/eliminación
+                // corrió antes, el índice capturado apuntaría a otra fila.
+                if (!esIndiceValido(fila)) {
+                    return;
+                }
+            } finally {
+                lock.unlock();
+            }
             fireTableRowsUpdated(fila, fila);
             notificarCambios();
         });
@@ -359,36 +381,73 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
     }
 
     public void eliminarHallazgo(int indiceFila) {
-        boolean eliminado = false;
+        Hallazgo objetivo;
         lock.lock();
         try {
-            if (esIndiceValido(indiceFila)) {
-                datos.remove(indiceFila);
-                eliminado = true;
-                Set<Integer> nuevosIgnorados = new HashSet<>();
-                for (Integer idx : filasIgnoradas) {
-                    if (idx < indiceFila) {
-                        nuevosIgnorados.add(idx);
-                    } else if (idx > indiceFila) {
-                        nuevosIgnorados.add(idx - 1);
-                    }
-                }
-                filasIgnoradas.clear();
-                filasIgnoradas.addAll(nuevosIgnorados);
+            if (!esIndiceValido(indiceFila)) {
+                return;
             }
+            objetivo = datos.remove(indiceFila);
+            reindexarIgnoradosTrasEliminar(indiceFila);
         } finally {
             lock.unlock();
         }
 
-        if (!eliminado) {
-            return;
-        }
+        // La baja de datos es sincrona (contrato historico del modelo). La fila
+        // de la vista se localiza en el EDT por la referencia registrada en
+        // identidadesVista, porque un rebuild o bajas concurrentes pudieron
+        // desplazar los indices; si no aparece, la vista ya reflejo la baja.
         ejecutarEnEdt(() -> {
-            if (indiceFila >= 0 && indiceFila < getRowCount()) {
-                removeRow(indiceFila);
+            int filaVista = buscarFilaVistaPorIdentidad(objetivo);
+            if (filaVista >= 0) {
+                removeRow(filaVista);
+                identidadesVista.remove(filaVista);
             }
             notificarCambios();
         });
+    }
+
+    /**
+     * Localiza la fila de la vista asociada a la referencia indicada.
+     * Debe llamarse desde el EDT. Retorna -1 si la vista ya no la contiene.
+     */
+    private int buscarFilaVistaPorIdentidad(Hallazgo objetivo) {
+        for (int i = 0; i < identidadesVista.size(); i++) {
+            if (identidadesVista.get(i) == objetivo) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Busca el índice de un hallazgo por identidad de referencia. Debe llamarse
+     * bajo lock. Retorna -1 si ya no está en {@code datos}.
+     */
+    private int buscarIndicePorIdentidad(Hallazgo objetivo) {
+        for (int i = 0; i < datos.size(); i++) {
+            if (datos.get(i) == objetivo) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Desplaza los índices de {@code filasIgnoradas} tras eliminar una fila.
+     * Debe llamarse bajo lock.
+     */
+    private void reindexarIgnoradosTrasEliminar(int indiceEliminado) {
+        Set<Integer> nuevosIgnorados = new HashSet<>();
+        for (Integer idx : filasIgnoradas) {
+            if (idx < indiceEliminado) {
+                nuevosIgnorados.add(idx);
+            } else if (idx > indiceEliminado) {
+                nuevosIgnorados.add(idx - 1);
+            }
+        }
+        filasIgnoradas.clear();
+        filasIgnoradas.addAll(nuevosIgnorados);
     }
 
     public int obtenerLimiteFilas() {
@@ -405,14 +464,14 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         ejecutarEnEdt(() -> {
             boolean limiteCambio;
             boolean rebuildRequerido;
-            List<Object[]> snapshotParaRebuild = null;
+            List<Hallazgo> snapshotParaRebuild = null;
             lock.lock();
             try {
                 limiteCambio = limiteFilas != limiteNormalizado;
                 limiteFilas = limiteNormalizado;
                 rebuildRequerido = aplicarLimiteFilas();
                 if (rebuildRequerido) {
-                    snapshotParaRebuild = tomarSnapshotFilas();
+                    snapshotParaRebuild = tomarSnapshotDatos();
                 }
             } finally {
                 lock.unlock();
@@ -451,13 +510,7 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
         int indiceFila;
         lock.lock();
         try {
-            indiceFila = -1;
-            for (int i = 0; i < datos.size(); i++) {
-                if (datos.get(i) == hallazgoOriginal) {
-                    indiceFila = i;
-                    break;
-                }
-            }
+            indiceFila = buscarIndicePorIdentidad(hallazgoOriginal);
             if (indiceFila < 0) {
                 return false;
             }
@@ -479,11 +532,12 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
      */
     private void actualizarFilaEnTabla(int indice, Hallazgo hallazgo) {
         ejecutarEnEdt(() -> {
-            if (indice < getRowCount()) {
+            if (indice < getRowCount() && indice < identidadesVista.size()) {
                 Object[] filaValores = hallazgo.aFilaTabla();
                 for (int i = 0; i < TOTAL_COLUMNAS; i++) {
                     setValueAt(filaValores[i], indice, i);
                 }
+                identidadesVista.set(indice, hallazgo);
                 fireTableRowsUpdated(indice, indice);
                 notificarCambios();
             }
@@ -492,22 +546,19 @@ public class ModeloTablaHallazgos extends DefaultTableModel {
 
     public void refrescarColumnasIdioma() {
         ejecutarEnEdt(() -> {
-            List<Object[]> snapshot = new ArrayList<>();
+            List<Hallazgo> snapshot;
             lock.lock();
             try {
-                for (Hallazgo hallazgo : datos) {
-                    if (hallazgo != null) {
-                        snapshot.add(hallazgo.aFilaTabla());
-                    }
-                }
+                snapshot = tomarSnapshotDatos();
             } finally {
                 lock.unlock();
             }
 
             setColumnIdentifiers(I18nUI.Tablas.COLUMNAS_HALLAZGOS());
             setRowCount(0);
-            for (Object[] fila : snapshot) {
-                addRow(fila);
+            identidadesVista.clear();
+            for (Hallazgo hallazgo : snapshot) {
+                agregarFilaVista(hallazgo);
             }
         });
     }

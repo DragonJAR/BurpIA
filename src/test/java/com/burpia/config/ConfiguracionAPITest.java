@@ -212,10 +212,42 @@ class ConfiguracionAPITest {
         assertTrue(valida.validar().isEmpty(), "assertTrue failed at ConfiguracionAPITest.java:101");
 
         ConfiguracionAPI invalida = valida.crearSnapshot();
-        invalida.establecerModeloParaProveedor("OpenAI", "");
+        invalida.establecerApiKeyParaProveedor("OpenAI", "");
         Map<String, String> errores = invalida.validar();
         assertFalse(errores.isEmpty(), "assertFalse failed at ConfiguracionAPITest.java:106");
-        assertTrue(errores.containsKey("modelo"), "assertTrue failed at ConfiguracionAPITest.java:107");
+        assertTrue(errores.containsKey("claveApi"), "assertTrue failed at ConfiguracionAPITest.java:107");
+    }
+
+    @Test
+    @DisplayName("Modelo vacío almacenado cae al default del proveedor")
+    void testModeloVacioAlmacenadoCaeAlDefaultProveedor() {
+        Map<String, String> modelos = new HashMap<>();
+        modelos.put("OpenAI", "");
+        config.establecerModelosPorProveedor(modelos);
+
+        String esperado = ProveedorAI.obtenerProveedor("OpenAI").obtenerModeloPorDefecto();
+        assertEquals(esperado, config.obtenerModeloParaProveedor("OpenAI"),
+            "Un modelo \"\" almacenado debe tratarse como sin override y caer al default del proveedor");
+    }
+
+    @Test
+    @DisplayName("Establecer modelo vacío o nulo elimina el override en vez de guardar \"\"")
+    void testEstablecerModeloVacioONuloEliminaOverride() {
+        config.establecerModeloParaProveedor("OpenAI", "gpt-4");
+        String esperado = ProveedorAI.obtenerProveedor("OpenAI").obtenerModeloPorDefecto();
+
+        config.establecerModeloParaProveedor("OpenAI", null);
+        assertFalse(config.obtenerModelosPorProveedor().containsKey("OpenAI"),
+            "establecerModeloParaProveedor(p, null) debe eliminar la entrada, no guardar \"\"");
+        assertEquals(esperado, config.obtenerModeloParaProveedor("OpenAI"),
+            "Tras limpiar el override debe volver el default del proveedor");
+
+        config.establecerModeloParaProveedor("OpenAI", "gpt-4");
+        config.establecerModeloParaProveedor("OpenAI", "");
+        assertFalse(config.obtenerModelosPorProveedor().containsKey("OpenAI"),
+            "establecerModeloParaProveedor(p, \"\") debe eliminar la entrada, no guardar \"\"");
+        assertEquals(esperado, config.obtenerModeloParaProveedor("OpenAI"),
+            "Tras limpiar el override con \"\" debe volver el default del proveedor");
     }
 
     @Test
@@ -509,7 +541,17 @@ class ConfiguracionAPITest {
     @DisplayName("Proveedor desconocido no se acepta y vuelve a default")
     void testProveedorDesconocidoNoSeAcepta() {
         config.establecerProveedorAI("-- Custom --");
-        assertEquals("Z.ai", config.obtenerProveedorAI(), "assertEquals failed at ConfiguracionAPITest.java:362");
+        // El fallback debe ser el proveedor local sin API key (Ollama), no un
+        // cloud de pago que fallaría después con un error de auth confuso.
+        assertEquals("Ollama", config.obtenerProveedorAI(), "assertEquals failed at ConfiguracionAPITest.java:362");
+    }
+
+    @Test
+    @DisplayName("Proveedor nulo cae al fallback local")
+    void testProveedorNuloCaeAlFallbackLocal() {
+        config.establecerProveedorAI(null);
+        assertEquals("Ollama", config.obtenerProveedorAI(),
+            "Un proveedor nulo debe caer al fallback local Ollama");
     }
 
     @Test
@@ -718,5 +760,61 @@ class ConfiguracionAPITest {
                 "gemini-1.5-pro-002");
         assertTrue(url.endsWith("/models/gemini-1.5-pro-002:generateContent"),
             "Un modelo sin caracteres especiales no debe alterarse: " + url);
+    }
+
+    @Test
+    @DisplayName("Lazy-init de rutasBinarioPorAgente es thread-safe")
+    void testLazyInitRutasBinarioEsThreadSafe() throws Exception {
+        java.lang.reflect.Field campo = ConfiguracionAPI.class.getDeclaredField("rutasBinarioPorAgente");
+        campo.setAccessible(true);
+        campo.set(config, null);
+
+        int hilos = 8;
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(hilos);
+        java.util.concurrent.CountDownLatch inicio = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch fin = new java.util.concurrent.CountDownLatch(hilos);
+        java.util.concurrent.atomic.AtomicInteger errores = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        for (int i = 0; i < hilos; i++) {
+            final int n = i;
+            executor.submit(() -> {
+                try {
+                    inicio.await(10, java.util.concurrent.TimeUnit.SECONDS);
+                    for (int j = 0; j < 50; j++) {
+                        config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), "/tmp/ruta-" + n);
+                        config.obtenerTodasLasRutasBinario();
+                        config.obtenerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name());
+                    }
+                } catch (Exception e) {
+                    errores.incrementAndGet();
+                } finally {
+                    fin.countDown();
+                }
+            });
+        }
+
+        inicio.countDown();
+        assertTrue(fin.await(30, java.util.concurrent.TimeUnit.SECONDS),
+            "Todos los hilos deben terminar dentro del timeout");
+        executor.shutdown();
+        assertEquals(0, errores.get(),
+            "El lazy-init concurrente no debe lanzar excepciones");
+        assertNotNull(campo.get(config),
+            "El mapa de rutas debe quedar inicializado tras el acceso concurrente");
+        assertTrue(config.obtenerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name()).startsWith("/tmp/ruta-"),
+            "Las escrituras concurrentes no deben perderse por un doble lazy-init");
+    }
+
+    @Test
+    @DisplayName("forzarNormalizacion aplica el fallback de proveedor una sola vez")
+    void testForzarNormalizacionAplicaFallbackProveedor() throws Exception {
+        java.lang.reflect.Field campo = ConfiguracionAPI.class.getDeclaredField("proveedorAI");
+        campo.setAccessible(true);
+        campo.set(config, "ProveedorInexistente");
+
+        config.forzarNormalizacion();
+
+        assertEquals("Ollama", config.obtenerProveedorAI(),
+            "La normalización forzada debe reescribir un proveedor inválido al fallback local");
     }
 }

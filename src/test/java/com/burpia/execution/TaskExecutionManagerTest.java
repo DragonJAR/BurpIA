@@ -184,6 +184,60 @@ class TaskExecutionManagerTest {
         }
     }
 
+    @Test
+    @DisplayName("Completar con tarea pausada conserva hallazgos pero no sobrescribe PAUSADO")
+    @SuppressWarnings("unchecked")
+    void testAlCompletarConTareaPausadaNoSobrescribeEstado() throws Exception {
+        PestaniaPrincipal pestaniaPrincipal = mock(PestaniaPrincipal.class);
+        manager = crearManager(pestaniaPrincipal);
+
+        SolicitudAnalisis solicitud = new SolicitudAnalisis(
+            "https://example.com/api/pausada",
+            "GET",
+            "GET /api/pausada HTTP/1.1\nHost: example.com",
+            "",
+            "hash-task-pausada"
+        );
+
+        AtomicReference<AnalizadorAI.Callback> callbackRef = new AtomicReference<>();
+        try (MockedConstruction<AnalizadorAI> construccion = mockConstruction(
+                AnalizadorAI.class,
+                (mock, context) -> callbackRef.set((AnalizadorAI.Callback) context.arguments().get(5)))) {
+            String tareaId = manager.programarAnalisis(solicitud, "Analisis HTTP");
+            flushEdt();
+
+            assertNotNull(tareaId, "assertNotNull failed at TaskExecutionManagerTest.java:pausa:tareaId");
+            assertNotNull(callbackRef.get(), "assertNotNull failed at TaskExecutionManagerTest.java:pausa:callback");
+
+            // El usuario pausa la tarea en la ventana final del análisis
+            gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_PAUSADO, "Pausada por el usuario");
+
+            Hallazgo hallazgo = new Hallazgo(
+                "https://example.com/api/pausada",
+                "Titulo",
+                "Descripcion",
+                Hallazgo.SEVERIDAD_HIGH,
+                Hallazgo.CONFIANZA_ALTA
+            );
+
+            callbackRef.get().alCompletarAnalisis(
+                new ResultadoAnalisisMultiple(
+                    solicitud.obtenerUrl(),
+                    List.of(hallazgo),
+                    solicitud.obtenerSolicitudHttp(),
+                    List.of()
+                )
+            );
+            flushEdt();
+
+            assertEquals(Tarea.ESTADO_PAUSADO, gestorTareas.obtenerTarea(tareaId).obtenerEstado(),
+                "La completación tardía no debe sobrescribir PAUSADO→COMPLETADO");
+            assertEquals(1, construccion.constructed().size(),
+                "Debe construirse un único AnalizadorAI para la tarea pausada");
+            verify(pestaniaPrincipal).agregarHallazgos(org.mockito.ArgumentMatchers.anyList());
+        }
+    }
+
     private TaskExecutionManager crearManager() {
         return crearManager(null);
     }

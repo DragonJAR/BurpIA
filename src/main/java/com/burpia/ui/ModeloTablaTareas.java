@@ -28,6 +28,11 @@ public class ModeloTablaTareas extends DefaultTableModel {
     private final ReentrantLock lock;
     private final AtomicInteger versionCambios = new AtomicInteger(0);
     private volatile Consumer<List<String>> manejadorPurgado;
+    // ID de la tarea de cada fila visible, en el mismo orden que dataVector.
+    // Solo se muta en el EDT, en los mismos puntos que la vista. Permite
+    // localizar la fila exacta al eliminar aunque una sync completa o bajas
+    // concurrentes hayan desplazado los indices.
+    private final List<String> identidadesVista;
 
     public ModeloTablaTareas() {
         this(LIMITE_DEFECTO_TAREAS);
@@ -37,6 +42,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         super(I18nUI.Tablas.COLUMNAS_TAREAS(), 0);
         this.datos = new ArrayList<>();
         this.indicePorId = new HashMap<>();
+        this.identidadesVista = new ArrayList<>();
         this.limiteFilas = Math.max(1, limiteFilas);
         this.lock = new ReentrantLock();
     }
@@ -135,9 +141,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
             if (!idsPurgadas.isEmpty()) {
                 programarSincronizacionTabla();
             } else {
-                ejecutarEnEdt(() -> {
-                    addRow(tarea.aFilaTabla());
-                });
+                ejecutarEnEdt(() -> agregarFilaVista(tarea));
             }
         } finally {
             lock.unlock();
@@ -286,6 +290,7 @@ public class ModeloTablaTareas extends DefaultTableModel {
         }
         ejecutarEnEdt(() -> {
             setRowCount(0);
+            identidadesVista.clear();
         });
     }
 
@@ -307,28 +312,57 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     public void eliminarTarea(int indiceFila) {
-        boolean eliminado = false;
+        String idEliminado = null;
         lock.lock();
         try {
             if (indiceFila >= 0 && indiceFila < datos.size()) {
-                datos.remove(indiceFila);
+                Tarea removida = datos.remove(indiceFila);
+                if (removida != null) {
+                    idEliminado = removida.obtenerId();
+                }
                 reconstruirIndicePorId();
-                eliminado = true;
                 marcarCambio();
             }
         } finally {
             lock.unlock();
         }
 
-        if (!eliminado) {
+        if (idEliminado == null) {
             return;
         }
-        final int filaAEliminar = indiceFila;
+        // La baja de datos es sincrona; la fila de la vista se localiza en el
+        // EDT por su ID, porque una sync completa o bajas concurrentes pudieron
+        // desplazar los indices. Si no aparece, la vista ya reflejo la baja.
+        final String id = idEliminado;
         ejecutarEnEdt(() -> {
-            if (filaAEliminar < getRowCount()) {
-                removeRow(filaAEliminar);
+            int filaVista = buscarFilaVistaPorIdentidad(id);
+            if (filaVista >= 0) {
+                removeRow(filaVista);
+                identidadesVista.remove(filaVista);
             }
         });
+    }
+
+    /**
+     * Localiza la fila de la vista asociada al ID indicado. Debe llamarse
+     * desde el EDT. Retorna -1 si la vista ya no la contiene.
+     */
+    private int buscarFilaVistaPorIdentidad(String idTarea) {
+        for (int i = 0; i < identidadesVista.size(); i++) {
+            if (java.util.Objects.equals(identidadesVista.get(i), idTarea)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Agrega la fila de una tarea a la vista registrando su ID. Debe llamarse
+     * desde el EDT.
+     */
+    private void agregarFilaVista(Tarea tarea) {
+        addRow(tarea.aFilaTabla());
+        identidadesVista.add(tarea.obtenerId());
     }
 
     public int buscarIndicePorId(String idTarea) {
@@ -451,16 +485,21 @@ public class ModeloTablaTareas extends DefaultTableModel {
     }
 
     private void sincronizarTablaDesdeDatosEnEdt() {
-        List<Object[]> snapshot = new ArrayList<>();
+        List<Tarea> snapshotDatos;
         lock.lock();
         try {
-            for (Tarea tarea : datos) {
-                if (tarea != null) {
-                    snapshot.add(tarea.aFilaTabla());
-                }
-            }
+            snapshotDatos = new ArrayList<>(datos);
         } finally {
             lock.unlock();
+        }
+
+        List<Object[]> snapshot = new ArrayList<>(snapshotDatos.size());
+        List<String> ids = new ArrayList<>(snapshotDatos.size());
+        for (Tarea tarea : snapshotDatos) {
+            if (tarea != null) {
+                snapshot.add(tarea.aFilaTabla());
+                ids.add(tarea.obtenerId());
+            }
         }
 
         // Optimización: setDataVector() hace una sola notificación en lugar de N addRow() separados
@@ -469,6 +508,8 @@ public class ModeloTablaTareas extends DefaultTableModel {
             snapshot.toArray(new Object[0][]),
             I18nUI.Tablas.COLUMNAS_TAREAS()
         );
+        identidadesVista.clear();
+        identidadesVista.addAll(ids);
     }
 
     public int obtenerLimiteFilas() {

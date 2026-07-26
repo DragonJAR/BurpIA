@@ -18,6 +18,25 @@ public class Hallazgo {
     public static final String CONFIANZA_MEDIA = "Medium";
     public static final String CONFIANZA_BAJA = "Low";
 
+    // Tablas de equivalencias keyword → valor canónico (matching por contains sobre
+    // el valor en minúsculas, en orden de prioridad). Incluyen formas masculinas y
+    // femeninas en ES ("Alto"/"Alta") porque los LLMs no garantizan el género
+    // gramatical; las raíces ("crític"/"critic") cubren ambas variantes acentuadas.
+    // "alto"/"medio"/"bajo" no colisionan con ninguna keyword de otra fila.
+    private static final String[][] EQUIVALENCIAS_SEVERIDAD = {
+        {SEVERIDAD_CRITICAL, "critical", "crític", "critic"},
+        {SEVERIDAD_HIGH, "high", "alta", "alto", "severa", "severo"},
+        {SEVERIDAD_MEDIUM, "medium", "media", "medio", "moderada", "moderado"},
+        {SEVERIDAD_LOW, "low", "baja", "bajo"},
+        {SEVERIDAD_INFO, "info", "inform"}
+    };
+
+    private static final String[][] EQUIVALENCIAS_CONFIANZA = {
+        {CONFIANZA_ALTA, "high", "alta", "alto", "certain"},
+        {CONFIANZA_MEDIA, "medium", "media", "medio", "firm"},
+        {CONFIANZA_BAJA, "low", "baja", "bajo", "tentative"}
+    };
+
     private final String horaDescubrimiento;
     private final String url;
     private final String titulo;
@@ -139,10 +158,6 @@ public class Hallazgo {
         }
     }
 
-    public static int obtenerPesoSeveridad(String severidad) {
-        return obtenerPrioridadSeveridad(severidad);
-    }
-
     public static int obtenerPrioridadConfianza(String confianza) {
         switch (normalizarConfianzaParaPrioridad(confianza)) {
             case CONFIANZA_ALTA:  return 3;
@@ -178,23 +193,7 @@ public class Hallazgo {
         if (Normalizador.esVacio(severidad)) {
             return valorPorDefecto;
         }
-        String valor = severidad.trim().toLowerCase(Locale.ROOT);
-        if (valor.contains("critical") || valor.contains("crítica") || valor.contains("critica")) {
-            return SEVERIDAD_CRITICAL;
-        }
-        if (valor.contains("high") || valor.contains("alta") || valor.contains("severa")) {
-            return SEVERIDAD_HIGH;
-        }
-        if (valor.contains("medium") || valor.contains("media") || valor.contains("moderada")) {
-            return SEVERIDAD_MEDIUM;
-        }
-        if (valor.contains("low") || valor.contains("baja")) {
-            return SEVERIDAD_LOW;
-        }
-        if (valor.contains("info") || valor.contains("inform")) {
-            return SEVERIDAD_INFO;
-        }
-        return valorPorDefecto;
+        return buscarCanonico(severidad.trim().toLowerCase(Locale.ROOT), EQUIVALENCIAS_SEVERIDAD, valorPorDefecto);
     }
 
     public static String normalizarConfianza(String confianza) {
@@ -209,15 +208,16 @@ public class Hallazgo {
         if (Normalizador.esVacio(confianza)) {
             return valorPorDefecto;
         }
-        String valor = confianza.trim().toLowerCase(Locale.ROOT);
-        if (valor.contains("high") || valor.contains("alta") || valor.contains("certain")) {
-            return CONFIANZA_ALTA;
-        }
-        if (valor.contains("medium") || valor.contains("media") || valor.contains("firm")) {
-            return CONFIANZA_MEDIA;
-        }
-        if (valor.contains("low") || valor.contains("baja") || valor.contains("tentative")) {
-            return CONFIANZA_BAJA;
+        return buscarCanonico(confianza.trim().toLowerCase(Locale.ROOT), EQUIVALENCIAS_CONFIANZA, valorPorDefecto);
+    }
+
+    private static String buscarCanonico(String valor, String[][] equivalencias, String valorPorDefecto) {
+        for (String[] fila : equivalencias) {
+            for (int i = 1; i < fila.length; i++) {
+                if (valor.contains(fila[i])) {
+                    return fila[0];
+                }
+            }
         }
         return valorPorDefecto;
     }

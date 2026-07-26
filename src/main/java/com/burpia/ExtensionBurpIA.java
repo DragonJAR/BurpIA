@@ -216,7 +216,10 @@ public class ExtensionBurpIA implements BurpExtension {
                     configRef.obtener(),
                     this::enviarAAgente,
                     this::enviarFlujoAAgente,
-                    () -> guardarConfiguracionSilenciosa("alertas-enviar-a-contexto"),
+                    () -> {
+                        sincronizarOptOutAlertasDesdeConfig();
+                        guardarConfiguracionSilenciosa("alertas-enviar-a-contexto");
+                    },
                     obtenerFramePadre());
             api.userInterface().registerContextMenuItemsProvider(fabricaMenuContextual);
         }
@@ -656,6 +659,13 @@ public class ExtensionBurpIA implements BurpExtension {
                 return;
             }
 
+            // `config` es la copia de trabajo del diálogo: se sincroniza con el
+            // snapshot vigente para que el diálogo no parta de valores obsoletos
+            // (pausa de captura o preferencias cambiadas fuera del diálogo).
+            if (configRef != null) {
+                configActual.aplicarDesde(configRef.obtener());
+            }
+
             DialogoConfiguracion dialogo = new DialogoConfiguracion(
                     SwingUtilities.getWindowAncestor(pestaniaActual.obtenerPanel()),
                     configActual,
@@ -668,6 +678,10 @@ public class ExtensionBurpIA implements BurpExtension {
                             modeloTablaTareas.establecerLimiteFilas(configActual.obtenerMaximoTareasTabla());
                         }
                         if (manejadorHttp != null) {
+                            // El estado vivo de captura manda sobre la copia del
+                            // diálogo; tras actualizar, configRef vuelve a apuntar
+                            // a `config` y campo/referencia quedan consistentes.
+                            preservarEstadoCapturaVivo(configActual);
                             manejadorHttp.actualizarConfiguracion(configActual);
                         }
                         I18nUI.establecerIdioma(configActual.obtenerIdiomaUi());
@@ -699,9 +713,20 @@ public class ExtensionBurpIA implements BurpExtension {
             pestaniaPrincipal.establecerManejadorConfiguracion(this::abrirConfiguracion);
             pestaniaPrincipal.establecerManejadorEnviarAAgente(this::enviarHallazgoAAgente);
             pestaniaPrincipal.establecerManejadorCambioAgente(() -> {
+                // PanelAgente muta el objeto `config` original (lo recibe en el
+                // arranque); trasladamos sus cambios al snapshot vigente en vez de
+                // re-apuntar configRef a `config`, que pudo quedar desconectado
+                // (re-apuntar reactivaría p.ej. una captura pausada).
+                ConfiguracionAPI cambiosAgente = config;
+                if (cambiosAgente != null) {
+                    aplicarCambioConfigEnVivo(c -> {
+                        c.establecerTipoAgente(cambiosAgente.obtenerTipoAgente());
+                        c.establecerAgenteDelay(cambiosAgente.obtenerAgenteDelay());
+                    });
+                }
                 guardarConfiguracionSilenciosa("cambio-agente-rapido");
-                if (manejadorHttp != null) {
-                    manejadorHttp.actualizarConfiguracion(config);
+                if (manejadorHttp != null && configRef != null) {
+                    manejadorHttp.actualizarConfiguracion(configRef.obtener());
                 }
                 pestaniaPrincipal.actualizarVisibilidadAgentes();
                 pestaniaPrincipal.aplicarIdioma();
@@ -1005,9 +1030,6 @@ public class ExtensionBurpIA implements BurpExtension {
         } else {
             manejadorHttp.reanudarCaptura();
         }
-        ConfiguracionAPI snapshot = configRef.obtener();
-        snapshot.establecerEscaneoPasivoHabilitado(manejadorHttp.estaCapturaActiva());
-        configRef.reemplazar(snapshot);
         guardarConfiguracionSilenciosa("captura");
         pestaniaPrincipal.establecerEstadoCaptura(manejadorHttp.estaCapturaActiva());
         registrar(I18nLogs.trf("Estado de captura actualizado: %s",
@@ -1029,22 +1051,28 @@ public class ExtensionBurpIA implements BurpExtension {
                 return;
             }
             boolean autoGuardadoNormalizado = esProfessional && activo;
-            if (config.autoGuardadoIssuesHabilitado() == autoGuardadoNormalizado) {
+            if (configRef.obtener().autoGuardadoIssuesHabilitado() == autoGuardadoNormalizado) {
                 return;
             }
-            config.establecerAutoGuardadoIssuesHabilitado(autoGuardadoNormalizado);
+            aplicarCambioConfigEnVivo(c -> c.establecerAutoGuardadoIssuesHabilitado(autoGuardadoNormalizado));
             guardarConfiguracionSilenciosa("auto-issues");
         });
 
         pestaniaPrincipal.establecerManejadorAutoScrollConsola(activo -> {
-            if (config.autoScrollConsolaHabilitado() == activo) {
+            if (configRef.obtener().autoScrollConsolaHabilitado() == activo) {
                 return;
             }
-            config.establecerAutoScrollConsolaHabilitado(activo);
+            aplicarCambioConfigEnVivo(c -> c.establecerAutoScrollConsolaHabilitado(activo));
             guardarConfiguracionSilenciosa("auto-scroll");
         });
-        pestaniaPrincipal.establecerManejadorAlertasEnviarA(() -> guardarConfiguracionSilenciosa("alertas-enviar-a"));
-        com.burpia.ui.UIUtils.configurarAlertas(config, () -> guardarConfiguracionSilenciosa("alertas-optout"));
+        pestaniaPrincipal.establecerManejadorAlertasEnviarA(() -> {
+            sincronizarOptOutAlertasDesdeConfig();
+            guardarConfiguracionSilenciosa("alertas-enviar-a");
+        });
+        com.burpia.ui.UIUtils.configurarAlertas(config, () -> {
+            sincronizarOptOutAlertasDesdeConfig();
+            guardarConfiguracionSilenciosa("alertas-optout");
+        });
 
         PanelAgente panelAgente = pestaniaPrincipal.obtenerPanelAgente();
         if (panelAgente != null) {
@@ -1106,12 +1134,58 @@ public class ExtensionBurpIA implements BurpExtension {
         registrar(I18nLogs.Extension.AGENTE_INICIALIZADO());
     }
 
-    private void guardarConfiguracionSilenciosa(String origen) {
-        if (gestorConfig == null || config == null) {
+    /**
+     * Aplica una mutación sobre el snapshot vigente de configRef usando el CAS +
+     * reintento de ManejadorHttpBurpIA. Es la única vía de escritura fuera del
+     * diálogo de ajustes: el campo `config` queda reservado como copia de trabajo
+     * del diálogo y no debe mutarse directamente porque puede quedar desconectado
+     * de configRef (p.ej. tras pausar la captura).
+     */
+    private void aplicarCambioConfigEnVivo(Consumer<ConfiguracionAPI> mutacion) {
+        if (manejadorHttp != null) {
+            manejadorHttp.aplicarCambioConfigAtomico(mutacion);
+        }
+    }
+
+    /**
+     * FabricaMenuContextual, PanelHallazgos y UIUtils mutan el objeto `config`
+     * original (inyectado en el arranque) al registrar opt-outs de alertas.
+     * Como configRef pudo avanzar con snapshots (pausa de captura, preferencias),
+     * trasladamos esos opt-outs al snapshot vigente antes de persistir.
+     */
+    private void sincronizarOptOutAlertasDesdeConfig() {
+        ConfiguracionAPI origen = config;
+        if (origen == null) {
             return;
         }
+        aplicarCambioConfigEnVivo(c -> {
+            c.establecerAlertasHabilitadas(origen.alertasHabilitadas());
+            c.establecerAlertasClickDerechoEnviarAHabilitadas(origen.alertasClickDerechoEnviarAHabilitadas());
+            c.establecerAlertasDeshabilitadas(origen.obtenerAlertasDeshabilitadas());
+        });
+    }
+
+    /**
+     * La captura se pausa/reanuda sobre configRef fuera del diálogo de ajustes.
+     * El diálogo trabaja sobre el campo `config` (copia de trabajo) y no debe
+     * reactivar la captura silenciosamente al guardar: el estado vivo manda.
+     */
+    private void preservarEstadoCapturaVivo(ConfiguracionAPI configDestino) {
+        if (manejadorHttp != null && configDestino != null) {
+            configDestino.establecerEscaneoPasivoHabilitado(manejadorHttp.estaCapturaActiva());
+        }
+    }
+
+    private void guardarConfiguracionSilenciosa(String origen) {
+        if (gestorConfig == null || configRef == null) {
+            return;
+        }
+        // Se persiste el snapshot vigente de configRef (fuente de verdad para los
+        // lectores HTTP), no el campo `config`: pausar/reanudar captura y los
+        // cambios atómicos reemplazan la referencia y `config` queda desconectado.
+        ConfiguracionAPI configVigente = configRef.obtener();
         StringBuilder mensajeError = new StringBuilder();
-        if (!gestorConfig.guardarConfiguracion(config, mensajeError)) {
+        if (!gestorConfig.guardarConfiguracion(configVigente, mensajeError)) {
             String detalle = mensajeError.toString().trim();
             if (Normalizador.esVacio(detalle)) {
                 detalle = I18nUI.Tareas.MSG_ERROR_DESCONOCIDO();

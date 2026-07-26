@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.mock;
 class PanelHallazgosExportTest {
 
     private IdiomaUI idiomaPrevio;
+    private final List<PanelHallazgos> panelesCreados = new ArrayList<>();
 
     @BeforeEach
     void fijarIdiomaIngles() {
@@ -44,6 +47,16 @@ class PanelHallazgosExportTest {
         if (idiomaPrevio != null) {
             I18nUI.establecerIdioma(idiomaPrevio.codigo());
         }
+    }
+
+    @AfterEach
+    void destruirPaneles() {
+        // Cada PanelHallazgos arranca un Timer y un executor; sin destruirlos
+        // cada test fuga hilos que sobreviven al final de la clase.
+        for (PanelHallazgos panel : panelesCreados) {
+            panel.destruir();
+        }
+        panelesCreados.clear();
     }
 
     @Test
@@ -141,6 +154,7 @@ class PanelHallazgosExportTest {
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         final PanelHallazgos[] holder = new PanelHallazgos[1];
         SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, new ModeloTablaHallazgos(100), false));
+        panelesCreados.add(holder[0]);
         return holder[0];
     }
 

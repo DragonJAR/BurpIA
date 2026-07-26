@@ -1,5 +1,6 @@
 package com.burpia.util;
 
+import com.burpia.i18n.I18nUI;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -88,7 +89,7 @@ class NormalizadorTest {
         @NullAndEmptySource
         @DisplayName("Retorna [NO CONFIGURADA] para null o vacía")
         void retornaNoConfiguradaParaNullOVacia(String apiKey) {
-            assertEquals("[NO CONFIGURADA]", Normalizador.sanitizarApiKey(apiKey), "assertEquals failed at NormalizadorTest.java:125");
+            assertEquals(I18nUI.General.CLAVE_NO_CONFIGURADA(), Normalizador.sanitizarApiKey(apiKey), "assertEquals failed at NormalizadorTest.java:125");
         }
 
         @Test

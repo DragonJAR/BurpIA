@@ -656,7 +656,17 @@ public class ConfigDialogController {
             @Override
             public void alExito(List<String> modelos) {
                 SwingUtilities.invokeLater(() -> {
+                    if (!dialogo.isDisplayable()) {
+                        return;
+                    }
                     if (seq != secuenciaRefrescoModelos.get()) {
+                        // Refresco stale: el usuario cambió de proveedor con la
+                        // carga en vuelo. Restaurar el botón que quedó en
+                        // "Actualizando modelos…" antes de descartar el resultado.
+                        if (btnRefrescarModelos != null) {
+                            btnRefrescarModelos.setText(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
+                        }
+                        actualizarEstadoCargaModelosSegunProveedor();
                         return;
                     }
 
@@ -689,7 +699,16 @@ public class ConfigDialogController {
             @Override
             public void alError(String error) {
                 SwingUtilities.invokeLater(() -> {
+                    if (!dialogo.isDisplayable()) {
+                        return;
+                    }
                     if (seq != secuenciaRefrescoModelos.get()) {
+                        // Misma restauración que en alExito: un error stale no
+                        // debe dejar el botón atascado en "Actualizando modelos…".
+                        if (btnRefrescarModelos != null) {
+                            btnRefrescarModelos.setText(I18nUI.Configuracion.BOTON_CARGAR_MODELOS());
+                        }
+                        actualizarEstadoCargaModelosSegunProveedor();
                         return;
                     }
 
@@ -756,6 +775,9 @@ public class ConfigDialogController {
 
             @Override
             protected void done() {
+                if (!dialogo.isDisplayable()) {
+                    return;
+                }
                 try {
                     ProbadorConexionAI.ResultadoPrueba resultado = get();
                     if (resultado.exito) {
@@ -1049,6 +1071,9 @@ public class ConfigDialogController {
             @Override
             public void alExito(ConnectionTester.InfoActualizacion info) {
                 SwingUtilities.invokeLater(() -> {
+                    if (!dialogo.isDisplayable()) {
+                        return;
+                    }
                     String versionActual = VersionBurpIA.obtenerVersionActual();
                     String urlDescarga = Normalizador.noEsVacio(info.obtenerUrlDescarga())
                             ? info.obtenerUrlDescarga()
@@ -1077,6 +1102,9 @@ public class ConfigDialogController {
             @Override
             public void alError(String error) {
                 SwingUtilities.invokeLater(() -> {
+                    if (!dialogo.isDisplayable()) {
+                        return;
+                    }
                     UIUtils.mostrarError(
                             dialogo,
                             I18nUI.Configuracion.TITULO_ERROR(),
@@ -1246,7 +1274,14 @@ public class ConfigDialogController {
     }
 
     public void cerrar() {
-        connectionTester.cerrar();
+        // ConnectionTester.cerrar() hace awaitTermination(5s) síncrono; como
+        // DialogoConfiguracion.dispose() invoca este método en el EDT, ejecutarlo
+        // aquí congelaría la UI al cerrar con peticiones en vuelo. Se delega a
+        // un hilo daemon dedicado: el diálogo ya está cerrándose y no depende
+        // del resultado.
+        Thread hiloCierre = new Thread(connectionTester::cerrar, "BurpIA-ConfigDialogCierre");
+        hiloCierre.setDaemon(true);
+        hiloCierre.start();
     }
 
     private String extraerMensajeError(Exception error) {

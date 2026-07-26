@@ -9,21 +9,29 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JTable;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
+import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
+import java.awt.Rectangle;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @DisplayName("UIUtils Tests")
 class UIUtilsTest {
@@ -499,6 +507,121 @@ class UIUtilsTest {
         void aplicarOptOutSinConfigNoLanza() {
             UIUtils.configurarAlertas(null, null);
             assertDoesNotThrow(UIUtils::aplicarOptOutGlobal);
+        }
+    }
+
+    @Nested
+    @DisplayName("Tooltips de error de verifiers")
+    class TooltipErrorVerifierTests {
+
+        @Test
+        @DisplayName("Error consecutivo no pisa el tooltip original y la limpieza lo restaura")
+        void errorConsecutivoRestauraTooltipOriginal() {
+            javax.swing.InputVerifier verifierUrl = UIUtils.crearInputVerifierUrl();
+            javax.swing.InputVerifier verifierNumerico = UIUtils.crearInputVerifierNumerico(1, 10);
+            javax.swing.JTextField campo = new javax.swing.JTextField("no-es-url");
+            campo.setToolTipText("Tooltip original");
+
+            assertFalse(verifierUrl.verify(campo),
+                "assertFalse failed at UIUtilsTest.java:tooltip:error1");
+            assertTrue(campo.getToolTipText() != null && campo.getToolTipText().startsWith("⚠"),
+                "El tooltip debe mostrar el mensaje de error");
+
+            campo.setText("abc");
+            assertFalse(verifierNumerico.verify(campo),
+                "assertFalse failed at UIUtilsTest.java:tooltip:error2");
+
+            campo.setText("5");
+            assertTrue(verifierNumerico.verify(campo),
+                "assertTrue failed at UIUtilsTest.java:tooltip:valido");
+            assertEquals("Tooltip original", campo.getToolTipText(),
+                "La limpieza debe restaurar el tooltip original, no el mensaje de error previo");
+        }
+
+        @Test
+        @DisplayName("Tooltip original null se limpia correctamente tras un error")
+        void tooltipOriginalNullSeLimpiaTrasError() {
+            javax.swing.InputVerifier verifier = UIUtils.crearInputVerifierApiKey();
+            javax.swing.JTextField campo = new javax.swing.JTextField("   ");
+
+            assertFalse(verifier.verify(campo),
+                "assertFalse failed at UIUtilsTest.java:tooltip:nullError");
+            assertNotNull(campo.getToolTipText(),
+                "Debe mostrarse el mensaje de error");
+
+            campo.setText("sk-abc123");
+            assertTrue(verifier.verify(campo),
+                "assertTrue failed at UIUtilsTest.java:tooltip:nullValido");
+            assertNull(campo.getToolTipText(),
+                "Sin tooltip original, la limpieza debe dejar el tooltip en null");
+        }
+    }
+
+    @Nested
+    @DisplayName("recordarGeometriaDialogo")
+    class RecordarGeometriaDialogoTests {
+
+        @Test
+        @DisplayName("Posición persistida fuera de pantalla se ignora pero el tamaño se aplica")
+        void posicionFueraDePantallaSeIgnora() {
+            assumeFalse(GraphicsEnvironment.isHeadless(), "Requiere pantalla");
+            PersistidorGeometriaFake persistidor = new PersistidorGeometriaFake();
+            persistidor.guardarEntero("dlg.ancho", 400);
+            persistidor.guardarEntero("dlg.alto", 300);
+            persistidor.guardarEntero("dlg.x", -100000);
+            persistidor.guardarEntero("dlg.y", -100000);
+
+            JDialog dialogo = new JDialog((java.awt.Frame) null);
+            try {
+                UIUtils.recordarGeometriaDialogo(dialogo, "dlg", persistidor);
+                assertNotEquals(-100000, dialogo.getX(),
+                    "Una X fuera de toda pantalla no debe restaurarse");
+                assertNotEquals(-100000, dialogo.getY(),
+                    "Una Y fuera de toda pantalla no debe restaurarse");
+                assertEquals(400, dialogo.getWidth(),
+                    "El tamaño persistido válido sí debe aplicarse");
+            } finally {
+                dialogo.dispose();
+            }
+        }
+
+        @Test
+        @DisplayName("Posición persistida visible se restaura")
+        void posicionVisibleSeRestaura() {
+            assumeFalse(GraphicsEnvironment.isHeadless(), "Requiere pantalla");
+            Rectangle limites = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                    .getMaximumWindowBounds();
+            int x = limites.x + 15;
+            int y = limites.y + 15;
+            PersistidorGeometriaFake persistidor = new PersistidorGeometriaFake();
+            persistidor.guardarEntero("dlg2.x", x);
+            persistidor.guardarEntero("dlg2.y", y);
+
+            JDialog dialogo = new JDialog((java.awt.Frame) null);
+            try {
+                UIUtils.recordarGeometriaDialogo(dialogo, "dlg2", persistidor);
+                assertEquals(x, dialogo.getX(),
+                    "Una posición visible debe restaurarse");
+                assertEquals(y, dialogo.getY(),
+                    "Una posición visible debe restaurarse");
+            } finally {
+                dialogo.dispose();
+            }
+        }
+    }
+
+    /** Persistidor en memoria para tests de recordarGeometriaDialogo. */
+    private static final class PersistidorGeometriaFake implements UIUtils.PersistenciaGeometria {
+        private final Map<String, Integer> valores = new HashMap<>();
+
+        @Override
+        public Integer leerEntero(String clave) {
+            return valores.get(clave);
+        }
+
+        @Override
+        public void guardarEntero(String clave, int valor) {
+            valores.put(clave, valor);
         }
     }
 }

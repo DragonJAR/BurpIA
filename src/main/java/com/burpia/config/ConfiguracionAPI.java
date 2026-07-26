@@ -44,6 +44,10 @@ public class ConfiguracionAPI {
     public static final int AGENTE_DELAY_MAXIMO_MS = 60000;
     public static final int AGENTE_DELAY_PASO_MS = 500;
 
+    // Fallback cuando el proveedor configurado es inválido: local y sin API
+    // key, a diferencia de un proveedor cloud de pago que fallaría por auth.
+    private static final String PROVEEDOR_FALLBACK = "Ollama";
+
     public static final String FUENTE_ESTANDAR_DEFECTO = "Monospaced";
     public static final int TAMANIO_FUENTE_ESTANDAR_DEFECTO = 11;
     public static final String FUENTE_MONO_DEFECTO = "Monospaced";
@@ -122,7 +126,7 @@ public class ConfiguracionAPI {
     private volatile ConcurrentMap<String, Boolean> alertasDeshabilitadas;
 
     public ConfiguracionAPI() {
-        this.proveedorAI = "Ollama";
+        this.proveedorAI = PROVEEDOR_FALLBACK;
         this.retrasoSegundos = normalizarRetrasoSegundos(1);
         this.maximoConcurrente = normalizarMaximoConcurrente(1);
         this.maximoHallazgosTabla = MAXIMO_HALLAZGOS_TABLA_DEFECTO;
@@ -280,7 +284,7 @@ public class ConfiguracionAPI {
 
     public void establecerProveedorAI(String proveedorAI) {
         String proveedorNormalizado = normalizarProveedor(proveedorAI);
-        this.proveedorAI = ProveedorAI.existeProveedor(proveedorNormalizado) ? proveedorNormalizado : "Z.ai";
+        this.proveedorAI = ProveedorAI.existeProveedor(proveedorNormalizado) ? proveedorNormalizado : PROVEEDOR_FALLBACK;
         asegurarMapas();
     }
 
@@ -430,11 +434,10 @@ public class ConfiguracionAPI {
     }
 
     public String obtenerRutaBinarioAgente(String agente) {
-        if (rutasBinarioPorAgente == null)
-            rutasBinarioPorAgente = new ConcurrentHashMap<>();
+        ConcurrentMap<String, String> rutas = asegurarRutasBinario();
         if (agente == null)
             return null;
-        String ruta = rutasBinarioPorAgente.get(agente);
+        String ruta = rutas.get(agente);
         if (Normalizador.esVacio(ruta)) {
             AgenteTipo tipoEnum = AgenteTipo.desdeCodigo(agente, null);
             return tipoEnum != null ? tipoEnum.obtenerRutaPorDefecto() : "";
@@ -443,15 +446,14 @@ public class ConfiguracionAPI {
     }
 
     public void establecerRutaBinarioAgente(String agente, String ruta) {
-        if (rutasBinarioPorAgente == null)
-            rutasBinarioPorAgente = new ConcurrentHashMap<>();
+        ConcurrentMap<String, String> rutas = asegurarRutasBinario();
         if (agente == null) {
             return;
         }
         if (ruta == null) {
-            rutasBinarioPorAgente.remove(agente);
+            rutas.remove(agente);
         } else {
-            rutasBinarioPorAgente.put(agente, ruta);
+            rutas.put(agente, ruta);
         }
     }
 
@@ -464,13 +466,27 @@ public class ConfiguracionAPI {
     }
 
     public Map<String, String> obtenerTodasLasRutasBinario() {
-        if (rutasBinarioPorAgente == null)
-            rutasBinarioPorAgente = new ConcurrentHashMap<>();
-        return new HashMap<>(rutasBinarioPorAgente);
+        return new HashMap<>(asegurarRutasBinario());
     }
 
     public void establecerTodasLasRutasBinario(Map<String, String> rutas) {
         this.rutasBinarioPorAgente = rutas != null ? new ConcurrentHashMap<>(rutas) : new ConcurrentHashMap<>();
+    }
+
+    // Lazy-init con doble chequeo bajo lockNormalizacion: el check-then-act sin
+    // lock podía crear dos mapas y perder las rutas escritas por el hilo perdedor.
+    private ConcurrentMap<String, String> asegurarRutasBinario() {
+        ConcurrentMap<String, String> rutas = rutasBinarioPorAgente;
+        if (rutas == null) {
+            synchronized (lockNormalizacion) {
+                rutas = rutasBinarioPorAgente;
+                if (rutas == null) {
+                    rutas = new ConcurrentHashMap<>();
+                    rutasBinarioPorAgente = rutas;
+                }
+            }
+        }
+        return rutas;
     }
 
     public String obtenerAgentePreflightPrompt() {
@@ -874,8 +890,11 @@ public class ConfiguracionAPI {
         }
         String p = prov.get();
         // Single get() para evitar TOCTOU (ver obtenerUrlBaseParaProveedor).
+        // Un "" almacenado (p.ej. persistido por una versión anterior) cuenta
+        // como "sin override" y cae al default del proveedor, igual que una
+        // URL base vacía en obtenerUrlBaseParaProveedor.
         String modelo = modelosPorProveedor.get(p);
-        if (modelo != null) {
+        if (Normalizador.noEsVacio(modelo)) {
             return modelo;
         }
         ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(p);
@@ -888,7 +907,15 @@ public class ConfiguracionAPI {
         if (proveedorNormalizado.isEmpty()) {
             return;
         }
-        modelosPorProveedor.put(proveedorNormalizado, modelo != null ? modelo : "");
+        // null/vacío limpia el override y revierte al default del proveedor,
+        // consistente con establecerUrlBaseParaProveedor y
+        // establecerApiKeyParaProveedor (que hacen remove). Guardar "" dejaba
+        // un override fantasma que anulaba el default en el getter.
+        if (Normalizador.esVacio(modelo)) {
+            modelosPorProveedor.remove(proveedorNormalizado);
+        } else {
+            modelosPorProveedor.put(proveedorNormalizado, modelo);
+        }
     }
 
     public String obtenerUrlBaseGuardadaParaProveedor(String proveedor) {
@@ -1334,10 +1361,10 @@ public class ConfiguracionAPI {
     }
 
     public List<String> obtenerProveedoresMultiConsulta() {
-        if (proveedoresMultiConsulta == null) {
-            proveedoresMultiConsulta = new ArrayList<>();
-        }
-        return new ArrayList<>(proveedoresMultiConsulta);
+        // Lectura null-safe sin reasignar el field: la lista se muta con
+        // copy-on-write, así que basta con leer la referencia volatile una vez.
+        List<String> actuales = proveedoresMultiConsulta;
+        return actuales != null ? new ArrayList<>(actuales) : new ArrayList<>();
     }
 
     public void establecerProveedoresMultiConsulta(List<String> proveedores) {
@@ -1400,10 +1427,46 @@ public class ConfiguracionAPI {
     // como conjunto.
     private final Object lockNormalizacion = new Object();
 
+    // volatile: escrito por forzarNormalizacion() y leído en el fast-path de
+    // asegurarMapas() fuera del lock (doble chequeo).
+    private volatile boolean requiereNormalizacion;
+
     private void asegurarMapas() {
-        synchronized (lockNormalizacion) {
-            asegurarMapasInterno();
+        // Fast-path: los mapas se inicializan en el constructor y todos los
+        // setters normalizan al escribir, así que en el hot-path HTTP no hay
+        // nada que hacer. La re-copia de los 6 mapas en cada getter solo es
+        // necesaria tras construir la instancia desde una fuente externa
+        // (ver forzarNormalizacion) o si algún mapa quedó null.
+        if (!requiereNormalizacion && mapasListos()) {
+            return;
         }
+        synchronized (lockNormalizacion) {
+            if (!requiereNormalizacion && mapasListos()) {
+                return;
+            }
+            asegurarMapasInterno();
+            requiereNormalizacion = false;
+        }
+    }
+
+    /**
+     * Fuerza una re-normalización completa de mapas y escalares en la próxima
+     * llamada a asegurarMapas(). Solo es necesario tras construir la instancia
+     * desde una fuente externa (carga desde disco / deserialización) que pueda
+     * haber inyectado valores sin pasar por los setters normalizadores.
+     */
+    public void forzarNormalizacion() {
+        requiereNormalizacion = true;
+        asegurarMapas();
+    }
+
+    private boolean mapasListos() {
+        return agentesHabilitadosPorTipo != null
+                && apiKeysPorProveedor != null
+                && urlsBasePorProveedor != null
+                && modelosPorProveedor != null
+                && maxTokensPorProveedor != null
+                && tiempoEsperaPorModelo != null;
     }
 
     private void asegurarMapasInterno() {
@@ -1430,7 +1493,7 @@ public class ConfiguracionAPI {
         tiempoEsperaPorModelo = new ConcurrentHashMap<>(normalizarMapaTiempoEsperaPorModelo(tiempoEsperaPorModelo));
         proveedorAI = normalizarProveedor(proveedorAI);
         if (Normalizador.esVacio(proveedorAI) || !ProveedorAI.existeProveedor(proveedorAI)) {
-            proveedorAI = "Z.ai";
+            proveedorAI = PROVEEDOR_FALLBACK;
         }
         proveedoresMultiConsulta = normalizarListaProveedores(proveedoresMultiConsulta);
         idiomaUi = IdiomaUI.desdeCodigo(idiomaUi).codigo();
@@ -1855,10 +1918,7 @@ public class ConfiguracionAPI {
      * @return mapa inmutable copy; clave = claveAlerta, valor = {@code true}
      */
     public Map<String, Boolean> obtenerAlertasDeshabilitadas() {
-        if (alertasDeshabilitadas == null) {
-            alertasDeshabilitadas = new ConcurrentHashMap<>();
-        }
-        return new HashMap<>(alertasDeshabilitadas);
+        return new HashMap<>(asegurarAlertasDeshabilitadas());
     }
 
     /**
@@ -1876,13 +1936,11 @@ public class ConfiguracionAPI {
      * @param claveAlerta clave única de la alerta
      */
     public void agregarAlertaDeshabilitada(String claveAlerta) {
-        if (alertasDeshabilitadas == null) {
-            alertasDeshabilitadas = new ConcurrentHashMap<>();
-        }
+        ConcurrentMap<String, Boolean> alertas = asegurarAlertasDeshabilitadas();
         if (Normalizador.esVacio(claveAlerta)) {
             return;
         }
-        alertasDeshabilitadas.put(claveAlerta, true);
+        alertas.put(claveAlerta, true);
     }
 
     /**
@@ -1891,10 +1949,26 @@ public class ConfiguracionAPI {
      * @param claveAlerta clave única de la alerta
      */
     public void quitarAlertaDeshabilitada(String claveAlerta) {
-        if (alertasDeshabilitadas == null) {
+        ConcurrentMap<String, Boolean> alertas = alertasDeshabilitadas;
+        if (alertas == null) {
             return;
         }
-        alertasDeshabilitadas.remove(claveAlerta);
+        alertas.remove(claveAlerta);
+    }
+
+    // Mismo patrón de doble chequeo que asegurarRutasBinario (ver allí).
+    private ConcurrentMap<String, Boolean> asegurarAlertasDeshabilitadas() {
+        ConcurrentMap<String, Boolean> alertas = alertasDeshabilitadas;
+        if (alertas == null) {
+            synchronized (lockNormalizacion) {
+                alertas = alertasDeshabilitadas;
+                if (alertas == null) {
+                    alertas = new ConcurrentHashMap<>();
+                    alertasDeshabilitadas = alertas;
+                }
+            }
+        }
+        return alertas;
     }
 
     private ConcurrentMap<String, Boolean> normalizarAlertasDeshabilitadas(Map<String, Boolean> alertas) {

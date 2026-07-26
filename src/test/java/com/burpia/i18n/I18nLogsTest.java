@@ -105,22 +105,68 @@ class I18nLogsTest {
     }
 
     @Nested
-    @DisplayName("tr() traduccion Ingles a Espanol")
-    class TrInglesAEspanol {
-
-        @Test
-        @DisplayName("en espanol, traduce de ingles a espanol")
-        void traduceInglesAEspanol() {
-            assertEquals("solicitud", I18nLogs.tr("request"), "assertEquals failed at I18nLogsTest.java:112");
-            assertEquals("respuesta", I18nLogs.tr("response"), "assertEquals failed at I18nLogsTest.java:113");
-            assertEquals("Configuracion guardada exitosamente", I18nLogs.tr("Configuration saved successfully"), "assertEquals failed at I18nLogsTest.java:114");
-        }
+    @DisplayName("tr() en modo espanol devuelve el mensaje sin cambios")
+    class TrModoEspanolIdentidad {
 
         @Test
         @DisplayName("en espanol, mensaje espanol permanece igual")
         void mensajeEspanolPermaneceIgual() {
             String mensaje = "Analisis completado: https://target";
-            assertEquals(mensaje, I18nLogs.tr(mensaje), "assertEquals failed at I18nLogsTest.java:121");
+            assertEquals(mensaje, I18nLogs.tr(mensaje), "assertEquals failed at I18nLogsTest.java: modo ES identidad");
+        }
+
+        @Test
+        @DisplayName("en espanol, mensaje en ingles NO se re-hispaniza")
+        void mensajeInglesNoSeRehispaniza() {
+            // F4: tr() ya no invierte el diccionario completo en modo ES; solo
+            // se hispaniza un conjunto explícito y acotado de préstamos
+            // técnicos con dependencia real (ver crearReemplazosExplicitosEnAEs).
+            assertEquals("request", I18nLogs.tr("request"),
+                "En modo ES, tr() debe ser identidad incluso para texto en inglés");
+            assertEquals("Configuration saved successfully", I18nLogs.tr("Configuration saved successfully"),
+                "En modo ES, tr() debe ser identidad incluso para texto en inglés");
+        }
+
+        @Test
+        @DisplayName("en espanol, préstamos explícitos se re-hispanizan (dependencia de consola)")
+        void prestamosExplicitosSeRehispanizan() {
+            // Dependencia real: ManejadorHttpBurpIATest aserta la forma hispanizada
+            // en la salida logueada; la vía cruda (sin logger) conserva el original.
+            assertEquals("Solicitud contextual sin respuesta asociada: GET https://t.com",
+                I18nLogs.tr("Solicitud contextual sin response asociada: GET https://t.com"),
+                "El préstamo explícito 'sin response asociada' debe hispanizarse en modo ES");
+            assertEquals("total=2, validas=2, sin request=0, sin respuesta=2",
+                I18nLogs.tr("total=2, validas=2, sin request=0, sin response=2"),
+                "El préstamo explícito 'sin response=' debe hispanizarse en modo ES");
+        }
+
+        @Test
+        @DisplayName("en espanol, '[Multi-Provider Configuration]' queda intacto")
+        void multiProviderConfigurationIntacto() {
+            // Regresión F4: la palabra simple Configuration→Configuracion
+            // corrompía este literal en modo ES.
+            String literal = "[Multi-Provider Configuration]";
+            assertEquals(literal, I18nLogs.tr(literal),
+                "En modo ES, '[Multi-Provider Configuration]' no debe mutar a '[Multi-Provider Configuracion]'");
+            assertEquals(literal, I18nLogs.Inicializacion.SECCION_MULTI_PROVEEDOR(),
+                "SECCION_MULTI_PROVEEDOR debe quedar intacta en modo ES");
+        }
+
+        @Test
+        @DisplayName("en espanol, 'delay' dentro de frase española no se muta a 'retraso'")
+        void delayNoSeMutaARetraso() {
+            String literal = "Esperando el delay establecido por el usuario";
+            assertEquals(literal, I18nLogs.tr(literal),
+                "En modo ES, 'delay' no debe reemplazarse por 'retraso'");
+        }
+
+        @Test
+        @DisplayName("SECCION_CONFIGURACION muestra '[Configuracion]' en espanol")
+        void seccionConfiguracionEspanol() {
+            // El caller pasaba el literal en inglés "[Configuration]" y dependía
+            // de la re-hispanización; ahora pasa el literal español.
+            assertEquals("[Configuracion]", I18nLogs.Inicializacion.SECCION_CONFIGURACION(),
+                "SECCION_CONFIGURACION debe mostrar '[Configuracion]' en modo ES");
         }
     }
 
@@ -499,31 +545,273 @@ class I18nLogsTest {
     }
 
     @Nested
-    @DisplayName("Consistencia bidireccional")
-    class ConsistenciaBidireccional {
+    @DisplayName("Consistencia de traduccion")
+    class ConsistenciaTraduccion {
 
         @Test
-        @DisplayName("traduccion ida y vuelta es consistente")
-        void traduccionIdaVuelta() {
+        @DisplayName("la traduccion ES→EN es de un solo sentido")
+        void traduccionUnSoloSentido() {
+            // F4: tr() en modo ES es identidad salvo préstamos explícitos;
+            // no existe traducción EN→ES general.
             String original = "Configuracion guardada exitosamente";
 
             I18nUI.establecerIdioma(IdiomaUI.EN);
             String enIngles = I18nLogs.tr(original);
+            assertEquals("Configuration saved successfully", enIngles,
+                "La traducción ES→EN debe producir el mensaje en inglés");
 
             I18nUI.establecerIdioma(IdiomaUI.ES);
-            String enEspanol = I18nLogs.tr(enIngles);
-
-            assertEquals(original, enEspanol, "assertEquals failed at I18nLogsTest.java:398");
+            assertEquals(enIngles, I18nLogs.tr(enIngles),
+                "En modo ES el mensaje inglés permanece sin cambios (sin re-hispanización)");
         }
 
         @Test
-        @DisplayName("palabras simples se traducen bidireccionalmente")
-        void palabrasSimplesBidireccional() {
+        @DisplayName("palabras simples se traducen ES→EN y pasan intactas en ES")
+        void palabrasSimplesUnSoloSentido() {
             I18nUI.establecerIdioma(IdiomaUI.EN);
-            assertEquals("request", I18nLogs.tr("solicitud"), "assertEquals failed at I18nLogsTest.java:405");
+            assertEquals("request", I18nLogs.tr("solicitud"), "assertEquals failed at I18nLogsTest.java: ES→EN palabra simple");
 
             I18nUI.establecerIdioma(IdiomaUI.ES);
-            assertEquals("solicitud", I18nLogs.tr("request"), "assertEquals failed at I18nLogsTest.java:408");
+            assertEquals("solicitud", I18nLogs.tr("solicitud"),
+                "En modo ES la palabra española permanece igual");
+            assertEquals("request", I18nLogs.tr("request"),
+                "En modo ES la palabra inglesa permanece igual (sin re-hispanización)");
+        }
+    }
+
+    @Nested
+    @DisplayName("F1: claves del diccionario alineadas con literales de callers")
+    class ClavesAlineadasConCallers {
+
+        @BeforeEach
+        void establecerIngles() {
+            I18nUI.establecerIdioma(IdiomaUI.EN);
+        }
+
+        @Test
+        @DisplayName("ExecutorService no terminó (con tilde y puntos suspensivos) traduce completo")
+        void executorServiceNoTermino() {
+            assertEquals("ExecutorService did not finish in 5 seconds, forcing shutdown...",
+                I18nLogs.tr("ExecutorService no terminó en 5 segundos, forzando shutdown..."),
+                "La clave debe coincidir exactamente con el literal de TaskExecutionManager");
+        }
+
+        @Test
+        @DisplayName("Error al esperar terminación (con tilde) traduce completo")
+        void errorEsperarTerminacion() {
+            assertEquals("Error waiting for ExecutorService termination",
+                I18nLogs.tr("Error al esperar terminación de ExecutorService"),
+                "La clave debe coincidir exactamente con el literal de TaskExecutionManager");
+        }
+    }
+
+    @Nested
+    @DisplayName("F2: frases completas sin traducciones parciales Frankenstein")
+    class FrasesCompletas {
+
+        @BeforeEach
+        void establecerIngles() {
+            I18nUI.establecerIdioma(IdiomaUI.EN);
+        }
+
+        @Test
+        @DisplayName("Esperando %d segundos antes del próximo reintento traduce completo")
+        void esperandoAntesReintento() {
+            String resultado = I18nLogs.trf("Esperando %d segundos antes del próximo reintento", 5);
+            assertEquals("Waiting 5 seconds before the next retry", resultado,
+                "La frase debe traducirse completa, no parcialmente");
+        }
+
+        @Test
+        @DisplayName("Todos los reintentos fallaron después de %d intentos traduce completo")
+        void todosReintentosFallaron() {
+            String resultado = I18nLogs.trf("Todos los reintentos fallaron después de %d intentos", 3);
+            assertEquals("All retries failed after 3 attempts", resultado,
+                "La frase debe traducirse completa, no parcialmente");
+        }
+
+        @Test
+        @DisplayName("Código de respuesta de API: %d traduce completo")
+        void codigoRespuestaApi() {
+            String resultado = I18nLogs.trf("Código de respuesta de API: %d", 200);
+            assertEquals("API response code: 200", resultado,
+                "La frase debe traducirse completa, no parcialmente");
+        }
+
+        @Test
+        @DisplayName("Cola de análisis saturada traduce completo con URL inyectada")
+        void colaSaturada() {
+            String resultado = I18nLogs.trf("Cola de análisis saturada, solicitud descartada: %s", "https://t.com/api");
+            assertEquals("Analysis queue saturated, request discarded: https://t.com/api", resultado,
+                "La frase debe traducirse completa y la URL viaja como arg");
+        }
+
+        @Test
+        @DisplayName("Estado de filtros guardado/restaurado traduce completo")
+        void estadoFiltros() {
+            assertEquals("Filters state saved: search='x', severity='alta'",
+                I18nLogs.trf("Estado de filtros guardado: búsqueda='%s', severidad='%s'", "x", "alta"),
+                "Variante 'guardado' debe traducirse completa");
+            assertEquals("Filters state restored: search='x', severity='alta'",
+                I18nLogs.trf("Estado de filtros restaurado: búsqueda='%s', severidad='%s'", "x", "alta"),
+                "Variante 'restaurado' debe traducirse completa");
+        }
+
+        @Test
+        @DisplayName("Pestaña restaurada traduce completo con índice")
+        void pestaniaRestaurada() {
+            assertEquals("Tab restored: tareas (index: 2)",
+                I18nLogs.trf("Pestaña restaurada: %s (índice: %d)", "tareas", 2),
+                "La frase debe traducirse completa, incluido '(índice: %d)'");
+        }
+
+        @Test
+        @DisplayName("No se pudo parsear respuesta como JSON directo traduce completo")
+        void parsearJsonDirecto() {
+            assertEquals("Could not parse response as direct JSON",
+                I18nLogs.tr("No se pudo parsear respuesta como JSON directo"),
+                "La frase debe traducirse completa");
+        }
+
+        @Test
+        @DisplayName("Respuesta con estructura JSON pero 0 hallazgos traduce completo")
+        void respuestaJsonSinHallazgos() {
+            String resultado = I18nLogs.tr(
+                "Respuesta con estructura JSON pero 0 hallazgos extraídos (posible JSON truncado o malformado)");
+            assertEquals("Response with JSON structure but 0 findings extracted (possible truncated or malformed JSON)",
+                resultado, "La frase debe traducirse completa, sin restos en español");
+            assertFalse(resultado.contains("hallazgos"), "No debe quedar 'hallazgos' en el output");
+        }
+
+        @Test
+        @DisplayName("JSON sin objetos de hallazgo traduce completo")
+        void jsonSinObjetosHallazgo() {
+            assertEquals("JSON without finding objects, attempting plain-text parsing",
+                I18nLogs.tr("JSON sin objetos de hallazgo, intentando parsing de texto plano"),
+                "La frase debe traducirse completa");
+        }
+    }
+
+    @Nested
+    @DisplayName("F3: metodos de clases internas traducen en modo EN")
+    class MetodosInternosTraducen {
+
+        @BeforeEach
+        void establecerIngles() {
+            I18nUI.establecerIdioma(IdiomaUI.EN);
+        }
+
+        @Test
+        @DisplayName("ContextoExcedido traduce sus mensajes")
+        void contextoExcedido() {
+            assertEquals("Context overflow detected", I18nLogs.ContextoExcedido.DETECTADO(),
+                "ContextoExcedido.DETECTADO debe traducirse");
+            assertEquals("Retrying with truncated prompt", I18nLogs.ContextoExcedido.RETRY_CON_TRUNCADO(),
+                "ContextoExcedido.RETRY_CON_TRUNCADO debe traducirse");
+            assertEquals("Non-recoverable context error after truncations", I18nLogs.ContextoExcedido.NO_RETRYABLE(),
+                "ContextoExcedido.NO_RETRYABLE debe traducirse");
+        }
+
+        @Test
+        @DisplayName("Tareas.ESTADO_ATASCADA traduce")
+        void tareaAtascadaTimeout() {
+            assertEquals("Stuck task - timeout", I18nLogs.Tareas.ESTADO_ATASCADA(),
+                "Tareas.ESTADO_ATASCADA debe traducirse");
+        }
+
+        @Test
+        @DisplayName("Agente.LOG_INICIALIZAR_AGENTE traduce")
+        void inicializarAgente() {
+            assertEquals("Initializing Agent...", I18nLogs.Agente.LOG_INICIALIZAR_AGENTE(),
+                "Agente.LOG_INICIALIZAR_AGENTE debe traducirse");
+        }
+
+        @Test
+        @DisplayName("Evidence traduce sus mensajes")
+        void evidence() {
+            assertEquals("Attempting to store null evidence", I18nLogs.Evidence.EVIDENCIA_NULA(),
+                "Evidence.EVIDENCIA_NULA debe traducirse");
+            assertEquals("Evidence stored: ", I18nLogs.Evidence.EVIDENCIA_ALMACENADA(),
+                "Evidence.EVIDENCIA_ALMACENADA debe traducirse");
+            assertEquals("Error storing evidence", I18nLogs.Evidence.ERROR_ALMACENAR(),
+                "Evidence.ERROR_ALMACENAR debe traducirse");
+            assertEquals("Error retrieving evidence: ", I18nLogs.Evidence.ERROR_OBTENER(),
+                "Evidence.ERROR_OBTENER debe traducirse");
+            assertEquals("Evidence deleted: ", I18nLogs.Evidence.EVIDENCIA_ELIMINADA(),
+                "Evidence.EVIDENCIA_ELIMINADA debe traducirse");
+            assertEquals("Error deleting evidence: ", I18nLogs.Evidence.ERROR_ELIMINAR(),
+                "Evidence.ERROR_ELIMINAR debe traducirse completo (no 'Error deleting evidencia: ')");
+            assertEquals("Evidence memory cache cleared", I18nLogs.Evidence.CACHE_LIMPIADO(),
+                "Evidence.CACHE_LIMPIADO debe traducirse");
+            assertEquals("Error cleaning old evidence", I18nLogs.Evidence.ERROR_LIMPIAR(),
+                "Evidence.ERROR_LIMPIAR debe traducirse");
+            assertEquals("Montoya API unavailable: cannot save AuditIssue", I18nLogs.Evidence.API_MONTOYA_NO_DISPONIBLE(),
+                "Evidence.API_MONTOYA_NO_DISPONIBLE debe traducirse");
+            assertEquals("Finding without URL: cannot create AuditIssue", I18nLogs.Evidence.HALLAZGO_SIN_URL(),
+                "Evidence.HALLAZGO_SIN_URL debe traducirse");
+            assertEquals("Issues integration only available in Burp Professional", I18nLogs.Evidence.ISSUES_SOLO_PRO(),
+                "Evidence.ISSUES_SOLO_PRO debe traducirse");
+        }
+
+        @Test
+        @DisplayName("AlmacenEvidencia traduce sus mensajes")
+        void almacenEvidencia() {
+            assertEquals("Error saving evidence, cleaning up file: ", I18nLogs.AlmacenEvidencia.ERROR_GUARDAR_LIMPIAR(),
+                "AlmacenEvidencia.ERROR_GUARDAR_LIMPIAR debe traducirse");
+            assertEquals("Error rebuilding evidence: ", I18nLogs.AlmacenEvidencia.ERROR_RECONSTRUIR(),
+                "AlmacenEvidencia.ERROR_RECONSTRUIR debe traducirse");
+            assertEquals("Error creating evidence directory: ", I18nLogs.AlmacenEvidencia.ERROR_CREAR_DIRECTORIO(),
+                "AlmacenEvidencia.ERROR_CREAR_DIRECTORIO debe traducirse");
+            assertEquals("Invalid request size in file: ", I18nLogs.AlmacenEvidencia.TAMANIO_REQUEST_INVALIDO(),
+                "AlmacenEvidencia.TAMANIO_REQUEST_INVALIDO debe traducirse");
+            assertEquals("Invalid response size in file: ", I18nLogs.AlmacenEvidencia.TAMANIO_RESPONSE_INVALIDO(),
+                "AlmacenEvidencia.TAMANIO_RESPONSE_INVALIDO debe traducirse");
+            assertEquals("Error rebuilding request/response from bytes", I18nLogs.AlmacenEvidencia.ERROR_RECONSTRUIR_BYTES(),
+                "AlmacenEvidencia.ERROR_RECONSTRUIR_BYTES debe traducirse");
+            assertEquals("Error extracting request bytes: ", I18nLogs.AlmacenEvidencia.ERROR_EXTRAER_REQUEST(),
+                "AlmacenEvidencia.ERROR_EXTRAER_REQUEST debe traducirse");
+            assertEquals("Error extracting response bytes: ", I18nLogs.AlmacenEvidencia.ERROR_EXTRAER_RESPONSE(),
+                "AlmacenEvidencia.ERROR_EXTRAER_RESPONSE debe traducirse");
+            assertEquals("Error creating debug directory: ", I18nLogs.AlmacenEvidencia.ERROR_DIRECTORIO_DEPURACION(),
+                "AlmacenEvidencia.ERROR_DIRECTORIO_DEPURACION debe traducirse");
+            assertEquals("Error getting file modification: ", I18nLogs.AlmacenEvidencia.ERROR_MODIFICACION_ARCHIVO(),
+                "AlmacenEvidencia.ERROR_MODIFICACION_ARCHIVO debe traducirse");
+            assertEquals("Error listing evidence files: ", I18nLogs.AlmacenEvidencia.ERROR_LISTAR_ARCHIVOS(),
+                "AlmacenEvidencia.ERROR_LISTAR_ARCHIVOS debe traducirse");
+            assertEquals("Error getting last modification: ", I18nLogs.AlmacenEvidencia.ERROR_ULTIMA_MODIFICACION(),
+                "AlmacenEvidencia.ERROR_ULTIMA_MODIFICACION debe traducirse");
+            assertEquals("Error deleting file: ", I18nLogs.AlmacenEvidencia.ERROR_ELIMINAR_ARCHIVO(),
+                "AlmacenEvidencia.ERROR_ELIMINAR_ARCHIVO debe traducirse completo (no 'Error deleting archivo: ')");
+        }
+
+        @Test
+        @DisplayName("Hallazgos.ERROR_ESCUCHA_CAMBIOS traduce")
+        void errorEscuchaCambios() {
+            assertEquals("Error in change listener: ", I18nLogs.Hallazgos.ERROR_ESCUCHA_CAMBIOS(),
+                "Hallazgos.ERROR_ESCUCHA_CAMBIOS debe traducirse");
+        }
+    }
+
+    @Nested
+    @DisplayName("F7: slot ES de INTRUDER_PAYLOAD_POSITIONS en espanol")
+    class SlotPayloadPositions {
+
+        @Test
+        @DisplayName("ACCION_INICIADA en espanol usa 'Posiciones de payload'")
+        void payloadPositionsEnEspanol() {
+            I18nUI.establecerIdioma(IdiomaUI.ES);
+
+            String mensaje = I18nLogs.ContextoMenu.ACCION_INICIADA(
+                I18nLogs.ContextoMenu.ACCION_ANALIZAR_SOLICITUD(),
+                InvocationType.INTRUDER_PAYLOAD_POSITIONS,
+                ToolType.INTRUDER,
+                1
+            );
+
+            assertTrue(mensaje.contains("Posiciones de payload"),
+                "El slot ES debe decir 'Posiciones de payload', no 'Payload positions'. Mensaje: " + mensaje);
+            assertFalse(mensaje.contains("Payload positions"),
+                "El literal inglés 'Payload positions' no debe aparecer en modo ES. Mensaje: " + mensaje);
         }
     }
 }

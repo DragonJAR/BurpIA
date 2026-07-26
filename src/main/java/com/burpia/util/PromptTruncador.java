@@ -2,6 +2,8 @@ package com.burpia.util;
 
 import com.burpia.i18n.I18nUI;
 
+import java.util.Locale;
+
 /**
  * Truncador inteligente de prompts para reducir tamaño sin perder información crítica.
  *
@@ -29,6 +31,12 @@ public class PromptTruncador {
 
     /** Longitud máxima del body truncado */
     private static final int MAX_BODY_TRUNCADO = 1000;
+
+    /** Marcador canónico de inicio de body HTTP en prompts (compartido con ConstructorPrompts). */
+    public static final String MARCADOR_BODY = "BODY:";
+
+    /** Marcador canónico de sección de response en prompts (compartido con ConstructorPrompts). */
+    public static final String MARCADOR_RESPONSE = "RESPONSE:";
 
     /** Headers que se pueden eliminar para reducir tamaño */
     private static final String[] HEADERS_ELIMINAR = {
@@ -122,7 +130,11 @@ public class PromptTruncador {
         int longitudBodyActual = 0;
 
         for (String linea : lineas) {
-            if (linea.contains("Body:") || linea.contains("Request Body:")) {
+            // Comparación case-insensitive: ConstructorPrompts emite los marcadores
+            // canónicos en MAYÚSCULAS ("BODY:"/"RESPONSE:"); prompts externos pueden
+            // venir en cualquier capitalización ("Body:", "Request Body:").
+            String lineaUpper = linea.toUpperCase(Locale.ROOT);
+            if (lineaUpper.contains(MARCADOR_BODY)) {
                 enBody = true;
                 bodyTruncado = false;
                 longitudBodyActual = 0;
@@ -131,7 +143,7 @@ public class PromptTruncador {
             }
 
             if (enBody) {
-                if (linea.trim().isEmpty() || linea.contains("Response:") ||
+                if (linea.trim().isEmpty() || lineaUpper.contains(MARCADOR_RESPONSE) ||
                         linea.startsWith("===") || linea.startsWith("---")) {
                     enBody = false;
                     bodyTruncado = false;

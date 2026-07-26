@@ -508,21 +508,33 @@ public final class UIUtils {
         }
     }
 
+    private static final String PROP_TOOLTIP_ORIGINAL = "burpia.tooltipOriginal";
+    private static final String PROP_TOOLTIP_ERROR_ACTIVO = "burpia.tooltipErrorActivo";
+
     private static void marcarTooltipError(JComponent input, boolean valido, String mensajeError) {
         if (valido) {
             limpiarTooltipError(input);
         } else if (Normalizador.noEsVacio(mensajeError)) {
-            input.putClientProperty("burpia.tooltipOriginal", input.getToolTipText());
+            // Guardar el original solo la primera vez: un error consecutivo no
+            // debe pisar el tooltip original con el propio mensaje de error,
+            // o la restauración dejaría el "⚠" para siempre.
+            if (!Boolean.TRUE.equals(input.getClientProperty(PROP_TOOLTIP_ERROR_ACTIVO))) {
+                input.putClientProperty(PROP_TOOLTIP_ORIGINAL, input.getToolTipText());
+                input.putClientProperty(PROP_TOOLTIP_ERROR_ACTIVO, Boolean.TRUE);
+            }
             input.setToolTipText("⚠ " + mensajeError);
         }
     }
 
     private static void limpiarTooltipError(JComponent input) {
-        Object original = input.getClientProperty("burpia.tooltipOriginal");
-        if (original != null) {
-            input.setToolTipText((String) original);
-            input.putClientProperty("burpia.tooltipOriginal", null);
+        // Solo limpiar si hay un error activo: sin el flag, un tooltip original
+        // null jamás se restauraba (putClientProperty(key, null) borra la propiedad).
+        if (!Boolean.TRUE.equals(input.getClientProperty(PROP_TOOLTIP_ERROR_ACTIVO))) {
+            return;
         }
+        input.setToolTipText((String) input.getClientProperty(PROP_TOOLTIP_ORIGINAL));
+        input.putClientProperty(PROP_TOOLTIP_ORIGINAL, null);
+        input.putClientProperty(PROP_TOOLTIP_ERROR_ACTIVO, null);
     }
 
     /**
@@ -562,9 +574,12 @@ public final class UIUtils {
         if (ancho != null && alto != null && ancho > 0 && alto > 0) {
             dialogo.setSize(ancho, alto);
         }
-        if (x != null && y != null) {
+        if (x != null && y != null && esPuntoVisibleEnPantalla(new Point(x, y))) {
             dialogo.setLocation(x, y);
         }
+        // Si la posición persistida quedó fuera de toda pantalla (monitor
+        // desconectado), se ignora: el diálogo conserva la ubicación que el
+        // caller haya establecido (típicamente centrada) y sigue siendo alcanzable.
         dialogo.addComponentListener(new java.awt.event.ComponentAdapter() {
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
@@ -585,6 +600,25 @@ public final class UIUtils {
         Integer leerEntero(String clave);
 
         void guardarEntero(String clave, int valor);
+    }
+
+    /**
+     * Indica si el punto (esquina superior izquierda de una ventana) cae dentro
+     * de los límites máximos de ventana de alguna pantalla visible. En entorno
+     * headless no hay pantallas que consultar y se acepta la posición.
+     */
+    private static boolean esPuntoVisibleEnPantalla(Point punto) {
+        if (GraphicsEnvironment.isHeadless()) {
+            return true;
+        }
+        for (GraphicsDevice dispositivo
+                : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            if (dispositivo.getDefaultConfiguration().getBounds().contains(punto)) {
+                return true;
+            }
+        }
+        return GraphicsEnvironment.getLocalGraphicsEnvironment()
+                .getMaximumWindowBounds().contains(punto);
     }
 
     public static void mostrarErrorBinarioAgenteNoEncontrado(Component parent,

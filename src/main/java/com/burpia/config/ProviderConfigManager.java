@@ -284,6 +284,14 @@ public final class ProviderConfigManager {
             }
         }
 
+        // El listener del checkbox se disparó en setSelected (línea previa)
+        // ANTES de poblar las listas, y su efecto quedó anulado por el clear()
+        // de modeloListaSeleccionados. Re-sincronizar ahora que las listas
+        // reflejan la config guardada para que el principal quede primero.
+        if (chkHabilitarMultiProveedor.isSelected()) {
+            sincronizarProveedorPrincipalConMultiProveedor();
+        }
+
         actualizarEstadoMultiProveedor();
         actualizarBotonesMultiProveedor();
         SwingUtilities.invokeLater(this::limpiarTimeoutManualActual);

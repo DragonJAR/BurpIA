@@ -1,11 +1,9 @@
 package com.burpia.analyzer;
 
 import com.burpia.config.ConfiguracionAPI;
-import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.ControlCancelacionPausa;
-import com.burpia.util.LimitadorTasa;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -48,8 +46,6 @@ class OrquestadorAnalisisTest {
             solicitud,
             config,
             null,
-            null,
-            new LimitadorTasa(1),
             null,
             null,
             null,
@@ -302,8 +298,8 @@ class OrquestadorAnalisisTest {
     }
 
     @Test
-    @DisplayName("Orquestador delega multi proveedor al gestor compartido")
-    void testEjecutarAnalisisCompletoDelegaMultiProveedor() throws Exception {
+    @DisplayName("Orquestador no despacha multi proveedor: el despacho vive en AnalizadorAI")
+    void testEjecutarAnalisisCompletoNuncaConstruyeGestorMultiProveedor() throws Exception {
         ConfiguracionAPI config = crearConfiguracionValida(PROVEEDOR_OPENAI, MODELO_OPENAI);
         config.establecerMultiProveedorHabilitado(true);
         config.establecerProveedoresMultiConsulta(List.of(PROVEEDOR_OPENAI, "Claude"));
@@ -312,24 +308,20 @@ class OrquestadorAnalisisTest {
         config.establecerApiKeyParaProveedor("Claude", "sk-claude");
 
         SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com/multi", "GET", "hash-orq-multi");
-        ResultadoAnalisisMultiple esperado = new ResultadoAnalisisMultiple(
-            solicitud.obtenerUrl(),
-            List.of(new Hallazgo(solicitud.obtenerUrl(), "Titulo", "Detalle", Hallazgo.SEVERIDAD_HIGH, Hallazgo.CONFIANZA_ALTA)),
-            solicitud.obtenerSolicitudHttp(),
-            List.of()
-        );
 
-        try (MockedConstruction<GestorMultiProveedor> gestorMultiMock = mockConstruction(
-                GestorMultiProveedor.class,
-                (mock, context) -> when(mock.ejecutarAnalisisMultiProveedor()).thenReturn(esperado))) {
+        try (MockedConstruction<GestorMultiProveedor> gestorMultiMock = mockConstruction(GestorMultiProveedor.class);
+             MockedConstruction<AnalizadorHTTP> analizadorHttpMock = mockConstruction(
+                     AnalizadorHTTP.class,
+                     (mock, context) -> when(mock.llamarAPI(anyString())).thenReturn("{\"hallazgos\":[]}"))) {
             OrquestadorAnalisis orquestador = crearOrquestador(config, solicitud);
 
             ResultadoAnalisisMultiple resultado = orquestador.ejecutarAnalisisCompleto();
 
-            assertEquals(esperado, resultado, "El orquestador debe reutilizar el resultado del gestor multi proveedor");
-            assertEquals(1, gestorMultiMock.constructed().size(),
-                "Debe construirse un único GestorMultiProveedor compartido");
-            verify(gestorMultiMock.constructed().get(0)).ejecutarAnalisisMultiProveedor();
+            assertNotNull(resultado,
+                "El orquestador debe resolver el análisis de proveedor único aunque multi esté habilitado");
+            assertTrue(gestorMultiMock.constructed().isEmpty(),
+                "El orquestador no debe construir GestorMultiProveedor: el despacho multi vive en AnalizadorAI");
+            verify(analizadorHttpMock.constructed().get(0)).llamarAPI(anyString());
         }
     }
 }

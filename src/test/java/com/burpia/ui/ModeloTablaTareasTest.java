@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import javax.swing.SwingUtilities;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -125,5 +126,50 @@ class ModeloTablaTareasTest {
         SwingUtilities.invokeAndWait(() -> {});
 
         assertEquals(modelo.obtenerNumeroTareas(), modelo.getRowCount(), "assertEquals failed at ModeloTablaTareasTest.java:127");
+    }
+
+    @Test
+    @DisplayName("Una sync previa en EDT no desincroniza: la baja se re-busca por id (H7)")
+    void testSyncPreviaYBajaPorIdentidad() throws Exception {
+        ModeloTablaTareas modelo = new ModeloTablaTareas(10);
+        modelo.agregarTarea(new Tarea("t1", "A", "https://example.com/1", Tarea.ESTADO_EN_COLA));
+        modelo.agregarTarea(new Tarea("t2", "B", "https://example.com/2", Tarea.ESTADO_EN_COLA));
+        modelo.agregarTarea(new Tarea("t3", "C", "https://example.com/3", Tarea.ESTADO_EN_COLA));
+        SwingUtilities.invokeAndWait(() -> {});
+        assertEquals(3, modelo.getRowCount(), "assertEquals failed at ModeloTablaTareasTest.java:H7:setup");
+
+        // Bloquear el EDT para encolar una sync ANTES del runnable de la baja,
+        // reproduciendo la carrera de H7 de forma determinista.
+        CountDownLatch edtListo = new CountDownLatch(1);
+        CountDownLatch liberarEdt = new CountDownLatch(1);
+        SwingUtilities.invokeLater(() -> {
+            edtListo.countDown();
+            try {
+                liberarEdt.await(2, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        assertTrue(edtListo.await(2, TimeUnit.SECONDS), "El EDT debe quedar bloqueado para la prueba");
+        SwingUtilities.invokeLater(() -> {
+            try {
+                java.lang.reflect.Method sync = ModeloTablaTareas.class
+                    .getDeclaredMethod("sincronizarTablaDesdeDatosEnEdt");
+                sync.setAccessible(true);
+                sync.invoke(modelo);
+            } catch (ReflectiveOperationException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+        modelo.eliminarTarea(1);
+        liberarEdt.countDown();
+        SwingUtilities.invokeAndWait(() -> {});
+
+        assertEquals(2, modelo.getRowCount(),
+            "La baja debe aplicarse exactamente una vez tras la sync");
+        assertEquals(2, modelo.obtenerNumeroTareas(),
+            "assertEquals failed at ModeloTablaTareasTest.java:H7:datos");
+        assertEquals("t3", modelo.obtenerIdTarea(1),
+            "La tarea posterior a la fila eliminada debe conservarse en su posición");
     }
 }

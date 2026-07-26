@@ -34,6 +34,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("PanelTareas Acciones Tests")
 class PanelTareasAccionesTest {
 
+    // Ventana de espera para que el diálogo se muestre en el EDT y sea capturado;
+    // 150 ms no bastan bajo la carga de la suite completa.
+    private static final long ESPERA_CAPTURA_DIALOGO_MS = 2000L;
+
     private ModeloTablaTareas modelo;
     private GestorTareas gestor;
     private PanelTareas panel;
@@ -444,7 +448,7 @@ class PanelTareasAccionesTest {
 
             TestDialogUtils.reiniciarDialogosMensajeCapturados();
             TestDialogUtils.ejecutarConDialogoAutoCerrado(() ->
-                itemEliminar.getActionListeners()[0].actionPerformed(new ActionEvent(itemEliminar, 0, "")), 150);
+                itemEliminar.getActionListeners()[0].actionPerformed(new ActionEvent(itemEliminar, 0, "")), ESPERA_CAPTURA_DIALOGO_MS);
 
             // Debe haberse mostrado un diÃ¡logo de confirmaciÃ³n (tÃ­tulo "Confirmar eliminaciÃ³n").
             assertTrue(TestDialogUtils.seCapturoDialogoMensaje(),
@@ -479,7 +483,7 @@ class PanelTareasAccionesTest {
 
             TestDialogUtils.reiniciarDialogosMensajeCapturados();
             TestDialogUtils.ejecutarConDialogoAutoCerrado(() ->
-                itemPausar.getActionListeners()[0].actionPerformed(new ActionEvent(itemPausar, 0, "")), 150);
+                itemPausar.getActionListeners()[0].actionPerformed(new ActionEvent(itemPausar, 0, "")), ESPERA_CAPTURA_DIALOGO_MS);
 
             // Debe mostrarse el mensaje de feedback (MSG_NO_PAUSADA).
             assertTrue(TestDialogUtils.seCapturoDialogoMensaje(),

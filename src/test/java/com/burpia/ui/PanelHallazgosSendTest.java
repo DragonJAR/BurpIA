@@ -3,7 +3,10 @@ package com.burpia.ui;
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.BurpSuiteEdition;
 import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.internal.MontoyaObjectFactory;
+import burp.api.montoya.internal.ObjectFactoryLocator;
 import burp.api.montoya.logging.Logging;
+import burp.api.montoya.scanner.AuditConfiguration;
 import burp.api.montoya.scanner.audit.Audit;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nUI;
@@ -107,7 +110,7 @@ class PanelHallazgosSendTest {
     }
 
     @Test
-    @DisplayName("Enviar a Scanner ejecuta la ruta sin lanzar errores")
+    @DisplayName("Enviar a Scanner crea el audit y le encola la solicitud seleccionada")
     void testEnviarAScanner() throws Exception {
         burp.api.montoya.scanner.Scanner scanner = mock(burp.api.montoya.scanner.Scanner.class);
         when(api.scanner()).thenReturn(scanner);
@@ -120,7 +123,22 @@ class PanelHallazgosSendTest {
         agregarHallazgoConRequest(panel, request, "https://example.com/scanner");
         assertTrue(panel.obtenerModelo().getRowCount() >= 1, "assertTrue failed at PanelHallazgosSendTest.java:112");
 
-        assertDoesNotThrow(() -> invocarMetodoPrivado(panel, "enviarAScanner", new int[]{0}));
+        // AuditConfiguration.auditConfiguration(...) delega en ObjectFactoryLocator.FACTORY,
+        // que fuera del runtime de Burp es null. mockStatic no alcanza: la acción corre
+        // en el executor del panel y los mocks estáticos de Mockito son thread-scoped.
+        // Se inyecta la factoría en el campo estático público y se restaura al final.
+        MontoyaObjectFactory fabricaMontoya = mock(MontoyaObjectFactory.class);
+        AuditConfiguration configScanner = mock(AuditConfiguration.class);
+        when(fabricaMontoya.auditConfiguration(any())).thenReturn(configScanner);
+        ObjectFactoryLocator.FACTORY = fabricaMontoya;
+        try {
+            invocarMetodoPrivado(panel, "enviarAScanner", new int[]{0});
+
+            verify(scanner, timeout(TIMEOUT_VERIFICACION_MS).atLeastOnce()).startAudit(any());
+            verify(audit, timeout(TIMEOUT_VERIFICACION_MS)).addRequest(eq(request));
+        } finally {
+            ObjectFactoryLocator.FACTORY = null;
+        }
     }
 
     @Test

@@ -9,6 +9,7 @@ import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.ui.contextmenu.InvocationType;
 import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.i18n.I18nUI;
 import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.ui.ModeloTablaHallazgos;
@@ -33,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -455,6 +457,35 @@ class ManejadorHttpBurpIATest {
         assertFalse(info.contains("Probar Conexión") || info.contains("Probar Conexion")
                 || info.contains("Test Connection"),
             "assertFalse failed at ManejadorHttpBurpIATest.java:249");
+    }
+
+    @Test
+    @DisplayName("aplicarCambioConfigAtomico(Consumer) muta una copia sin tocar el snapshot compartido")
+    void testAplicarCambioConfigAtomicoConsumerNoMutaSnapshotCompartido() throws Exception {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        ManejadorHttpBurpIA manejador = crearManejador(null, config);
+
+        Field campoRef = ManejadorHttpBurpIA.class.getDeclaredField("configRef");
+        campoRef.setAccessible(true);
+        ConfiguracionAPIRef configRef = (ConfiguracionAPIRef) campoRef.get(manejador);
+        ConfiguracionAPI snapshotAnterior = configRef.obtener();
+
+        manejador.aplicarCambioConfigAtomico(c -> c.establecerAutoScrollConsolaHabilitado(false));
+
+        assertNotSame(snapshotAnterior, configRef.obtener(),
+            "La referencia debe reemplazarse por un snapshot nuevo");
+        assertTrue(snapshotAnterior.autoScrollConsolaHabilitado(),
+            "El snapshot compartido anterior no debe mutarse (contrato de inmutabilidad)");
+        assertFalse(configRef.obtener().autoScrollConsolaHabilitado(),
+            "El snapshot vigente debe reflejar la mutación aplicada");
+    }
+
+    @Test
+    @DisplayName("aplicarCambioConfigAtomico(Consumer) con mutación nula es un no-op seguro")
+    void testAplicarCambioConfigAtomicoConsumerNuloNoFalla() {
+        ManejadorHttpBurpIA manejador = crearManejador(null);
+        assertDoesNotThrow(() -> manejador.aplicarCambioConfigAtomico(
+            (java.util.function.Consumer<ConfiguracionAPI>) null));
     }
 
     private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {

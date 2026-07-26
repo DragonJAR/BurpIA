@@ -3660,7 +3660,7 @@ public final class I18nUI {
 
             public static String INYECTAR_PAYLOAD() {
                 return I18nUI.tr("Inyecta manualmente el prompt inicial en la terminal.",
-                        "Manually inject original prompt into terminal.");
+                        "Manually inject the initial prompt into the terminal.");
             }
 
             public static String CAMBIAR_AGENTE_RAPIDO() {

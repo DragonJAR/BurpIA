@@ -213,8 +213,7 @@ class DeduplicadorSolicitudesTest {
             // Inmediatamente debería ser duplicado
             assertTrue(deduplicadorLocal.esDuplicadoYAgregar("expirable"), "assertTrue failed at DeduplicadorSolicitudesTest.java:214");
 
-            // Esperar a que expire + intervalo de limpieza (30 segundos mínimo)
-            // Usamos un TTL muy corto y forzamos una nueva operación para disparar limpieza
+            // Esperar a que expire el TTL (50ms)
             Thread.sleep(100);
 
             // Después de agregar varios hashes nuevos, se debería disparar la limpieza
@@ -222,10 +221,10 @@ class DeduplicadorSolicitudesTest {
                 deduplicadorLocal.esDuplicadoYAgregar("trigger" + i);
             }
 
-            // El hash original debería haber expirado (no es duplicado)
-            // Nota: Esto depende del intervalo de limpieza de 30 segundos,
-            // por lo que con TTL muy corto puede no expirar inmediatamente
-            // Este test verifica el comportamiento básico de duplicado
+            // El hash original expiró por TTL: al consultarlo ya no cuenta como duplicado
+            // (expiración por entrada, sin depender del barrido periódico de 30s).
+            assertFalse(deduplicadorLocal.esDuplicadoYAgregar("expirable"),
+                "Un hash expirado por TTL debe tratarse como nuevo, no como duplicado");
         }
 
         @Test

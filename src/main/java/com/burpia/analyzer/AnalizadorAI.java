@@ -102,20 +102,8 @@ public class AnalizadorAI implements Runnable {
         
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
 
-        OrquestadorAnalisis.Callback callbackOrquestador = new OrquestadorAnalisis.Callback() {
-            @Override
-            public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {
-                // No se usa directamente aquí, manejamos callbacks en run()
-            }
-            
-            @Override
-            public void alErrorAnalisis(String error) {
-                // No se usa directamente aquí, manejamos callbacks en run()
-            }
-        };
-        
         this.orquestador = new OrquestadorAnalisis(
-            solicitud, config, stdout, stderr, limitador, callbackOrquestador,
+            solicitud, this.config, stdout, stderr,
             alInicioAnalisis, gestorConsola, this.controlCancelacionPausa);
             
         this.parseador = new ParseadorRespuestasAI(gestorLogging, 
@@ -279,19 +267,13 @@ public class AnalizadorAI implements Runnable {
     }
 
     private String validarConfiguracionAntesDeConsulta() {
-        if (config == null) {
-            return alertaConfiguracionNoDisponible();
-        }
+        // config nunca es null: el constructor normaliza a new ConfiguracionAPI()
         String error = config.validarParaConsultaModelo();
         return error != null ? error.trim() : "";
     }
 
     private static String mensajeErrorSolicitudNoDisponible() {
         return I18nUI.tr("Solicitud de analisis no disponible", "Analysis request is not available");
-    }
-
-    private static String alertaConfiguracionNoDisponible() {
-        return I18nUI.tr("ALERTA: Configuracion de IA no disponible", "ALERT: AI configuration is unavailable");
     }
 
     private static String mensajeAnalisisInterrumpido(String causa) {

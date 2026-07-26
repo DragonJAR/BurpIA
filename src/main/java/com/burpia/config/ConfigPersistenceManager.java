@@ -44,7 +44,11 @@ public class ConfigPersistenceManager {
             gestorLogging.error("ConfigPersistenceManager", I18nLogs.Configuracion.CONFIGURACION_NULA());
             this.configuracionCargada = new ConfiguracionAPI();
         }
-        
+
+        // La instancia viene de una fuente externa (disco): forzar una
+        // re-normalización completa única; después los getters usan fast-path.
+        configuracionCargada.forzarNormalizacion();
+
         this.estadoInicial = crearEstadoSnapshot(configuracionCargada);
         gestorLogging.info("ConfigPersistenceManager", I18nLogs.Configuracion.CARGADA_OK());
         
@@ -235,7 +239,15 @@ public class ConfigPersistenceManager {
         snapshot.put("tiempoEsperaPorModelo", new HashMap<>(config.obtenerTiempoEsperaPorModelo()));
         snapshot.put("rutasBinarioPorAgente", new HashMap<>(config.obtenerTodasLasRutasBinario()));
         snapshot.put("estadoUI", new HashMap<>(config.obtenerEstadoUI()));
-        
+        // obtenerProveedoresMultiConsulta ya devuelve copia defensiva.
+        snapshot.put("proveedoresMultiConsulta", config.obtenerProveedoresMultiConsulta());
+        snapshot.put("alertasDeshabilitadas", new HashMap<>(config.obtenerAlertasDeshabilitadas()));
+        snapshot.put("nivelErrorHabilitado", config.esNivelErrorHabilitado());
+        snapshot.put("nivelWarnHabilitado", config.esNivelWarnHabilitado());
+        snapshot.put("nivelInfoHabilitado", config.esNivelInfoHabilitado());
+        snapshot.put("nivelDebugHabilitado", config.esNivelDebugHabilitado());
+        snapshot.put("nivelTraceHabilitado", config.esNivelTraceHabilitado());
+
         return snapshot;
     }
 

@@ -12,6 +12,7 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -59,6 +60,25 @@ class HttpUtilsTest {
             String hash1 = HttpUtils.generarHash("input1".getBytes());
             String hash2 = HttpUtils.generarHash("input2".getBytes());
             assertNotEquals(hash1, hash2);
+        }
+
+        @Test
+        @DisplayName("Libera el ThreadLocal del hilo actual tras generar el hash")
+        void liberaThreadLocalTrasGenerarHash() throws Exception {
+            // Regresión H6: sin remove() el MessageDigest pinea el classloader de
+            // la extensión al recargarla en Burp. Si el ThreadLocal quedó limpio,
+            // un get() posterior re-inicializa una instancia distinta.
+            java.lang.reflect.Field campo = HttpUtils.class.getDeclaredField("SHA256_LOCAL");
+            campo.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            ThreadLocal<MessageDigest> threadLocal = (ThreadLocal<MessageDigest>) campo.get(null);
+
+            MessageDigest instanciaPrevia = threadLocal.get();
+            HttpUtils.generarHash("datos".getBytes(StandardCharsets.UTF_8));
+            MessageDigest instanciaPosterior = threadLocal.get();
+
+            assertNotSame(instanciaPrevia, instanciaPosterior,
+                "Tras generarHash el ThreadLocal debe quedar limpio (get() crea una instancia nueva)");
         }
     }
 
@@ -540,6 +560,54 @@ class HttpUtilsTest {
             assertTrue(HttpUtils.esRecursoEstatico("http://example.com/app.js?version=1.0&debug=true"), "assertTrue failed at HttpUtilsTest.java:514");
             assertTrue(HttpUtils.esRecursoEstatico("http://example.com/style.css#section"), "assertTrue failed at HttpUtilsTest.java:515");
             assertFalse(HttpUtils.esRecursoEstatico("http://example.com/page.html?param=value"), "assertFalse failed at HttpUtilsTest.java:516");
+        }
+    }
+
+    @Nested
+    @DisplayName("esLoopbackOLan")
+    class EsLoopbackOLan {
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "localhost",
+            "sub.localhost",
+            "127.0.0.1",
+            "::1",
+            "[::1]",
+            "10.0.0.1",
+            "10.255.255.255",
+            "192.168.1.1",
+            "172.16.0.1",
+            "172.31.255.254"
+        })
+        @DisplayName("Retorna true para loopback e IPs privadas estrictas")
+        void retornaTrueParaLoopbackEIpPrivada(String host) {
+            assertTrue(HttpUtils.esLoopbackOLan(host), "assertTrue failed for host: " + host);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+            "10.evil.com",
+            "192.168.attacker.example",
+            "172.32.0.1",
+            "172.15.0.1",
+            "10.999.1.1",
+            "10.0.0",
+            "10.0.0.1.5",
+            "192.168.1",
+            "8.8.8.8",
+            "example.com"
+        })
+        @DisplayName("Retorna false para hostnames DNS que imitan prefijos privados e IPs fuera de rango")
+        void retornaFalseParaHostnamesEnganosos(String host) {
+            assertFalse(HttpUtils.esLoopbackOLan(host), "assertFalse failed for host: " + host);
+        }
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @DisplayName("Retorna false para hostname null o vacío")
+        void retornaFalseParaNullOVacio(String host) {
+            assertFalse(HttpUtils.esLoopbackOLan(host), "assertFalse failed at HttpUtilsTest.java:EsLoopbackOLan");
         }
     }
 }

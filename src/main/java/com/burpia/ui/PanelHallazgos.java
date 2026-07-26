@@ -85,6 +85,12 @@ public class PanelHallazgos extends JPanel {
     private UIStateManager uiStateManager;
     private final ExecutorService ejecutorAcciones;
     private final Timer temporizadorPersistenciaFiltros;
+    private javax.swing.event.TableModelListener listenerEmptyState;
+    // Audit de Scanner reutilizado durante la sesión del panel. Montoya solo
+    // expone Audit.delete(), que elimina también los issues ya emitidos, así que
+    // cerrar el audit por lote descartaría resultados: se reutiliza uno lazy y
+    // se suelta la referencia en destruir() (Burp gestiona su ciclo de vida).
+    private volatile Audit auditoriaScannerActiva;
 
     @SuppressWarnings("this-escape")
     public PanelHallazgos(MontoyaApi api) {
@@ -214,7 +220,8 @@ public class PanelHallazgos extends JPanel {
         panelTablaWrapper.setLayout(new OverlayLayout(panelTablaWrapper));
         panelTablaWrapper.add(etiquetaEmptyState);
         panelTablaWrapper.add(panelDesplazable);
-        tabla.getModel().addTableModelListener(e -> actualizarEmptyStateHallazgos());
+        listenerEmptyState = e -> actualizarEmptyStateHallazgos();
+        tabla.getModel().addTableModelListener(listenerEmptyState);
         actualizarEmptyStateHallazgos();
 
         campoBusqueda.getDocument().addDocumentListener(UIUtils.crearDocumentListener(this::aplicarFiltros));
@@ -871,43 +878,58 @@ public class PanelHallazgos extends JPanel {
             I18nUI.Hallazgos.RESUMEN_ACCION_SCANNER(),
             true,
             true,
-            new AccionSobreSolicitud() {
-                private Audit auditoriaActiva;
-
-                @Override
-                public String ejecutar(HttpRequest solicitud, Hallazgo hallazgo) {
-                    if (!esBurpProfessional) {
-                        throw new IllegalStateException(I18nUI.Hallazgos.ERROR_SCANNER_SOLO_PRO());
-                    }
-                    if (auditoriaActiva == null) {
-                        AuditConfiguration configScanner = AuditConfiguration.auditConfiguration(
-                            BuiltInAuditConfiguration.LEGACY_ACTIVE_AUDIT_CHECKS
-                        );
-                        auditoriaActiva = api.scanner().startAudit(configScanner);
-                    }
-                    auditoriaActiva.addRequest(solicitud);
-                    // Diagnóstico: qué le mandamos al audit (método, URL, httpService) y qué
-                    // hace el audit. Un httpService NULL o 0 insertionPoints explican el "no
-                    // dispara". (api.logging va al panel Output de la extensión.)
-                    // Solo en modo registro detallado para no ensuciar el Output en uso normal.
-                    if (config != null && config.esDetallado()) {
-                        api.logging().logToOutput(I18nUI.Hallazgos.LOG_PETICION_ENVIADA_SCANNER() + solicitud.url()
-                            + " | metodo=" + solicitud.method()
-                            + " | httpService=" + (solicitud.httpService() != null
-                                ? solicitud.httpService().host() + ":" + solicitud.httpService().port()
-                                  + " secure=" + solicitud.httpService().secure()
-                                : "NULL (sin servicio: el audit no tiene a donde escanear)")
-                            + " | audit.estado=" + auditoriaActiva.statusMessage()
-                            + " | audit.insertionPoints=" + auditoriaActiva.insertionPointCount()
-                            + " | audit.requests=" + auditoriaActiva.requestCount()
-                            + " | audit.errores=" + auditoriaActiva.errorCount());
-                    }
-                    return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
-                        solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_SCANNER()
-                    );
+            (solicitud, hallazgo) -> {
+                if (!esBurpProfessional) {
+                    throw new IllegalStateException(I18nUI.Hallazgos.ERROR_SCANNER_SOLO_PRO());
                 }
+                Audit auditoria = obtenerAuditoriaScanner();
+                auditoria.addRequest(solicitud);
+                // Diagnóstico: qué le mandamos al audit (método, URL, httpService) y qué
+                // hace el audit. Un httpService NULL o 0 insertionPoints explican el "no
+                // dispara". (api.logging va al panel Output de la extensión.)
+                // Solo en modo registro detallado para no ensuciar el Output en uso normal.
+                if (config != null && config.esDetallado()) {
+                    api.logging().logToOutput(I18nUI.Hallazgos.LOG_PETICION_ENVIADA_SCANNER() + solicitud.url()
+                        + " | metodo=" + solicitud.method()
+                        + " | httpService=" + (solicitud.httpService() != null
+                            ? solicitud.httpService().host() + ":" + solicitud.httpService().port()
+                              + " secure=" + solicitud.httpService().secure()
+                            : "NULL (sin servicio: el audit no tiene a donde escanear)")
+                        + " | audit.estado=" + auditoria.statusMessage()
+                        + " | audit.insertionPoints=" + auditoria.insertionPointCount()
+                        + " | audit.requests=" + auditoria.requestCount()
+                        + " | audit.errores=" + auditoria.errorCount());
+                }
+                return I18nUI.Hallazgos.LINEA_ESTADO_EXITO_ALERTA(
+                    solicitud.url() + " " + I18nUI.Hallazgos.SUFIJO_ENVIADO_SCANNER()
+                );
             }
         );
+    }
+
+    /**
+     * Devuelve el audit de Scanner de la sesión, creándolo de forma lazy la
+     * primera vez. Antes cada envío creaba un {@code Audit} nuevo que nunca se
+     * cerraba, acumulando audits vivos en Burp; reutilizar uno por sesión evita
+     * la fuga sin invalidar resultados (ver comentario en el campo).
+     */
+    private Audit obtenerAuditoriaScanner() {
+        Audit auditoria = auditoriaScannerActiva;
+        if (auditoria == null) {
+            auditoria = api.scanner().startAudit(crearConfiguracionAuditoriaScanner());
+            auditoriaScannerActiva = auditoria;
+        }
+        return auditoria;
+    }
+
+    /**
+     * Configuración del audit de Scanner. Extraída como método de instancia para
+     * permitir su sustitución en tests: el factory estático de Montoya requiere
+     * un Burp en ejecución (ObjectFactoryLocator) y no funciona en la JVM de tests.
+     */
+    protected AuditConfiguration crearConfiguracionAuditoriaScanner() {
+        return AuditConfiguration.auditConfiguration(
+            BuiltInAuditConfiguration.LEGACY_ACTIVE_AUDIT_CHECKS);
     }
 
     private void enviarAIssues(int... filas) {
@@ -1572,6 +1594,15 @@ public class PanelHallazgos extends JPanel {
     public void destruir() {
         temporizadorPersistenciaFiltros.stop();
         ejecutorAcciones.shutdownNow();
+        // Con modelo compartido entre paneles, un listener huérfano retendría
+        // este panel destruido y seguiría repintando sus componentes.
+        if (listenerEmptyState != null) {
+            tabla.getModel().removeTableModelListener(listenerEmptyState);
+            listenerEmptyState = null;
+        }
+        // No Audit.delete(): borraría también los resultados ya emitidos en el
+        // Scanner de Burp. Solo se suelta la referencia del panel.
+        auditoriaScannerActiva = null;
     }
 
     private String resolverUrlReferencia(Hallazgo hallazgo) {

@@ -266,6 +266,80 @@ class DialogoDetalleHallazgoTest {
         }
     }
 
+    @Test
+    @DisplayName("Labels tienen asociación accesible con sus campos (labelFor)")
+    void testLabelsAsociadosACampos() throws Exception {
+        Consumer<Hallazgo> alGuardar = h -> {};
+        DialogoDetalleHallazgo dialogo = crearDialogo(null, alGuardar);
+        try {
+            JTextField txtUrl = obtenerCampo(dialogo, "txtUrl");
+            JTextField txtTitulo = obtenerCampo(dialogo, "txtTitulo");
+
+            SwingUtilities.invokeAndWait(() -> {
+                JLabel lblUrl = buscarLabelPorTexto(dialogo.getContentPane(),
+                    I18nUI.DetalleHallazgo.LABEL_URL());
+                JLabel lblTitulo = buscarLabelPorTexto(dialogo.getContentPane(),
+                    I18nUI.DetalleHallazgo.LABEL_TITULO());
+                assertNotNull(lblUrl, "Debe existir el label de URL");
+                assertNotNull(lblTitulo, "Debe existir el label de título");
+                assertSame(txtUrl, lblUrl.getLabelFor(),
+                    "El label de URL debe estar asociado al campo de URL");
+                assertSame(txtTitulo, lblTitulo.getLabelFor(),
+                    "El label de título debe estar asociado al campo de título");
+            });
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Sin edición no hay cambios sin guardar")
+    void testSinEdicionNoHayCambiosSinGuardar() throws Exception {
+        Hallazgo original = new Hallazgo(
+            "https://original.com", "Título", "Descripción", "High", "Medium");
+        DialogoDetalleHallazgo dialogo = crearDialogo(original, h -> {});
+        try {
+            assertFalse(invocarTieneCambiosSinGuardar(dialogo),
+                "Recién cargado, el diálogo no debe reportar cambios sin guardar");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Cambiar solo la severidad cuenta como cambio sin guardar")
+    void testCambioSeveridadCuentaComoCambioSinGuardar() throws Exception {
+        Hallazgo original = new Hallazgo(
+            "https://original.com", "Título", "Descripción", "High", "Medium");
+        DialogoDetalleHallazgo dialogo = crearDialogo(original, h -> {});
+        try {
+            JComboBox<String> comboSeveridad = obtenerCampo(dialogo, "comboSeveridad");
+            SwingUtilities.invokeAndWait(() -> comboSeveridad.setSelectedItem("Crítica"));
+
+            assertTrue(invocarTieneCambiosSinGuardar(dialogo),
+                "Un cambio de severidad debe detectarse como cambio sin guardar");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
+    @Test
+    @DisplayName("Cambiar solo la confianza cuenta como cambio sin guardar")
+    void testCambioConfianzaCuentaComoCambioSinGuardar() throws Exception {
+        Hallazgo original = new Hallazgo(
+            "https://original.com", "Título", "Descripción", "High", "Medium");
+        DialogoDetalleHallazgo dialogo = crearDialogo(original, h -> {});
+        try {
+            JComboBox<String> comboConfianza = obtenerCampo(dialogo, "comboConfianza");
+            SwingUtilities.invokeAndWait(() -> comboConfianza.setSelectedItem("Alta"));
+
+            assertTrue(invocarTieneCambiosSinGuardar(dialogo),
+                "Un cambio de confianza debe detectarse como cambio sin guardar");
+        } finally {
+            destruirDialogo(dialogo);
+        }
+    }
+
     // ========== Helper Methods DRY ==========
 
     /**
@@ -305,6 +379,46 @@ class DialogoDetalleHallazgoTest {
         Field field = DialogoDetalleHallazgo.class.getDeclaredField(nombreCampo);
         field.setAccessible(true);
         return (T) field.get(dialogo);
+    }
+
+    /**
+     * Busca recursivamente un JLabel por su texto exacto dentro de un contenedor.
+     *
+     * @param contenedor Contenedor raíz de búsqueda
+     * @param texto Texto exacto del label (null si no se encuentra)
+     * @return El JLabel encontrado, o null
+     */
+    private JLabel buscarLabelPorTexto(Container contenedor, String texto) {
+        for (Component comp : contenedor.getComponents()) {
+            if (comp instanceof JLabel && texto.equals(((JLabel) comp).getText())) {
+                return (JLabel) comp;
+            }
+            if (comp instanceof Container) {
+                JLabel encontrado = buscarLabelPorTexto((Container) comp, texto);
+                if (encontrado != null) {
+                    return encontrado;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Invoca el método privado tieneCambiosSinGuardar del diálogo en el EDT.
+     */
+    private boolean invocarTieneCambiosSinGuardar(DialogoDetalleHallazgo dialogo) throws Exception {
+        AtomicReference<Boolean> resultado = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                java.lang.reflect.Method metodo =
+                    DialogoDetalleHallazgo.class.getDeclaredMethod("tieneCambiosSinGuardar");
+                metodo.setAccessible(true);
+                resultado.set((Boolean) metodo.invoke(dialogo));
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return resultado.get();
     }
 
     private JButton obtenerBotonGuardar(DialogoDetalleHallazgo dialogo) throws Exception {

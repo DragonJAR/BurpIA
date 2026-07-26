@@ -10,10 +10,13 @@ import javax.swing.JCheckBox;
 import javax.swing.SwingUtilities;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -21,9 +24,21 @@ import static org.mockito.Mockito.mock;
 @DisplayName("PanelHallazgos Issues Menu Tests")
 class PanelHallazgosIssuesMenuTest {
 
+    private final List<PanelHallazgos> panelesCreados = new ArrayList<>();
+
     @AfterEach
     void resetIdioma() {
         I18nUI.establecerIdioma("es");
+    }
+
+    @AfterEach
+    void destruirPaneles() {
+        // Cada PanelHallazgos arranca un Timer y un executor; sin destruirlos
+        // cada test fuga hilos que sobreviven al final de la clase.
+        for (PanelHallazgos panel : panelesCreados) {
+            panel.destruir();
+        }
+        panelesCreados.clear();
     }
 
     @Test
@@ -48,22 +63,20 @@ class PanelHallazgosIssuesMenuTest {
     }
 
     @Test
-    @DisplayName("Menu Issues se incluye dinamicamente cuando autoguardado desactivado en Pro")
-    void testMenuIssuesVisibleEnMenuDinamicoCuandoAutoguardadoDesactivado() throws Exception {
-        PanelHallazgos panel = crearPanel(true);
-
+    @DisplayName("Etiqueta del menu Issues es la estandar en Pro y 'solo Pro' en Community")
+    void testEtiquetaMenuIssuesDependeDeEdicionBurp() throws Exception {
         Method metodo = PanelHallazgos.class.getDeclaredMethod("obtenerEtiquetaMenuIssues");
         metodo.setAccessible(true);
 
-        String etiqueta = (String) metodo.invoke(panel);
-        assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), etiqueta, "assertEquals failed at PanelHallazgosIssuesMenuTest.java:59");
+        PanelHallazgos panelPro = crearPanel(true);
+        String etiquetaPro = (String) metodo.invoke(panelPro);
+        assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), etiquetaPro,
+            "En Burp Professional la etiqueta debe ser la estándar de envío a Issues");
 
-        SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
-        flushEdt();
-        assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:63");
-
-        String etiquetaTrasDesactivar = (String) metodo.invoke(panel);
-        assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), etiquetaTrasDesactivar, "assertEquals failed at PanelHallazgosIssuesMenuTest.java:66");
+        PanelHallazgos panelCommunity = crearPanel(false);
+        String etiquetaCommunity = (String) metodo.invoke(panelCommunity);
+        assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES_SOLO_PRO(), etiquetaCommunity,
+            "En Community la etiqueta debe indicar que requiere Burp Professional");
     }
 
     @Test
@@ -106,8 +119,9 @@ class PanelHallazgosIssuesMenuTest {
         PanelHallazgos panel = crearPanel(true);
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
-        String etiquetaInicial = checkAutoIssues.getText();
-        assertTrue(etiquetaInicial.contains("Issues") || etiquetaInicial.contains("automáticamente"), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:110");
+        String etiquetaEspaniol = checkAutoIssues.getText();
+        assertEquals(I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES(), etiquetaEspaniol,
+            "La etiqueta inicial debe ser la versión en español de CHECK_GUARDAR_ISSUES");
 
         SwingUtilities.invokeAndWait(() -> {
             I18nUI.establecerIdioma("en");
@@ -115,8 +129,10 @@ class PanelHallazgosIssuesMenuTest {
         });
         flushEdt();
 
-        String etiquetaIngles = checkAutoIssues.getText();
-        assertTrue(etiquetaIngles.contains("Issues") || etiquetaIngles.contains("automatically"), "assertTrue failed at PanelHallazgosIssuesMenuTest.java:119");
+        assertEquals(I18nUI.Hallazgos.CHECK_GUARDAR_ISSUES(), checkAutoIssues.getText(),
+            "Tras aplicarIdioma la etiqueta debe ser la versión en inglés de CHECK_GUARDAR_ISSUES");
+        assertNotEquals(etiquetaEspaniol, checkAutoIssues.getText(),
+            "La etiqueta debe cambiar efectivamente al cambiar de idioma");
     }
 
     @Test
@@ -153,6 +169,7 @@ class PanelHallazgosIssuesMenuTest {
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
         final PanelHallazgos[] holder = new PanelHallazgos[1];
         SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, new ModeloTablaHallazgos(100), esBurpProfessional));
+        panelesCreados.add(holder[0]);
         return holder[0];
     }
 

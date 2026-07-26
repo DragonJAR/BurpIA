@@ -88,7 +88,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 configSnapshot.obtenerMaximoConcurrente(),
                 configSnapshot.obtenerRetrasoSegundos(),
                 configSnapshot.esDetallado()));
-        // EFICIENCIA: Solo registrar notas de scope en modo detallado
         if (configSnapshot.esDetallado()) {
             registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS());
             registrar(I18nUI.Consola.NOTA_SCOPE_ANALISIS_ACCION());
@@ -128,7 +127,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             httpRequestProcessor.actualizarConfiguracion(nuevaConfig);
         }
 
-        // Usar TaskExecutionManager para actualizar configuración
         taskExecutionManager.actualizarConfiguracion(nuevaConfig);
 
         String proveedor = nuevaConfig.obtenerProveedorAI();
@@ -160,7 +158,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        // Usar HttpRequestProcessor para validación
         if (!httpRequestProcessor.esSolicitudValida(respuestaRecibida)) {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
@@ -237,7 +234,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         rastrear(() -> "Detalles de solicitud: Metodo=" + metodo + ", URL=" + url +
                 ", Encabezados=" + numEncabezados + ", Codigo respuesta=" + codigoEstado);
 
-        // Usar HttpRequestProcessor para crear SolicitudAnalisis
         SolicitudAnalisis solicitudAnalisis = httpRequestProcessor.crearSolicitudAnalisisDesdeRespuesta(respuestaRecibida);
         programarAnalisis(
                 solicitudAnalisis,
@@ -275,7 +271,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return;
         }
 
-        // Usar HttpRequestProcessor para crear SolicitudAnalisis y normalizar evidencia
         SolicitudAnalisis solicitudAnalisis = httpRequestProcessor.crearSolicitudAnalisisForzada(solicitud, solicitudRespuestaOriginal);
         if (solicitudAnalisis == null) {
             registrarError("No se pudo crear solicitud de análisis forzada");
@@ -346,7 +341,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public boolean reencolarTarea(String tareaId) {
-        // Usar TaskExecutionManager para reencolar
         boolean resultado = taskExecutionManager.reencolarTarea(tareaId);
         if (resultado) {
             registrar(I18nLogs.tr("Tarea reencolada") + ": " + I18nLogs.trTecnico(tareaId));
@@ -355,7 +349,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void cancelarEjecucionActiva(String tareaId) {
-        // Usar TaskExecutionManager para cancelar ejecución activa
         taskExecutionManager.cancelarEjecucionActiva(tareaId);
     }
 
@@ -369,7 +362,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             return null;
         }
 
-        // Usar TaskExecutionManager para programar análisis
         return taskExecutionManager.programarAnalisis(solicitudAnalisis, tipoTarea);
     }
 
@@ -405,7 +397,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             }
 
             if (multiHabilitado && proveedores != null && proveedores.size() > 1) {
-                // Multi-proveedor con 2+ proveedores
                 String proveedorPrincipal = config.obtenerProveedorAI();
                 List<String> proveedoresAdicionales = new ArrayList<>();
                 for (String p : proveedores) {
@@ -421,8 +412,6 @@ public class ManejadorHttpBurpIA implements HttpHandler {
                 return;
             }
 
-            // Caso normal: proveedor único
-            // CONFIABILIDAD: Solo advertir sobre multi-proveedor en modo detallado
             if (multiHabilitado && config.esDetallado()) {
                 int numProveedores = proveedores != null ? proveedores.size() : 0;
                 if (numProveedores <= 1) {
@@ -606,17 +595,14 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         return config != null && config.esDetallado() && contextoInvocacion != null;
     }
 
-
-
     public void shutdown() {
-        // Usar TaskExecutionManager para shutdown
         taskExecutionManager.shutdown();
         
         alertasConfiguracionEmitidas.clear();
     }
 
     public void pausarCaptura() {
-        aplicarCambioConfigAtomico(c -> {
+        aplicarCambioConfigConReintento(c -> {
             ConfiguracionAPI modificada = c.crearSnapshot();
             modificada.establecerEscaneoPasivoHabilitado(false);
             return modificada;
@@ -625,12 +611,32 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     public void reanudarCaptura() {
-        aplicarCambioConfigAtomico(c -> {
+        aplicarCambioConfigConReintento(c -> {
             ConfiguracionAPI modificada = c.crearSnapshot();
             modificada.establecerEscaneoPasivoHabilitado(true);
             return modificada;
         });
         registrar("Captura reanudada por usuario");
+    }
+
+    /**
+     * Aplica una mutación puntual sobre la configuración viva, generalizando el
+     * patrón de pausar/reanudar captura para cambios externos (p.ej. preferencias
+     * de UI desde ExtensionBurpIA). La mutación se aplica sobre una COPIA del
+     * snapshot vigente: mutar el objeto devuelto por {@code configRef.obtener()}
+     * violaría el contrato de inmutabilidad de los snapshots.
+     *
+     * @param mutacion mutación a aplicar sobre la copia del snapshot vigente
+     */
+    public void aplicarCambioConfigAtomico(java.util.function.Consumer<ConfiguracionAPI> mutacion) {
+        if (mutacion == null) {
+            return;
+        }
+        aplicarCambioConfigConReintento(actual -> {
+            ConfiguracionAPI modificada = actual.crearSnapshot();
+            mutacion.accept(modificada);
+            return modificada;
+        });
     }
 
     /**
@@ -645,7 +651,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
      * @param funcion función que recibe la config actual y devuelve un snapshot
      *                modificado (no se muta la instancia compartida)
      */
-    private void aplicarCambioConfigAtomico(java.util.function.UnaryOperator<ConfiguracionAPI> funcion) {
+    private void aplicarCambioConfigConReintento(java.util.function.UnaryOperator<ConfiguracionAPI> funcion) {
         // Acotado: la contención EDT vs handler es breve y rara. Un límite bajo
         // previene bucles infinitos ante un bug en la función (que devuelva una
         // referencia igual a la actual haría que CAS nunca succeeds).

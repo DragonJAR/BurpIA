@@ -168,15 +168,13 @@ public final class I18nLogs {
         {"Contenido extraido - Longitud", "Extracted content - Length"},
         {"Se encontraron", "Found"},
         {"en JSON", "in JSON"},
-        {"JSON no contiene campo 'hallazgos', intentando parsing de texto plano",
-            "JSON does not contain 'hallazgos', trying plain-text parsing"},
         {"Hallazgo agregado", "Finding added"},
         {"Severidad extraida", "Extracted severity"},
         {"Deteniendo ExecutorService de ManejadorHttpBurpIA", "Stopping ManejadorHttpBurpIA ExecutorService"},
-        {"ExecutorService no termino en 5 segundos, forzando shutdown", "ExecutorService did not finish in 5 seconds, forcing shutdown"},
-        {"Error al esperar terminacion de ExecutorService", "Error waiting for ExecutorService termination"},
+        {"ExecutorService no terminó en 5 segundos, forzando shutdown...", "ExecutorService did not finish in 5 seconds, forcing shutdown..."},
+        {"Error al esperar terminación de ExecutorService", "Error waiting for ExecutorService termination"},
         {"ExecutorService cerrado", "ExecutorService closed"},
-        {"Cola de analisis saturada, solicitud descartada", "Analysis queue saturated, request discarded"},
+        {"Cola de análisis saturada, solicitud descartada: %s", "Analysis queue saturated, request discarded: %s"},
         {"Maximo de reintentos de inyeccion alcanzado", "Maximum injection retries reached"},
         {"Payload en bufer usando escritura directa", "Payload buffered using direct write"},
         {"Se ha despachado la secuencia VK_ENTER", "VK_ENTER sequence dispatched"},
@@ -391,7 +389,6 @@ public final class I18nLogs {
         {"Configuración guardada exitosamente", "Configuration saved successfully"},
         {"Error al guardar configuración", "Error saving configuration"},
         {"Configuración nula no puede ser validada", "Null configuration cannot be validated"},
-        {"Se encontraron", "Found"},
         {"errores de validación", "validation errors"},
         {"Configuración validada exitosamente", "Configuration validated successfully"},
         {"Estado de referencia actualizado", "Reference state updated"},
@@ -423,7 +420,53 @@ public final class I18nLogs {
         {"se conserva parseo no estricto del payload original", "non-strict parsing of original payload preserved"},
         {"No se pudo crear solicitud de análisis forzada", "Could not create forced analysis request"},
         {"eliminadas", "deleted"},
-        {"Error en monitor de tareas atascadas", "Error in stuck-tasks monitor"}
+        {"Error en monitor de tareas atascadas", "Error in stuck-tasks monitor"},
+        // Entradas de frase completa para literales de callers que producían
+        // traducciones parciales ("Frankenstein") en modo EN. Los formatos trf
+        // se traducen con los placeholders %s/%d intactos porque trf aplica el
+        // diccionario sobre el formato ANTES de String.format.
+        {"Esperando %d segundos antes del próximo reintento", "Waiting %d seconds before the next retry"},
+        {"Todos los reintentos fallaron después de %d intentos", "All retries failed after %d attempts"},
+        {"Código de respuesta de API: %d", "API response code: %d"},
+        {"Estado de filtros guardado: búsqueda='%s', severidad='%s'", "Filters state saved: search='%s', severity='%s'"},
+        {"Estado de filtros restaurado: búsqueda='%s', severidad='%s'", "Filters state restored: search='%s', severity='%s'"},
+        {"Pestaña restaurada: %s (índice: %d)", "Tab restored: %s (index: %d)"},
+        {"No se pudo parsear respuesta como JSON directo", "Could not parse response as direct JSON"},
+        {"Respuesta con estructura JSON pero 0 hallazgos extraídos (posible JSON truncado o malformado)",
+            "Response with JSON structure but 0 findings extracted (possible truncated or malformed JSON)"},
+        {"JSON sin objetos de hallazgo, intentando parsing de texto plano",
+            "JSON without finding objects, attempting plain-text parsing"},
+        // Entradas para métodos de clases internas que salían en español en modo EN.
+        {"Contexto excedido detectado", "Context overflow detected"},
+        {"Reintentando con prompt truncado", "Retrying with truncated prompt"},
+        {"Error de contexto no recuperable después de truncados", "Non-recoverable context error after truncations"},
+        {"Tarea atascada - timeout", "Stuck task - timeout"},
+        {"Inicializando Agente...", "Initializing Agent..."},
+        {"Intentando almacenar evidencia nula", "Attempting to store null evidence"},
+        {"Evidencia almacenada: ", "Evidence stored: "},
+        {"Error al almacenar evidencia", "Error storing evidence"},
+        {"Error al obtener evidencia: ", "Error retrieving evidence: "},
+        {"Evidencia eliminada: ", "Evidence deleted: "},
+        {"Error al eliminar evidencia: ", "Error deleting evidence: "},
+        {"Cache de memoria de evidencias limpiado", "Evidence memory cache cleared"},
+        {"Error al limpiar evidencias antiguas", "Error cleaning old evidence"},
+        {"API Montoya no disponible: no se puede guardar AuditIssue", "Montoya API unavailable: cannot save AuditIssue"},
+        {"Hallazgo sin URL: no se puede crear AuditIssue", "Finding without URL: cannot create AuditIssue"},
+        {"Integración con Issues solo disponible en Burp Professional", "Issues integration only available in Burp Professional"},
+        {"Error al guardar evidencia, se limpia archivo: ", "Error saving evidence, cleaning up file: "},
+        {"Error al reconstruir evidencia: ", "Error rebuilding evidence: "},
+        {"Error al crear directorio de evidencia: ", "Error creating evidence directory: "},
+        {"Tamaño de request inválido en archivo: ", "Invalid request size in file: "},
+        {"Tamaño de response inválido en archivo: ", "Invalid response size in file: "},
+        {"Error al reconstruir request/response desde bytes", "Error rebuilding request/response from bytes"},
+        {"Error al extraer bytes de request: ", "Error extracting request bytes: "},
+        {"Error al extraer bytes de response: ", "Error extracting response bytes: "},
+        {"Error al crear directorio para depuración: ", "Error creating debug directory: "},
+        {"Error al obtener modificación de archivo: ", "Error getting file modification: "},
+        {"Error al listar archivos de evidencia: ", "Error listing evidence files: "},
+        {"Error al obtener última modificación: ", "Error getting last modification: "},
+        {"Error al eliminar archivo: ", "Error deleting file: "},
+        {"Error en escucha de cambios: ", "Error in change listener: "}
     };
 
     /**
@@ -798,7 +841,7 @@ public final class I18nLogs {
                 case SITE_MAP_TABLE -> I18nUI.tr("Tabla Site Map", "Site Map Table");
                 case SEARCH_RESULTS -> I18nUI.tr("Resultados de búsqueda", "Search Results");
                 case SCANNER_RESULTS -> I18nUI.tr("Resultados de scanner", "Scanner Results");
-                case INTRUDER_PAYLOAD_POSITIONS -> I18nUI.tr("Payload positions", "Payload positions");
+                case INTRUDER_PAYLOAD_POSITIONS -> I18nUI.tr("Posiciones de payload", "Payload positions");
                 case INTRUDER_ATTACK_RESULTS -> I18nUI.tr("Resultados de Intruder", "Intruder attack results");
                 default -> tipoInvocacion.name();
             };
@@ -841,7 +884,8 @@ public final class I18nLogs {
         }
 
         public static String SECCION_CONFIGURACION() {
-            return tr("[Configuration]");
+            // Literal en español: tr() en modo ES es identidad, no re-hispaniza.
+            return tr("[Configuracion]");
         }
 
         public static String SECCION_ENTORNO() {
@@ -1414,7 +1458,7 @@ public final class I18nLogs {
     private static final Pattern ES_PALABRA_SIMPLE = Pattern.compile("\\p{L}+");
 
     private static final EntradaReemplazo[] REEMPLAZOS_ES_A_EN = crearReemplazos(0);
-    private static final EntradaReemplazo[] REEMPLAZOS_EN_A_ES = crearReemplazos(1);
+    private static final EntradaReemplazo[] REEMPLAZOS_EN_A_ES = crearReemplazosExplicitosEnAEs();
 
     private I18nLogs() {
     }
@@ -1422,7 +1466,9 @@ public final class I18nLogs {
     /**
      * Traduce un mensaje de logging según el idioma configurado.
      * <p>
-     * Si el idioma es español, devuelve el mensaje sin cambios.
+     * Si el idioma es español, devuelve el mensaje sin cambios, salvo un
+     * conjunto explícito y acotado de préstamos técnicos que se re-hispanizan
+     * (ver {@link #crearReemplazosExplicitosEnAEs()}).
      * Si el idioma es inglés, aplica reemplazos de español a inglés.
      * Para otros idiomas, devuelve el mensaje original.
      * </p>
@@ -1503,6 +1549,33 @@ public final class I18nLogs {
     }
 
     /**
+     * Crea el conjunto explícito y acotado de re-hispanización EN→ES.
+     * <p>
+     * La antigua re-hispanización invertía todo el diccionario (incluidas las
+     * palabras simples) y corrompía mensajes ya en español — p. ej.
+     * "[Multi-Provider Configuration]" quedaba "[Multi-Provider Configuracion]"
+     * y "delay" se mutaba a "retraso" (F4). En su lugar solo se hispanizan
+     * los préstamos técnicos con dependencia real verificada: tests de consola
+     * en modo ES que asertan la forma hispanizada en la salida logueada
+     * (ManejadorHttpBurpIATest). Son frases, nunca palabras simples, para que
+     * el alcance quede limitado a esos literales.
+     * </p>
+     *
+     * @return array de entradas de reemplazo EN→ES explícitas
+     */
+    private static EntradaReemplazo[] crearReemplazosExplicitosEnAEs() {
+        String[][] pares = {
+            {"sin response asociada", "sin respuesta asociada"},
+            {"sin response=", "sin respuesta="}
+        };
+        EntradaReemplazo[] resultado = new EntradaReemplazo[pares.length];
+        for (int i = 0; i < pares.length; i++) {
+            resultado[i] = new EntradaReemplazo(pares[i][0], pares[i][1]);
+        }
+        return resultado;
+    }
+
+    /**
      * Crea un array de entradas de reemplazo ordenadas por longitud descendente.
      * <p>
      * El ordenamiento por longitud asegura que las cadenas más largas se
@@ -1510,7 +1583,7 @@ public final class I18nLogs {
      * reemplazos de frases más largas.
      * </p>
      *
-     * @param indiceOrigen 0 para ES→EN, 1 para EN→ES
+     * @param indiceOrigen 0 para ES→EN (única dirección soportada)
      * @return array de entradas de reemplazo ordenadas
      */
     private static EntradaReemplazo[] crearReemplazos(int indiceOrigen) {

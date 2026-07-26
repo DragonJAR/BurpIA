@@ -14,13 +14,19 @@ import com.burpia.ExtensionBurpIA;
 import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ConfiguracionAPIRef;
+import com.burpia.config.GestorConfiguracion;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.ui.FabricaMenuContextual;
+import com.burpia.ui.ModeloTablaHallazgos;
+import com.burpia.ui.ModeloTablaTareas;
 import com.burpia.ui.PanelAgente;
 import com.burpia.ui.PestaniaPrincipal;
+import com.burpia.ui.UIUtils;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorTareas;
+import com.burpia.util.LimitadorTasa;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -33,12 +39,16 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -57,6 +67,18 @@ class ExtensionBurpIATest {
     @BeforeEach
     void setUp() {
         I18nUI.establecerIdioma("es");
+    }
+
+    /**
+     * AISLAMIENTO: inicializarPreferenciasUsuarioEnUI instala la config de la extensión como
+     * estado global de alertas en UIUtils (varios tests la invocan con mocks cuyo
+     * alertasHabilitadas() es false). Si no se desinstala, los diálogos info/aviso quedan
+     * suprimidos para el resto de la JVM y tests ajenos (PanelAgente, PanelTareas) fallan
+     * de forma intermitente según el orden de ejecución de la suite.
+     */
+    @AfterEach
+    void tearDown() {
+        UIUtils.configurarAlertas(null, null);
     }
 
     @Nested
@@ -981,6 +1003,151 @@ class ExtensionBurpIATest {
             assertTrue(logs.contains("responses omitidas=1"), logs);
             assertTrue(logs.contains("Response omitida en serialización de agente"), logs);
             assertTrue(logs.contains("Longitud de payload a agente"), logs);
+        }
+    }
+
+    @Nested
+    @DisplayName("Tests de regresión C1: consistencia config vs configRef")
+    class ConsistenciaConfigConfigRefTests {
+
+        @Test
+        @DisplayName("Tras pausarCaptura, guardarConfiguracionSilenciosa persiste el estado pausado")
+        void testGuardarSilenciosaPersisteEstadoPausadoTrasPausarCaptura() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            establecerCampoConfigConRef(extension, config);
+            ConfiguracionAPIRef configRef = (ConfiguracionAPIRef) obtenerCampo(extension, "configRef");
+
+            GestorConfiguracion gestorConfig = mock(GestorConfiguracion.class);
+            when(gestorConfig.guardarConfiguracion(any(ConfiguracionAPI.class), any(StringBuilder.class)))
+                .thenReturn(true);
+            establecerCampo(extension, "gestorConfig", gestorConfig);
+
+            ManejadorHttpBurpIA manejador = crearManejadorReal(config, configRef);
+            establecerCampo(extension, "manejadorHttp", manejador);
+            try {
+                manejador.pausarCaptura();
+                assertNotSame(config, configRef.obtener(),
+                    "pausarCaptura debe reemplazar la referencia con un snapshot nuevo");
+                assertTrue(config.escaneoPasivoHabilitado(),
+                    "El objeto config original queda desconectado con el valor obsoleto");
+
+                invocarGuardarConfiguracionSilenciosa(extension, "captura");
+
+                ArgumentCaptor<ConfiguracionAPI> captor = ArgumentCaptor.forClass(ConfiguracionAPI.class);
+                verify(gestorConfig).guardarConfiguracion(captor.capture(), any(StringBuilder.class));
+                assertFalse(captor.getValue().escaneoPasivoHabilitado(),
+                    "Debe persistir el estado pausado, no el objeto config obsoleto");
+                assertSame(configRef.obtener(), captor.getValue(),
+                    "Debe persistir exactamente el snapshot vigente de configRef");
+            } finally {
+                manejador.shutdown();
+            }
+        }
+
+        @Test
+        @DisplayName("Cambio de preferencia auto-scroll es visible vía configRef.obtener()")
+        @SuppressWarnings("unchecked")
+        void testCambioPreferenciaAutoScrollVisibleEnConfigRef() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            establecerCampoConfigConRef(extension, config);
+            ConfiguracionAPIRef configRef = (ConfiguracionAPIRef) obtenerCampo(extension, "configRef");
+
+            GestorConfiguracion gestorConfig = mock(GestorConfiguracion.class);
+            when(gestorConfig.guardarConfiguracion(any(ConfiguracionAPI.class), any(StringBuilder.class)))
+                .thenReturn(true);
+            establecerCampo(extension, "gestorConfig", gestorConfig);
+
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+            ManejadorHttpBurpIA manejador = crearManejadorReal(config, configRef);
+            establecerCampo(extension, "manejadorHttp", manejador);
+            try {
+                Method metodo = ExtensionBurpIA.class.getDeclaredMethod("inicializarPreferenciasUsuarioEnUI");
+                metodo.setAccessible(true);
+                metodo.invoke(extension);
+
+                ArgumentCaptor<Consumer<Boolean>> captor = ArgumentCaptor.forClass(Consumer.class);
+                verify(pestania).establecerManejadorAutoScrollConsola(captor.capture());
+
+                assertTrue(configRef.obtener().autoScrollConsolaHabilitado(),
+                    "Precondición: auto-scroll habilitado por defecto");
+                captor.getValue().accept(false);
+
+                assertFalse(configRef.obtener().autoScrollConsolaHabilitado(),
+                    "El cambio de preferencia debe ser visible vía configRef.obtener()");
+
+                ArgumentCaptor<ConfiguracionAPI> configCaptor = ArgumentCaptor.forClass(ConfiguracionAPI.class);
+                verify(gestorConfig).guardarConfiguracion(configCaptor.capture(), any(StringBuilder.class));
+                assertFalse(configCaptor.getValue().autoScrollConsolaHabilitado(),
+                    "La preferencia persistida debe reflejar el cambio");
+            } finally {
+                manejador.shutdown();
+            }
+        }
+
+        @Test
+        @DisplayName("Pausar captura y luego guardar ajustes mantiene la captura pausada")
+        void testPausarLuegoGuardarAjustesMantieneCapturaPausada() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            establecerCampoConfigConRef(extension, config);
+            ConfiguracionAPIRef configRef = (ConfiguracionAPIRef) obtenerCampo(extension, "configRef");
+
+            ManejadorHttpBurpIA manejador = crearManejadorReal(config, configRef);
+            establecerCampo(extension, "manejadorHttp", manejador);
+            try {
+                manejador.pausarCaptura();
+                assertFalse(manejador.estaCapturaActiva(), "Precondición: captura pausada");
+
+                // Simula el guardado del diálogo: ConfigDialogController hace
+                // config.aplicarDesde(snapshot) con un snapshot que deriva de `config`
+                // y arrastra el escaneoPasivo=true obsoleto.
+                ConfiguracionAPI snapshotDialogo = config.crearSnapshot();
+                snapshotDialogo.establecerEscaneoPasivoHabilitado(true);
+                config.aplicarDesde(snapshotDialogo);
+
+                // Callback alGuardar de abrirConfiguracion: preserva el estado vivo
+                // de captura antes de propagar la configuración al manejador.
+                Method preservar = ExtensionBurpIA.class.getDeclaredMethod(
+                    "preservarEstadoCapturaVivo", ConfiguracionAPI.class);
+                preservar.setAccessible(true);
+                preservar.invoke(extension, config);
+                manejador.actualizarConfiguracion(config);
+
+                assertFalse(manejador.estaCapturaActiva(),
+                    "La captura debe seguir pausada tras guardar ajustes");
+                assertFalse(configRef.obtener().escaneoPasivoHabilitado(),
+                    "configRef debe conservar escaneoPasivoHabilitado=false");
+            } finally {
+                manejador.shutdown();
+            }
+        }
+
+        private ManejadorHttpBurpIA crearManejadorReal(ConfiguracionAPI config, ConfiguracionAPIRef configRef) {
+            ModeloTablaTareas modeloTareas = new ModeloTablaTareas(config.obtenerMaximoTareasTabla());
+            GestorTareas gestorTareas = new GestorTareas(modeloTareas, mensaje -> { });
+            return new ManejadorHttpBurpIA(
+                null,
+                configRef,
+                null,
+                new PrintWriter(new StringWriter(), true),
+                new PrintWriter(new StringWriter(), true),
+                new LimitadorTasa(1),
+                null,
+                gestorTareas,
+                null,
+                new ModeloTablaHallazgos(config.obtenerMaximoHallazgosTabla()),
+                null
+            );
+        }
+
+        private void invocarGuardarConfiguracionSilenciosa(ExtensionBurpIA extension, String origen) throws Exception {
+            Method metodo = ExtensionBurpIA.class.getDeclaredMethod("guardarConfiguracionSilenciosa", String.class);
+            metodo.setAccessible(true);
+            metodo.invoke(extension, origen);
         }
     }
 

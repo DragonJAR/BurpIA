@@ -57,9 +57,13 @@ class EstilosUITest {
         }
 
         @Test
-        @DisplayName("esTemaOscuro con null usa fallback")
+        @DisplayName("esTemaOscuro con null usa el fondo de panel como fallback")
         void testEsTemaOscuroNull() {
-            assertNotNull(EstilosUI.esTemaOscuro(null), "assertNotNull failed at EstilosUITest.java:62");
+            // assertNotNull sobre boolean primitivo sería un falso verde: el contrato real
+            // es que null cae al fondo de panel (obtenerColorFondoBase).
+            boolean esperado = EstilosUI.esTemaOscuro(EstilosUI.obtenerFondoPanel());
+            assertEquals(esperado, EstilosUI.esTemaOscuro(null),
+                "Con null debe evaluarse la luminancia del fondo de panel como fallback");
         }
     }
 
@@ -449,22 +453,29 @@ class EstilosUITest {
         @Test
         @DisplayName("Con config por defecto, todas las fuentes quedan no-null con estilo correcto")
         void aplicarDefaultsConservaFuentesNoNull() {
-            EstilosUI.actualizarFuentes(new com.burpia.config.ConfiguracionAPI());
+            // actualizarFuentes muta estáticos globales: capturar y restaurar para no
+            // contaminar otros tests que lean las FUENTE_* después de esta clase.
+            java.awt.Font[] fuentesPrevias = capturarFuentes();
+            try {
+                EstilosUI.actualizarFuentes(new com.burpia.config.ConfiguracionAPI());
 
-            assertNotNull(EstilosUI.FUENTE_ESTANDAR, "FUENTE_ESTANDAR no debe ser null tras actualizar");
-            assertNotNull(EstilosUI.FUENTE_NEGRITA, "FUENTE_NEGRITA no debe ser null tras actualizar");
-            assertNotNull(EstilosUI.FUENTE_MONO, "FUENTE_MONO no debe ser null tras actualizar");
-            assertNotNull(EstilosUI.FUENTE_MONO_NEGRITA, "FUENTE_MONO_NEGRITA no debe ser null tras actualizar");
-            assertNotNull(EstilosUI.FUENTE_TABLA, "FUENTE_TABLA no debe ser null tras actualizar");
-            assertNotNull(EstilosUI.FUENTE_CAMPO_TEXTO, "FUENTE_CAMPO_TEXTO no debe ser null tras actualizar");
-            assertNotNull(EstilosUI.FUENTE_BOTON_PRINCIPAL, "FUENTE_BOTON_PRINCIPAL no debe ser null tras actualizar");
-            assertNotNull(EstilosUI.FUENTE_TITULO_BANNER, "FUENTE_TITULO_BANNER no debe ser null tras actualizar");
-            assertNotNull(EstilosUI.FUENTE_ICONO_GRANDE, "FUENTE_ICONO_GRANDE no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_ESTANDAR, "FUENTE_ESTANDAR no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_NEGRITA, "FUENTE_NEGRITA no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_MONO, "FUENTE_MONO no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_MONO_NEGRITA, "FUENTE_MONO_NEGRITA no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_TABLA, "FUENTE_TABLA no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_CAMPO_TEXTO, "FUENTE_CAMPO_TEXTO no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_BOTON_PRINCIPAL, "FUENTE_BOTON_PRINCIPAL no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_TITULO_BANNER, "FUENTE_TITULO_BANNER no debe ser null tras actualizar");
+                assertNotNull(EstilosUI.FUENTE_ICONO_GRANDE, "FUENTE_ICONO_GRANDE no debe ser null tras actualizar");
 
-            assertEquals(java.awt.Font.PLAIN, EstilosUI.FUENTE_ESTANDAR.getStyle(), "FUENTE_ESTANDAR debe ser PLAIN");
-            assertEquals(java.awt.Font.BOLD, EstilosUI.FUENTE_NEGRITA.getStyle(), "FUENTE_NEGRITA debe ser BOLD");
-            assertEquals(java.awt.Font.PLAIN, EstilosUI.FUENTE_MONO.getStyle(), "FUENTE_MONO debe ser PLAIN");
-            assertEquals(java.awt.Font.BOLD, EstilosUI.FUENTE_MONO_NEGRITA.getStyle(), "FUENTE_MONO_NEGRITA debe ser BOLD");
+                assertEquals(java.awt.Font.PLAIN, EstilosUI.FUENTE_ESTANDAR.getStyle(), "FUENTE_ESTANDAR debe ser PLAIN");
+                assertEquals(java.awt.Font.BOLD, EstilosUI.FUENTE_NEGRITA.getStyle(), "FUENTE_NEGRITA debe ser BOLD");
+                assertEquals(java.awt.Font.PLAIN, EstilosUI.FUENTE_MONO.getStyle(), "FUENTE_MONO debe ser PLAIN");
+                assertEquals(java.awt.Font.BOLD, EstilosUI.FUENTE_MONO_NEGRITA.getStyle(), "FUENTE_MONO_NEGRITA debe ser BOLD");
+            } finally {
+                restaurarFuentes(fuentesPrevias);
+            }
         }
 
         /**
@@ -482,6 +493,32 @@ class EstilosUITest {
             assertEquals(esperada, EstilosUI.FUENTE_ESTANDAR,
                     "FUENTE_ESTANDAR no debe cambiar cuando actualizarFuentes recibe null");
         }
+    }
+
+    private static java.awt.Font[] capturarFuentes() {
+        return new java.awt.Font[]{
+            EstilosUI.FUENTE_ESTANDAR,
+            EstilosUI.FUENTE_NEGRITA,
+            EstilosUI.FUENTE_MONO,
+            EstilosUI.FUENTE_MONO_NEGRITA,
+            EstilosUI.FUENTE_TABLA,
+            EstilosUI.FUENTE_CAMPO_TEXTO,
+            EstilosUI.FUENTE_BOTON_PRINCIPAL,
+            EstilosUI.FUENTE_TITULO_BANNER,
+            EstilosUI.FUENTE_ICONO_GRANDE
+        };
+    }
+
+    private static void restaurarFuentes(java.awt.Font[] fuentesPrevias) {
+        EstilosUI.FUENTE_ESTANDAR = fuentesPrevias[0];
+        EstilosUI.FUENTE_NEGRITA = fuentesPrevias[1];
+        EstilosUI.FUENTE_MONO = fuentesPrevias[2];
+        EstilosUI.FUENTE_MONO_NEGRITA = fuentesPrevias[3];
+        EstilosUI.FUENTE_TABLA = fuentesPrevias[4];
+        EstilosUI.FUENTE_CAMPO_TEXTO = fuentesPrevias[5];
+        EstilosUI.FUENTE_BOTON_PRINCIPAL = fuentesPrevias[6];
+        EstilosUI.FUENTE_TITULO_BANNER = fuentesPrevias[7];
+        EstilosUI.FUENTE_ICONO_GRANDE = fuentesPrevias[8];
     }
 
 }

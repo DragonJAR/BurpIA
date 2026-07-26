@@ -14,7 +14,9 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -430,5 +432,32 @@ class GestorConfiguracionTest {
         assertTrue(gestor.guardarConfiguracion(cargada), "assertTrue failed at GestorConfiguracionTest.java:361");
         String jsonMigrado = leerConfigJson();
         assertFalse(jsonMigrado.contains("\"-- Custom --\""), "assertFalse failed at GestorConfiguracionTest.java:363");
+    }
+
+    @Test
+    @DisplayName("Archivo guardado con API keys queda con permisos restrictivos 0600 en FS POSIX (H3)")
+    void testArchivoGuardadoPermisosRestrictivos() throws Exception {
+        configurarDirectorioTemporalComoHome();
+
+        GestorConfiguracion gestor = new GestorConfiguracion();
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerApiKeyParaProveedor("OpenAI", "sk-test-secreto");
+
+        assertTrue(gestor.guardarConfiguracion(config), "assertTrue failed at GestorConfiguracionTest.java:permisos-save");
+
+        Path configPath = configDir.resolve("config.json");
+        assertTrue(Files.exists(configPath), "assertTrue failed at GestorConfiguracionTest.java:permisos-exists");
+        assertFalse(Files.exists(configDir.resolve("config.json.tmp")),
+            "assertFalse failed at GestorConfiguracionTest.java:permisos-tmp");
+
+        if (!Files.getFileStore(configPath).supportsFileAttributeView("posix")) {
+            return;
+        }
+        Set<PosixFilePermission> permisos = Files.getPosixFilePermissions(configPath);
+        assertEquals(
+            Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
+            permisos,
+            "assertEquals failed at GestorConfiguracionTest.java:permisos-posix");
     }
 }

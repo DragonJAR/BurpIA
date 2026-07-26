@@ -331,7 +331,7 @@ public class ConnectionTester {
             // keys cloud NO se exponen a MITM por misconfig DNS.
             javax.net.ssl.HostnameVerifier defaultVerifier = javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier();
             builder.hostnameVerifier((hostname, session) -> {
-                if (esLoopbackOLan(hostname)) {
+                if (HttpUtils.esLoopbackOLan(hostname)) {
                     return true;
                 }
                 return defaultVerifier.verify(hostname, session);
@@ -342,33 +342,6 @@ public class ConnectionTester {
         }
     }
 
-    private static boolean esLoopbackOLan(String hostname) {
-        if (hostname == null || hostname.isEmpty()) {
-            return false;
-        }
-        String h = hostname.toLowerCase(java.util.Locale.ROOT);
-        if ("localhost".equals(h) || h.endsWith(".localhost") || "127.0.0.1".equals(h) || "::1".equals(h)) {
-            return true;
-        }
-        if (h.startsWith("10.") || h.startsWith("192.168.")) {
-            return true;
-        }
-        if (h.startsWith("172.")) {
-            int dot1 = h.indexOf('.', 4);
-            if (dot1 > 4) {
-                try {
-                    int segundo = Integer.parseInt(h.substring(4, dot1));
-                    if (segundo >= 16 && segundo <= 31) {
-                        return true;
-                    }
-                } catch (NumberFormatException ignored) {
-                    // Not an IP — fall through
-                }
-            }
-        }
-        return false;
-    }
-    
     private List<String> listarModelosParaProveedor(String proveedor, String apiKey, String urlBase, ConfiguracionAPI config) {
         try {
             OkHttpClient client = crearClienteParaConfiguracion(config);

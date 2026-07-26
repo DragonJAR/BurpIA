@@ -169,15 +169,15 @@ class HallazgoTest {
         }
 
         @Test
-        @DisplayName("Obtener peso de severidad correctamente")
-        void testPesoSeveridad() {
-            assertEquals(5, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_CRITICAL), "assertEquals failed at HallazgoTest.java:190");
-            assertEquals(4, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_HIGH), "assertEquals failed at HallazgoTest.java:191");
-            assertEquals(3, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_MEDIUM), "assertEquals failed at HallazgoTest.java:192");
-            assertEquals(2, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_LOW), "assertEquals failed at HallazgoTest.java:193");
-            assertEquals(1, Hallazgo.obtenerPesoSeveridad(Hallazgo.SEVERIDAD_INFO), "assertEquals failed at HallazgoTest.java:194");
-            assertEquals(0, Hallazgo.obtenerPesoSeveridad("Unknown"), "assertEquals failed at HallazgoTest.java:195");
-            assertEquals(0, Hallazgo.obtenerPesoSeveridad(null), "assertEquals failed at HallazgoTest.java:196");
+        @DisplayName("Obtener prioridad de severidad correctamente")
+        void testPrioridadSeveridad() {
+            assertEquals(5, Hallazgo.obtenerPrioridadSeveridad(Hallazgo.SEVERIDAD_CRITICAL), "assertEquals failed at HallazgoTest.java:190");
+            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad(Hallazgo.SEVERIDAD_HIGH), "assertEquals failed at HallazgoTest.java:191");
+            assertEquals(3, Hallazgo.obtenerPrioridadSeveridad(Hallazgo.SEVERIDAD_MEDIUM), "assertEquals failed at HallazgoTest.java:192");
+            assertEquals(2, Hallazgo.obtenerPrioridadSeveridad(Hallazgo.SEVERIDAD_LOW), "assertEquals failed at HallazgoTest.java:193");
+            assertEquals(1, Hallazgo.obtenerPrioridadSeveridad(Hallazgo.SEVERIDAD_INFO), "assertEquals failed at HallazgoTest.java:194");
+            assertEquals(0, Hallazgo.obtenerPrioridadSeveridad("Unknown"), "assertEquals failed at HallazgoTest.java:195");
+            assertEquals(0, Hallazgo.obtenerPrioridadSeveridad(null), "assertEquals failed at HallazgoTest.java:196");
         }
 
         @Test
@@ -303,6 +303,27 @@ class HallazgoTest {
         }
 
         @Test
+        @DisplayName("Normalizar severidad con formas masculinas en espanol")
+        void testNormalizarSeveridadFormasMasculinas() {
+            assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("Crítico"),
+                "Crítico debe normalizar a Critical, no degradar a Info");
+            assertEquals(Hallazgo.SEVERIDAD_CRITICAL, Hallazgo.normalizarSeveridad("critico"),
+                "critico sin tilde debe normalizar a Critical");
+            assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("Alto"),
+                "Alto debe normalizar a High, no degradar a Info");
+            assertEquals(Hallazgo.SEVERIDAD_HIGH, Hallazgo.normalizarSeveridad("Severo"),
+                "Severo debe normalizar a High");
+            assertEquals(Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.normalizarSeveridad("Medio"),
+                "Medio debe normalizar a Medium");
+            assertEquals(Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.normalizarSeveridad("Moderado"),
+                "Moderado debe normalizar a Medium");
+            assertEquals(Hallazgo.SEVERIDAD_LOW, Hallazgo.normalizarSeveridad("Bajo"),
+                "Bajo debe normalizar a Low, no degradar a Info");
+            assertEquals(4, Hallazgo.obtenerPrioridadSeveridad("Alto"),
+                "La prioridad de Alto debe ser la de High");
+        }
+
+        @Test
         @DisplayName("Normalizar confianza con valores validos")
         void testNormalizarConfianzaValidos() {
             assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("High"), "assertEquals failed at HallazgoTest.java:324");
@@ -328,6 +349,19 @@ class HallazgoTest {
             assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("firm"), "assertEquals failed at HallazgoTest.java:344");
             assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("Baja"), "assertEquals failed at HallazgoTest.java:345");
             assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("tentative"), "assertEquals failed at HallazgoTest.java:346");
+        }
+
+        @Test
+        @DisplayName("Normalizar confianza con formas masculinas en espanol")
+        void testNormalizarConfianzaFormasMasculinas() {
+            assertEquals(Hallazgo.CONFIANZA_ALTA, Hallazgo.normalizarConfianza("Alto"),
+                "Alto debe normalizar a High");
+            assertEquals(Hallazgo.CONFIANZA_MEDIA, Hallazgo.normalizarConfianza("Medio"),
+                "Medio debe normalizar a Medium");
+            assertEquals(Hallazgo.CONFIANZA_BAJA, Hallazgo.normalizarConfianza("Bajo"),
+                "Bajo debe normalizar a Low");
+            assertEquals(3, Hallazgo.obtenerPrioridadConfianza("Alto"),
+                "La prioridad de Alto debe ser la de High");
         }
     }
 

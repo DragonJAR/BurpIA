@@ -43,6 +43,11 @@ import static org.mockito.Mockito.when;
 @DisplayName("PanelAgente Transporte Tests")
 class PanelAgenteTransporteTest {
 
+    // La inyección PTY corre en un executor con delays propios (>= 800 ms antes del primer
+    // write); bajo la carga de la suite completa timeouts cortos (2500-3500 ms) fallan de
+    // forma intermitente. 10 s da margen sin cambiar lo que se verifica.
+    private static final long TIMEOUT_ESCRITURA_PTY_MS = 10000L;
+
     @BeforeEach
     void setUp() {
         TestDialogUtils.registrarCapturaDialogos();
@@ -209,7 +214,7 @@ class PanelAgenteTransporteTest {
             method.setAccessible(true);
             method.invoke(panel, 146L);
 
-            verify(connector, timeout(3500).times(1))
+            verify(connector, timeout(TIMEOUT_ESCRITURA_PTY_MS).times(1))
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains("PROMPT_PREFLIGHT_CUSTOM")
                 ));
@@ -284,7 +289,7 @@ class PanelAgenteTransporteTest {
             method.setAccessible(true);
             method.invoke(panel, 77L);
 
-            verify(connector, timeout(2500).atLeastOnce())
+            verify(connector, timeout(TIMEOUT_ESCRITURA_PTY_MS).atLeastOnce())
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains("droid")
                 ));
@@ -316,11 +321,11 @@ class PanelAgenteTransporteTest {
             method.setAccessible(true);
             method.invoke(panel, 88L);
 
-            verify(connector, timeout(3500).atLeastOnce())
+            verify(connector, timeout(TIMEOUT_ESCRITURA_PTY_MS).atLeastOnce())
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains("droid-test")
                 ));
-            verify(connector, timeout(3500).atLeastOnce())
+            verify(connector, timeout(TIMEOUT_ESCRITURA_PTY_MS).atLeastOnce())
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains("PAYLOAD_DIFERIDO")
                 ));
@@ -368,15 +373,15 @@ class PanelAgenteTransporteTest {
             method.setAccessible(true);
             method.invoke(panel, 144L);
 
-            verify(connector, timeout(3500).atLeastOnce())
+            verify(connector, timeout(TIMEOUT_ESCRITURA_PTY_MS).atLeastOnce())
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains("droid-test")
                 ));
-            verify(connector, timeout(3500).atLeastOnce())
+            verify(connector, timeout(TIMEOUT_ESCRITURA_PTY_MS).atLeastOnce())
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains("PAYLOAD_1")
                 ));
-            verify(connector, timeout(3500).atLeastOnce())
+            verify(connector, timeout(TIMEOUT_ESCRITURA_PTY_MS).atLeastOnce())
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains("PAYLOAD_2")
                 ));
@@ -479,7 +484,7 @@ class PanelAgenteTransporteTest {
             method.invoke(panel, 145L);
 
             String rutaEsperada = "\"" + System.getProperty("user.home") + "/bin/claude\" --dangerously-skip-permissions";
-            verify(connector, timeout(2500).atLeastOnce())
+            verify(connector, timeout(TIMEOUT_ESCRITURA_PTY_MS).atLeastOnce())
                 .write(org.mockito.ArgumentMatchers.<String>argThat(
                     cmd -> cmd != null && cmd.contains(rutaEsperada)
                 ));
@@ -876,6 +881,42 @@ class PanelAgenteTransporteTest {
         } finally {
             panel.destruir();
         }
+    }
+
+    @Test
+    @DisplayName("Sanitizacion de terminal elimina ESC y secuencias de control (H1)")
+    void testSanitizarTextoParaTerminalEliminaEscapes() throws Exception {
+        String malicioso = "curl http://a\u001bb[201~\nrm -rf /\u0007";
+        String saneado = invocarSanitizarTextoParaTerminal(malicioso);
+
+        assertFalse(saneado.contains("\u001b"), "assertFalse failed at PanelAgenteTransporteTest.java:sanitizar-esc");
+        assertFalse(saneado.contains("\u0007"), "assertFalse failed at PanelAgenteTransporteTest.java:sanitizar-bel");
+        assertEquals("curl http://ab[201~\nrm -rf /", saneado,
+            "assertEquals failed at PanelAgenteTransporteTest.java:sanitizar-payload");
+    }
+
+    @Test
+    @DisplayName("Sanitizacion de terminal conserva texto normal con saltos de linea y tabs")
+    void testSanitizarTextoParaTerminalConservaTextoNormal() throws Exception {
+        String normal = "Title: XSS\nSummary: detalle\nURL: http://example.com/a?b=1\ncolumna1\tdato";
+        String saneado = invocarSanitizarTextoParaTerminal(normal);
+
+        assertEquals(normal, saneado, "assertEquals failed at PanelAgenteTransporteTest.java:sanitizar-normal");
+    }
+
+    @Test
+    @DisplayName("Sanitizacion de terminal tolera null y vacio")
+    void testSanitizarTextoParaTerminalNullYVacio() throws Exception {
+        assertEquals("", invocarSanitizarTextoParaTerminal(null),
+            "assertEquals failed at PanelAgenteTransporteTest.java:sanitizar-null");
+        assertEquals("", invocarSanitizarTextoParaTerminal(""),
+            "assertEquals failed at PanelAgenteTransporteTest.java:sanitizar-vacio");
+    }
+
+    private String invocarSanitizarTextoParaTerminal(String texto) throws Exception {
+        Method method = PanelAgente.class.getDeclaredMethod("sanitizarTextoParaTerminal", String.class);
+        method.setAccessible(true);
+        return (String) method.invoke(null, texto);
     }
 
     private PanelAgente crearPanelSinConsola() throws Exception {

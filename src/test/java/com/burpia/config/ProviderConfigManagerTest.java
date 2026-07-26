@@ -442,6 +442,28 @@ class ProviderConfigManagerTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void testCargarConfiguracionInicialSincronizaProveedorPrincipalPrimero() {
+        ConfiguracionAPI configReal = new ConfiguracionAPI();
+        configReal.establecerProveedorAI("OpenAI");
+        configReal.establecerMultiProveedorHabilitado(true);
+        configReal.establecerProveedoresMultiConsulta(java.util.List.of("Claude", "OpenAI"));
+
+        ProviderConfigManager manager = crearManagerConComponentesReales(configReal);
+        DefaultListModel<String> seleccionados = obtenerCampoPrivado(manager, "modeloListaSeleccionados", DefaultListModel.class);
+
+        manager.cargarConfiguracionInicial();
+
+        assertEquals(2, seleccionados.getSize(),
+            "La lista de seleccionados debe reflejar la configuración guardada");
+        assertEquals("OpenAI", seleccionados.getElementAt(0),
+            "El proveedor principal debe quedar primero aunque el listener del checkbox "
+                + "se disparó antes de poblar las listas");
+        assertEquals("Claude", seleccionados.getElementAt(1),
+            "El resto de proveedores debe conservar su orden relativo");
+    }
+
+    @Test
     void testValidarEstadoActualDetectaModeloVacio() {
         when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
         when(comboModelo.getSelectedItem()).thenReturn("");

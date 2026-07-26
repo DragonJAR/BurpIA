@@ -193,6 +193,18 @@ class ParserRespuestasAITest {
     }
 
     @Test
+    @DisplayName("Extractor no estricto acepta el alias detalle para descripcion")
+    void testExtraerCampoNoEstrictoAliasDetalle() {
+        // Regresión H5: normalizarClaveCampoNoEstricto mapeaba "detalle"→descripcion
+        // pero CamposHallazgo.DESCRIPCION no incluía "detalle" en sus variaciones,
+        // así que la extracción siempre devolvía "".
+        String contenido = "{\"titulo\":\"SQLi\",\"detalle\":\"Inyeccion en parametro id\"}";
+        assertEquals("Inyeccion en parametro id",
+            ParserRespuestasAI.extraerCampoNoEstricto("detalle", contenido),
+            "extraerCampoNoEstricto debe resolver el alias 'detalle' via las variaciones canonicas");
+    }
+
+    @Test
     @DisplayName("Extractor no estricto maneja comillas internas y mal escapadas")
     void testExtraerCampoNoEstrictoComillasInternas() {
         String contenidoEstructurado = "{\n" +

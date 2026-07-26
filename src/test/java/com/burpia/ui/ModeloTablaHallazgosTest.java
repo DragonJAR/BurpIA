@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("ModeloTablaHallazgos Tests")
@@ -525,6 +526,133 @@ class ModeloTablaHallazgosTest {
 
     private Hallazgo crearHallazgo(String url, String titulo) {
         return new Hallazgo(url, titulo, "Descripción de " + titulo, "Low", "Low");
+    }
+
+    @Nested
+    @DisplayName("Eliminación con índice capturado (H7)")
+    class EliminacionIndiceCapturadoTests {
+
+        @Test
+        @DisplayName("Bajas múltiples con EDT ocupado se aplican por identidad de forma coherente")
+        void testBajasMultiplesPorIdentidad() throws Exception {
+            ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(10);
+            Hallazgo h1 = crearHallazgo("https://example.com/1", "Test 1");
+            Hallazgo h2 = crearHallazgo("https://example.com/2", "Test 2");
+            Hallazgo h3 = crearHallazgo("https://example.com/3", "Test 3");
+            modelo.agregarHallazgo(h1);
+            modelo.agregarHallazgo(h2);
+            modelo.agregarHallazgo(h3);
+            SwingUtilities.invokeAndWait(() -> {});
+
+            // Bloquear el EDT para que ambas bajas capturen su objetivo antes
+            // de que corra cualquier runnable (la carrera de H7, determinista).
+            java.util.concurrent.CountDownLatch edtListo = new java.util.concurrent.CountDownLatch(1);
+            java.util.concurrent.CountDownLatch liberarEdt = new java.util.concurrent.CountDownLatch(1);
+            SwingUtilities.invokeLater(() -> {
+                edtListo.countDown();
+                try {
+                    liberarEdt.await(2, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            assertTrue(edtListo.await(2, java.util.concurrent.TimeUnit.SECONDS),
+                "El EDT debe quedar bloqueado para la prueba");
+
+            modelo.eliminarHallazgo(1);
+            modelo.eliminarHallazgo(0);
+            liberarEdt.countDown();
+            SwingUtilities.invokeAndWait(() -> {});
+
+            assertEquals(1, modelo.getRowCount(),
+                "assertEquals failed at ModeloTablaHallazgosTest.java:H7:filas");
+            assertEquals(1, modelo.obtenerNumeroHallazgos(),
+                "assertEquals failed at ModeloTablaHallazgosTest.java:H7:datos");
+            assertSame(h3, modelo.obtenerHallazgo(0),
+                "El único hallazgo restante debe ser el tercero");
+            assertEquals(h3.obtenerUrl(), modelo.getValueAt(0, 1),
+                "La fila visible debe corresponder al hallazgo en datos");
+        }
+
+        @Test
+        @DisplayName("Datos y filas quedan sincronizados tras operaciones concurrentes")
+        void testSincronizacionDatosFilasConcurrente() throws Exception {
+            ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(400);
+            java.util.concurrent.ExecutorService executor =
+                java.util.concurrent.Executors.newFixedThreadPool(6);
+            int total = 300;
+
+            for (int i = 0; i < total; i++) {
+                final int idx = i;
+                executor.submit(() -> modelo.agregarHallazgo(
+                    crearHallazgo("https://example.com/" + idx, "Test " + idx)));
+                if (i % 3 == 0) {
+                    executor.submit(() -> modelo.eliminarHallazgo(0));
+                }
+            }
+
+            executor.shutdown();
+            assertTrue(executor.awaitTermination(10, java.util.concurrent.TimeUnit.SECONDS),
+                "assertTrue failed at ModeloTablaHallazgosTest.java:H7:await");
+            SwingUtilities.invokeAndWait(() -> {});
+
+            assertEquals(modelo.obtenerNumeroHallazgos(), modelo.getRowCount(),
+                "dataVector y datos deben quedar sincronizados");
+            for (int i = 0; i < modelo.getRowCount(); i++) {
+                Hallazgo hallazgo = modelo.obtenerHallazgo(i);
+                assertNotNull(hallazgo, "Toda fila visible debe tener su hallazgo en datos");
+                assertEquals(hallazgo.obtenerUrl(), modelo.getValueAt(i, 1),
+                    "La fila visible debe corresponder al hallazgo en la misma posición de datos");
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("Marcar ignorado con revalidación (H7)")
+    class MarcarIgnoradoRevalidacionTests {
+
+        @Test
+        @DisplayName("marcarComoIgnorado revalida el rango dentro del EDT")
+        void testMarcarComoIgnoradoRevalidaRangoEnEdt() throws Exception {
+            ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(10);
+            modelo.agregarHallazgo(crearHallazgo("https://example.com/1", "Test 1"));
+            modelo.agregarHallazgo(crearHallazgo("https://example.com/2", "Test 2"));
+            modelo.agregarHallazgo(crearHallazgo("https://example.com/3", "Test 3"));
+            SwingUtilities.invokeAndWait(() -> {});
+
+            List<TableModelEvent> eventos = new ArrayList<>();
+            modelo.addTableModelListener(eventos::add);
+
+            // Bloquear el EDT para encolar primero un trim por límite (deja 1
+            // fila) y después el marcarComoIgnorado(2): cuando corra el runnable,
+            // el índice 2 ya no existirá y no debe disparar fireTableRowsUpdated.
+            java.util.concurrent.CountDownLatch edtListo = new java.util.concurrent.CountDownLatch(1);
+            java.util.concurrent.CountDownLatch liberarEdt = new java.util.concurrent.CountDownLatch(1);
+            SwingUtilities.invokeLater(() -> {
+                edtListo.countDown();
+                try {
+                    liberarEdt.await(2, java.util.concurrent.TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            assertTrue(edtListo.await(2, java.util.concurrent.TimeUnit.SECONDS),
+                "El EDT debe quedar bloqueado para la prueba");
+
+            modelo.establecerLimiteFilas(1);
+            modelo.marcarComoIgnorado(2);
+            liberarEdt.countDown();
+            SwingUtilities.invokeAndWait(() -> {});
+
+            boolean updateFueraDeRango = eventos.stream().anyMatch(e ->
+                e.getType() == TableModelEvent.UPDATE && e.getFirstRow() == 2);
+            assertFalse(updateFueraDeRango,
+                "No debe emitirse fireTableRowsUpdated para una fila que ya no existe");
+            assertEquals(1, modelo.getRowCount(),
+                "assertEquals failed at ModeloTablaHallazgosTest.java:H7:filas");
+            assertEquals(modelo.obtenerNumeroHallazgos(), modelo.getRowCount(),
+                "dataVector y datos deben quedar sincronizados");
+        }
     }
 
     private Hallazgo crearHallazgoConSeveridad(String url, String titulo, String severidad) {

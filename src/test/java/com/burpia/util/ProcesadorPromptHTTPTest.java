@@ -193,6 +193,37 @@ class ProcesadorPromptHTTPTest {
         }
 
         @Test
+        @DisplayName("No sustituye el literal {RESPONSE} contenido en un body")
+        void noSustituyeTokenEnContenidoInsertado() {
+            // Regresión H3: la decisión de reemplazo se toma sobre la plantilla,
+            // no sobre el resultado con contenido HTTP ya insertado.
+            String resultado = ProcesadorPromptHTTP.reemplazarContenidoFlujo(
+                "{REQUEST}",
+                List.of("cuerpo con {RESPONSE} literal"),
+                List.of("respuesta real")
+            );
+
+            assertTrue(resultado.contains("cuerpo con {RESPONSE} literal"),
+                "El literal {RESPONSE} dentro del body no debe ser sustituido");
+            assertTrue(resultado.contains("=== RESPONSE 1 ==="),
+                "La respuesta real se agrega via bloque fallback, no via el literal del body");
+        }
+
+        @Test
+        @DisplayName("No sustituye el literal {OUTPUT_LANGUAGE} contenido en un body")
+        void noSustituyeOutputLanguageEnContenidoInsertado() {
+            String prompt = "Analiza: {REQUEST}";
+            List<SolicitudAnalisis> solicitudes = List.of(
+                crearSolicitud("url", METODO_GET, "body con {OUTPUT_LANGUAGE} literal", "resp")
+            );
+
+            String resultado = ProcesadorPromptHTTP.procesarFlujo(prompt, solicitudes, configEs);
+
+            assertTrue(resultado.contains("body con {OUTPUT_LANGUAGE} literal"),
+                "El literal {OUTPUT_LANGUAGE} dentro del body no debe ser sustituido");
+        }
+
+        @Test
         @DisplayName("Lanza excepcion cuando lista de solicitudes es null")
         void lanzaExcepcionCuandoListaNull() {
             IllegalArgumentException excepcion = assertThrows(

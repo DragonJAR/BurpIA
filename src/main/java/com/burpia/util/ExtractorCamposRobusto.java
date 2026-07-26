@@ -98,27 +98,26 @@ public final class ExtractorCamposRobusto {
     /**
      * Campos predefinidos para hallazgos de seguridad.
      * Reutilizable en toda la aplicación.
+     *
+     * <p>Las variaciones se derivan de las tablas canónicas de {@link JsonParserUtil}
+     * (fuente única de aliases, DRY): así aliases como "detalle" funcionan igual en
+     * parsing JSON estricto y en extracción robusta de texto malformado.</p>
      */
     public static final class CamposHallazgo {
         /** Campo de título/delimitador principal */
-        public static final Campo TITULO = new Campo("titulo",
-            "titulo", "title", "name", "nombre");
+        public static final Campo TITULO = new Campo("titulo", JsonParserUtil.CAMPOS_TITULO);
 
         /** Campo de descripción/detalles */
-        public static final Campo DESCRIPCION = new Campo("descripcion",
-            "descripcion", "description", "finding", "hallazgo", "details");
+        public static final Campo DESCRIPCION = new Campo("descripcion", JsonParserUtil.CAMPOS_DESCRIPCION);
 
         /** Campo de severidad/riesgo */
-        public static final Campo SEVERIDAD = new Campo("severidad",
-            "severidad", "severity", "risk", "impacto");
+        public static final Campo SEVERIDAD = new Campo("severidad", JsonParserUtil.CAMPOS_SEVERIDAD);
 
         /** Campo de confianza/certeza */
-        public static final Campo CONFIANZA = new Campo("confianza",
-            "confianza", "confidence", "certainty", "certeza");
+        public static final Campo CONFIANZA = new Campo("confianza", JsonParserUtil.CAMPOS_CONFIANZA);
 
         /** Campo de evidencia/prueba */
-        public static final Campo EVIDENCIA = new Campo("evidencia",
-            "evidencia", "evidence", "proof", "indicator");
+        public static final Campo EVIDENCIA = new Campo("evidencia", JsonParserUtil.CAMPOS_EVIDENCIA);
 
         /**
          * Todos los campos en orden de prioridad.

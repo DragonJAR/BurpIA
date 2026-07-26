@@ -131,12 +131,65 @@ class ConfigPersistenceManagerTest {
     void testHayCambiosPendientes() {
         ConfiguracionAPI config = persistenceManager.cargarConfiguracion();
         assertFalse(persistenceManager.hayCambiosPendientes());
-        
+
         config.establecerRetrasoSegundos(10);
         assertTrue(persistenceManager.hayCambiosPendientes());
-        
+
         persistenceManager.actualizarEstadoReferencia();
         assertFalse(persistenceManager.hayCambiosPendientes());
+    }
+
+    @Test
+    void testHayCambiosPendientesDetectaCambioEnListaMultiProveedor() {
+        ConfiguracionAPI config = persistenceManager.cargarConfiguracion();
+        assertFalse(persistenceManager.hayCambiosPendientes());
+
+        config.establecerProveedoresMultiConsulta(java.util.List.of("OpenAI", "Claude"));
+        assertTrue(persistenceManager.hayCambiosPendientes(),
+            "Cambiar solo la lista multi-proveedor debe detectarse como cambio pendiente");
+
+        persistenceManager.actualizarEstadoReferencia();
+        assertFalse(persistenceManager.hayCambiosPendientes());
+
+        config.agregarProveedorMultiConsulta("Ollama");
+        assertTrue(persistenceManager.hayCambiosPendientes(),
+            "Agregar un proveedor a la lista debe detectarse como cambio pendiente");
+    }
+
+    @Test
+    void testHayCambiosPendientesDetectaCambioEnNivelDeLog() {
+        ConfiguracionAPI config = persistenceManager.cargarConfiguracion();
+        assertFalse(persistenceManager.hayCambiosPendientes());
+
+        config.establecerNivelInfoHabilitado(false);
+        assertTrue(persistenceManager.hayCambiosPendientes(),
+            "Cambiar un nivel de log debe detectarse como cambio pendiente");
+
+        persistenceManager.actualizarEstadoReferencia();
+        assertFalse(persistenceManager.hayCambiosPendientes());
+
+        config.establecerDetallado(true);
+        persistenceManager.actualizarEstadoReferencia();
+        config.establecerNivelTraceHabilitado(false);
+        assertTrue(persistenceManager.hayCambiosPendientes(),
+            "Cambiar el nivel trace debe detectarse como cambio pendiente");
+    }
+
+    @Test
+    void testHayCambiosPendientesDetectaCambioEnAlertasOptOut() {
+        ConfiguracionAPI config = persistenceManager.cargarConfiguracion();
+        assertFalse(persistenceManager.hayCambiosPendientes());
+
+        config.agregarAlertaDeshabilitada("alerta-prueba");
+        assertTrue(persistenceManager.hayCambiosPendientes(),
+            "Deshabilitar una alerta debe detectarse como cambio pendiente");
+
+        persistenceManager.actualizarEstadoReferencia();
+        assertFalse(persistenceManager.hayCambiosPendientes());
+
+        config.quitarAlertaDeshabilitada("alerta-prueba");
+        assertTrue(persistenceManager.hayCambiosPendientes(),
+            "Reactivar una alerta debe detectarse como cambio pendiente");
     }
     
     @Test

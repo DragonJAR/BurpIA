@@ -72,25 +72,35 @@ public final class HttpUtils {
     }
 
     public static String generarHash(byte[] datos) {
-        MessageDigest md = obtenerSha256();
-        if (datos != null && datos.length > 0) {
-            md.update(datos);
+        try {
+            MessageDigest md = obtenerSha256();
+            if (datos != null && datos.length > 0) {
+                md.update(datos);
+            }
+            return convertirDigestHex(md.digest());
+        } finally {
+            // Sin remove() el MessageDigest pinea el classloader de la extensión
+            // al recargarla en Burp (los hilos sobreviven al unload).
+            SHA256_LOCAL.remove();
         }
-        return convertirDigestHex(md.digest());
     }
 
     public static String generarHashPartes(String... partes) {
-        MessageDigest md = obtenerSha256();
-        if (partes == null || partes.length == 0) {
-            return convertirDigestHex(md.digest());
-        }
-        for (String parte : partes) {
-            if (Normalizador.noEsVacio(parte)) {
-                md.update(parte.getBytes(StandardCharsets.UTF_8));
+        try {
+            MessageDigest md = obtenerSha256();
+            if (partes == null || partes.length == 0) {
+                return convertirDigestHex(md.digest());
             }
-            md.update((byte) 0);
+            for (String parte : partes) {
+                if (Normalizador.noEsVacio(parte)) {
+                    md.update(parte.getBytes(StandardCharsets.UTF_8));
+                }
+                md.update((byte) 0);
+            }
+            return convertirDigestHex(md.digest());
+        } finally {
+            SHA256_LOCAL.remove();
         }
-        return convertirDigestHex(md.digest());
     }
 
     public static String extraerEncabezados(HttpRequest solicitud) {
@@ -127,34 +137,38 @@ public final class HttpUtils {
         if (solicitud == null || respuesta == null) {
             return "";
         }
-        
-        MessageDigest md = obtenerSha256();
-        
-        actualizarDigest(md, solicitud.method());
-        actualizarDigest(md, solicitud.url());
-        actualizarDigest(md, respuesta.statusCode());
 
-        byte[] bytesSolicitud = obtenerBytesSolicitudSeguros(solicitud);
-        if (bytesSolicitud.length > 0) {
-            actualizarDigest(md, bytesSolicitud);
-        } else {
-            long longitudSolicitud = obtenerLongitudCuerpoSeguro(solicitud);
-            if (longitudSolicitud >= 0L) {
-                actualizarDigest(md, longitudSolicitud);
+        try {
+            MessageDigest md = obtenerSha256();
+
+            actualizarDigest(md, solicitud.method());
+            actualizarDigest(md, solicitud.url());
+            actualizarDigest(md, respuesta.statusCode());
+
+            byte[] bytesSolicitud = obtenerBytesSolicitudSeguros(solicitud);
+            if (bytesSolicitud.length > 0) {
+                actualizarDigest(md, bytesSolicitud);
+            } else {
+                long longitudSolicitud = obtenerLongitudCuerpoSeguro(solicitud);
+                if (longitudSolicitud >= 0L) {
+                    actualizarDigest(md, longitudSolicitud);
+                }
             }
-        }
 
-        byte[] bytesRespuesta = obtenerBytesRespuestaSeguros(respuesta);
-        if (bytesRespuesta.length > 0) {
-            actualizarDigest(md, bytesRespuesta);
-        } else {
-            long longitudRespuesta = obtenerLongitudCuerpoSeguro(respuesta);
-            if (longitudRespuesta >= 0L) {
-                actualizarDigest(md, longitudRespuesta);
+            byte[] bytesRespuesta = obtenerBytesRespuestaSeguros(respuesta);
+            if (bytesRespuesta.length > 0) {
+                actualizarDigest(md, bytesRespuesta);
+            } else {
+                long longitudRespuesta = obtenerLongitudCuerpoSeguro(respuesta);
+                if (longitudRespuesta >= 0L) {
+                    actualizarDigest(md, longitudRespuesta);
+                }
             }
-        }
 
-        return convertirDigestHex(md.digest());
+            return convertirDigestHex(md.digest());
+        } finally {
+            SHA256_LOCAL.remove();
+        }
     }
 
     private static byte[] obtenerBytesSolicitudSeguros(HttpRequest solicitud) {
@@ -319,6 +333,66 @@ public final class HttpUtils {
             return texto;
         }
         return texto.substring(0, maxCaracteres);
+    }
+
+    /**
+     * Determina si un hostname corresponde a loopback o a una IP privada
+     * (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) o al nombre "localhost".
+     * Usado para limitar el bypass de hostname verification SSL (O3).
+     * <p>
+     * SECURITY (H2): los rangos privados solo aplican a IPv4 numérica estricta
+     * (4 octetos 0-255). Un prefijo textual como "10.evil.com" o
+     * "192.168.attacker.example" NO debe activar el bypass SSL.
+     * {@code URI.getHost()} devuelve "[::1]" con corchetes: se aceptan ambas formas.
+     *
+     * @param hostname hostname o IP a clasificar
+     * @return true si es loopback o IP privada estricta
+     */
+    public static boolean esLoopbackOLan(String hostname) {
+        if (Normalizador.esVacio(hostname)) {
+            return false;
+        }
+        String h = hostname.toLowerCase(Locale.ROOT);
+        if ("localhost".equals(h) || h.endsWith(".localhost") || "127.0.0.1".equals(h)
+                || "::1".equals(h) || "[::1]".equals(h)) {
+            return true;
+        }
+        int[] octetos = parsearOctetosIpv4Estrictos(h);
+        if (octetos == null) {
+            return false;
+        }
+        if (octetos[0] == 10) {
+            return true;
+        }
+        if (octetos[0] == 192 && octetos[1] == 168) {
+            return true;
+        }
+        return octetos[0] == 172 && octetos[1] >= 16 && octetos[1] <= 31;
+    }
+
+    private static int[] parsearOctetosIpv4Estrictos(String host) {
+        String[] partes = host.split("\\.", -1);
+        if (partes.length != 4) {
+            return null;
+        }
+        int[] octetos = new int[4];
+        for (int i = 0; i < partes.length; i++) {
+            String parte = partes[i];
+            if (parte.isEmpty() || parte.length() > 3) {
+                return null;
+            }
+            for (int j = 0; j < parte.length(); j++) {
+                if (!Character.isDigit(parte.charAt(j))) {
+                    return null;
+                }
+            }
+            int valor = Integer.parseInt(parte);
+            if (valor > 255) {
+                return null;
+            }
+            octetos[i] = valor;
+        }
+        return octetos;
     }
 
     public static boolean esRecursoEstatico(String url) {

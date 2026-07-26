@@ -92,7 +92,6 @@ public class DialogoDetalleHallazgo extends JDialog {
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblUrl = new JLabel(I18nUI.DetalleHallazgo.LABEL_URL());
         lblUrl.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.URL());
-        lblUrl.setLabelFor(txtUrl);
         panelContenido.add(lblUrl, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
@@ -101,13 +100,13 @@ public class DialogoDetalleHallazgo extends JDialog {
         txtUrl.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.URL());
         txtUrl.setInputVerifier(UIUtils.crearInputVerifierUrl());
         panelContenido.add(txtUrl, gbc);
+        lblUrl.setLabelFor(txtUrl);
 
         fila++;
 
         gbc.gridx = 0; gbc.gridy = fila; gbc.weightx = 0;
         JLabel lblTitulo = new JLabel(I18nUI.DetalleHallazgo.LABEL_TITULO());
         lblTitulo.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.TITULO());
-        lblTitulo.setLabelFor(txtTitulo);
         panelContenido.add(lblTitulo, gbc);
 
         gbc.gridx = 1; gbc.weightx = 1;
@@ -115,6 +114,7 @@ public class DialogoDetalleHallazgo extends JDialog {
         txtTitulo.setFont(EstilosUI.FUENTE_CAMPO_TEXTO);
         txtTitulo.setToolTipText(I18nUI.Tooltips.DetalleHallazgo.TITULO());
         panelContenido.add(txtTitulo, gbc);
+        lblTitulo.setLabelFor(txtTitulo);
 
         fila++;
 
@@ -257,14 +257,25 @@ public class DialogoDetalleHallazgo extends JDialog {
 
     private boolean tieneCambiosSinGuardar() {
         if (hallazgoOriginal == null) {
-            // Hallazgo nuevo: cualquier contenido cuenta como cambio.
+            // Hallazgo nuevo: cualquier contenido cuenta como cambio. Los combos
+            // se comparan contra los defaults que carga cargarDatos().
             return Normalizador.noEsVacio(txtUrl.getText())
                     || Normalizador.noEsVacio(txtTitulo.getText())
-                    || txtDescripcion.getDocument().getLength() > 0;
+                    || txtDescripcion.getDocument().getLength() > 0
+                    || !java.util.Objects.equals(comboSeveridad.getSelectedItem(),
+                            I18nUI.Hallazgos.SEVERIDAD_INFO())
+                    || !java.util.Objects.equals(comboConfianza.getSelectedItem(),
+                            I18nUI.Hallazgos.CONFIANZA_MEDIA());
         }
+        // Los combos también cuentan: instalarIndicadorSucio() los marca con "•",
+        // así que descartarlos aquí los perdería en silencio al cerrar.
         return !java.util.Objects.equals(txtUrl.getText(), valorONulo(hallazgoOriginal.obtenerUrl()))
                 || !java.util.Objects.equals(txtTitulo.getText(), valorONulo(hallazgoOriginal.obtenerTitulo()))
-                || !java.util.Objects.equals(txtDescripcion.getText(), valorONulo(hallazgoOriginal.obtenerHallazgo()));
+                || !java.util.Objects.equals(txtDescripcion.getText(), valorONulo(hallazgoOriginal.obtenerHallazgo()))
+                || !java.util.Objects.equals(comboSeveridad.getSelectedItem(),
+                        I18nUI.Hallazgos.TRADUCIR_SEVERIDAD(hallazgoOriginal.obtenerSeveridad()))
+                || !java.util.Objects.equals(comboConfianza.getSelectedItem(),
+                        I18nUI.Hallazgos.TRADUCIR_CONFIANZA(hallazgoOriginal.obtenerConfianza()));
     }
 
     private static String valorONulo(String valor) {

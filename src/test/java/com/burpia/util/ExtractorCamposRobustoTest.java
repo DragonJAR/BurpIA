@@ -194,6 +194,34 @@ class ExtractorCamposRobustoTest {
         }
 
         @Test
+        @DisplayName("Extrae descripcion usando el alias detalle")
+        void extraeDescripcionConAliasDetalle() {
+            // Regresión H5: "detalle" es alias canónico de descripcion en
+            // JsonParserUtil.CAMPOS_DESCRIPCION; las variaciones deben derivarse
+            // de esa tabla única.
+            String bloque = "\"titulo\":\"Test\", " +
+                           "\"detalle\":\"Detalle del hallazgo\"";
+
+            String valor = ExtractorCamposRobusto.extraerCampoDeBloque(
+                ExtractorCamposRobusto.CamposHallazgo.DESCRIPCION,
+                bloque
+            );
+
+            assertEquals("Detalle del hallazgo", valor, "Debe extraer descripcion via alias 'detalle'");
+        }
+
+        @Test
+        @DisplayName("Variaciones de campos coinciden con la tabla canonica de JsonParserUtil")
+        void variacionesDerivanDeTablaCanonica() {
+            assertArrayEquals(JsonParserUtil.CAMPOS_DESCRIPCION,
+                ExtractorCamposRobusto.CamposHallazgo.DESCRIPCION.obtenerVariaciones(),
+                "DESCRIPCION debe derivar sus variaciones de JsonParserUtil.CAMPOS_DESCRIPCION");
+            assertArrayEquals(JsonParserUtil.CAMPOS_TITULO,
+                ExtractorCamposRobusto.CamposHallazgo.TITULO.obtenerVariaciones(),
+                "TITULO debe derivar sus variaciones de JsonParserUtil.CAMPOS_TITULO");
+        }
+
+        @Test
         @DisplayName("Retorna vacío si bloque es null")
         void retornaVacioSiBloqueNull() {
             String valor = ExtractorCamposRobusto.extraerCampoDeBloque(

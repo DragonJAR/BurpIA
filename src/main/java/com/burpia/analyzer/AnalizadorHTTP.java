@@ -6,6 +6,7 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.util.ConstructorSolicitudesProveedor;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.ControlCancelacionPausa;
+import com.burpia.util.HttpUtils;
 import com.burpia.util.Normalizador;
 import okhttp3.*;
 import java.io.IOException;
@@ -75,7 +76,6 @@ public class AnalizadorHTTP {
                 throw e;
             } catch (ApiHttpException e) {
                 ultimaExcepcion = e;
-                // Si es error de contexto, lanzar excepción específica (no reintentar aquí)
                 if (e.esErrorContextoExcedido()) {
                     int limite = ContextExceededDetector.extraerLimiteTokens(e.obtenerCuerpoError());
                     throw new ContextExceededException(e.getMessage(), e.obtenerCuerpoError(), limite);
@@ -197,7 +197,6 @@ public class AnalizadorHTTP {
                             codigoRespuesta,
                             Normalizador.noEsVacio(cuerpoError) ? cuerpoError : I18nUI.Conexion.DETALLE_SIN_CUERPO());
                     
-                    // Detectar error de contexto excedido
                     String proveedor = config.obtenerProveedorAI();
                     boolean esErrorContexto = DETECTOR_CONTEXTO.esErrorContextoExcedido(
                         proveedor, codigoRespuesta, cuerpoError);
@@ -341,7 +340,7 @@ public class AnalizadorHTTP {
             // de un MITM por misconfig DNS.
             javax.net.ssl.HostnameVerifier defaultVerifier = javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier();
             builder.hostnameVerifier((hostname, session) -> {
-                if (esLoopbackOLan(hostname)) {
+                if (HttpUtils.esLoopbackOLan(hostname)) {
                     return true;
                 }
                 return defaultVerifier.verify(hostname, session);
@@ -350,42 +349,6 @@ public class AnalizadorHTTP {
             gestorLogging.error(ORIGEN_LOG,
                 I18nUI.Conexion.LOG_SSL_INSECURE_ERROR(e.getClass().getSimpleName()));
         }
-    }
-
-    /**
-     * Determina si un hostname corresponde a una IP loopback o de red privada
-     * (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) o el nombre "localhost".
-     * Usado para limitar el bypass de hostname verification SSL (O3).
-     */
-    private static boolean esLoopbackOLan(String hostname) {
-        if (hostname == null || hostname.isEmpty()) {
-            return false;
-        }
-        String h = hostname.toLowerCase(java.util.Locale.ROOT);
-        if ("localhost".equals(h) || h.endsWith(".localhost") || "127.0.0.1".equals(h) || "::1".equals(h)) {
-            return true;
-        }
-        // IPv4 patterns: 10.x, 172.16-31.x, 192.168.x
-        if (h.startsWith("10.")) {
-            return true;
-        }
-        if (h.startsWith("192.168.")) {
-            return true;
-        }
-        if (h.startsWith("172.")) {
-            int dot1 = h.indexOf('.', 4);
-            if (dot1 > 4) {
-                try {
-                    int segundo = Integer.parseInt(h.substring(4, dot1));
-                    if (segundo >= 16 && segundo <= 31) {
-                        return true;
-                    }
-                } catch (NumberFormatException ignored) {
-                    // Not an IP — fall through
-                }
-            }
-        }
-        return false;
     }
 
     private void registrarFalloIntento(int intento, IOException error) {

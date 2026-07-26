@@ -148,6 +148,10 @@ public class GestorConfiguracion {
 
             Files.write(tempPath, json.getBytes(StandardCharsets.UTF_8));
 
+            // H3: el temporal ya contiene las API keys; aplicar permisos
+            // restrictivos ANTES del rename, no solo después.
+            asegurarPermisosPrivados(tempPath);
+
             // L6: en Windows, Files.move(REPLACE_EXISTING) puede lanzar
             // AccessDeniedException si el destino está abierto (AV, indexador,
             // otro proceso). Reintentamos con backoff corto antes de rendir,
@@ -269,15 +273,19 @@ public class GestorConfiguracion {
             }
             // Conservar solo la entrada del propietario, eliminar herencia/heredados.
             java.nio.file.attribute.UserPrincipal owner = aclView.getOwner();
-            java.util.List<java.nio.file.attribute.AclEntry> nuevas = new java.util.ArrayList<>();
-            if (owner != null) {
-                java.nio.file.attribute.AclEntry entry = java.nio.file.attribute.AclEntry.newBuilder()
-                        .setType(java.nio.file.attribute.AclEntryType.ALLOW)
-                        .setPrincipal(owner)
-                        .setPermissions(java.nio.file.attribute.AclEntryPermission.values())
-                        .build();
-                nuevas.add(entry);
+            // H4: si el propietario no se puede resolver, setAcl([]) denegaría
+            // todo acceso, incluido el del propio usuario. Mejor no tocar el ACL.
+            if (owner == null) {
+                logInfo("[Configuracion] Propietario del archivo no resoluble: no se aplica ACL restrictiva");
+                return;
             }
+            java.util.List<java.nio.file.attribute.AclEntry> nuevas = new java.util.ArrayList<>();
+            java.nio.file.attribute.AclEntry entry = java.nio.file.attribute.AclEntry.newBuilder()
+                    .setType(java.nio.file.attribute.AclEntryType.ALLOW)
+                    .setPrincipal(owner)
+                    .setPermissions(java.nio.file.attribute.AclEntryPermission.values())
+                    .build();
+            nuevas.add(entry);
             aclView.setAcl(nuevas);
         } catch (Exception e) {
             logInfo("[Configuracion] No se pudo aplicar ACL privada (FS no soportado): %s", e.getMessage());

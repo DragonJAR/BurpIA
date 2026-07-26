@@ -1023,15 +1023,20 @@ public class PanelAgente extends JPanel {
             }
             };
 
-            process = nuevoProceso;
-            ttyConnector = nuevoConnector;
-
             ejecutarEnEdt(() -> {
                 if (esSesionVigente(sesionObjetivo) && terminalWidget != null) {
+                    process = nuevoProceso;
+                    ttyConnector = nuevoConnector;
                     terminalWidget.setTtyConnector(nuevoConnector);
                     terminalWidget.start();
                     ultimoAgenteIniciado = obtenerTipoAgenteConfiguradoActual();
                     programarInyeccionInicial(sesionObjetivo);
+                } else {
+                    // La sesión quedó inválida entre el arranque del PTY y este
+                    // bloque EDT: destruir proceso y connector para no fugas un
+                    // PTY vivo sin dueño (H5).
+                    ejecutarSilencioso(nuevoConnector::close, "Error cerrando ttyConnector");
+                    terminarProcesoSilencioso(nuevoProceso);
                 }
                 consolaArrancando.set(false);
             });
@@ -1201,7 +1206,7 @@ public class PanelAgente extends JPanel {
         String ansiStart = "\u001b[200~";
         String ansiEnd = "\u001b[201~";
 
-        String payloadConBrackets = ansiStart + texto + ansiEnd;
+        String payloadConBrackets = ansiStart + sanitizarTextoParaTerminal(texto) + ansiEnd;
         long injectionId = contadorInyeccion.incrementAndGet();
         SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(opciones.tipoAgente());
 
@@ -1223,6 +1228,32 @@ public class PanelAgente extends JPanel {
             dormirSilencioso(opciones.delaySubmitPostPasteMs());
             enviarSecuenciaSubmit(opciones, secuencia, injectionId, origen, sesionObjetivo);
         });
+    }
+
+    /**
+     * SECURITY (H1): el texto inyectado vía bracketed-paste incluye datos
+     * controlados por servidores remotos (título/URL/request/response del
+     * hallazgo). Un ESC o un carácter de control embebido (p. ej. ESC[201~)
+     * terminaría el paste antes de tiempo y el resto se ejecutaría como
+     * input directo de la terminal. Se eliminan ESC y los controles
+     * C0/C1 excepto \t, \n y \r, que el flujo de inyección usa de forma
+     * legítima (payloads multilínea).
+     */
+    private static String sanitizarTextoParaTerminal(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return "";
+        }
+        StringBuilder limpio = new StringBuilder(texto.length());
+        for (int i = 0; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+            boolean esEscapeOControl = c == '\u001b'
+                || (c < 0x20 && c != '\t' && c != '\n' && c != '\r')
+                || c == 0x7F;
+            if (!esEscapeOControl) {
+                limpio.append(c);
+            }
+        }
+        return limpio.toString();
     }
 
     private void enviarSecuenciaSubmit(

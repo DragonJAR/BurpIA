@@ -71,7 +71,11 @@ public class DeduplicadorSolicitudes {
         long ahora = System.currentTimeMillis();
         synchronized (lock) {
             barrerExpiradosSiCorresponde(ahora);
-            boolean duplicado = hashesProcesados.containsKey(hash);
+            // Expiración por entrada: un hash cuyo TTL venció no cuenta como duplicado
+            // aunque el barrido periódico (cada 30s) aún no lo haya eliminado.
+            // El put refresca el timestamp (TTL deslizante) en ambos caminos.
+            Long timestampPrevio = hashesProcesados.get(hash);
+            boolean duplicado = timestampPrevio != null && ahora - timestampPrevio <= ttlMillis;
             hashesProcesados.put(hash, ahora);
             return duplicado;
         }

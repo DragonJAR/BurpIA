@@ -251,6 +251,14 @@ public class ContextExceededDetector {
         if (normalizado.equalsIgnoreCase("moonshot") || normalizado.equalsIgnoreCase("moonshot (kimi)")) {
             return "Moonshot (Kimi)";
         }
+        // DeepSeek y xAI tienen claves con capitalización interna en PATRONES_ERROR;
+        // sin estas ramas capitalizarPrimeraLetra producía "Deepseek"/"Xai" (inalcanzables).
+        if (normalizado.equalsIgnoreCase("deepseek")) {
+            return "DeepSeek";
+        }
+        if (normalizado.equalsIgnoreCase("xai")) {
+            return "xAI";
+        }
         // LM Studio — acepta variantes de spacing/case (lm studio, LMStudio).
         if (normalizado.equalsIgnoreCase("lm studio") || normalizado.equalsIgnoreCase("lmstudio")) {
             return "LM Studio";

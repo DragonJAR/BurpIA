@@ -8,13 +8,11 @@ import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.ControlCancelacionPausa;
 import com.burpia.util.GestorConsolaGUI;
 import com.burpia.util.GestorLoggingUnificado;
-import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
 import com.burpia.util.PromptTruncador;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.List;
 
 public class OrquestadorAnalisis {
     private static final String ORIGEN_LOG = "OrquestadorAnalisis";
@@ -23,12 +21,7 @@ public class OrquestadorAnalisis {
     // Snapshot inmutable: el llamador crea una copia via crearSnapshot() antes de pasarla.
     // No se reasigna ni muta después del constructor; 'final' garantiza visibilidad entre hilos.
     private final ConfiguracionAPI config;
-    private final PrintWriter stdout;
-    private final PrintWriter stderr;
-    private final LimitadorTasa limitador;
-    private final Callback callback;
     private final Runnable alInicioAnalisis;
-    private final GestorConsolaGUI gestorConsola;
     private final ControlCancelacionPausa controlCancelacionPausa;
     private final ConstructorPrompts constructorPrompt;
     private final GestorLoggingUnificado gestorLogging;
@@ -36,37 +29,21 @@ public class OrquestadorAnalisis {
     private final ParseadorRespuestasAI parseador;
     private final PromptTruncador promptTruncador;
 
-    public interface Callback {
-        void alCompletarAnalisis(ResultadoAnalisisMultiple resultado);
-        void alErrorAnalisis(String error);
-        default void alCanceladoAnalisis() {}
-    }
-
-    public OrquestadorAnalisis(SolicitudAnalisis solicitud, 
-                              ConfiguracionAPI config, 
-                              PrintWriter stdout, 
+    public OrquestadorAnalisis(SolicitudAnalisis solicitud,
+                              ConfiguracionAPI config,
+                              PrintWriter stdout,
                               PrintWriter stderr,
-                              LimitadorTasa limitador, 
-                              Callback callback, 
                               Runnable alInicioAnalisis,
-                              GestorConsolaGUI gestorConsola, 
+                              GestorConsolaGUI gestorConsola,
                               ControlCancelacionPausa controlCancelacionPausa) {
         this.solicitud = solicitud;
         this.config = config != null ? config : new ConfiguracionAPI();
-        this.stdout = stdout != null ? stdout : new PrintWriter(OutputStream.nullOutputStream(), true);
-        this.stderr = stderr != null ? stderr : new PrintWriter(OutputStream.nullOutputStream(), true);
-        this.limitador = limitador != null ? limitador : new LimitadorTasa(1);
-        this.callback = callback != null ? callback : new Callback() {
-            @Override
-            public void alCompletarAnalisis(ResultadoAnalisisMultiple resultado) {}
-            @Override
-            public void alErrorAnalisis(String error) {}
-        };
+        PrintWriter out = stdout != null ? stdout : new PrintWriter(OutputStream.nullOutputStream(), true);
+        PrintWriter err = stderr != null ? stderr : new PrintWriter(OutputStream.nullOutputStream(), true);
         this.alInicioAnalisis = alInicioAnalisis;
-        this.gestorConsola = gestorConsola;
         this.controlCancelacionPausa = controlCancelacionPausa != null ? controlCancelacionPausa : new ControlCancelacionPausa(null, null);
         this.constructorPrompt = new ConstructorPrompts(this.config);
-        this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
+        this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, out, err, null, null);
         // Extraer suppliers para AnalizadorHTTP (API legacy)
         java.util.function.BooleanSupplier cancelada = this.controlCancelacionPausa::esCancelada;
         java.util.function.BooleanSupplier pausada = this.controlCancelacionPausa::esPausada;
@@ -94,59 +71,35 @@ public class OrquestadorAnalisis {
         gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Hash de solicitud: %s",
                 nombreHilo, solicitud.obtenerHashSolicitud()));
 
-        try {
-            controlCancelacionPausa.verificarCancelacion();
-            controlCancelacionPausa.esperarSiPausada();
-            notificarInicioAnalisis();
-            
-            String alertaConfiguracion = validarConfiguracionAntesDeConsulta();
-            if (Normalizador.noEsVacio(alertaConfiguracion)) {
-                gestorLogging.error(ORIGEN_LOG, alertaConfiguracion);
-                throw new IOException(alertaConfiguracion);
-            }
+        controlCancelacionPausa.verificarCancelacion();
+        controlCancelacionPausa.esperarSiPausada();
+        notificarInicioAnalisis();
 
-            // NOTA: El limitador YA fue adquirido por el llamador (AnalizadorAI o FlowAnalysisManager)
-            // No adquirimos aquí para evitar doble adquisición que causa permisos negativos
-
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Analizando: %s", solicitud.obtenerUrl()));
-
-            boolean multiHabilitado = config.esMultiProveedorHabilitado();
-            List<String> proveedoresConfig = config.obtenerProveedoresMultiConsulta();
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("DIAGNOSTICO: multiHabilitado=%s, proveedoresConfig=%s",
-                    multiHabilitado,
-                    proveedoresConfig != null ? proveedoresConfig.size() + " elementos" : "null"));
-
-            ResultadoAnalisisMultiple resultadoMultiple;
-            if (multiHabilitado && proveedoresConfig != null && proveedoresConfig.size() > 1) {
-                gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("DIAGNOSTICO: Ejecutando multi-proveedor con %d proveedores",
-                        proveedoresConfig.size()));
-                resultadoMultiple = ejecutarAnalisisMultiProveedorSecuencial();
-            } else {
-                if (multiHabilitado) {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.trf(
-                            "PROVEEDOR: Multi-proveedor habilitado pero solo %d proveedor(es) configurado(s). Usando proveedor único: %s",
-                            proveedoresConfig != null ? proveedoresConfig.size() : 0,
-                            config.obtenerProveedorAI()));
-                } else {
-                    gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("PROVEEDOR: Usando proveedor único: %s",
-                            config.obtenerProveedorAI()));
-                }
-                String respuesta = llamarAPIAIConRetries();
-                resultadoMultiple = parseador.parsearRespuesta(respuesta, solicitud, config != null ? config.obtenerProveedorAI() : "");
-            }
-
-            long duracion = System.currentTimeMillis() - tiempoInicio;
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Análisis completado: %s (tomo %dms)",
-                    solicitud.obtenerUrl(), duracion));
-            gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Severidad maxima: %s",
-                    nombreHilo, resultadoMultiple.obtenerSeveridadMaxima()));
-
-            return resultadoMultiple;
-
-        } finally { // NOPMD EmptyFinallyBlock
-            // El limitador es liberado por el llamador (AnalizadorAI o FlowAnalysisManager).
-            // No liberamos aquí para evitar doble liberación que causaría permisos negativos.
+        String alertaConfiguracion = validarConfiguracionAntesDeConsulta();
+        if (Normalizador.noEsVacio(alertaConfiguracion)) {
+            gestorLogging.error(ORIGEN_LOG, alertaConfiguracion);
+            throw new IOException(alertaConfiguracion);
         }
+
+        // El limitador de tasa y el despacho multi-proveedor viven en el
+        // llamador (AnalizadorAI): este pipeline solo ejecuta el análisis de
+        // proveedor único. No adquirimos ni liberamos permisos aquí para no
+        // romper el balance del semáforo compartido.
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Analizando: %s", solicitud.obtenerUrl()));
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("PROVEEDOR: Usando proveedor único: %s",
+                config.obtenerProveedorAI()));
+
+        String respuesta = llamarAPIAIConRetries();
+        ResultadoAnalisisMultiple resultadoMultiple = parseador.parsearRespuesta(
+                respuesta, solicitud, config.obtenerProveedorAI());
+
+        long duracion = System.currentTimeMillis() - tiempoInicio;
+        gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Análisis completado: %s (tomo %dms)",
+                solicitud.obtenerUrl(), duracion));
+        gestorLogging.verbose(ORIGEN_LOG, I18nLogs.trf("[%s] Severidad maxima: %s",
+                nombreHilo, resultadoMultiple.obtenerSeveridadMaxima()));
+
+        return resultadoMultiple;
     }
 
     private void notificarInicioAnalisis() {
@@ -161,9 +114,7 @@ public class OrquestadorAnalisis {
     }
 
     private String validarConfiguracionAntesDeConsulta() {
-        if (config == null) {
-            return alertaConfiguracionNoDisponible();
-        }
+        // config nunca es null: el constructor normaliza a new ConfiguracionAPI()
         String error = config.validarParaConsultaModelo();
         return error != null ? error.trim() : "";
     }
@@ -194,22 +145,6 @@ public class OrquestadorAnalisis {
         return respuesta;
     }
 
-    private ResultadoAnalisisMultiple ejecutarAnalisisMultiProveedorSecuencial() throws IOException, InterruptedException {
-        java.util.function.BooleanSupplier cancelada = controlCancelacionPausa::esCancelada;
-        java.util.function.BooleanSupplier pausada = controlCancelacionPausa::esPausada;
-        GestorMultiProveedor gestorMultiProveedor = new GestorMultiProveedor(
-                solicitud,
-                config,
-                stdout,
-                stderr,
-                gestorConsola,
-                cancelada,
-                pausada,
-                gestorLogging);
-        return gestorMultiProveedor.ejecutarAnalisisMultiProveedor();
-    }
-
-
     private String resumirParaLog(String texto) {
         // Cuando el modo detallado está activo, mostrar todo sin truncar
         if (config != null && config.esDetallado()) {
@@ -226,10 +161,6 @@ public class OrquestadorAnalisis {
 
     private static String mensajeErrorSolicitudNoDisponible() {
         return I18nUI.tr("Solicitud de analisis no disponible", "Analysis request is not available");
-    }
-
-    private static String alertaConfiguracionNoDisponible() {
-        return I18nUI.tr("ALERTA: Configuracion de IA no disponible", "ALERTA: AI configuration is unavailable");
     }
 
     /**

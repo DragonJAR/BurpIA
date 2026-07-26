@@ -60,7 +60,9 @@ public final class ProcesadorPromptHTTP {
         validarParametrosFlujo(solicitudes, config);
         
         String prompt = obtenerPromptEfectivo(promptBase);
-        String resultado = prompt;
+        // {OUTPUT_LANGUAGE} se reemplaza sobre la plantilla ANTES de insertar
+        // contenido HTTP: un body que contenga el literal del token no debe expandirse.
+        String resultado = prompt.replace(TOKEN_OUTPUT_LANGUAGE, obtenerIdiomaSalida(config));
 
         if (noEsVacia(solicitudes)) {
             resultado = reemplazarContenidoFlujo(
@@ -69,9 +71,7 @@ public final class ProcesadorPromptHTTP {
                 construirResponsesFlujo(solicitudes)
             );
         }
-        
-        resultado = resultado.replace(TOKEN_OUTPUT_LANGUAGE, obtenerIdiomaSalida(config));
-        
+
         return resultado;
     }
 
@@ -100,12 +100,17 @@ public final class ProcesadorPromptHTTP {
 
         boolean teniaMarcadorRequest = contieneMarcadoresRequest(prompt);
         boolean teniaMarcadorResponse = contieneMarcadoresResponse(prompt);
+        // Los reemplazos simples se deciden sobre la plantilla ANTES de insertar
+        // contenido: si el contenido insertado contiene el literal de un token
+        // (p.ej. un body con "{RESPONSE}"), no debe expandirse ni duplicarse.
+        boolean teniaTokenRequestSimple = prompt.contains(TOKEN_REQUEST);
+        boolean teniaTokenResponseSimple = prompt.contains(TOKEN_RESPONSE);
         String resultado = reemplazarMarcadoresNumerados(prompt, requests, responses);
 
-        if (resultado.contains(TOKEN_REQUEST)) {
+        if (teniaTokenRequestSimple) {
             resultado = resultado.replace(TOKEN_REQUEST, construirBloquesEnumerados("REQUEST", requests));
         }
-        if (resultado.contains(TOKEN_RESPONSE)) {
+        if (teniaTokenResponseSimple) {
             resultado = resultado.replace(TOKEN_RESPONSE, construirBloquesEnumerados("RESPONSE", responses));
         }
 

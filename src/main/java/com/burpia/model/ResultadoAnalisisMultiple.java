@@ -93,8 +93,8 @@ public class ResultadoAnalisisMultiple {
             .filter(Objects::nonNull)
             .map(Hallazgo::obtenerSeveridad)
             .max((s1, s2) -> Integer.compare(
-                Hallazgo.obtenerPesoSeveridad(s1),
-                Hallazgo.obtenerPesoSeveridad(s2)))
+                Hallazgo.obtenerPrioridadSeveridad(s1),
+                Hallazgo.obtenerPrioridadSeveridad(s2)))
             .orElse(Hallazgo.SEVERIDAD_INFO);
     }
 

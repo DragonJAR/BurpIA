@@ -180,6 +180,12 @@ public class TestDialogUtils {
                 for (int i = todasLasVentanas.length - 1; i >= 0; i--) {
                     Window ventana = todasLasVentanas[i];
                     if (ventana != null && ventana.isVisible()) {
+                        // Capturar antes de cerrar: bajo carga el cleaner en background
+                        // puede no alcanzar a procesar el diálogo antes de esta limpieza,
+                        // y sin esto el mensaje se pierde de forma intermitente.
+                        if (CAPTURA_ACTIVA.get() && ventana instanceof JDialog) {
+                            capturarDialogoMensajeSiAplica((JDialog) ventana);
+                        }
                         // Cerrar cualquier tipo de dialogo o alerta
                         ventana.dispose();
                     }

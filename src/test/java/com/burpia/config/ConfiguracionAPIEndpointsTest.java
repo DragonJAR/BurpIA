@@ -200,7 +200,7 @@ class ConfiguracionAPIEndpointsTest {
     @DisplayName("Construye endpoint con modelo null usa default")
     void testEndpointConModeloNull() {
         assertEquals(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-002:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent",
             ConfiguracionAPI.construirUrlApiProveedor("Gemini", "https://generativelanguage.googleapis.com/v1beta", null)
         , "assertEquals failed at ConfiguracionAPIEndpointsTest.java:125");
     }

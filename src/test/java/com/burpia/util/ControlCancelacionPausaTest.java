@@ -1,5 +1,6 @@
 package com.burpia.util;
 
+import com.burpia.i18n.I18nUI;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -77,7 +78,7 @@ class ControlCancelacionPausaTest {
         InterruptedException thrown = assertThrows(InterruptedException.class,
                 ctrl::verificarCancelacion,
                 "assertThrows failed at ControlCancelacionPausaTest.java:70");
-        assertEquals("Tarea cancelada", thrown.getMessage(),
+        assertEquals(I18nUI.Tareas.ERROR_TAREA_CANCELADA(), thrown.getMessage(),
                 "assertEquals failed at ControlCancelacionPausaTest.java:71");
     }
 

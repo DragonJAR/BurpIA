@@ -35,7 +35,7 @@ class PanelEstadisticasEliminacionTest {
     private Estadisticas estadisticas;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         modelo = new ModeloTablaHallazgos(1000);
         estadisticas = new Estadisticas();
 
@@ -44,21 +44,30 @@ class PanelEstadisticasEliminacionTest {
         ConfiguracionAPI mockConfig = mock(ConfiguracionAPI.class);
         when(mockConfig.obtenerMaximoHallazgosTabla()).thenReturn(1000);
 
-        panelHallazgos = new PanelHallazgos(mockApi, modelo, false);
-        panelHallazgos.establecerConfiguracion(mockConfig);
+        // Los componentes Swing se construyen en el EDT (convención del proyecto).
+        SwingUtilities.invokeAndWait(() -> {
+            panelHallazgos = new PanelHallazgos(mockApi, modelo, false);
+            panelHallazgos.establecerConfiguracion(mockConfig);
 
-        panelEstadisticas = new PanelEstadisticas(
-            estadisticas,
-            modelo::obtenerLimiteFilas,
-            panelHallazgos
-        );
-        panelHallazgos.establecerManejadorFiltrosAplicados(panelEstadisticas::actualizarForzado);
+            panelEstadisticas = new PanelEstadisticas(
+                estadisticas,
+                modelo::obtenerLimiteFilas,
+                panelHallazgos
+            );
+            panelHallazgos.establecerManejadorFiltrosAplicados(panelEstadisticas::actualizarForzado);
+        });
     }
 
     @AfterEach
     void tearDown() {
+        // Ambos paneles arrancan Timers/executors; destruirlos evita fugas de hilos.
         if (panelEstadisticas != null) {
             panelEstadisticas.destruir();
+            panelEstadisticas = null;
+        }
+        if (panelHallazgos != null) {
+            panelHallazgos.destruir();
+            panelHallazgos = null;
         }
     }
 

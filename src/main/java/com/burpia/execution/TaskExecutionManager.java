@@ -495,7 +495,16 @@ public class TaskExecutionManager {
                     });
                 }
 
-                if (gestorTareas != null && Normalizador.noEsVacio(id)) {
+                // Race pause+complete: si la tarea fue pausada mientras el hilo
+                // worker completaba la llamada HTTP, conservamos los hallazgos
+                // (ya agregados arriba) pero NO tocamos el estado: sobrescribir
+                // PAUSADO→COMPLETADO perdería la pausa pedida por el usuario en
+                // la ventana final del análisis. PAUSADO no es estado final, así
+                // que el guard anti-resurrección de actualizarTarea no la protege.
+                boolean pausada = gestorTareas != null && Normalizador.noEsVacio(id)
+                        && gestorTareas.estaTareaPausada(id);
+
+                if (!pausada && gestorTareas != null && Normalizador.noEsVacio(id)) {
                     int numHallazgos = resultado != null ? resultado.obtenerNumeroHallazgos() : 0;
                     boolean huboFallos = resultado != null && resultado.huboErroresParciales();
                     int numFallidos = huboFallos ? resultado.obtenerProveedoresFallidos().size() : 0;

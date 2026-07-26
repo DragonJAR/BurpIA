@@ -2,6 +2,7 @@ package com.burpia.util;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.ui.EstilosUI;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,9 +20,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("GestorConsolaGUI Tests")
 class GestorConsolaGUITest {
 
+    private IdiomaUI idiomaPrevio;
+
     @BeforeEach
     void establecerIdiomaBase() {
+        idiomaPrevio = I18nUI.obtenerIdioma();
         I18nUI.establecerIdioma(IdiomaUI.ES);
+    }
+
+    @AfterEach
+    void restaurarIdioma() {
+        // El idioma es global: sin restaurarlo, los tests que fijan EN contaminan
+        // el resto de la suite (falsos rojos/verdes dependientes del orden).
+        if (idiomaPrevio != null) {
+            I18nUI.establecerIdioma(idiomaPrevio);
+        }
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.Normalizador;
 import com.burpia.util.PoliticaMemoria;
 import com.burpia.util.ProcesadorPromptHTTP;
+import com.burpia.util.PromptTruncador;
 
 import java.util.Objects;
 
@@ -73,16 +74,25 @@ public class ConstructorPrompts {
         boolean teniaTokenResponse = promptTemplate.contains(TOKEN_RESPONSE);
         boolean teniaTokenIdioma = promptTemplate.contains(TOKEN_OUTPUT_LANGUAGE);
 
-        String promptFinal = promptTemplate
-                .replace(TOKEN_REQUEST, requestContenido)
-                .replace(TOKEN_RESPONSE, responseContenido)
-                .replace(TOKEN_OUTPUT_LANGUAGE, idiomaSalida);
+        // Los reemplazos se deciden sobre la plantilla ANTES de insertar contenido:
+        // si el contenido HTTP insertado contiene el literal de un token (p.ej. un
+        // body con "{RESPONSE}"), no debe expandirse ni duplicarse.
+        String promptFinal = promptTemplate;
+        if (teniaTokenRequest) {
+            promptFinal = promptFinal.replace(TOKEN_REQUEST, requestContenido);
+        }
+        if (teniaTokenResponse) {
+            promptFinal = promptFinal.replace(TOKEN_RESPONSE, responseContenido);
+        }
+        if (teniaTokenIdioma) {
+            promptFinal = promptFinal.replace(TOKEN_OUTPUT_LANGUAGE, idiomaSalida);
+        }
 
         if (!teniaTokenRequest) {
             promptFinal += "\n\nREQUEST:\n" + requestContenido;
         }
         if (!teniaTokenResponse) {
-            promptFinal += "\n\nRESPONSE:\n" + responseContenido;
+            promptFinal += "\n\n" + PromptTruncador.MARCADOR_RESPONSE + "\n" + responseContenido;
         }
         if (!teniaTokenIdioma) {
             promptFinal += "\n\n" + I18nUI.tr("IDIOMA DE SALIDA", "OUTPUT LANGUAGE") + ": " + idiomaSalida +
@@ -138,7 +148,7 @@ public class ConstructorPrompts {
 
         String cuerpo = valorNoVacio(solicitud.obtenerCuerpo(), "");
         if (!cuerpo.isEmpty()) {
-            requestBuilder.append("\nBODY:\n")
+            requestBuilder.append("\n").append(PromptTruncador.MARCADOR_BODY).append("\n")
                     .append(truncarTexto(
                             cuerpo,
                             PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
@@ -182,13 +192,13 @@ public class ConstructorPrompts {
         }
 
         if (!cuerpo.isEmpty()) {
-            responseBuilder.append("\nBODY:\n")
+            responseBuilder.append("\n").append(PromptTruncador.MARCADOR_BODY).append("\n")
                     .append(truncarTexto(
                             cuerpo,
                             PoliticaMemoria.MAXIMO_CUERPO_ANALISIS_CARACTERES,
                             I18nUI.tr("cuerpo de respuesta", "response body")));
         } else {
-            responseBuilder.append("\nBODY:\n[EMPTY]");
+            responseBuilder.append("\n").append(PromptTruncador.MARCADOR_BODY).append("\n[EMPTY]");
         }
 
         return responseBuilder.toString();

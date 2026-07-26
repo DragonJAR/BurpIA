@@ -129,6 +129,35 @@ class ContextExceededDetectorTest {
             boolean resultado = detector.esErrorContextoExcedido("google", 429, cuerpoError);
             assertTrue(resultado, "Debe detectar error para google normalizado a Gemini con mención de tokens");
         }
+
+        @Test
+        @DisplayName("detecta error de DeepSeek con nombre en minúsculas")
+        void detectaConDeepseekMinusculas() {
+            // Regresión H4: "deepseek" normalizaba a "Deepseek" (clave inalcanzable;
+            // PATRONES usa "DeepSeek").
+            String cuerpoError = "{\"error\": {\"message\": \"context_length_exceeded: prompt too long\"}}";
+            boolean resultado = detector.esErrorContextoExcedido("deepseek", 400, cuerpoError);
+            assertTrue(resultado, "Debe detectar error de contexto para deepseek normalizado a DeepSeek");
+        }
+
+        @Test
+        @DisplayName("detecta error de xAI con nombre en minúsculas")
+        void detectaConXaiMinusculas() {
+            // Regresión H4: "xai" normalizaba a "Xai" (clave inalcanzable; PATRONES usa "xAI").
+            String cuerpoError = "{\"error\": {\"message\": \"token rate limit exceeded for context\"}}";
+            boolean resultado = detector.esErrorContextoExcedido("xai", 400, cuerpoError);
+            assertTrue(resultado, "Debe detectar error de contexto para xai normalizado a xAI");
+        }
+
+        @Test
+        @DisplayName("detecta error de DeepSeek y xAI con nombre canónico")
+        void detectaConNombreCanonico() {
+            String cuerpoError = "context_length_exceeded";
+            assertTrue(detector.esErrorContextoExcedido("DeepSeek", 400, cuerpoError),
+                "Debe detectar error para DeepSeek canónico");
+            assertTrue(detector.esErrorContextoExcedido("xAI", 400, cuerpoError),
+                "Debe detectar error para xAI canónico");
+        }
     }
 
     @Nested

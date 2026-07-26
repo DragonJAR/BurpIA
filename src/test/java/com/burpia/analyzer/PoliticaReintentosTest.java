@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -337,12 +338,18 @@ class PoliticaReintentosTest {
         @Test
         @DisplayName("Con thread interrumpido no es reintentable")
         void conThreadInterrumpido_noEsReintentable() throws InterruptedException {
+            // El resultado se captura en el hilo hijo y se aserta en el hilo del test:
+            // asertar dentro del Runnable haría que una aserción fallida muriese
+            // silenciosamente en el hilo hijo (falso verde).
+            AtomicBoolean resultado = new AtomicBoolean(true);
             Thread testThread = new Thread(() -> {
                 Thread.currentThread().interrupt();
-                assertFalse(PoliticaReintentos.esExcepcionReintentable(new SocketTimeoutException("timeout")), "assertFalse failed at PoliticaReintentosTest.java:342");
+                resultado.set(PoliticaReintentos.esExcepcionReintentable(new SocketTimeoutException("timeout")));
             });
             testThread.start();
             testThread.join(1000);
+
+            assertFalse(resultado.get(), "assertFalse failed at PoliticaReintentosTest.java:342");
         }
     }
 
