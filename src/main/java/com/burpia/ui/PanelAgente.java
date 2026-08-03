@@ -1030,21 +1030,37 @@ public class PanelAgente extends JPanel {
             };
 
             ejecutarEnEdt(() -> {
-                if (esSesionVigente(sesionObjetivo) && terminalWidget != null) {
-                    process = nuevoProceso;
-                    ttyConnector = nuevoConnector;
-                    terminalWidget.setTtyConnector(nuevoConnector);
-                    terminalWidget.start();
-                    ultimoAgenteIniciado = obtenerTipoAgenteConfiguradoActual();
-                    programarInyeccionInicial(sesionObjetivo);
-                } else {
-                    // La sesión quedó inválida entre el arranque del PTY y este
-                    // bloque EDT: destruir proceso y connector para no fugas un
-                    // PTY vivo sin dueño (H5).
-                    ejecutarSilencioso(nuevoConnector::close, "Error cerrando ttyConnector");
+                try {
+                    if (esSesionVigente(sesionObjetivo) && terminalWidget != null) {
+                        process = nuevoProceso;
+                        ttyConnector = nuevoConnector;
+                        terminalWidget.setTtyConnector(nuevoConnector);
+                        terminalWidget.start();
+                        ultimoAgenteIniciado = obtenerTipoAgenteConfiguradoActual();
+                        programarInyeccionInicial(sesionObjetivo);
+                    } else {
+                        // La sesión quedó inválida entre el arranque del PTY y este
+                        // bloque EDT: destruir proceso y connector para no fugas un
+                        // PTY vivo sin dueño (H5).
+                        ejecutarSilencioso(nuevoConnector::close, "Error cerrando ttyConnector");
+                        terminarProcesoSilencioso(nuevoProceso);
+                    }
+                } catch (RuntimeException ex) {
+                    // Si setTtyConnector o start() lanzan, el reader thread de
+                    // jediterm nunca arranca → cursor parpadeante sin output.
+                    // Sin este catch, consolaArrancando queda en true para siempre
+                    // y TODO reinicio futuro se bloquea en el CAS de iniciarConsola.
+                    gestorLogging.error(ORIGEN_LOG, I18nLogs.tr("Error iniciando terminal widget"), ex);
+                    ejecutarSilencioso(nuevoConnector::close, "Error cerrando ttyConnector tras fallo de start()");
                     terminarProcesoSilencioso(nuevoProceso);
+                    process = null;
+                    ttyConnector = null;
+                    ejecutarEnEdt(() -> UIUtils.mostrarError(PanelAgente.this,
+                            I18nUI.Consola.TITULO_ERROR_PTY(),
+                            I18nUI.Consola.MSG_ERROR_PTY_DETALLE(ex.getMessage() != null ? ex.getMessage() : ex.getClass().getSimpleName())));
+                } finally {
+                    consolaArrancando.set(false);
                 }
-                consolaArrancando.set(false);
             });
 
         } catch (Exception e) {
