@@ -36,14 +36,6 @@ import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PanelAgente extends JPanel {
 
-    static {
-        // Defense-in-depth: si la clase PanelAgente se carga antes que ExtensionBurpIA
-        // (p.ej. vía reflection desde otro plugin de Burp), reforzamos jna.nosys aquí
-        // también. El costo de setear dos veces es desprecible; el costo de no hacerlo
-        // es un Error de ABI incompatible que mata el PTY.
-        System.setProperty("jna.nosys", "true");
-    }
-
     /**
      * Resultado de una inyección de comando en la terminal del agente.
      * Permite distinguir un envío inmediato de uno diferido (encolado) para
