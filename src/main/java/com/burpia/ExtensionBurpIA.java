@@ -47,6 +47,17 @@ import java.util.function.Consumer;
 import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class ExtensionBurpIA implements BurpExtension {
+
+    static {
+        // JNA puede cargar una librería nativa cacheada en el sistema (~/Library/Caches/JNA
+        // en macOS, /tmp/jna-* en Linux) dejada por otra aplicación con una versión de JNA
+        // diferente. Esto provoca un Error de ABI incompatible que mata el thread del PTY
+        // (síntoma: cursor parpadeante en la pestaña Agente, sin output).
+        // jna.nosys=true fuerza a JNA a extraer y usar exclusivamente la librería nativa
+        // empaquetada en el fat JAR de BurpIA, ignorando el caché del sistema.
+        System.setProperty("jna.nosys", "true");
+    }
+
     private static final String TOKEN_REQUEST = "{REQUEST}";
     private static final String TOKEN_RESPONSE = "{RESPONSE}";
     private static final String TOKEN_TITLE = "{TITLE}";

@@ -36,6 +36,14 @@ import static com.burpia.ui.UIUtils.ejecutarEnEdt;
 
 public class PanelAgente extends JPanel {
 
+    static {
+        // Defense-in-depth: si la clase PanelAgente se carga antes que ExtensionBurpIA
+        // (p.ej. vía reflection desde otro plugin de Burp), reforzamos jna.nosys aquí
+        // también. El costo de setear dos veces es desprecible; el costo de no hacerlo
+        // es un Error de ABI incompatible que mata el PTY.
+        System.setProperty("jna.nosys", "true");
+    }
+
     /**
      * Resultado de una inyección de comando en la terminal del agente.
      * Permite distinguir un envío inmediato de uno diferido (encolado) para
@@ -986,11 +994,16 @@ public class PanelAgente extends JPanel {
             env.put("TERM", "xterm-256color");
 
             String[] command = construirComandoShell();
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("Arrancando PTY con comando: ")
+                + I18nLogs.trTecnico(java.util.Arrays.toString(command)));
 
             PtyProcess nuevoProceso = new PtyProcessBuilder()
                 .setCommand(command)
                 .setEnvironment(env)
                 .start();
+
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.tr("PTY arrancado, proceso vivo: ")
+                + nuevoProceso.isAlive());
 
             if (!esSesionVigente(sesionObjetivo)) {
                 terminarProcesoSilencioso(nuevoProceso);
@@ -999,9 +1012,29 @@ public class PanelAgente extends JPanel {
             }
 
             TtyConnector rawConnector = new PtyProcessTtyConnector(nuevoProceso, StandardCharsets.UTF_8);
+
+            // Verificar que el proceso sigue vivo tras crear el connector:
+            // PtyProcessTtyConnector no falla si el proceso ya murió, pero el
+            // reader thread de jediterm leerá EOF inmediatamente → cursor
+            // parpadeante sin output y sin error visible.
+            if (!nuevoProceso.isAlive()) {
+                gestorLogging.error(ORIGEN_LOG, I18nLogs.tr(
+                    "El proceso PTY murió inmediatamente tras arrancar. Verifica que el shell configurado exista."));
+                consolaArrancando.set(false);
+                manejarErrorPty(new RuntimeException("PTY process died immediately after start"));
+                return;
+            }
+
             TtyConnector nuevoConnector = new TtyConnector() {
                 @Override
-                public boolean init(com.jediterm.terminal.Questioner q) { return rawConnector.init(q); }
+                public boolean init(com.jediterm.terminal.Questioner q) {
+                    boolean ok = rawConnector.init(q);
+                    if (!ok) {
+                        gestorLogging.error(ORIGEN_LOG, I18nLogs.tr(
+                            "ttyConnector.init() retornó false: el reader thread no podrá leer datos del PTY."));
+                    }
+                    return ok;
+                }
                 @Override
                 public void close() { rawConnector.close(); }
                 @Override
@@ -1063,9 +1096,15 @@ public class PanelAgente extends JPanel {
                 }
             });
 
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // Catch Throwable (no solo Exception): pty4j puede lanzar
+            // UnsatisfiedLinkError o NoClassDefFoundError si las librerías
+            // nativas no se cargan correctamente en el classpath del fat JAR.
+            // Sin este catch, el Error escapa y mata el thread sin logging,
+            // dejando el terminal con cursor parpadeante y sin output.
             consolaArrancando.set(false);
-            manejarErrorPty(e);
+            manejarErrorPty(e instanceof Exception ? (Exception) e : new RuntimeException(
+                e.getClass().getSimpleName() + ": " + e.getMessage(), e));
         }
     }
 
