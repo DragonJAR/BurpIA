@@ -63,13 +63,17 @@ class ManejadorHttpBurpIATest {
      * Los tests verifican mensajes localizados y deben ser consistentes sin importar
      * el idioma del sistema.
      */
+    private com.burpia.i18n.IdiomaUI idiomaOriginal;
+
     @BeforeEach
     void setUp() {
+        idiomaOriginal = I18nUI.obtenerIdioma();
         I18nUI.establecerIdioma("es");
     }
 
     @AfterEach
     void tearDown() {
+        I18nUI.establecerIdioma(idiomaOriginal);
         for (ManejadorHttpBurpIA manejador : manejadores) {
             manejador.shutdown();
         }

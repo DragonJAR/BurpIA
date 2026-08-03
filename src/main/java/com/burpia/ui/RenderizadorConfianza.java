@@ -76,15 +76,9 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
         this.confianzaStr = (value != null) ? value.toString() : "";
         this.setText("");
 
-        Font f = getFont();
-        // M12: detectar "ignorado" por el valor real del atributo STRIKETHROUGH,
-        // no solo por presencia de la key. Swing reusa la misma instancia de
-        // renderer para todas las filas: si otra celda seteó una fuente tachada
-        // (RenderizadorHallazgoBorrado), getFont() puede devolverla para una fila
-        // NO ignorada. containsKey() además es true incluso con valor null/otro.
-        // Chequear STRIKETHROUGH_ON explícitamente evita falsos "ignorado".
-        Object strike = f.getAttributes().get(java.awt.font.TextAttribute.STRIKETHROUGH);
-        this.isIgnorado = java.awt.font.TextAttribute.STRIKETHROUGH_ON.equals(strike);
+        // isIgnorado se detecta en paintComponent, no aquí: RenderizadorHallazgoBorrado
+        // modifica la fuente (strikethrough) DESPUÉS de que este método retorna, así
+        // que getFont() aquí refleja el estado de la fila ANTERIOR (stale).
 
         return this;
     }
@@ -130,6 +124,12 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+
+        // Detectar "ignorado" aquí: el decorador RenderizadorHallazgoBorrado ya
+        // aplicó/reseteó la fuente para esta fila, así que getFont() es correcto.
+        Font f = getFont();
+        Object strike = f.getAttributes().get(java.awt.font.TextAttribute.STRIKETHROUGH);
+        this.isIgnorado = java.awt.font.TextAttribute.STRIKETHROUGH_ON.equals(strike);
 
         if (Normalizador.esVacio(confianzaStr)) return;
 

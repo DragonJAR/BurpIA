@@ -654,11 +654,14 @@ class PerformanceBenchmarkTest {
                     new PrintWriter(OutputStream.nullOutputStream(), true),
                     new LimitadorTasa(1)
                 );
-                String tareaId = manager.programarAnalisis(solicitud, "Analisis HTTP");
-                assertNotNull(tareaId, "assertNotNull failed at PerformanceBenchmarkTest.java:599");
-                assertNotNull(gestor.obtenerTarea(tareaId), "assertNotNull failed at PerformanceBenchmarkTest.java:600");
-                manager.shutdown();
-                gestor.detener();
+                try {
+                    String tareaId = manager.programarAnalisis(solicitud, "Analisis HTTP");
+                    assertNotNull(tareaId, "assertNotNull failed at PerformanceBenchmarkTest.java:599");
+                    assertNotNull(gestor.obtenerTarea(tareaId), "assertNotNull failed at PerformanceBenchmarkTest.java:600");
+                } finally {
+                    manager.shutdown();
+                    gestor.detener();
+                }
             });
 
             System.out.println(result);

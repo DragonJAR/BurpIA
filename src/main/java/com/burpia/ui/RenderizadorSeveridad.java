@@ -57,12 +57,9 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
         this.severidadStr = (value != null) ? value.toString() : "";
         this.setText("");
 
-        Font f = getFont();
-        // M12: mismo fix que RenderizadorConfianza. Chequear el valor
-        // STRIKETHROUGH_ON explícito, no la presencia de la key (la fuente se
-        // cachea en el renderer compartido entre filas).
-        Object strike = f.getAttributes().get(java.awt.font.TextAttribute.STRIKETHROUGH);
-        this.isIgnorado = java.awt.font.TextAttribute.STRIKETHROUGH_ON.equals(strike);
+        // isIgnorado se detecta en paintComponent, no aquí: RenderizadorHallazgoBorrado
+        // modifica la fuente (strikethrough) DESPUÉS de que este método retorna, así
+        // que getFont() aquí refleja el estado de la fila ANTERIOR (stale).
 
         return this;
     }
@@ -128,6 +125,12 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+
+        // Detectar "ignorado" aquí: el decorador RenderizadorHallazgoBorrado ya
+        // aplicó/reseteó la fuente para esta fila, así que getFont() es correcto.
+        Font f = getFont();
+        Object strike = f.getAttributes().get(java.awt.font.TextAttribute.STRIKETHROUGH);
+        this.isIgnorado = java.awt.font.TextAttribute.STRIKETHROUGH_ON.equals(strike);
 
         if (Normalizador.esVacio(severidadStr)) return;
 

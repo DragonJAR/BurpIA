@@ -694,7 +694,7 @@ class PanelAgenteTransporteTest {
     }
 
     @Test
-    @DisplayName("Destruir reinicia el inyector PTY para permitir reutilización segura")
+    @DisplayName("Destruir cierra el inyector PTY y se recrea on-demand al reutilizar")
     void testDestruirReiniciaInyectorPty() throws Exception {
         PanelAgente panel = crearPanelSinConsola();
         try {
@@ -703,13 +703,15 @@ class PanelAgenteTransporteTest {
 
             panel.destruir();
 
-            ExecutorService inyectorPostDestruir = obtenerInyectorPty(panel);
+            // Tras destruir, el field es null: cerrarInyectorPty lo nullea para
+            // que no quede un executor huérfano. La recreación es lazy on-demand.
+            ExecutorService inyectorPostDestruir = obtenerInyectorPtyViaMetodo(panel);
             assertNotNull(inyectorPostDestruir, "assertNotNull failed at PanelAgenteTransporteTest.java:312");
             assertNotSame(inyectorInicial, inyectorPostDestruir, "assertNotSame failed at PanelAgenteTransporteTest.java:313");
             assertFalse(inyectorPostDestruir.isShutdown(), "assertFalse failed at PanelAgenteTransporteTest.java:314");
 
             panel.escribirComandoCrudo("echo test");
-            ExecutorService inyectorPostEscritura = obtenerInyectorPty(panel);
+            ExecutorService inyectorPostEscritura = obtenerInyectorPtyViaMetodo(panel);
             assertFalse(inyectorPostEscritura.isShutdown(), "assertFalse failed at PanelAgenteTransporteTest.java:318");
         } finally {
             panel.destruir();
@@ -969,6 +971,12 @@ class PanelAgenteTransporteTest {
         Field field = PanelAgente.class.getDeclaredField("inyectorPty");
         field.setAccessible(true);
         return (ExecutorService) field.get(panel);
+    }
+
+    private ExecutorService obtenerInyectorPtyViaMetodo(PanelAgente panel) throws Exception {
+        Method method = PanelAgente.class.getDeclaredMethod("obtenerInyectorPty");
+        method.setAccessible(true);
+        return (ExecutorService) method.invoke(panel);
     }
 
     private void invocarCambiarAgenteRapido(PanelAgente panel) throws Exception {

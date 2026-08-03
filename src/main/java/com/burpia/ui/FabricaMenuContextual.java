@@ -235,7 +235,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         if (previo != null && hash.equals(previo.hashSolicitud)
                 && previo.contenido != null && previo.contenido.equals(contenido)
                 && (ahora - previo.timestampMs) < VENTANA_DEBOUNCE_MS) {
-            api.logging().logToOutput(I18nUI.Contexto.LOG_DEBOUNCE_IGNORADO());
+            logToOutputSafe(I18nUI.Contexto.LOG_DEBOUNCE_IGNORADO());
             return false;
         }
 
@@ -272,7 +272,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         } catch (RuntimeException ex) {
             // El handler corre en el EDT; sin este catch la excepción escaparía
             // sin informar al usuario ni registrar el stack.
-            api.logging().logToError(I18nUI.Contexto.MSG_ERROR_ANALISIS(ex.getMessage()), ex);
+            logToErrorSafe(I18nUI.Contexto.MSG_ERROR_ANALISIS(ex.getMessage()), ex);
             if (!GraphicsEnvironment.isHeadless()) {
                 UIUtils.mostrarError(parentFrame,
                     I18nUI.Contexto.TITULO_ERROR_ANALISIS(),
@@ -331,7 +331,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 }
             } catch (Exception ex) {
                 fallidas++;
-                api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()), ex);
+                logToErrorSafe(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()), ex);
             }
         }
 
@@ -397,7 +397,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             PanelAgente.ResultadoInyeccion resultado = manejadorAgenteFlujo.enviar(new ArrayList<>(seleccion), contextoInvocacion);
             enviada = resultado != PanelAgente.ResultadoInyeccion.DESCARTADO;
         } catch (Exception ex) {
-            api.logging().logToError(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()), ex);
+            logToErrorSafe(I18nUI.Contexto.LOG_ERROR_ENVIO_AGENTE(ex.getMessage()), ex);
             enviada = false;
         }
 
@@ -487,7 +487,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         } catch (RuntimeException ex) {
             // El handler corre en el EDT; sin este catch la excepción escaparía
             // sin informar al usuario ni registrar el stack.
-            api.logging().logToError(I18nUI.Contexto.MSG_ERROR_ANALISIS(ex.getMessage()), ex);
+            logToErrorSafe(I18nUI.Contexto.MSG_ERROR_ANALISIS(ex.getMessage()), ex);
             if (!GraphicsEnvironment.isHeadless()) {
                 UIUtils.mostrarError(parentFrame,
                     I18nUI.Contexto.TITULO_ERROR_ANALISIS(),
@@ -506,7 +506,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 }
             // Best-effort: invocationType() may not be available in all Burp editions
             } catch (RuntimeException ex) {
-                api.logging().logToOutput(I18nUI.Contexto.LOG_INVOCATION_TYPE_NO_DISPONIBLE(ex.getMessage()));
+                logToOutputSafe(I18nUI.Contexto.LOG_INVOCATION_TYPE_NO_DISPONIBLE(ex.getMessage()));
             }
             try {
                 if (evento.toolType() != null) {
@@ -514,7 +514,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
                 }
             // Best-effort: toolType() may not be available in all Burp editions
             } catch (RuntimeException ex) {
-                api.logging().logToOutput(I18nUI.Contexto.LOG_TOOL_TYPE_NO_DISPONIBLE(ex.getMessage()));
+                logToOutputSafe(I18nUI.Contexto.LOG_TOOL_TYPE_NO_DISPONIBLE(ex.getMessage()));
             }
         }
         return new ContextoInvocacion(tipoInvocacion, tipoHerramienta, cantidadSeleccionada);
@@ -531,6 +531,38 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
             AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A, config,
             config != null && config.alertasClickDerechoEnviarAHabilitadas(),
             manejadorCambioAlertasEnviarA);
+    }
+
+    /**
+     * Escribe al log de Burp de forma segura: si {@code api} es null o
+     * {@code api.logging()} lanza, degrada a {@code System.err}. Los action
+     * handlers y catch blocks se ejecutan tras el null-check del provider
+     * (líneas 126/152), pero {@code api} pudo cambiar de estado o el handler
+     * se invoca de forma diferida (clic del usuario) sin la garantía inicial.
+     */
+    private void logToOutputSafe(String mensaje) {
+        if (api != null) {
+            try {
+                api.logging().logToOutput(mensaje);
+                return;
+            } catch (Exception ignored) {
+                // degrade to stderr
+            }
+        }
+        System.out.println(mensaje);
+    }
+
+    private void logToErrorSafe(String mensaje, Throwable ex) {
+        if (api != null) {
+            try {
+                api.logging().logToError(mensaje, ex);
+                return;
+            } catch (Exception ignored) {
+                // degrade to stderr
+            }
+        }
+        System.err.println(mensaje);
+        ex.printStackTrace(System.err);
     }
 
     private static final class RegistroClic {

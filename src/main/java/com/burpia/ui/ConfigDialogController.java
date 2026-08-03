@@ -762,14 +762,19 @@ public class ConfigDialogController {
         SwingWorker<ProbadorConexionAI.ResultadoPrueba, Void> worker = new SwingWorker<>() {
             @Override
             protected ProbadorConexionAI.ResultadoPrueba doInBackground() {
+                ProbadorConexionAI probador = null;
                 try {
-                    ProbadorConexionAI probador = new ProbadorConexionAI(configTemporal);
+                    probador = new ProbadorConexionAI(configTemporal);
                     return probador.probarConexion();
                 } catch (Exception e) {
                     return new ProbadorConexionAI.ResultadoPrueba(
                         false,
                         I18nUI.Conexion.ERROR_PRUEBA_CONEXION(extraerMensajeError(e)),
                         null);
+                } finally {
+                    if (probador != null) {
+                        probador.cerrar();
+                    }
                 }
             }
 
@@ -894,6 +899,10 @@ public class ConfigDialogController {
 
             @Override
             protected void done() {
+                if (!dialogo.isDisplayable()) {
+                    guardandoConfiguracion = false;
+                    return;
+                }
                 try {
                     if (get()) {
                         configDialogo.aplicarDesde(snapshot);

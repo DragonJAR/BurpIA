@@ -1713,58 +1713,7 @@ public class ConfiguracionAPI {
 
     public ConfiguracionAPI crearSnapshot() {
         ConfiguracionAPI snapshot = new ConfiguracionAPI();
-        snapshot.retrasoSegundos = this.retrasoSegundos;
-        snapshot.maximoConcurrente = this.maximoConcurrente;
-        snapshot.maximoHallazgosTabla = this.maximoHallazgosTabla;
-        snapshot.detallado = this.detallado;
-        snapshot.proveedorAI = this.proveedorAI;
-        snapshot.tiempoEsperaAI = this.tiempoEsperaAI;
-        snapshot.idiomaUi = this.idiomaUi;
-        snapshot.escaneoPasivoHabilitado = this.escaneoPasivoHabilitado;
-        snapshot.autoGuardadoIssuesHabilitado = this.autoGuardadoIssuesHabilitado;
-        snapshot.autoScrollConsolaHabilitado = this.autoScrollConsolaHabilitado;
-        snapshot.alertasHabilitadas = this.alertasHabilitadas;
-        snapshot.alertasClickDerechoEnviarAHabilitadas = this.alertasClickDerechoEnviarAHabilitadas;
-        snapshot.promptConfigurable = this.promptConfigurable;
-        snapshot.promptModificado = this.promptModificado;
-        snapshot.ignorarErroresSSL = this.ignorarErroresSSL;
-        snapshot.soloProxy = this.soloProxy;
-        snapshot.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(this.agentesHabilitadosPorTipo);
-        snapshot.establecerTipoAgente(this.tipoAgente);
-        snapshot.rutasBinarioPorAgente = copiarConcurrentMap(this.rutasBinarioPorAgente);
-        snapshot.agentePreflightPrompt = this.agentePreflightPrompt;
-        snapshot.agentePrompt = this.agentePrompt;
-        snapshot.agenteDelay = this.agenteDelay;
-
-        snapshot.nombreFuenteEstandar = this.nombreFuenteEstandar;
-        snapshot.tamanioFuenteEstandar = this.tamanioFuenteEstandar;
-        snapshot.nombreFuenteMono = this.nombreFuenteMono;
-        snapshot.tamanioFuenteMono = this.tamanioFuenteMono;
-
-        snapshot.textoFiltroHallazgos = this.textoFiltroHallazgos;
-        snapshot.filtroSeveridadHallazgos = this.filtroSeveridadHallazgos;
-        snapshot.persistirFiltroBusquedaHallazgos = this.persistirFiltroBusquedaHallazgos;
-        snapshot.persistirFiltroSeveridadHallazgos = this.persistirFiltroSeveridadHallazgos;
-        snapshot.estadoUI = copiarConcurrentMap(this.estadoUI);
-        snapshot.alertasDeshabilitadas = copiarConcurrentMap(this.alertasDeshabilitadas);
-
-        snapshot.apiKeysPorProveedor = copiarConcurrentMap(this.apiKeysPorProveedor);
-        snapshot.urlsBasePorProveedor = copiarConcurrentMap(this.urlsBasePorProveedor);
-        snapshot.modelosPorProveedor = copiarConcurrentMap(this.modelosPorProveedor);
-        snapshot.maxTokensPorProveedor = copiarConcurrentMap(this.maxTokensPorProveedor);
-        snapshot.tiempoEsperaPorModelo = copiarConcurrentMap(this.tiempoEsperaPorModelo);
-        snapshot.nivelErrorHabilitado = this.nivelErrorHabilitado;
-        snapshot.nivelWarnHabilitado = this.nivelWarnHabilitado;
-        snapshot.nivelInfoHabilitado = this.nivelInfoHabilitado;
-        snapshot.nivelDebugHabilitado = this.nivelDebugHabilitado;
-        snapshot.nivelTraceHabilitado = this.nivelTraceHabilitado;
-
-        snapshot.maximoTareasTabla = this.maximoTareasTabla;
-        snapshot.multiProveedorHabilitado = this.multiProveedorHabilitado;
-        if (Normalizador.noEsVacia(this.proveedoresMultiConsulta)) {
-            snapshot.proveedoresMultiConsulta = new ArrayList<>(this.proveedoresMultiConsulta);
-        }
-
+        copiarCampos(this, snapshot);
         snapshot.asegurarMapas();
         return snapshot;
     }
@@ -1775,58 +1724,77 @@ public class ConfiguracionAPI {
         }
         origen.asegurarMapas();
 
-        this.retrasoSegundos = origen.retrasoSegundos;
-        this.maximoConcurrente = origen.maximoConcurrente;
-        this.maximoHallazgosTabla = origen.maximoHallazgosTabla;
-        this.maximoTareasTabla = origen.maximoTareasTabla;
-        this.detallado = origen.detallado;
-        this.proveedorAI = origen.proveedorAI;
-        this.tiempoEsperaAI = origen.tiempoEsperaAI;
-        this.idiomaUi = origen.idiomaUi;
-        this.escaneoPasivoHabilitado = origen.escaneoPasivoHabilitado;
-        this.autoGuardadoIssuesHabilitado = origen.autoGuardadoIssuesHabilitado;
-        this.autoScrollConsolaHabilitado = origen.autoScrollConsolaHabilitado;
-        this.alertasHabilitadas = origen.alertasHabilitadas;
-        this.alertasClickDerechoEnviarAHabilitadas = origen.alertasClickDerechoEnviarAHabilitadas;
-        this.promptConfigurable = origen.promptConfigurable;
-        this.promptModificado = origen.promptModificado;
-        this.ignorarErroresSSL = origen.ignorarErroresSSL;
-        this.soloProxy = origen.soloProxy;
-        this.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(origen.agentesHabilitadosPorTipo);
-        establecerTipoAgente(origen.tipoAgente);
-        this.rutasBinarioPorAgente = copiarConcurrentMap(origen.rutasBinarioPorAgente);
+        copiarCampos(origen, this);
+
+        // Re-normalizar campos que pueden venir de fuentes externas (disco,
+        // diálogo) con valores no validados: crearSnapshot los copia en
+        // bruto porque es una copia fiel; aplicarDesde los normaliza.
         this.agentePreflightPrompt = normalizarPromptAgentePreflight(origen.agentePreflightPrompt);
         this.agentePrompt = normalizarPromptAgente(origen.agentePrompt);
         establecerAgenteDelay(origen.agenteDelay);
 
-        this.apiKeysPorProveedor = copiarConcurrentMap(origen.apiKeysPorProveedor);
-        this.urlsBasePorProveedor = copiarConcurrentMap(origen.urlsBasePorProveedor);
-        this.modelosPorProveedor = copiarConcurrentMap(origen.modelosPorProveedor);
-        this.maxTokensPorProveedor = copiarConcurrentMap(origen.maxTokensPorProveedor);
-        this.tiempoEsperaPorModelo = copiarConcurrentMap(origen.tiempoEsperaPorModelo);
+        asegurarMapas();
+    }
 
-        this.nombreFuenteEstandar = origen.nombreFuenteEstandar;
-        this.tamanioFuenteEstandar = origen.tamanioFuenteEstandar;
-        this.nombreFuenteMono = origen.nombreFuenteMono;
-        this.tamanioFuenteMono = origen.tamanioFuenteMono;
+    /**
+     * Copia todos los campos escalares y mapas de {@code origen} a {@code destino}.
+     * Es el único punto de copia para crearSnapshot y aplicarDesde (DRY):
+     * cualquier campo nuevo que se añada a la clase solo necesita añadirse aquí.
+     *
+     * @param origen  instancia fuente (no se muta)
+     * @param destino instancia destino (se muta)
+     */
+    private static void copiarCampos(ConfiguracionAPI origen, ConfiguracionAPI destino) {
+        destino.retrasoSegundos = origen.retrasoSegundos;
+        destino.maximoConcurrente = origen.maximoConcurrente;
+        destino.maximoHallazgosTabla = origen.maximoHallazgosTabla;
+        destino.maximoTareasTabla = origen.maximoTareasTabla;
+        destino.detallado = origen.detallado;
+        destino.proveedorAI = origen.proveedorAI;
+        destino.tiempoEsperaAI = origen.tiempoEsperaAI;
+        destino.idiomaUi = origen.idiomaUi;
+        destino.escaneoPasivoHabilitado = origen.escaneoPasivoHabilitado;
+        destino.autoGuardadoIssuesHabilitado = origen.autoGuardadoIssuesHabilitado;
+        destino.autoScrollConsolaHabilitado = origen.autoScrollConsolaHabilitado;
+        destino.alertasHabilitadas = origen.alertasHabilitadas;
+        destino.alertasClickDerechoEnviarAHabilitadas = origen.alertasClickDerechoEnviarAHabilitadas;
+        destino.promptConfigurable = origen.promptConfigurable;
+        destino.promptModificado = origen.promptModificado;
+        destino.ignorarErroresSSL = origen.ignorarErroresSSL;
+        destino.soloProxy = origen.soloProxy;
+        destino.agentesHabilitadosPorTipo = normalizarMapaHabilitacionAgentes(origen.agentesHabilitadosPorTipo);
+        destino.establecerTipoAgente(origen.tipoAgente);
+        destino.rutasBinarioPorAgente = copiarConcurrentMap(origen.rutasBinarioPorAgente);
+        destino.agentePreflightPrompt = origen.agentePreflightPrompt;
+        destino.agentePrompt = origen.agentePrompt;
+        destino.agenteDelay = origen.agenteDelay;
 
-        this.textoFiltroHallazgos = origen.textoFiltroHallazgos;
-        this.filtroSeveridadHallazgos = origen.filtroSeveridadHallazgos;
-        this.persistirFiltroBusquedaHallazgos = origen.persistirFiltroBusquedaHallazgos;
-        this.persistirFiltroSeveridadHallazgos = origen.persistirFiltroSeveridadHallazgos;
-        this.estadoUI = copiarConcurrentMap(origen.estadoUI);
-        this.alertasDeshabilitadas = copiarConcurrentMap(origen.alertasDeshabilitadas);
-        this.multiProveedorHabilitado = origen.multiProveedorHabilitado;
-        this.proveedoresMultiConsulta = origen.proveedoresMultiConsulta != null
+        destino.apiKeysPorProveedor = copiarConcurrentMap(origen.apiKeysPorProveedor);
+        destino.urlsBasePorProveedor = copiarConcurrentMap(origen.urlsBasePorProveedor);
+        destino.modelosPorProveedor = copiarConcurrentMap(origen.modelosPorProveedor);
+        destino.maxTokensPorProveedor = copiarConcurrentMap(origen.maxTokensPorProveedor);
+        destino.tiempoEsperaPorModelo = copiarConcurrentMap(origen.tiempoEsperaPorModelo);
+
+        destino.nombreFuenteEstandar = origen.nombreFuenteEstandar;
+        destino.tamanioFuenteEstandar = origen.tamanioFuenteEstandar;
+        destino.nombreFuenteMono = origen.nombreFuenteMono;
+        destino.tamanioFuenteMono = origen.tamanioFuenteMono;
+
+        destino.textoFiltroHallazgos = origen.textoFiltroHallazgos;
+        destino.filtroSeveridadHallazgos = origen.filtroSeveridadHallazgos;
+        destino.persistirFiltroBusquedaHallazgos = origen.persistirFiltroBusquedaHallazgos;
+        destino.persistirFiltroSeveridadHallazgos = origen.persistirFiltroSeveridadHallazgos;
+        destino.estadoUI = copiarConcurrentMap(origen.estadoUI);
+        destino.alertasDeshabilitadas = copiarConcurrentMap(origen.alertasDeshabilitadas);
+        destino.multiProveedorHabilitado = origen.multiProveedorHabilitado;
+        destino.proveedoresMultiConsulta = origen.proveedoresMultiConsulta != null
                 ? new ArrayList<>(origen.proveedoresMultiConsulta)
                 : new ArrayList<>();
-        this.nivelErrorHabilitado = origen.nivelErrorHabilitado;
-        this.nivelWarnHabilitado = origen.nivelWarnHabilitado;
-        this.nivelInfoHabilitado = origen.nivelInfoHabilitado;
-        this.nivelDebugHabilitado = origen.nivelDebugHabilitado;
-        this.nivelTraceHabilitado = origen.nivelTraceHabilitado;
-
-        asegurarMapas();
+        destino.nivelErrorHabilitado = origen.nivelErrorHabilitado;
+        destino.nivelWarnHabilitado = origen.nivelWarnHabilitado;
+        destino.nivelInfoHabilitado = origen.nivelInfoHabilitado;
+        destino.nivelDebugHabilitado = origen.nivelDebugHabilitado;
+        destino.nivelTraceHabilitado = origen.nivelTraceHabilitado;
     }
 
     public List<String> obtenerProveedoresDisponibles() {

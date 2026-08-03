@@ -47,6 +47,8 @@ class ConfigPersistenceManagerTest {
         // Restaurar user.home original
         if (userHomeOriginal != null) {
             System.setProperty("user.home", userHomeOriginal);
+        } else {
+            System.clearProperty("user.home");
         }
         RutasBurpIA.limpiarCacheParaTests();
     }

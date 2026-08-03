@@ -50,6 +50,8 @@ class GestorConfiguracionTest {
     void tearDown() {
         if (userHomeOriginal != null) {
             System.setProperty("user.home", userHomeOriginal);
+        } else {
+            System.clearProperty("user.home");
         }
         RutasBurpIA.limpiarCacheParaTests();
         I18nUI.establecerIdioma("es");

@@ -35,6 +35,7 @@ public class PanelTareas extends JPanel {
     private JPanel panelTablaWrapper;
     private Function<String, Boolean> manejadorReintento;
     private volatile int ultimaVersionTareas = -1;
+    private javax.swing.event.TableModelListener listenerEmptyState;
 
     private static final int COLUMNA_URL = 1;
     private static final int COLUMNA_ESTADO = 2;
@@ -114,7 +115,8 @@ public class PanelTareas extends JPanel {
         // OverlayLayout apila: el label (visible solo en vacío) queda sobre el scroll.
         panelTablaWrapper.add(etiquetaEmpty);
         panelTablaWrapper.add(panelDesplazable);
-        tabla.getModel().addTableModelListener(e -> UIUtils.actualizarEmptyState(tabla, etiquetaEmpty, I18nUI.Tareas.MSG_EMPTY_STATE()));
+        listenerEmptyState = e -> UIUtils.actualizarEmptyState(tabla, etiquetaEmpty, I18nUI.Tareas.MSG_EMPTY_STATE());
+        tabla.getModel().addTableModelListener(listenerEmptyState);
         UIUtils.actualizarEmptyState(tabla, etiquetaEmpty, I18nUI.Tareas.MSG_EMPTY_STATE());
 
         botonPausarReanudar.addActionListener(e -> {
@@ -646,6 +648,12 @@ public class PanelTareas extends JPanel {
 
     public void destruir() {
         timerActualizacion.stop();
+        // Con modelo compartido entre paneles, un listener huérfano retendría
+        // este panel destruido y seguiría repintando sus componentes.
+        if (listenerEmptyState != null) {
+            tabla.getModel().removeTableModelListener(listenerEmptyState);
+            listenerEmptyState = null;
+        }
     }
 
     public void establecerConfiguracion(ConfiguracionAPI config) {

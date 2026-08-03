@@ -84,6 +84,18 @@ public class ProbadorConexionAI {
         }
     }
 
+    /**
+     * Cierra el cliente HTTP interno y libera su pool de conexiones y dispatcher.
+     * Debe llamarse cuando el probador ya no se vaya a utilizar para evitar
+     * fugas de sockets e hilos OkHttp Dispatcher.
+     */
+    public void cerrar() {
+        if (clienteHttp != null) {
+            clienteHttp.dispatcher().executorService().shutdown();
+            clienteHttp.connectionPool().evictAll();
+        }
+    }
+
     private ResultadoHttpPrueba realizarSolicitudPrueba() throws IOException {
         ConstructorSolicitudesProveedor.SolicitudPreparada preparada =
             ConstructorSolicitudesProveedor.construirSolicitud(config, "Responde exactamente con OK", clienteHttp);

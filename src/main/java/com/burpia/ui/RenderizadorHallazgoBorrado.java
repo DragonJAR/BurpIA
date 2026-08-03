@@ -57,6 +57,9 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
         );
 
         if (row < 0 || row >= tabla.getRowCount()) {
+            // Reset defensivo: la fuente puede estar tachada de una fila
+            // anterior (Swing reusa la misma instancia de renderer).
+            componente.setFont(table.getFont());
             return componente;
         }
 

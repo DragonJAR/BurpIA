@@ -436,11 +436,13 @@ public class DialogoConfiguracion extends JDialog {
     /**
      * Muestra el diálogo y espera a que se cierre.
      * 
-     * @return true si se guardó la configuración, false en caso contrario
+     * @return siempre {@code true}; el guardado se maneja via el callback
+     *         del constructor, no por el valor de retorno. Ningún caller
+     *         productivo usa este método (el diálogo se abre con setVisible).
      */
     public boolean mostrarDialogo() {
         setVisible(true);
-        return true; // El controlador manejará el guardado
+        return true;
     }
     
     // ===== MÉTODOS DE DELEGACIÓN PARA MANTENER COMPATIBILIDAD CON TESTS =====

@@ -298,8 +298,10 @@ public final class GestorLoggingUnificado {
         String origenNormalizado = normalizarOrigen(origen);
         String mensajeTecnico = I18nLogs.trTecnico(mensaje);
 
+        // registrarTecnico (traducirMensaje=false) preserva el contenido literal:
+        // registrarVerbose re-traduce con I18nLogs.tr(), corrompiendo JSON/headers.
         if (gestorConsola != null) {
-            gestorConsola.registrarVerbose(origenNormalizado, mensajeTecnico);
+            gestorConsola.registrarTecnico(origenNormalizado, mensajeTecnico, GestorConsolaGUI.TipoLog.VERBOSE);
         }
         if (stdout != null) {
             stdout.println(construirPrefijoConsola(origenNormalizado) + "[VERBOSE] " + mensajeTecnico);

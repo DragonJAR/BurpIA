@@ -353,8 +353,11 @@ public final class ReparadorJson {
                 // Comilla sin escapar dentro de tag HTML - escapar
                 resultado.append("\\\"");
             } else if (c == '\\' && i + 1 < valor.length() && valor.charAt(i + 1) == '"') {
-                // Backslash antes de comilla - mantenerlo
-                resultado.append(c);
+                // Secuencia \" ya escapada: preservar ambos caracteres y saltar
+                // la comilla para evitar que la próxima iteración la re-escape
+                // (lo que produciría \\" y corrompería el JSON al parsear).
+                resultado.append("\\\"");
+                i++;
             } else {
                 resultado.append(c);
             }

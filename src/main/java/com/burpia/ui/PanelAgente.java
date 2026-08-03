@@ -187,12 +187,18 @@ public class PanelAgente extends JPanel {
         }
     }
 
-    private void reiniciarInyectorPty() {
+    /**
+     * Cierra el executor del inyector PTY sin recrearlo. Se usa en
+     * {@link #destruir()} para el teardown permanente (descarga de la
+     * extensión). Si el panel se reutiliza tras destruir,
+     * {@link #obtenerInyectorPty()} lo recreará on-demand.
+     */
+    private void cerrarInyectorPty() {
         synchronized (lockInyectorPty) {
             if (inyectorPty != null) {
                 inyectorPty.shutdownNow();
+                inyectorPty = null;
             }
-            inyectorPty = crearInyectorPty();
         }
     }
 
@@ -467,7 +473,7 @@ public class PanelAgente extends JPanel {
         detenerReintentoFocoTimer();
         cerrarYCrearNuevaSesion();
         cerrarSesionActiva();
-        reiniciarInyectorPty();
+        cerrarInyectorPty();
         UIUtils.ejecutarEnEdtYEsperar(() -> {
             cerrarTerminalWidget();
             terminalWidget = null;

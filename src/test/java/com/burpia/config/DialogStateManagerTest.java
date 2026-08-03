@@ -32,10 +32,12 @@ class DialogStateManagerTest {
     private DialogStateManager.EstadoUIProvider uiProvider;
     
     private DialogStateManager stateManager;
+    private com.burpia.i18n.IdiomaUI idiomaOriginal;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        idiomaOriginal = I18nUI.obtenerIdioma();
         I18nUI.establecerIdioma("es");
         stateManager = new DialogStateManager(gestorLogging);
         
@@ -77,7 +79,7 @@ class DialogStateManagerTest {
 
     @AfterEach
     void tearDown() {
-        I18nUI.establecerIdioma("es");
+        I18nUI.establecerIdioma(idiomaOriginal);
     }
 
     @Test
