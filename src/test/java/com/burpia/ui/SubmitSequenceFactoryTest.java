@@ -119,6 +119,25 @@ class SubmitSequenceFactoryTest {
     }
 
     @Nested
+    @DisplayName("construir para Codex CLI")
+    class CodexCliTests {
+
+        @Test
+        @DisplayName("usa SMART_FALLBACK igual que Factory Droid (TUI estándar)")
+        void usaSmartFallback() {
+            // Codex CLI es una TUI estándar (Rust) — sin comportamiento especial
+            // detectado, cae al sequence por defecto (Droid: \r + fallbacks \n y \r\n).
+            // Si en uso real requiere otro tratamiento, agregar branch específica.
+            SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
+                AgenteTipo.CODEX_CLI,
+                SubmitSequenceFactory.Plataforma.LINUX
+            );
+
+            assertCadenaSmartFallback(secuencia);
+        }
+    }
+
+    @Nested
     @DisplayName("Casos borde y valores nulos")
     class CasosBordeTests {
 

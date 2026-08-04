@@ -43,6 +43,17 @@ public enum AgenteTipo {
             "%USERPROFILE%\\.grok\\bin\\grok.exe",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GROK-ES.md",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-GROK-EN.md"
+    ),
+    // Codex CLI (OpenAI). --yolo equivale a approval_policy="never" +
+    // sandbox_mode="danger-full-access" (autonomía total sin prompts).
+    // Config en ~/.codex/config.toml. TUI estándar (Rust): cae al submit
+    // sequence por defecto como Grok/Gemini/OpenCode.
+    CODEX_CLI(
+            "Codex CLI",
+            "~/.local/bin/codex --yolo",
+            "%USERPROFILE%\\.local\\bin\\codex.exe --yolo",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-CODEX-ES.md",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-CODEX-EN.md"
     );
 
     private final String nombreVisible;

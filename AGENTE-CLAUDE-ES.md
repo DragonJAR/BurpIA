@@ -265,6 +265,24 @@ Si cuando se inserta el prompt pre-flight las herramientas MCP aún no están li
 - Incrementa `Espera MCP (ms)` para dar más tiempo a levantar MCP.
 - Usa `Reiniciar` y luego `Inyectar Payload` para forzar el pre-flight.
 
+### El proxy MCP falla con SIGKILL (exit 137) en macOS
+
+El JRE embebido dentro del bundle de Burp Suite puede ser terminado por macOS (SIGKILL/exit 137) debido a restricciones de code-signing o cuarentena. Si `claude mcp list` muestra `Failed to connect` para `burp` y el puerto 9876 está activo, usa un Java del sistema en lugar del JRE embebido:
+
+```bash
+# Verificar que el puerto MCP de Burp está activo
+curl -s -m 5 http://127.0.0.1:9876/ | head -3
+
+# Re-registrar el MCP con el Java de Homebrew en lugar del JRE embebido
+claude mcp remove burp --scope user
+claude mcp add burp --scope user -- "/opt/homebrew/opt/openjdk@21/bin/java" "-jar" "/Users/USUARIO/.BurpSuite/mcp-proxy/mcp-proxy-all.jar" "--sse-url" "http://127.0.0.1:9876"
+```
+
+**Notas:**
+- El nombre de la app puede ser `Burp Suite.app`, no necesariamente `Burp Suite Professional.app`. Verifica con `ls -d /Applications/Burp*`.
+- Si no tienes Homebrew Java, instálalo con `brew install openjdk@21`.
+- Alternativamente, usa `JAVA_HOME` del sistema: sustituye la ruta del comando por `$JAVA_HOME/bin/java`.
+
 ---
 
 ## 10. Referencias oficiales
