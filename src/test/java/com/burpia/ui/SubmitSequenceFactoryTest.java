@@ -138,6 +138,22 @@ class SubmitSequenceFactoryTest {
     }
 
     @Nested
+    @DisplayName("construir para Custom Agent")
+    class CustomAgentTests {
+
+        @Test
+        @DisplayName("usa SMART_FALLBACK igual que Factory Droid (TUI estándar)")
+        void usaSmartFallback() {
+            SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
+                AgenteTipo.CUSTOM_AGENT,
+                SubmitSequenceFactory.Plataforma.LINUX
+            );
+
+            assertCadenaSmartFallback(secuencia);
+        }
+    }
+
+    @Nested
     @DisplayName("Casos borde y valores nulos")
     class CasosBordeTests {
 

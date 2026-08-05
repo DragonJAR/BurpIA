@@ -54,6 +54,16 @@ public enum AgenteTipo {
             "%USERPROFILE%\\.local\\bin\\codex.exe --yolo",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-CODEX-ES.md",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-CODEX-EN.md"
+    ),
+    // Agente personalizado. El usuario define su propio CLI en el campo de ruta
+    // del diálogo de configuración. Cae al submit sequence por defecto (SMART_FALLBACK)
+    // como cualquier TUI estándar. No tiene documentación ni ruta por defecto.
+    CUSTOM_AGENT(
+            "Custom Agent",
+            "",
+            "",
+            "",
+            ""
     );
 
     private final String nombreVisible;

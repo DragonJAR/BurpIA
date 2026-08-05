@@ -238,6 +238,8 @@ class GestorConfiguracionTest {
             "Grok no estaba en el JSON cargado: debe quedar deshabilitado por default");
         assertFalse(cargada.agenteHabilitado(AgenteTipo.CODEX_CLI.name()),
             "Codex no estaba en el JSON cargado: debe quedar deshabilitado por default");
+        assertFalse(cargada.agenteHabilitado(AgenteTipo.CUSTOM_AGENT.name()),
+            "Custom Agent no estaba en el JSON cargado: debe quedar deshabilitado por default");
         assertEquals(AgenteTipo.CLAUDE_CODE.name(), cargada.obtenerTipoAgente(),
             "assertEquals failed at GestorConfiguracionTest.java:216");
     }
