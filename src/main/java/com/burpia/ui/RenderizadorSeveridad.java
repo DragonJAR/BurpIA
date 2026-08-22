@@ -10,8 +10,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.swing.JTable;
@@ -32,13 +30,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
     private static final String ICONO_INFO = "ℹ ";
 
     private static final int MAX_CACHE_TEXTO = 100;
-    private static final Map<String, String> TEXTO_CACHE = Collections.synchronizedMap(
-            new LinkedHashMap<String, String>(16, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
-                    return size() > MAX_CACHE_TEXTO;
-                }
-            });
+    private static final Map<String, String> TEXTO_CACHE = UIUtils.crearCacheLru(MAX_CACHE_TEXTO);
 
     private String severidadStr = "";
     private boolean isIgnorado = false;
@@ -128,9 +120,7 @@ public class RenderizadorSeveridad extends DefaultTableCellRenderer {
 
         // Detectar "ignorado" aquí: el decorador RenderizadorHallazgoBorrado ya
         // aplicó/reseteó la fuente para esta fila, así que getFont() es correcto.
-        Font f = getFont();
-        Object strike = f.getAttributes().get(java.awt.font.TextAttribute.STRIKETHROUGH);
-        this.isIgnorado = java.awt.font.TextAttribute.STRIKETHROUGH_ON.equals(strike);
+        this.isIgnorado = UIUtils.esFuenteTachada(getFont());
 
         if (Normalizador.esVacio(severidadStr)) return;
 

@@ -2,6 +2,7 @@ package com.burpia.util;
 
 import burp.api.montoya.MontoyaApi;
 import com.burpia.i18n.I18nLogs;
+import com.burpia.i18n.I18nUI;
 
 import java.io.PrintWriter;
 import java.util.logging.Level;
@@ -81,16 +82,6 @@ public final class GestorLoggingUnificado {
      */
     public static GestorLoggingUnificado crearMinimal(PrintWriter stdout, PrintWriter stderr) {
         return new GestorLoggingUnificado(null, stdout, stderr, null, null);
-    }
-
-    /**
-     * Crea una instancia con Logger de java.util.logging.
-     *
-     * @param logger Logger de java.util.logging
-     * @return Nueva instancia de GestorLoggingUnificado
-     */
-    public static GestorLoggingUnificado crearConLogger(Logger logger) {
-        return new GestorLoggingUnificado(null, null, null, null, logger);
     }
 
     // ============ MÉTODOS PÚBLICOS DE LOGGING ============
@@ -226,7 +217,7 @@ public final class GestorLoggingUnificado {
             logger.log(nivel, mensaje);
         } else if (stdout != null) {
             // Fallback a stdout si no hay logger
-            String prefijo = nivel == Level.SEVERE ? "[ERROR] " : (nivel == Level.WARNING ? "[WARNING] " : "[INFO] ");
+            String prefijo = nivel == Level.SEVERE ? "[ERROR] " : (nivel == Level.WARNING ? I18nUI.Consola.TAG_WARNING() : "[INFO] ");
             stdout.println(prefijo + mensaje);
             stdout.flush();
         }
@@ -246,6 +237,15 @@ public final class GestorLoggingUnificado {
 
         if (logger != null && logger.isLoggable(nivel)) {
             logger.log(nivel, mensaje, throwable);
+        } else if (stdout != null) {
+            // Mismo fallback que log(Level, String): sin logger, el mensaje Y el
+            // stack no deben perderse en silencio.
+            String prefijo = nivel == Level.SEVERE ? "[ERROR] " : (nivel == Level.WARNING ? I18nUI.Consola.TAG_WARNING() : "[INFO] ");
+            stdout.println(prefijo + mensaje);
+            if (throwable != null) {
+                throwable.printStackTrace(stdout);
+            }
+            stdout.flush();
         }
     }
 
@@ -328,17 +328,17 @@ public final class GestorLoggingUnificado {
 
         // 1. Log a consola GUI (como INFO con prefijo WARNING)
         if (gestorConsola != null) {
-            gestorConsola.registrarInfo(origenNormalizado, "[WARNING] " + mensajeLocalizado);
+            gestorConsola.registrarInfo(origenNormalizado, I18nUI.Consola.TAG_WARNING() + mensajeLocalizado);
         }
 
         // 2. Log a stdout
         if (stdout != null) {
-            stdout.println(construirPrefijoConsola(origenNormalizado) + "[WARNING] " + mensajeLocalizado);
+            stdout.println(construirPrefijoConsola(origenNormalizado) + I18nUI.Consola.TAG_WARNING() + mensajeLocalizado);
             stdout.flush();
         }
 
         // 3. Log a Burp API
-        logToBurpApi(origenNormalizado, "[WARNING] " + mensajeLocalizado, false);
+        logToBurpApi(origenNormalizado, I18nUI.Consola.TAG_WARNING() + mensajeLocalizado, false);
 
         // 4. Log a java.util.logging
         if (logger != null && logger.isLoggable(Level.WARNING)) {

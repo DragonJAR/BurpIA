@@ -432,19 +432,11 @@ public class DialogoConfiguracion extends JDialog {
     public Runnable obtenerAlGuardar() {
         return alGuardar;
     }
-    
-    /**
-     * Muestra el diálogo y espera a que se cierre.
-     * 
-     * @return siempre {@code true}; el guardado se maneja via el callback
-     *         del constructor, no por el valor de retorno. Ningún caller
-     *         productivo usa este método (el diálogo se abre con setVisible).
-     */
-    public boolean mostrarDialogo() {
-        setVisible(true);
-        return true;
-    }
-    
+
+    // mostrarDialogo() removido (orphan): retornaba siempre true, su Javadoc
+    // mentía y no tenía callers en producción ni en tests. El diálogo se abre
+    // con setVisible(true) desde ExtensionBurpIA.
+
     // ===== MÉTODOS DE DELEGACIÓN PARA MANTENER COMPATIBILIDAD CON TESTS =====
     // Estos métodos delegan al controlador para mantener la compatibilidad
     

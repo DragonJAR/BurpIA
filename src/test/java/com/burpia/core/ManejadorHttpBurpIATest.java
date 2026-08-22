@@ -11,12 +11,15 @@ import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.i18n.I18nUI;
+import com.burpia.model.Estadisticas;
 import com.burpia.ui.FabricaMenuContextual;
 import com.burpia.ui.ModeloTablaHallazgos;
 import com.burpia.ui.ModeloTablaTareas;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
+import burp.api.montoya.http.handler.HttpResponseReceived;
+import burp.api.montoya.http.handler.ResponseReceivedAction;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,8 +40,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @DisplayName("ManejadorHttpBurpIA Tests")
@@ -490,6 +497,173 @@ class ManejadorHttpBurpIATest {
         ManejadorHttpBurpIA manejador = crearManejador(null);
         assertDoesNotThrow(() -> manejador.aplicarCambioConfigAtomico(
             (java.util.function.Consumer<ConfiguracionAPI>) null));
+    }
+
+    @Test
+    @DisplayName("Fallback de concurrencia unificado entre constructor y actualizarConfiguracion")
+    void testFallbackConcurrenciaUnificadoEntreConstructorYActualizacion() throws Exception {
+        ConfiguracionAPI configInvalida = spy(new ConfiguracionAPI());
+        doReturn(0).when(configInvalida).obtenerMaximoConcurrente();
+
+        StringWriter stdoutBuffer = new StringWriter();
+        StringWriter stderrBuffer = new StringWriter();
+        ModeloTablaTareas modeloTablaTareas = new ModeloTablaTareas(configInvalida.obtenerMaximoTareasTabla());
+        GestorTareas gestorTareas = new GestorTareas(modeloTablaTareas, mensaje -> { });
+        ManejadorHttpBurpIA manejador = new ManejadorHttpBurpIA(
+            null,
+            new ConfiguracionAPIRef(configInvalida),
+            null,
+            new PrintWriter(stdoutBuffer, true),
+            new PrintWriter(stderrBuffer, true),
+            null,
+            null,
+            gestorTareas,
+            null,
+            new ModeloTablaHallazgos(configInvalida.obtenerMaximoHallazgosTabla()),
+            null
+        );
+        manejadores.add(manejador);
+
+        Field campoLimitador = ManejadorHttpBurpIA.class.getDeclaredField("limitador");
+        campoLimitador.setAccessible(true);
+        LimitadorTasa limitador = (LimitadorTasa) campoLimitador.get(manejador);
+        assertEquals(1, limitador.permisosDisponibles(),
+            "El constructor debe crear el limitador con CONCURRENCIA_DEFECTO cuando la config reporta 0");
+
+        ConfiguracionAPI otraInvalida = spy(new ConfiguracionAPI());
+        doReturn(0).when(otraInvalida).obtenerMaximoConcurrente();
+        manejador.actualizarConfiguracion(otraInvalida);
+
+        assertEquals(1, limitador.permisosDisponibles(),
+            "actualizarConfiguracion debe usar el mismo fallback que el constructor");
+    }
+
+    @Test
+    @DisplayName("CAS agotado por contención registra error en lugar de fallar en silencio")
+    void testCambioConfigCasAgotadoRegistraError() throws Exception {
+        SalidaManejador salida = crearManejadorConSalida(null, new ConfiguracionAPI());
+        Field campoRef = ManejadorHttpBurpIA.class.getDeclaredField("configRef");
+        campoRef.setAccessible(true);
+        ConfiguracionAPIRef configRef = (ConfiguracionAPIRef) campoRef.get(salida.manejador);
+
+        // Sabotaje determinista del CAS: la mutación reemplaza la referencia
+        // antes de reemplazarSiEsperada, de modo que los 5 intentos fallan.
+        salida.manejador.aplicarCambioConfigAtomico(c -> configRef.reemplazar(new ConfiguracionAPI()));
+
+        assertTrue(salida.stderr.toString().contains("tras 5 reintentos"),
+            "Debe registrarse el agotamiento de reintentos CAS, got: " + salida.stderr);
+    }
+
+    @Test
+    @DisplayName("Bloqueo por configuración inválida no incrementa omitidosBajaConfianza")
+    void testBloqueoPorConfigInvalidaNoIncrementaOmitidos() {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "");
+
+        Estadisticas estadisticas = new Estadisticas();
+        SalidaManejador salida = crearManejadorConEstadisticas(config, estadisticas,
+            apiConScope("https://example.com/login"));
+
+        // ResponseReceivedAction.continueWith requiere el ObjectFactory del runtime
+        // de Burp (null en tests unitarios); se estubea la factoría estática.
+        try (org.mockito.MockedStatic<ResponseReceivedAction> acciones = mockStatic(ResponseReceivedAction.class)) {
+            acciones.when(() -> ResponseReceivedAction.continueWith(any(HttpResponseReceived.class)))
+                .thenReturn(null);
+            salida.manejador.handleHttpResponseReceived(respuestaRecibidaAnalizable("https://example.com/login"));
+        }
+
+        assertEquals(1, estadisticas.obtenerTotalSolicitudes(),
+            "La solicitud analizable debe contarse como recibida");
+        assertEquals(0, estadisticas.obtenerTotalOmitidos(),
+            "Un bloqueo por config inválida no es un omitido por contenido: la métrica no debe moverse");
+        String error = salida.stderr.toString();
+        assertTrue(error.contains("ANÁLISIS BLOQUEADO") || error.contains("ANALISIS BLOQUEADO"),
+            "La alerta rate-limited debe seguir informando el bloqueo, got: " + error);
+    }
+
+    @Test
+    @DisplayName("Pausar y reanudar captura registran mensajes localizados")
+    void testPausarReanudarCapturaMensajesLocalizados() {
+        SalidaManejador salida = crearManejadorConSalida(null, new ConfiguracionAPI());
+
+        salida.manejador.pausarCaptura();
+        salida.manejador.reanudarCaptura();
+        String info = salida.stdout.toString();
+        assertTrue(info.contains("Captura pausada por usuario"), info);
+        assertTrue(info.contains("Captura reanudada por usuario"), info);
+
+        I18nUI.establecerIdioma("en");
+        salida.manejador.pausarCaptura();
+        assertTrue(salida.stdout.toString().contains("Capture paused by user"), salida.stdout.toString());
+    }
+
+    @Test
+    @DisplayName("Trazas del handler pasivo se emiten localizadas en inglés")
+    void testTrazasHandlerPasivoLocalizadasEnIngles() {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        config.establecerDetallado(true);
+        config.establecerProveedorAI("OpenAI");
+        config.establecerUrlBaseParaProveedor("OpenAI", "https://api.openai.com/v1");
+        config.establecerModeloParaProveedor("OpenAI", "gpt-5-mini");
+        config.establecerApiKeyParaProveedor("OpenAI", "");
+        SalidaManejador salida = crearManejadorConEstadisticas(config, new Estadisticas(),
+            apiConScope("https://example.com/login"));
+
+        I18nUI.establecerIdioma("en");
+        try (org.mockito.MockedStatic<ResponseReceivedAction> acciones = mockStatic(ResponseReceivedAction.class)) {
+            acciones.when(() -> ResponseReceivedAction.continueWith(any(HttpResponseReceived.class)))
+                .thenReturn(null);
+            salida.manejador.handleHttpResponseReceived(respuestaRecibidaAnalizable("https://example.com/login"));
+        }
+
+        String info = salida.stdout.toString();
+        assertTrue(info.contains("Response received: POST https://example.com/login (status: 200)"), info);
+        assertTrue(info.contains("IN SCOPE - Processing: POST https://example.com/login"), info);
+    }
+
+    private MontoyaApi apiConScope(String urlEnScope) {
+        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        when(api.scope().isInScope(urlEnScope)).thenReturn(true);
+        return api;
+    }
+
+    private HttpResponseReceived respuestaRecibidaAnalizable(String url) {
+        HttpResponseReceived respuesta = mock(HttpResponseReceived.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
+        when(respuesta.initiatingRequest().url()).thenReturn(url);
+        when(respuesta.initiatingRequest().method()).thenReturn("POST");
+        when(respuesta.statusCode()).thenReturn((short) 200);
+        when(respuesta.toolSource().isFromTool(ToolType.PROXY)).thenReturn(true);
+        HttpHeader contentType = mock(HttpHeader.class);
+        when(contentType.name()).thenReturn("Content-Type");
+        when(contentType.value()).thenReturn("text/html");
+        when(respuesta.headers()).thenReturn(List.of(contentType));
+        return respuesta;
+    }
+
+    private SalidaManejador crearManejadorConEstadisticas(ConfiguracionAPI config, Estadisticas estadisticas,
+            MontoyaApi api) {
+        StringWriter stdoutBuffer = new StringWriter();
+        StringWriter stderrBuffer = new StringWriter();
+        ModeloTablaTareas modeloTablaTareas = new ModeloTablaTareas(config.obtenerMaximoTareasTabla());
+        GestorTareas gestorTareas = new GestorTareas(modeloTablaTareas, mensaje -> { });
+        ManejadorHttpBurpIA manejador = new ManejadorHttpBurpIA(
+            api,
+            new ConfiguracionAPIRef(config),
+            null,
+            new PrintWriter(stdoutBuffer, true),
+            new PrintWriter(stderrBuffer, true),
+            new LimitadorTasa(1),
+            estadisticas,
+            gestorTareas,
+            null,
+            new ModeloTablaHallazgos(config.obtenerMaximoHallazgosTabla()),
+            null
+        );
+        manejadores.add(manejador);
+        return new SalidaManejador(manejador, stdoutBuffer, stderrBuffer);
     }
 
     private ManejadorHttpBurpIA crearManejador(MontoyaApi api) {

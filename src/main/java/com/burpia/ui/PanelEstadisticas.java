@@ -45,6 +45,8 @@ public class PanelEstadisticas extends JPanel {
     private static final int TAMANIO_FIJO_BOTON = 60;
     private static final int ESPACIADO_BOTONES = 8;
     private static final int AJUSTE_Y_BOTONES = -3;
+    // Ancho del panel lateral en layout horizontal (2 botones lado a lado + gap).
+    private static final int ANCHO_LATERAL_HORIZONTAL = (TAMANIO_FIJO_BOTON * 2) + ESPACIADO_BOTONES;
 
     @SuppressWarnings("this-escape")
     public PanelEstadisticas(Estadisticas estadisticas,
@@ -96,16 +98,18 @@ public class PanelEstadisticas extends JPanel {
 
             @Override
             public void doLayout() {
-                int ancho = getWidth() - calcularAnchoLateralPreferido();
-                boolean esLayoutHorizontal = ancho >= UMBRAL_RESPONSIVE;
+                // El getWidth() del CENTER ya excluye el lateral EAST: descontarlo
+                // aquí de nuevo lo restaba dos veces y desincronizaba el cambio de
+                // layout del contenido respecto al de los botones laterales.
+                boolean horizontal = esLayoutHorizontal();
 
-                if (esLayoutHorizontal != ultimoLayoutHorizontal) {
-                    if (esLayoutHorizontal) {
+                if (horizontal != ultimoLayoutHorizontal) {
+                    if (horizontal) {
                         setLayout(new GridLayout(1, 2, 12, 0));
                     } else {
                         setLayout(new GridLayout(2, 1, 0, 10));
                     }
-                    ultimoLayoutHorizontal = esLayoutHorizontal;
+                    ultimoLayoutHorizontal = horizontal;
                 }
 
                 super.doLayout();
@@ -227,12 +231,23 @@ public class PanelEstadisticas extends JPanel {
         botonConfiguracion.getAccessibleContext().setAccessibleName(I18nUI.Tooltips.Estadisticas.CONFIGURACION());
     }
 
+    /**
+     * Criterio único de layout responsive: el contenido central y los botones
+     * laterales cambian de disposición con el mismo umbral. Se mide el ancho
+     * total del panel reservando siempre el lateral en su forma más ancha
+     * (horizontal), así el criterio es una función pura del ancho total y no
+     * oscila entre layouts sucesivos.
+     */
+    private boolean esLayoutHorizontal() {
+        return getWidth() - ANCHO_LATERAL_HORIZONTAL >= UMBRAL_RESPONSIVE;
+    }
+
     private void ajustarDimensionBotones() {
         if (panelLateral == null) {
             return;
         }
 
-        boolean layoutVertical = getWidth() < UMBRAL_RESPONSIVE;
+        boolean layoutVertical = !esLayoutHorizontal();
         int ladoBoton = TAMANIO_FIJO_BOTON;
 
         Dimension tamano = new Dimension(ladoBoton, ladoBoton);
@@ -274,11 +289,10 @@ public class PanelEstadisticas extends JPanel {
     }
 
     private int calcularAnchoLateralPreferido() {
-        boolean layoutVertical = getWidth() < UMBRAL_RESPONSIVE;
-        if (layoutVertical) {
+        if (!esLayoutHorizontal()) {
             return TAMANIO_FIJO_BOTON;
         }
-        return (TAMANIO_FIJO_BOTON * 2) + ESPACIADO_BOTONES;
+        return ANCHO_LATERAL_HORIZONTAL;
     }
 
     private void aplicarDimensionBotonCuadrado(JButton boton, Dimension tamano) {

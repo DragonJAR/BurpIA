@@ -393,16 +393,12 @@ public final class HttpRequestProcessor {
             return null;
         }
         try {
-            if (solicitudRespuesta.hasResponse()) {
-                HttpResponse respuesta = solicitudRespuesta.response();
-                if (respuesta != null) {
-                    return respuesta;
-                }
+            if (!solicitudRespuesta.hasResponse()) {
+                return null;
             }
-        } catch (Exception e) {
-            registrarErrorInspeccionContextual("No se pudo inspeccionar response contextual", e);
-        }
-        try {
+            // Una sola llamada a response(): hasResponse()==true no garantiza
+            // response()!=null, y antes eso provocaba una segunda llamada
+            // redundante en el try de abajo.
             return solicitudRespuesta.response();
         } catch (Exception e) {
             registrarErrorInspeccionContextual("No se pudo obtener response contextual", e);

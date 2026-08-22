@@ -206,10 +206,6 @@ public class ConfiguracionAPI {
         return obtenerApiKeyParaProveedor(obtenerProveedorAI());
     }
 
-    public String obtenerClaveApiSanitizada() {
-        return obtenerClaveApiSanitizadaParaProveedor(obtenerProveedorAI());
-    }
-
     public String obtenerClaveApiSanitizadaParaProveedor(String proveedor) {
         String apiKey = obtenerApiKeyParaProveedor(proveedor);
         return com.burpia.util.Normalizador.sanitizarApiKey(apiKey);
@@ -543,13 +539,6 @@ public class ConfiguracionAPI {
 
     public void establecerTamanioFuenteMono(int tamanio) {
         this.tamanioFuenteMono = tamanio > 0 ? tamanio : TAMANIO_FUENTE_MONO_DEFECTO;
-    }
-
-    public void restaurarFuentesPorDefecto() {
-        this.nombreFuenteEstandar = FUENTE_ESTANDAR_DEFECTO;
-        this.tamanioFuenteEstandar = TAMANIO_FUENTE_ESTANDAR_DEFECTO;
-        this.nombreFuenteMono = FUENTE_MONO_DEFECTO;
-        this.tamanioFuenteMono = TAMANIO_FUENTE_MONO_DEFECTO;
     }
 
     // UI State Persistence - Getters and Setters for PanelHallazgos
@@ -1405,21 +1394,6 @@ public class ConfiguracionAPI {
         proveedoresMultiConsulta = nueva;
     }
 
-    public void removerProveedorMultiConsulta(String proveedor) {
-        List<String> actual = proveedoresMultiConsulta;
-        if (actual == null || actual.isEmpty()) {
-            return;
-        }
-        String proveedorNormalizado = normalizarProveedor(proveedor);
-        if (!actual.contains(proveedorNormalizado)) {
-            return;
-        }
-        // Copy-on-write (ver agregarProveedorMultiConsulta).
-        List<String> nueva = new ArrayList<>(actual);
-        nueva.remove(proveedorNormalizado);
-        proveedoresMultiConsulta = nueva;
-    }
-
     // Lock dedicado para asegurarMapas(). Evita que dos llamadas concurrentes
     // creen mapas frescos independientes y se pisen mutuamente (perdiendo
     // entries que estaban en una pero no en la otra). El cuerpo del método
@@ -1797,34 +1771,6 @@ public class ConfiguracionAPI {
         destino.nivelTraceHabilitado = origen.nivelTraceHabilitado;
     }
 
-    public List<String> obtenerProveedoresDisponibles() {
-        List<String> disponibles = new ArrayList<>();
-        List<String> todosProveedores = ProveedorAI.obtenerNombresProveedores();
-
-        for (String proveedor : todosProveedores) {
-            if (!ProveedorAI.existeProveedor(proveedor)) {
-                continue;
-            }
-
-            ProveedorAI.ConfiguracionProveedor config = ProveedorAI.obtenerProveedor(proveedor);
-            if (config == null) {
-                continue;
-            }
-
-            if (!config.requiereClaveApi()) {
-                disponibles.add(proveedor);
-                continue;
-            }
-
-            String apiKey = obtenerApiKeyParaProveedor(proveedor);
-            if (Normalizador.noEsVacio(apiKey)) {
-                disponibles.add(proveedor);
-            }
-        }
-
-        return disponibles;
-    }
-
     // ==================== MÉTODOS DE NIVELES DE LOGGING ====================
 
     public boolean esNivelErrorHabilitado() {
@@ -1865,17 +1811,6 @@ public class ConfiguracionAPI {
 
     public void establecerNivelTraceHabilitado(boolean habilitado) {
         this.nivelTraceHabilitado = habilitado && esDetallado(); // Solo si está en modo detallado
-    }
-
-    // Método helper para verificar si algún nivel de logging está habilitado
-    public boolean hayAlgunNivelLoggingHabilitado() {
-        // Incluir Debug y Trace: el nombre del método promete "algún nivel", y
-        // si el usuario desactiva Error/Warn/Info pero deja Debug/Trace
-        // activos (vía detallado=true), el método debe reflejar que sí hay
-        // logging. Antes omitía Debug/Trace, suprimiendo toda la salida.
-        return nivelErrorHabilitado || nivelWarnHabilitado
-                || nivelInfoHabilitado || nivelDebugHabilitado
-                || nivelTraceHabilitado;
     }
 
     // ==================== MÉTODOS DE ALERTAS OPT-OUT ====================

@@ -22,7 +22,7 @@ public final class FlowAnalysisConstraints {
             return solicitudesValidas;
         }
         for (HttpRequestResponse rr : seleccion) {
-            if (rr != null && rr.request() != null) {
+            if (esSolicitudValida(rr)) {
                 solicitudesValidas.add(rr);
             }
         }
@@ -43,10 +43,14 @@ public final class FlowAnalysisConstraints {
         }
         int count = 0;
         for (HttpRequestResponse rr : seleccion) {
-            if (rr != null && rr.request() != null) {
+            if (esSolicitudValida(rr)) {
                 count++;
             }
         }
         return count;
+    }
+
+    private static boolean esSolicitudValida(HttpRequestResponse rr) {
+        return rr != null && rr.request() != null;
     }
 }

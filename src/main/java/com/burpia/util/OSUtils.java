@@ -46,24 +46,27 @@ public final class OSUtils {
     }
 
     public static void cerrarVentanaAjustes() {
-        try {
-            Window[] windows = Window.getWindows();
-            for (Window window : windows) {
-                if (window instanceof JDialog && window.isVisible()) {
-                    JDialog dialog = (JDialog) window;
-                    String className = dialog.getClass().getSimpleName();
+        // Toda la enumeración y manipulación de ventanas ocurre en el EDT:
+        // Window.getWindows() y los accesos a componentes Swing no son
+        // thread-safe fuera de él.
+        ejecutarEnEdt(() -> {
+            try {
+                Window[] windows = Window.getWindows();
+                for (Window window : windows) {
+                    if (window instanceof JDialog && window.isVisible()) {
+                        JDialog dialog = (JDialog) window;
+                        String className = dialog.getClass().getSimpleName();
 
-                    if (debeCerrarVentanaAjustes(className)) {
-                        ejecutarEnEdt(() -> {
+                        if (debeCerrarVentanaAjustes(className)) {
                             dialog.setVisible(false);
                             dialog.dispose();
-                        });
+                        }
                     }
                 }
+            } catch (Exception ignored) {
+                // Non-critical UI operation: closing configuration dialogs is best-effort
             }
-        } catch (Exception ignored) {
-            // Non-critical UI operation: closing configuration dialogs is best-effort
-        }
+        });
     }
 
     static boolean debeCerrarVentanaAjustes(String className) {
@@ -86,7 +89,11 @@ public final class OSUtils {
             }
         }
 
-        if (expansion.startsWith("~")) {
+        // Expandir "~" solo como home del usuario actual: "~", "~/" o "~\".
+        // Formas tipo "~otrousuario/..." requieren resolver el home de OTRO
+        // usuario (no soportado); expandirlas al home propio apuntaba a rutas
+        // incorrectas silenciosamente.
+        if (expansion.equals("~") || expansion.startsWith("~/") || expansion.startsWith("~\\")) {
             String userHome = System.getProperty("user.home");
             if (Normalizador.noEsVacio(userHome)) {
                 expansion = userHome + expansion.substring(1);

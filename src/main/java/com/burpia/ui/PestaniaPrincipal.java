@@ -527,7 +527,8 @@ public class PestaniaPrincipal extends JPanel {
             guardarPestaniaSeleccionadaActual();
             guardarAnchosColumnasActuales();
         } catch (Exception e) {
-            gestorLogging.warning(ORIGEN_LOG, I18nLogs.tr("Error al persistir estado UI de pestaña principal"));
+            gestorLogging.warning(ORIGEN_LOG,
+                I18nLogs.tr("Error al persistir estado UI de pestaña principal") + ": " + e.getMessage());
         }
 
         UIManager.removePropertyChangeListener(listenerLookAndFeel);

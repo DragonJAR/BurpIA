@@ -5,11 +5,9 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.util.List;
@@ -214,6 +212,26 @@ class PanelFilasResponsiveTest {
 
         assertEquals(3, conteoFinal.get(),
             "Los 3 botones deben seguir presentes tras múltiples transiciones de layout");
+    }
+
+    @Test
+    @DisplayName("Tolera filas null y componentes null sin lanzar NPE")
+    void toleraFilasYComponentesNulos() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            JButton btn = new JButton("X");
+            List<List<javax.swing.JComponent>> filas = new java.util.ArrayList<>();
+            List<javax.swing.JComponent> filaConNull = new java.util.ArrayList<>();
+            filaConNull.add(btn);
+            filaConNull.add(null);
+            filas.add(filaConNull);
+            filas.add(null);
+
+            // List.copyOf lanzaría NPE con estos nulls; la copia debe filtrarlos.
+            PanelFilasResponsive panel = new PanelFilasResponsive(300, 8, 4, filas);
+
+            assertEquals(1, contarBotonesRecursivo(panel),
+                "Solo el componente no nulo debe quedar agregado al panel");
+        });
     }
 
     private int contarBotonesRecursivo(java.awt.Container contenedor) {

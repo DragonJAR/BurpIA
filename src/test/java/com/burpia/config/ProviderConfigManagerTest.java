@@ -545,8 +545,32 @@ class ProviderConfigManagerTest {
 
         assertFalse(resultado.esValido());
         assertEquals("maxTokens", resultado.obtenerCampo());
+        // El mensaje correcto para texto no numérico lo da validarEntero
+        // ("debe ser un número válido"), no un error de rango fabricado con 0.
         assertEquals(
-                ConfigValidator.validarMaxTokens(0).obtenerMensajeError(),
+                ConfigValidator.validarEntero("abc", "maxTokens",
+                        ConfigValidator.MAX_TOKENS_MINIMO, ConfigValidator.MAX_TOKENS_MAXIMO)
+                        .obtenerMensajeError(),
+                resultado.obtenerMensajeError());
+    }
+
+    @Test
+    void testValidarEstadoActualDetectaTimeoutVacioConMensajeEspecifico() {
+        when(comboProveedor.getSelectedItem()).thenReturn("OpenAI");
+        when(comboModelo.getSelectedItem()).thenReturn("gpt-4o");
+        when(txtTimeoutModelo.getText()).thenReturn("");
+        when(txtMaxTokens.getText()).thenReturn("2048");
+        when(txtUrl.getText()).thenReturn("https://api.openai.com/v1");
+
+        ProviderConfigManager.ValidationResultEstadoProveedor resultado =
+                providerConfigManager.validarEstadoActual(false, false);
+
+        assertFalse(resultado.esValido());
+        assertEquals("timeout", resultado.obtenerCampo());
+        assertEquals(
+                ConfigValidator.validarEntero("", "timeout",
+                        ConfiguracionAPI.TIEMPO_ESPERA_MIN_SEGUNDOS, ConfiguracionAPI.TIEMPO_ESPERA_MAX_SEGUNDOS)
+                        .obtenerMensajeError(),
                 resultado.obtenerMensajeError());
     }
 

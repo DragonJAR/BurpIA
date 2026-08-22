@@ -365,7 +365,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         if (!FlowAnalysisConstraints.tieneMinimoValido(seleccion)) {
             if (!GraphicsEnvironment.isHeadless()) {
                 UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
-                    null,
+                    parentFrame,
                     I18nUI.Contexto.TITULO_FLUJO_REQUIERE_MULTIPLES(),
                     I18nUI.Contexto.MSG_FLUJO_REQUIERE_MULTIPLES_VALIDAS(),
                     alertasEnviarAHabilitadas(),
@@ -377,7 +377,7 @@ public class FabricaMenuContextual implements ContextMenuItemsProvider {
         if (FlowAnalysisConstraints.excedeMaximoValido(seleccion)) {
             if (!GraphicsEnvironment.isHeadless()) {
                 UIUtils.mostrarAdvertenciaConOptOutMenuContextual(
-                    null,
+                    parentFrame,
                     I18nUI.Contexto.TITULO_FLUJO_REQUIERE_MULTIPLES(),
                     I18nUI.Contexto.MSG_FLUJO_MAXIMO_PETICIONES(FlowAnalysisConstraints.MAXIMO_PETICIONES_FLUJO),
                     alertasEnviarAHabilitadas(),

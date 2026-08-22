@@ -80,6 +80,6 @@ class AlertasOptOutHelperTest {
             "No debe ejecutar el callback si el flag ya estaba en false");
         assertFalse(config.obtenerAlertasDeshabilitadas()
                 .containsKey(AlertasOptOutHelper.ALERTA_MENU_ENVIAR_A),
-            "No debe registrar opt-out si no habÃ­a nada que deshabilitar");
+            "No debe registrar opt-out si no había nada que deshabilitar");
     }
 }

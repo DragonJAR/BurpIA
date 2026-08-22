@@ -123,7 +123,8 @@ public class SolicitudAnalisis {
                              String cuerpoRespuesta,
                              String promptPreconstruido) {
         // Normalizar null → "" en los campos de identidad. hashSolicitud se usa
-        // como key de dedup y en equals; url/metodo se muestran en UI. Un null
+        // como key de dedup en DeduplicadorSolicitudes (la clase no define
+        // equals/hashCode propios); url/metodo se muestran en UI. Un null
         // aquí (de un caller que no valide) rompía la dedup y podía NPE en la UI.
         // Se reusa el helper normalizarNull ya existente en esta clase (DRY).
         this.url = normalizarNull(url);

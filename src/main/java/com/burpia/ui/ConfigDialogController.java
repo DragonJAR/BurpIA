@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -837,7 +838,8 @@ public class ConfigDialogController {
             return;
         }
 
-        DatosGuardadoDialogo datosGuardado = capturarDatosGuardadoDialogo();
+        DatosGuardadoDialogo datosGuardado = Objects.requireNonNull(
+                capturarDatosGuardadoDialogo(), I18nUI.General.ERROR_ARGUMENTO_NULO("datosGuardado"));
         Map<String, EstadoProveedorUI> estadosProveedorGuardar =
                 new HashMap<>(providerManager.obtenerConfiguracionParaGuardar());
         estadosProveedorGuardar.put(proveedorSeleccionado, estadoUI);
@@ -867,7 +869,6 @@ public class ConfigDialogController {
                     snapshot = configDialogo.crearSnapshot();
                     aplicarConfiguracionASnapshot(
                             snapshot,
-                            estadoUI,
                             proveedorSeleccionado,
                             valoresNumericos,
                             estadosProveedorGuardar,
@@ -939,22 +940,22 @@ public class ConfigDialogController {
     }
 
     private void aplicarConfiguracionASnapshot(ConfiguracionAPI snapshot,
-                                               EstadoProveedorUI estadoUI,
                                                String proveedorSeleccionado,
                                                ValoresNumericosConfiguracion valoresNumericos,
                                                Map<String, EstadoProveedorUI> estadosProveedorGuardar,
                                                DatosGuardadoDialogo datosGuardado) {
-        if (datosGuardado != null) {
-            snapshot.establecerIdiomaUi(datosGuardado.codigoIdioma);
-        }
+        // datosGuardado nunca es null: se valida con requireNonNull al capturarlo
+        // en manejarGuardarConfiguracion. Los guards null que había aquí eran muertos.
+        snapshot.establecerIdiomaUi(datosGuardado.codigoIdioma);
 
         snapshot.establecerProveedorAI(proveedorSeleccionado);
 
+        // estadosProveedorGuardar ya incluye el estado del proveedor actual
+        // (put en manejarGuardarConfiguracion); no duplicar el put aquí.
         Map<String, EstadoProveedorUI> estadosProveedorAplicar = new HashMap<>();
         if (estadosProveedorGuardar != null) {
             estadosProveedorAplicar.putAll(estadosProveedorGuardar);
         }
-        estadosProveedorAplicar.put(proveedorSeleccionado, estadoUI);
 
         for (Map.Entry<String, EstadoProveedorUI> entry : estadosProveedorAplicar.entrySet()) {
             String nombreProveedor = entry.getKey();
@@ -965,50 +966,42 @@ public class ConfigDialogController {
                 snapshot.establecerModeloParaProveedor(nombreProveedor, estadoProveedor.obtenerModelo());
                 snapshot.establecerUrlBaseParaProveedor(nombreProveedor, estadoProveedor.obtenerBaseUrl());
                 snapshot.establecerMaxTokensParaProveedor(nombreProveedor, estadoProveedor.obtenerMaxTokens());
-                snapshot.establecerTiempoEsperaParaModelo(nombreProveedor, 
+                snapshot.establecerTiempoEsperaParaModelo(nombreProveedor,
                     estadoProveedor.obtenerModelo(), estadoProveedor.obtenerTimeout());
             }
         }
 
-        if (datosGuardado != null) {
-            snapshot.establecerDetallado(datosGuardado.detallado);
-            snapshot.establecerIgnorarErroresSSL(datosGuardado.ignorarSsl);
-            snapshot.establecerSoloProxy(datosGuardado.soloProxy);
-            snapshot.establecerAlertasHabilitadas(datosGuardado.alertasHabilitadas);
-            snapshot.establecerPersistirFiltroBusquedaHallazgos(datosGuardado.persistirBusqueda);
-            snapshot.establecerPersistirFiltroSeveridadHallazgos(datosGuardado.persistirSeveridad);
-        }
+        snapshot.establecerDetallado(datosGuardado.detallado);
+        snapshot.establecerIgnorarErroresSSL(datosGuardado.ignorarSsl);
+        snapshot.establecerSoloProxy(datosGuardado.soloProxy);
+        snapshot.establecerAlertasHabilitadas(datosGuardado.alertasHabilitadas);
+        snapshot.establecerPersistirFiltroBusquedaHallazgos(datosGuardado.persistirBusqueda);
+        snapshot.establecerPersistirFiltroSeveridadHallazgos(datosGuardado.persistirSeveridad);
 
         snapshot.establecerRetrasoSegundos(valoresNumericos.retrasoSegundos);
         snapshot.establecerMaximoConcurrente(valoresNumericos.maximoConcurrente);
         snapshot.establecerMaximoHallazgosTabla(valoresNumericos.maximoHallazgosTabla);
         snapshot.establecerMaximoTareasTabla(valoresNumericos.maximoTareas);
 
-        if (datosGuardado != null) {
-            snapshot.establecerTipoAgente(datosGuardado.tipoAgenteSeleccionado);
-            snapshot.establecerEstadosHabilitacionAgentes(datosGuardado.estadosHabilitacionAgentes);
-            snapshot.establecerAgentePreflightPrompt(datosGuardado.agentePromptInicial);
-            snapshot.establecerAgentePrompt(datosGuardado.agentePrompt);
+        snapshot.establecerTipoAgente(datosGuardado.tipoAgenteSeleccionado);
+        snapshot.establecerEstadosHabilitacionAgentes(datosGuardado.estadosHabilitacionAgentes);
+        snapshot.establecerAgentePreflightPrompt(datosGuardado.agentePromptInicial);
+        snapshot.establecerAgentePrompt(datosGuardado.agentePrompt);
 
-            for (Map.Entry<String, String> entry : datosGuardado.rutasBinarioAgentes.entrySet()) {
-                snapshot.establecerRutaBinarioAgente(entry.getKey(), entry.getValue());
-            }
+        for (Map.Entry<String, String> entry : datosGuardado.rutasBinarioAgentes.entrySet()) {
+            snapshot.establecerRutaBinarioAgente(entry.getKey(), entry.getValue());
         }
 
-        if (datosGuardado != null) {
-            String promptPorDefecto = ConfiguracionAPI.obtenerPromptPorDefecto();
-            snapshot.establecerPromptConfigurable(datosGuardado.promptActual);
-            snapshot.establecerPromptModificado(!datosGuardado.promptActual.equals(promptPorDefecto));
-        }
+        String promptPorDefecto = ConfiguracionAPI.obtenerPromptPorDefecto();
+        snapshot.establecerPromptConfigurable(datosGuardado.promptActual);
+        snapshot.establecerPromptModificado(!datosGuardado.promptActual.equals(promptPorDefecto));
 
-        if (datosGuardado != null) {
-            snapshot.establecerNombreFuenteEstandar(datosGuardado.fuenteEstandar);
-            snapshot.establecerTamanioFuenteEstandar(datosGuardado.tamanioFuenteEstandar);
-            snapshot.establecerNombreFuenteMono(datosGuardado.fuenteMono);
-            snapshot.establecerTamanioFuenteMono(datosGuardado.tamanioFuenteMono);
-            snapshot.establecerMultiProveedorHabilitado(datosGuardado.multiProveedorHabilitado);
-            snapshot.establecerProveedoresMultiConsulta(datosGuardado.proveedoresMultiSeleccionados);
-        }
+        snapshot.establecerNombreFuenteEstandar(datosGuardado.fuenteEstandar);
+        snapshot.establecerTamanioFuenteEstandar(datosGuardado.tamanioFuenteEstandar);
+        snapshot.establecerNombreFuenteMono(datosGuardado.fuenteMono);
+        snapshot.establecerTamanioFuenteMono(datosGuardado.tamanioFuenteMono);
+        snapshot.establecerMultiProveedorHabilitado(datosGuardado.multiProveedorHabilitado);
+        snapshot.establecerProveedoresMultiConsulta(datosGuardado.proveedoresMultiSeleccionados);
     }
 
     private DatosGuardadoDialogo capturarDatosGuardadoDialogo() {
@@ -1238,6 +1231,10 @@ public class ConfigDialogController {
         if (Normalizador.esVacio(agenteSeleccionado)) {
             return "";
         }
+        // Fuente de verdad mientras el diálogo está abierto: borrador temporal →
+        // snapshot del diálogo (configDialogo) → default del tipo de agente.
+        // NO se consulta la config viva: sus valores pueden ser más nuevos que
+        // lo que el usuario ve y editó en esta sesión del diálogo.
         String rutaTemporal = rutasBinarioAgenteTemporal.get(agenteSeleccionado);
         if (Normalizador.noEsVacio(rutaTemporal)) {
             return rutaTemporal;
@@ -1245,10 +1242,6 @@ public class ConfigDialogController {
         String rutaGuardadaDialogo = configDialogo.obtenerRutaBinarioAgente(agenteSeleccionado);
         if (Normalizador.noEsVacio(rutaGuardadaDialogo)) {
             return rutaGuardadaDialogo;
-        }
-        String rutaGuardada = config.obtenerRutaBinarioAgente(agenteSeleccionado);
-        if (Normalizador.noEsVacio(rutaGuardada)) {
-            return rutaGuardada;
         }
         AgenteTipo tipoAgente = AgenteTipo.desdeCodigo(agenteSeleccionado, null);
         return tipoAgente != null ? tipoAgente.obtenerRutaPorDefecto() : "";
@@ -1389,8 +1382,8 @@ public class ConfigDialogController {
                     "maxTokens",
                     estado.obtenerMaxTokensTexto(),
                     I18nUI.Configuracion.LABEL_MAX_TOKENS(),
-                    1,
-                    200000);
+                    ConfigValidator.MAX_TOKENS_MINIMO,
+                    ConfigValidator.MAX_TOKENS_MAXIMO);
             agregarErrorProveedorSiExiste(
                     errores,
                     proveedor,

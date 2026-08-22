@@ -65,7 +65,11 @@ public final class JsonParserUtil {
             } else if (campoHallazgos.isJsonObject()) {
                 objetos.add(campoHallazgos.getAsJsonObject());
             }
-            return objetos;
+            if (!objetos.isEmpty()) {
+                return objetos;
+            }
+            // El campo existe pero no aporta hallazgos (no es array/objeto o es
+            // un array vacío): no rendirse — la raíz misma puede ser el hallazgo.
         }
         if (pareceObjetoHallazgo(objetoRaiz, CAMPOS_DESCRIPCION, CAMPOS_EVIDENCIA)) {
             objetos.add(objetoRaiz);

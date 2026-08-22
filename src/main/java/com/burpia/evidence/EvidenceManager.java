@@ -55,11 +55,20 @@ public class EvidenceManager {
             return;
         }
 
+        // Community no soporta issues: un solo warning agregado en lugar de
+        // iterar logueando ISSUES_SOLO_PRO por cada hallazgo.
+        if (!esBurpProfessional) {
+            gestorLogging.warning(ORIGEN_LOG, I18nLogs.Evidence.ISSUES_SOLO_PRO());
+            return;
+        }
+
         int guardados = 0;
+        int intentados = 0;
         for (Hallazgo hallazgo : hallazgos) {
             if (hallazgo == null) {
                 continue;
             }
+            intentados++;
 
             if (guardarHallazgoComoIssue(api, hallazgo)) {
                 guardados++;
@@ -67,7 +76,7 @@ public class EvidenceManager {
         }
 
         if (guardados > 0) {
-            gestorLogging.info(ORIGEN_LOG, I18nLogs.Evidence.AUDIT_ISSUES_CREADOS(guardados, hallazgos.size()));
+            gestorLogging.info(ORIGEN_LOG, I18nLogs.Evidence.AUDIT_ISSUES_CREADOS(guardados, intentados));
         }
     }
 }

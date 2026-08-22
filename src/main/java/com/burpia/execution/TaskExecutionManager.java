@@ -4,6 +4,7 @@ import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
+import com.burpia.model.Estadisticas;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.model.Tarea;
 import com.burpia.ui.PestaniaPrincipal;
@@ -36,6 +37,12 @@ public class TaskExecutionManager {
     private static final int MAX_CONTEXTO_REINTENTO = 1000;
     private static final AtomicInteger CONTADOR_HILOS = new AtomicInteger(0);
 
+    // Fallback canónico de concurrencia, compartido con ManejadorHttpBurpIA.
+    // ConfiguracionAPI normaliza máximo concurrente al rango [1,10] en el setter,
+    // así que obtenerMaximoConcurrente() nunca devuelve <= 0 en la práctica: la
+    // rama de fallback solo protege contra configs manipuladas por reflexión.
+    public static final int CONCURRENCIA_DEFECTO = ConfiguracionAPI.MINIMO_MAXIMO_CONCURRENTE;
+
     private volatile ConfiguracionAPI config;
     private final GestorTareas gestorTareas;
     private final GestorConsolaGUI gestorConsola;
@@ -44,6 +51,7 @@ public class TaskExecutionManager {
     private final PrintWriter stderr;
     private final LimitadorTasa limitador;
     private final GestorLoggingUnificado gestorLogging;
+    private final Estadisticas estadisticas;
 
     private final ThreadPoolExecutor executorService;
     private final Map<String, ContextoReintento> contextosReintento;
@@ -70,19 +78,28 @@ public class TaskExecutionManager {
     public TaskExecutionManager(ConfiguracionAPI config, GestorTareas gestorTareas,
             GestorConsolaGUI gestorConsola, PestaniaPrincipal pestaniaPrincipal,
             PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador) {
+        this(config, gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador, null);
+    }
+
+    public TaskExecutionManager(ConfiguracionAPI config, GestorTareas gestorTareas,
+            GestorConsolaGUI gestorConsola, PestaniaPrincipal pestaniaPrincipal,
+            PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
+            Estadisticas estadisticas) {
         this.config = config != null ? config : new ConfiguracionAPI();
         this.gestorTareas = gestorTareas;
         this.gestorConsola = gestorConsola;
         this.pestaniaPrincipal = pestaniaPrincipal;
         this.stdout = stdout != null ? stdout : new PrintWriter(System.out, true);
         this.stderr = stderr != null ? stderr : new PrintWriter(System.err, true);
-        this.limitador = limitador != null ? limitador : new LimitadorTasa(10);
+        this.limitador = limitador != null ? limitador : new LimitadorTasa(CONCURRENCIA_DEFECTO);
+        this.estadisticas = estadisticas;
         this.gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, null, null);
         this.contextosReintento = new ConcurrentHashMap<>();
         this.ejecucionesActivas = new ConcurrentHashMap<>();
         this.analizadoresActivos = new ConcurrentHashMap<>();
 
-        int maxThreads = this.config.obtenerMaximoConcurrente() > 0 ? this.config.obtenerMaximoConcurrente() : 10;
+        int maxThreads = this.config.obtenerMaximoConcurrente() > 0
+                ? this.config.obtenerMaximoConcurrente() : CONCURRENCIA_DEFECTO;
         int capacidadCola = Math.max(50, maxThreads * 20);
         this.executorService = new ThreadPoolExecutor(
                 maxThreads,
@@ -404,7 +421,7 @@ public class TaskExecutionManager {
 
         int nuevoMaximoConcurrente = nuevaConfig.obtenerMaximoConcurrente() > 0
                 ? nuevaConfig.obtenerMaximoConcurrente()
-                : 1;
+                : CONCURRENCIA_DEFECTO;
 
         limitador.ajustarMaximoConcurrente(nuevoMaximoConcurrente);
         actualizarPoolEjecucion(nuevoMaximoConcurrente);
@@ -427,18 +444,6 @@ public class TaskExecutionManager {
                 executorService.setMaximumPoolSize(nuevoMaximoConcurrente);
             }
         }
-    }
-
-    public int obtenerTareasActivas() {
-        return executorService.getActiveCount();
-    }
-
-    public int obtenerTareasEnCola() {
-        return executorService.getQueue().size();
-    }
-
-    public long obtenerTareasCompletadas() {
-        return executorService.getCompletedTaskCount();
     }
 
     private String describirErrorVisible(Throwable error) {
@@ -488,6 +493,11 @@ public class TaskExecutionManager {
                 if (resultado != null && resultado.obtenerHallazgos() != null
                         && !resultado.obtenerHallazgos().isEmpty()) {
                     List<com.burpia.model.Hallazgo> hallazgos = resultado.obtenerHallazgos();
+                    if (estadisticas != null) {
+                        for (int i = 0; i < hallazgos.size(); i++) {
+                            estadisticas.incrementarHallazgosCreados();
+                        }
+                    }
                     ejecutarEnEdt(() -> {
                         if (pestaniaPrincipal != null) {
                             pestaniaPrincipal.agregarHallazgos(hallazgos);

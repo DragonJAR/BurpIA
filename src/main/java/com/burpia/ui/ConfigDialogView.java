@@ -1,6 +1,7 @@
 package com.burpia.ui;
 
 import com.burpia.config.AgenteTipo;
+import com.burpia.config.ConfigValidator;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ProveedorAI;
 import com.burpia.i18n.I18nUI;
@@ -13,6 +14,10 @@ public class ConfigDialogView {
     private static final int FILAS_PROMPT_AGENTE = 6;
     private static final int ANCHO_SCROLL_PROMPT_AGENTE = 300;
     private static final int ALTO_SCROLL_PROMPT_AGENTE = 180;
+
+    // Rango de tamaños de fuente seleccionables en los spinners de apariencia
+    private static final int TAMANIO_FUENTE_SPINNER_MINIMO = 6;
+    private static final int TAMANIO_FUENTE_SPINNER_MAXIMO = 72;
 
     // Constantes de dimensiones del diálogo (compartidas con DialogoConfiguracion)
     static final int ANCHO_DIALOGO = 800;
@@ -124,7 +129,8 @@ public class ConfigDialogView {
 
         txtMaxTokens = crearCampoTexto();
         txtMaxTokens.setToolTipText(I18nUI.Tooltips.Configuracion.MAX_TOKENS());
-        txtMaxTokens.setInputVerifier(UIUtils.crearInputVerifierNumerico(1, 200000));
+        txtMaxTokens.setInputVerifier(UIUtils.crearInputVerifierNumerico(
+                ConfigValidator.MAX_TOKENS_MINIMO, ConfigValidator.MAX_TOKENS_MAXIMO));
 
         txtTimeoutModelo = crearCampoTexto();
         txtTimeoutModelo.setToolTipText(I18nUI.Tooltips.Configuracion.TIMEOUT_MODELO());
@@ -194,9 +200,13 @@ public class ConfigDialogView {
         comboFuenteMono.setFont(EstilosUI.FUENTE_ESTANDAR);
         comboFuenteMono.setToolTipText(I18nUI.Tooltips.Configuracion.FUENTE_MONO());
 
-        spinnerTamanioEstandar = new JSpinner(new SpinnerNumberModel(11, 6, 72, 1));
+        spinnerTamanioEstandar = new JSpinner(new SpinnerNumberModel(
+                ConfiguracionAPI.TAMANIO_FUENTE_ESTANDAR_DEFECTO,
+                TAMANIO_FUENTE_SPINNER_MINIMO, TAMANIO_FUENTE_SPINNER_MAXIMO, 1));
         spinnerTamanioEstandar.setToolTipText(I18nUI.Tooltips.Configuracion.TAMANIO_ESTANDAR());
-        spinnerTamanioMono = new JSpinner(new SpinnerNumberModel(12, 6, 72, 1));
+        spinnerTamanioMono = new JSpinner(new SpinnerNumberModel(
+                ConfiguracionAPI.TAMANIO_FUENTE_MONO_DEFECTO,
+                TAMANIO_FUENTE_SPINNER_MINIMO, TAMANIO_FUENTE_SPINNER_MAXIMO, 1));
         spinnerTamanioMono.setToolTipText(I18nUI.Tooltips.Configuracion.TAMANIO_MONO());
 
         comboAgente = new JComboBox<>(AgenteTipo.codigosDisponibles());
@@ -344,8 +354,11 @@ public class ConfigDialogView {
         chkMostrarClave.setFont(EstilosUI.FUENTE_ESTANDAR);
         chkMostrarClave.setOpaque(false);
         chkMostrarClave.setToolTipText(I18nUI.Configuracion.TOOLTIP_MOSTRAR_CLAVE());
+        // Capturar el echo original del L&F en vez de hardcodear '•': si el tema
+        // usa otro carácter de máscara, al ocultar de nuevo se restaura el suyo.
+        char echoOriginalClave = txtClave.getEchoChar();
         chkMostrarClave.addActionListener(e -> txtClave.setEchoChar(
-                chkMostrarClave.isSelected() ? (char) 0 : '•'));
+                chkMostrarClave.isSelected() ? (char) 0 : echoOriginalClave));
         panelClave.add(chkMostrarClave, BorderLayout.EAST);
         panel.add(panelClave, gbc);
 
@@ -535,10 +548,12 @@ public class ConfigDialogView {
         gbc.fill = GridBagConstraints.NONE;
         gbc.anchor = GridBagConstraints.CENTER;
 
-        JPanel panelBotonesCentro = new JPanel(new GridLayout(4, 1, 5, 5));
+        // 2 filas (agregar/quitar) con gap: antes GridLayout(4,1) con un strut
+        // que no respetaba su tamaño (GridLayout estira todas las celdas igual).
+        JPanel panelBotonesCentro = new JPanel(new GridLayout(2, 1, 5, 5));
+        panelBotonesCentro.setOpaque(false);
         panelBotonesCentro.add(btnAgregarProveedor);
         panelBotonesCentro.add(btnQuitarProveedor);
-        panelBotonesCentro.add(Box.createVerticalStrut(10));
         panel.add(panelBotonesCentro, gbc);
 
         gbc.gridx = 2;
@@ -1106,10 +1121,6 @@ public class ConfigDialogView {
 
     public JTabbedPane obtenerTabbedPane() {
         return tabbedPane;
-    }
-
-    public JPanel obtenerPanelBotones() {
-        return panelBotones;
     }
 
     public JTextField obtenerTxtUrl() {

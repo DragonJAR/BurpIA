@@ -20,7 +20,6 @@ import javax.swing.table.TableCellRenderer;
  */
 public class RenderizadorHallazgoBorrado implements TableCellRenderer {
     private final TableCellRenderer rendererOriginal;
-    private final JTable tabla;
     private final ModeloTablaHallazgos modelo;
 
     // Cache de la fuente tachada para evitar reasignar HashMap + deriveFont
@@ -39,7 +38,7 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
      */
     public RenderizadorHallazgoBorrado(TableCellRenderer rendererOriginal, JTable tabla, ModeloTablaHallazgos modelo) {
         this.rendererOriginal = Objects.requireNonNull(rendererOriginal, I18nUI.General.ERROR_ARGUMENTO_NULO("renderer"));
-        this.tabla = Objects.requireNonNull(tabla, I18nUI.General.ERROR_ARGUMENTO_NULO("tabla"));
+        Objects.requireNonNull(tabla, I18nUI.General.ERROR_ARGUMENTO_NULO("tabla"));
         this.modelo = Objects.requireNonNull(modelo, I18nUI.General.ERROR_ARGUMENTO_NULO("modelo"));
     }
 
@@ -56,14 +55,17 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
             table, value, isSelected, hasFocus, row, column
         );
 
-        if (row < 0 || row >= tabla.getRowCount()) {
+        // Usar consistentemente el parámetro `table` (no un campo guardado): el
+        // renderer se instancia una vez por columna y Swing siempre pasa la tabla
+        // correcta; mezclar ambos podía leer estado de una tabla distinta.
+        if (row < 0 || row >= table.getRowCount()) {
             // Reset defensivo: la fuente puede estar tachada de una fila
             // anterior (Swing reusa la misma instancia de renderer).
             componente.setFont(table.getFont());
             return componente;
         }
 
-        int filaModelo = tabla.convertRowIndexToModel(row);
+        int filaModelo = table.convertRowIndexToModel(row);
 
         // Aplicar estilos según estado de ignorado
         if (componente instanceof JLabel) {
@@ -76,7 +78,7 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
             if (modelo.estaIgnorado(filaModelo)) {
                 aplicarEstiloIgnorado(etiqueta, isSelected, table);
             } else {
-                etiqueta.setFont(tabla.getFont());
+                etiqueta.setFont(table.getFont());
             }
         }
 
@@ -104,7 +106,7 @@ public class RenderizadorHallazgoBorrado implements TableCellRenderer {
         }
 
         // Aplicar fuente con tachado (cache invalidación por identidad de base).
-        etiqueta.setFont(obtenerFuenteTachada(tabla.getFont()));
+        etiqueta.setFont(obtenerFuenteTachada(table.getFont()));
     }
 
     /**

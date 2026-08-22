@@ -27,6 +27,7 @@ import com.burpia.util.LimitadorTasa;
 import com.burpia.util.HttpUtils;
 import com.burpia.util.Normalizador;
 import com.burpia.util.DeduplicadorSolicitudes;
+import com.burpia.util.TrazadorContextual;
 import com.burpia.evidence.EvidenceManager;
 import com.burpia.processor.HttpRequestProcessor;
 import com.burpia.execution.TaskExecutionManager;
@@ -41,6 +42,15 @@ import java.util.function.Supplier;
 public class ManejadorHttpBurpIA implements HttpHandler {
     private static final String ORIGEN_LOG = "BurpIA";
     private static final long INTERVALO_ALERTA_CONFIG_MS = 120000L;
+    // Fallback defensivo cuando la config reporte un valor inválido (<= 0).
+    // La constante canónica vive en TaskExecutionManager.CONCURRENCIA_DEFECTO y
+    // se alinea con el mínimo del modelo (ConfiguracionAPI); antes el fallback
+    // divergía entre componentes (10 vs 1) según el camino de actualización.
+    private static final int CONCURRENCIA_DEFECTO = TaskExecutionManager.CONCURRENCIA_DEFECTO;
+    // Límite de reintentos CAS para cambios de config en vivo (pausa de captura,
+    // preferencias). Acotado para evitar bucles infinitos ante contención o una
+    // función que devuelva la misma referencia.
+    private static final int MAX_INTENTOS_CAMBIO_CONFIG = 5;
     private final MontoyaApi api;
     private final ConfiguracionAPIRef configRef;
     private final PestaniaPrincipal pestaniaPrincipal;
@@ -57,6 +67,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     private final HttpRequestProcessor httpRequestProcessor;
     private final TaskExecutionManager taskExecutionManager;
     private final Map<ConfiguracionAPI.CodigoValidacionConsulta, Long> alertasConfiguracionEmitidas;
+    private final TrazadorContextual trazadorContextual;
 
     public ManejadorHttpBurpIA(MontoyaApi api, ConfiguracionAPIRef configRef, PestaniaPrincipal pestaniaPrincipal,
             PrintWriter stdout, PrintWriter stderr, LimitadorTasa limitador,
@@ -78,11 +89,16 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         GestorLoggingUnificado gestorLogging = GestorLoggingUnificado.crear(gestorConsola, stdout, stderr, api, null);
         this.httpRequestProcessor = httpRequestProcessor != null ? httpRequestProcessor : new HttpRequestProcessor(api, configRefSegura.obtener(), gestorLogging);
         ConfiguracionAPI configSnapshot = configRefSegura.obtener();
-        this.taskExecutionManager = new TaskExecutionManager(configRefSegura.obtener(), gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador);
+        this.taskExecutionManager = new TaskExecutionManager(configRefSegura.obtener(), gestorTareas, gestorConsola, pestaniaPrincipal, stdout, stderr, limitador, estadisticas);
         this.alertasConfiguracionEmitidas = new ConcurrentHashMap<>();
-        int maxThreads = configSnapshot.obtenerMaximoConcurrente() > 0 ? configSnapshot.obtenerMaximoConcurrente() : 10;
+        int maxThreads = configSnapshot.obtenerMaximoConcurrente() > 0
+                ? configSnapshot.obtenerMaximoConcurrente() : CONCURRENCIA_DEFECTO;
         this.limitador = limitador != null ? limitador : new LimitadorTasa(maxThreads);
         this.logLock = new Object();
+        this.trazadorContextual = new TrazadorContextual(
+                configRefSegura::obtener,
+                () -> this.httpRequestProcessor,
+                this::escribirTrazaContextual);
 
         registrar(I18nUI.Consola.LOG_MANEJADOR_INICIALIZADO(
                 configSnapshot.obtenerMaximoConcurrente(),
@@ -119,7 +135,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         int nuevoMaximoConcurrente = nuevaConfig.obtenerMaximoConcurrente() > 0
                 ? nuevaConfig.obtenerMaximoConcurrente()
-                : 1;
+                : CONCURRENCIA_DEFECTO;
 
         this.limitador.ajustarMaximoConcurrente(nuevoMaximoConcurrente);
 
@@ -176,19 +192,19 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             estadisticas.incrementarTotalSolicitudes();
         }
 
-        rastrear(() -> "Respuesta recibida: " + metodo + " " + url + " (estado: " + codigoEstado + ")");
+        rastrear(() -> I18nLogs.Manejador.TRAZA_RESPUESTA_RECIBIDA(metodo, url, codigoEstado));
 
         if (!httpRequestProcessor.estaEnScope(respuestaRecibida.initiatingRequest())) {
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        rastrear(() -> "DENTRO DE SCOPE - Procesando: " + metodo + " " + url);
+        rastrear(() -> I18nLogs.ContextoMenu.SCOPE_DENTRO(metodo, url));
 
         if (httpRequestProcessor.esRecursoEstatico(url)) {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosBajaConfianza();
             }
-            rastrear(() -> "Omitiendo recurso estatico: " + url);
+            rastrear(() -> I18nLogs.ContextoMenu.RECURSO_ESTATICO_OBSERVADO(url));
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
@@ -200,30 +216,30 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             String contentTypeLog = Normalizador.esVacio(contentTypeRespuesta)
                     ? "desconocido"
                     : contentTypeRespuesta.trim();
-            rastrear(() -> "Omitiendo contenido no analizable: " + url + " (Content-Type: " + contentTypeLog + ")");
+            rastrear(() -> I18nLogs.ContextoMenu.CONTENIDO_NO_ANALIZABLE_OBSERVADO(url, contentTypeLog));
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
+        // Un bloqueo por configuración inválida NO incrementa omitidosBajaConfianza:
+        // esa métrica mide contenido descartado por filtros, y aquí la alerta
+        // rate-limited de registrarAlertaConfiguracionLimitada ya informa al usuario.
         if (!puedeIniciarAnalisis("Analisis HTTP", url)) {
-            if (estadisticas != null) {
-                estadisticas.incrementarOmitidosBajaConfianza();
-            }
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
         String hashSolicitud = HttpUtils.generarHashRapido(respuestaRecibida.initiatingRequest(), respuestaRecibida);
         String hashAbreviado = httpRequestProcessor.abreviarHash(hashSolicitud);
-        rastrear(() -> "Hash de solicitud: " + hashAbreviado + "...");
+        rastrear(() -> I18nLogs.ContextoMenu.HASH_SOLICITUD(hashAbreviado));
 
         if (deduplicador.esDuplicadoYAgregar(hashSolicitud)) {
             if (estadisticas != null) {
                 estadisticas.incrementarOmitidosDuplicado();
             }
-            rastrear(() -> "Solicitud duplicada omitida: " + url);
+            rastrear(() -> I18nLogs.Manejador.TRAZA_SOLICITUD_DUPLICADA_OMITIDA(url));
             return ResponseReceivedAction.continueWith(respuestaRecibida);
         }
 
-        rastrear(() -> "Nueva solicitud registrada: " + url + " (hash: " + hashAbreviado + "...)");
+        rastrear(() -> I18nLogs.Manejador.TRAZA_NUEVA_SOLICITUD_REGISTRADA(url, hashAbreviado));
 
         int conteoEncabezados = 0;
         if (respuestaRecibida.initiatingRequest().headers() != null) {
@@ -231,8 +247,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         }
         final int numEncabezados = conteoEncabezados;
 
-        rastrear(() -> "Detalles de solicitud: Metodo=" + metodo + ", URL=" + url +
-                ", Encabezados=" + numEncabezados + ", Codigo respuesta=" + codigoEstado);
+        rastrear(() -> I18nLogs.ContextoMenu.DETALLES_SOLICITUD(metodo, url, numEncabezados, codigoEstado));
 
         SolicitudAnalisis solicitudAnalisis = httpRequestProcessor.crearSolicitudAnalisisDesdeRespuesta(respuestaRecibida);
         programarAnalisis(
@@ -273,7 +288,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
         SolicitudAnalisis solicitudAnalisis = httpRequestProcessor.crearSolicitudAnalisisForzada(solicitud, solicitudRespuestaOriginal);
         if (solicitudAnalisis == null) {
-            registrarError("No se pudo crear solicitud de análisis forzada");
+            registrarError(I18nLogs.Manejador.ERROR_CREAR_SOLICITUD_FORZADA());
             return;
         }
 
@@ -358,10 +373,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             registrarError(I18nLogs.Manejador.ERROR_PROGRAMAR_ANALISIS());
             return null;
         }
-        if (!puedeIniciarAnalisis(tipoTarea, solicitudAnalisis.obtenerUrl())) {
-            return null;
-        }
-
+        // Sin doble verificación de config aquí: cada caller (handler pasivo,
+        // análisis manual y flujo) ya ejecuta puedeIniciarAnalisis ANTES de
+        // construir la solicitud, evitando trabajo inútil (hash, dedup, DTO) y
+        // una segunda alerta rate-limited idéntica. La ventana de carrera entre
+        // ambos puntos es mínima y la ejecución vuelve a validar aguas abajo.
         return taskExecutionManager.programarAnalisis(solicitudAnalisis, tipoTarea);
     }
 
@@ -471,7 +487,11 @@ public class ManejadorHttpBurpIA implements HttpHandler {
     }
 
     private void rastrearContextual(String mensaje) {
-        rastrear(mensaje);
+        trazadorContextual.rastrearContextual(mensaje);
+    }
+
+    private void escribirTrazaContextual(String mensaje) {
+        registrarInterno(mensaje, GestorConsolaGUI.TipoLog.VERBOSE, false, "[BurpIA] [RASTREO] ");
     }
 
     private void rastrear(String mensaje) {
@@ -535,64 +555,23 @@ public class ManejadorHttpBurpIA implements HttpHandler {
 
     private void registrarInicioContextualDetallado(String accion,
             FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
-        if (!debeRegistrarContextoDetallado(contextoInvocacion)) {
-            return;
-        }
-        rastrearContextual(I18nLogs.ContextoMenu.ACCION_INICIADA(
-            accion,
-            contextoInvocacion.obtenerTipoInvocacion(),
-            contextoInvocacion.obtenerTipoHerramienta(),
-            contextoInvocacion.obtenerCantidadSeleccionada()
-        ));
+        trazadorContextual.registrarInicioContextualDetallado(accion, contextoInvocacion);
     }
 
     private void registrarResumenSeleccionContextualDetallado(List<HttpRequestResponse> solicitudes) {
-        ConfiguracionAPI config = configRef.obtener();
-        if (config == null || !config.esDetallado()) {
-            return;
-        }
-        int total = solicitudes != null ? solicitudes.size() : 0;
-        int sinRequest = httpRequestProcessor.contarSolicitudesSinRequest(solicitudes);
-        int validas = Math.max(0, total - sinRequest);
-        int sinResponse = httpRequestProcessor.contarSolicitudesSinResponse(solicitudes);
-        rastrearContextual(I18nLogs.ContextoMenu.RESUMEN_SELECCION(total, validas, sinRequest, sinResponse));
+        trazadorContextual.registrarResumenSeleccionContextualDetallado(solicitudes);
     }
 
     private void registrarSolicitudesContextualesDetalladas(List<HttpRequestResponse> solicitudes) {
-        ConfiguracionAPI config = configRef.obtener();
-        if (config == null || !config.esDetallado() || Normalizador.esVacia(solicitudes)) {
-            return;
-        }
-        for (HttpRequestResponse solicitud : solicitudes) {
-            registrarSolicitudContextualDetallada(solicitud);
-        }
+        trazadorContextual.registrarSolicitudesContextualesDetalladas(solicitudes);
     }
 
     private void registrarSolicitudContextualDetallada(HttpRequestResponse solicitud) {
-        ConfiguracionAPI config = configRef.obtener();
-        if (config == null || !config.esDetallado() || solicitud == null) {
-            return;
-        }
-        HttpRequestProcessor.ResumenSolicitudContextual resumen =
-            httpRequestProcessor.inspeccionarSolicitudContextual(solicitud);
-        if (!resumen.esValida()) {
-            return;
-        }
-        for (String traza : httpRequestProcessor.construirTrazasDetalleContextual(resumen)) {
-            rastrearContextual(traza);
-        }
+        trazadorContextual.registrarSolicitudContextualDetallada(solicitud);
     }
 
     private void registrarBypassContextualDetallado(String mensaje) {
-        ConfiguracionAPI config = configRef.obtener();
-        if (config != null && config.esDetallado() && Normalizador.noEsVacio(mensaje)) {
-            rastrearContextual(mensaje);
-        }
-    }
-
-    private boolean debeRegistrarContextoDetallado(FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
-        ConfiguracionAPI config = configRef.obtener();
-        return config != null && config.esDetallado() && contextoInvocacion != null;
+        trazadorContextual.registrarBypassContextualDetallado(mensaje);
     }
 
     public void shutdown() {
@@ -607,7 +586,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             modificada.establecerEscaneoPasivoHabilitado(false);
             return modificada;
         });
-        registrar("Captura pausada por usuario");
+        registrar(I18nLogs.Manejador.CAPTURA_PAUSADA());
     }
 
     public void reanudarCaptura() {
@@ -616,7 +595,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             modificada.establecerEscaneoPasivoHabilitado(true);
             return modificada;
         });
-        registrar("Captura reanudada por usuario");
+        registrar(I18nLogs.Manejador.CAPTURA_REANUDADA());
     }
 
     /**
@@ -655,7 +634,7 @@ public class ManejadorHttpBurpIA implements HttpHandler {
         // Acotado: la contención EDT vs handler es breve y rara. Un límite bajo
         // previene bucles infinitos ante un bug en la función (que devuelva una
         // referencia igual a la actual haría que CAS nunca succeeds).
-        for (int intento = 0; intento < 5; intento++) {
+        for (int intento = 0; intento < MAX_INTENTOS_CAMBIO_CONFIG; intento++) {
             ConfiguracionAPI actual = configRef.obtener();
             ConfiguracionAPI modificada = funcion.apply(actual);
             if (modificada == null || modificada == actual) {
@@ -666,6 +645,9 @@ public class ManejadorHttpBurpIA implements HttpHandler {
             }
             // La ref cambió concurrentemente: reintentar sobre la nueva versión.
         }
+        // Agotados los reintentos, el cambio se pierde: debe quedar rastro en el
+        // log, no un fallo silencioso (antes retornaba sin avisar).
+        registrarError(I18nLogs.Manejador.ERROR_CAMBIO_CONFIG_AGOTADO(MAX_INTENTOS_CAMBIO_CONFIG));
     }
 
     public boolean guardarHallazgoComoIssue(Hallazgo hallazgo) {

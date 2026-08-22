@@ -3,7 +3,6 @@ package com.burpia.core;
 import com.burpia.ExtensionBurpIA;
 import com.burpia.processor.HttpRequestProcessor;
 import com.burpia.ui.FabricaMenuContextual;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,11 +22,6 @@ import static org.mockito.Mockito.verify;
  */
 @DisplayName("ExtensionBurpIA Unload Tests")
 class ExtensionBurpIAUnloadTest {
-
-    @BeforeEach
-    void setUp() {
-        // Idioma español para determinismo en los tests
-    }
 
     /**
      * Helper: establece un campo privado en el objetivo via reflexión.

@@ -16,9 +16,11 @@ import javax.swing.JPopupMenu;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
+import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Rectangle;
+import java.awt.font.TextAttribute;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,49 +49,6 @@ class UIUtilsTest {
     void tearDown() {
         I18nUI.establecerIdioma(IDIOMA_DEFAULT);
         UIUtils.configurarAlertas(null, null);
-    }
-
-    @Nested
-    @DisplayName("extraerTextoVisibleEnlace")
-    class ExtraerTextoVisibleEnlaceTests {
-
-        @Test
-        @DisplayName("mantiene texto plano sin cambios")
-        void textoPlano() {
-            assertEquals("Como instalar Factory Droid?", UIUtils.extraerTextoVisibleEnlace("Como instalar Factory Droid?"), "assertEquals failed at UIUtilsTest.java:45");
-        }
-
-        @Test
-        @DisplayName("elimina anchor html")
-        void conAnchor() {
-            String input = "<html><a href='https://example.com'>Como instalar Factory Droid?</a></html>";
-            assertEquals("Como instalar Factory Droid?", UIUtils.extraerTextoVisibleEnlace(input), "assertEquals failed at UIUtilsTest.java:52");
-        }
-
-        @Test
-        @DisplayName("elimina etiquetas html residuales")
-        void conEtiquetasHtml() {
-            String input = "<b>Texto</b> <i>de enlace</i>";
-            assertEquals("Texto de enlace", UIUtils.extraerTextoVisibleEnlace(input), "assertEquals failed at UIUtilsTest.java:59");
-        }
-
-        @Test
-        @DisplayName("maneja null retornando vacio")
-        void nulo() {
-            assertEquals("", UIUtils.extraerTextoVisibleEnlace(null), "assertEquals failed at UIUtilsTest.java:65");
-        }
-
-        @Test
-        @DisplayName("maneja string vacio")
-        void vacio() {
-            assertEquals("", UIUtils.extraerTextoVisibleEnlace(""), "assertEquals failed at UIUtilsTest.java:71");
-        }
-
-        @Test
-        @DisplayName("maneja solo espacios en blanco")
-        void soloEspacios() {
-            assertEquals("", UIUtils.extraerTextoVisibleEnlace("   "), "assertEquals failed at UIUtilsTest.java:77");
-        }
     }
 
     @Nested
@@ -316,29 +275,29 @@ class UIUtilsTest {
         }
 
         @Test
-        @DisplayName("convierte filas de vista a modelo filtrando invÃ¡lidas y duplicados")
+        @DisplayName("convierte filas de vista a modelo filtrando inválidas y duplicados")
         void convierteFiltrandoInvalidasYDuplicados() {
             JTable tabla = crearTablaSinFiltros(5);
             int[] resultado = UIUtils.convertirFilasVistaAModelo(tabla, 0, 2, 2, -1, 99);
             assertArrayEquals(new int[]{0, 2}, resultado,
-                "Debe filtrar Ã­ndices fuera de rango (-1, 99) y descartar duplicados (2,2)");
+                "Debe filtrar índices fuera de rango (-1, 99) y descartar duplicados (2,2)");
         }
 
         @Test
-        @DisplayName("retorna array vacÃ­o para entrada nula o vacÃ­a")
+        @DisplayName("retorna array vacío para entrada nula o vacía")
         void retornaVacioParaEntradaNulaOVacia() {
             JTable tabla = crearTablaSinFiltros(3);
             assertArrayEquals(new int[0], UIUtils.convertirFilasVistaAModelo(tabla, (int[]) null),
-                "Entrada null debe retornar array vacÃ­o");
+                "Entrada null debe retornar array vacío");
             assertArrayEquals(new int[0], UIUtils.convertirFilasVistaAModelo(tabla),
-                "Sin filas debe retornar array vacÃ­o");
+                "Sin filas debe retornar array vacío");
         }
 
         @Test
-        @DisplayName("retorna array vacÃ­o para tabla null")
+        @DisplayName("retorna array vacío para tabla null")
         void retornaVacioParaTablaNull() {
             assertArrayEquals(new int[0], UIUtils.convertirFilasVistaAModelo(null, 0, 1),
-                "Tabla null debe retornar array vacÃ­o de forma segura");
+                "Tabla null debe retornar array vacío de forma segura");
         }
     }
 
@@ -608,6 +567,34 @@ class UIUtilsTest {
                 dialogo.dispose();
             }
         }
+    }
+
+    @Test
+    @DisplayName("esFuenteTachada detecta STRIKETHROUGH_ON y tolera null")
+    void testEsFuenteTachada() {
+        Font base = new Font(Font.MONOSPACED, Font.PLAIN, 12);
+        assertFalse(UIUtils.esFuenteTachada(base), "Una fuente normal no debe reportarse tachada");
+        assertFalse(UIUtils.esFuenteTachada(null), "null debe reportarse como no tachada");
+
+        Map<TextAttribute, Object> atributos = new HashMap<>(base.getAttributes());
+        atributos.put(TextAttribute.STRIKETHROUGH, TextAttribute.STRIKETHROUGH_ON);
+        assertTrue(UIUtils.esFuenteTachada(base.deriveFont(atributos)),
+            "La fuente con STRIKETHROUGH_ON debe reportarse tachada");
+    }
+
+    @Test
+    @DisplayName("crearCacheLru desaloja la entrada menos reciente al superar la capacidad")
+    void testCrearCacheLruDesalojaMasAntiguo() {
+        Map<String, Integer> cache = UIUtils.crearCacheLru(2);
+        cache.put("a", 1);
+        cache.put("b", 2);
+        cache.get("a"); // 'a' pasa a ser el más reciente
+        cache.put("c", 3); // desaloja 'b'
+
+        assertEquals(2, cache.size(), "El caché no debe superar su capacidad");
+        assertTrue(cache.containsKey("a"), "'a' fue accedido recientemente y debe conservarse");
+        assertFalse(cache.containsKey("b"), "'b' era el menos reciente y debe desalojarse");
+        assertTrue(cache.containsKey("c"), "'c' es la entrada nueva y debe conservarse");
     }
 
     /** Persistidor en memoria para tests de recordarGeometriaDialogo. */

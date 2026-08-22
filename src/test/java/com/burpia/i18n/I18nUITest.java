@@ -290,4 +290,38 @@ class I18nUITest {
             I18nUI.Consola.RESUMEN(3, 1, 1, 1)
         , "assertEquals failed at I18nUITest.java:220");
     }
+
+    @Test
+    @DisplayName("Mensajes de validación de ConfigValidator viven en I18nUI y renderizan ES/EN")
+    void testMensajesValidacionConfigEnI18nUI() {
+        I18nUI.establecerIdioma("es");
+        assertEquals(
+            "Formato de API key inválido para OpenAI. Debe comenzar con 'sk-' y no contener espacios",
+            I18nUI.Configuracion.ERROR_VALIDACION_API_KEY("OpenAI", "sk-"),
+            "Slot ES de ERROR_VALIDACION_API_KEY");
+        assertEquals(
+            "El ejecutable contiene segmentos inválidos (..)",
+            I18nUI.Configuracion.ERROR_BINARIO_SEGMENTOS_INVALIDOS(),
+            "Slot ES de ERROR_BINARIO_SEGMENTOS_INVALIDOS");
+
+        I18nUI.establecerIdioma("en");
+        assertEquals(
+            "Invalid API key format for OpenAI. Must start with 'sk-' and contain no spaces",
+            I18nUI.Configuracion.ERROR_VALIDACION_API_KEY("OpenAI", "sk-"),
+            "Slot EN de ERROR_VALIDACION_API_KEY");
+        assertEquals(
+            "Executable contains invalid segments (..)",
+            I18nUI.Configuracion.ERROR_BINARIO_SEGMENTOS_INVALIDOS(),
+            "Slot EN de ERROR_BINARIO_SEGMENTOS_INVALIDOS");
+    }
+
+    @Test
+    @DisplayName("TAG_WARNING de consola es idéntico en ES y EN")
+    void testTagWarningConsola() {
+        I18nUI.establecerIdioma("es");
+        assertEquals("[WARNING] ", I18nUI.Consola.TAG_WARNING(), "Slot ES de TAG_WARNING");
+
+        I18nUI.establecerIdioma("en");
+        assertEquals("[WARNING] ", I18nUI.Consola.TAG_WARNING(), "Slot EN de TAG_WARNING");
+    }
 }

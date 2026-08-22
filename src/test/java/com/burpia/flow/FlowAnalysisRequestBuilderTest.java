@@ -63,6 +63,27 @@ class FlowAnalysisRequestBuilderTest {
             "El prompt de flujo no debe inventar respuestas faltantes");
     }
 
+    @Test
+    @DisplayName("La numeracion de peticiones no deja huecos cuando hay nulls en la lista")
+    void testNumeracionSinHuecosConNulls() {
+        ConfiguracionAPI config = new ConfiguracionAPI();
+        SolicitudAnalisis primera = crearSolicitud(
+            "https://example.com/one", "GET", "GET /one HTTP/1.1\nHost: example.com", "", 200, "HTTP/1.1 200 OK", "r1");
+        SolicitudAnalisis tercera = crearSolicitud(
+            "https://example.com/three", "POST", "POST /three HTTP/1.1\nHost: example.com", "{\"b\":2}", -1, "", "");
+
+        SolicitudAnalisis solicitudFlujo = FlowAnalysisRequestBuilder.crearSolicitudFlujo(
+            config, java.util.Arrays.asList(primera, null, tercera));
+
+        assertNotNull(solicitudFlujo, "La solicitud de flujo no debe ser null con nulls intercalados");
+        String encabezados = solicitudFlujo.obtenerEncabezados();
+        assertTrue(encabezados.contains("[PETICIÓN 1]"), "La primera petición válida debe numerarse 1");
+        assertTrue(encabezados.contains("[PETICIÓN 2]"), "La segunda petición válida debe numerarse 2 (sin hueco por el null)");
+        assertFalse(encabezados.contains("[PETICIÓN 3]"), "Solo hay 2 peticiones válidas: no debe existir [PETICIÓN 3]");
+        assertTrue(solicitudFlujo.obtenerCuerpo().contains("[BODY PETICIÓN 2]"),
+            "El body de la segunda petición válida debe usar la misma numeración sin huecos");
+    }
+
     private SolicitudAnalisis crearSolicitud(String url,
                                              String metodo,
                                              String encabezados,

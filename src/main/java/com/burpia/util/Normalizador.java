@@ -132,7 +132,7 @@ public final class Normalizador {
      * </p>
      * <ul>
      *   <li>Para claves {@code null} o vacías: {@code [NO CONFIGURADA]}</li>
-     *   <li>Para claves de 8 caracteres o menos: {@code ****}</li>
+     *   <li>Para claves de 12 caracteres o menos: {@code ****}</li>
      *   <li>Para claves más largas: primeros 4 caracteres + {@code ****} + últimos 4 caracteres</li>
      * </ul>
      *
@@ -143,7 +143,9 @@ public final class Normalizador {
         if (apiKey == null || apiKey.isEmpty()) {
             return com.burpia.i18n.I18nUI.General.CLAVE_NO_CONFIGURADA();
         }
-        if (apiKey.length() <= 8) {
+        // Claves de 9-12 chars mostraban 4+4 (casi toda la clave): enmascarar
+        // por completo hasta 12 caracteres.
+        if (apiKey.length() <= 12) {
             return "****";
         }
         return apiKey.substring(0, 4) + "****" + apiKey.substring(apiKey.length() - 4);

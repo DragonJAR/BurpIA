@@ -1129,6 +1129,12 @@ public final class I18nUI {
         private Consola() {
         }
 
+        // La consola GUI solo soporta INFO/VERBOSE/ERROR; no existe un tipo
+        // WARNING, así que los warnings se emiten como INFO con este prefijo.
+        public static String TAG_WARNING() {
+            return tr("[WARNING] ", "[WARNING] ");
+        }
+
         public static String TITULO_ERROR_PTY() {
             return tr("Error de PTY", "PTY Error");
         }
@@ -1933,6 +1939,20 @@ public final class I18nUI {
 
         public static String ERROR_CLAVE_REQUERIDA() {
             return tr("La clave de API es requerida", "API key is required");
+        }
+
+        public static String ERROR_VALIDACION_API_KEY(String proveedor, String prefijo) {
+            return trf(
+                    "Formato de API key inválido para %s. Debe comenzar con '%s' y no contener espacios",
+                    "Invalid API key format for %s. Must start with '%s' and contain no spaces",
+                    proveedor, prefijo);
+        }
+
+        public static String ERROR_BINARIO_SEGMENTOS_INVALIDOS() {
+            return tr(
+                    "El ejecutable contiene segmentos inválidos (..)",
+                    "Executable contains invalid segments (..)"
+            );
         }
 
         public static String ERROR_PROMPT_REQUERIDO() {

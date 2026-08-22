@@ -15,6 +15,7 @@ import com.burpia.ManejadorHttpBurpIA;
 import com.burpia.config.ConfiguracionAPI;
 import com.burpia.config.ConfiguracionAPIRef;
 import com.burpia.config.GestorConfiguracion;
+import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.model.Hallazgo;
 import com.burpia.ui.FabricaMenuContextual;
@@ -24,6 +25,7 @@ import com.burpia.ui.PanelAgente;
 import com.burpia.ui.PestaniaPrincipal;
 import com.burpia.ui.UIUtils;
 import com.burpia.util.GestorConsolaGUI;
+import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import org.junit.jupiter.api.AfterEach;
@@ -32,14 +34,18 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -51,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -594,6 +601,7 @@ class ExtensionBurpIATest {
             HttpRequest request = crearProxyContadorToString(HttpRequest.class, contadorRequest, "REQUEST-CONTENT");
             HttpResponse response = crearProxyContadorToString(HttpResponse.class, contadorResponse, "RESPONSE-CONTENT");
             when(solicitudRespuesta.request()).thenReturn(request);
+            when(solicitudRespuesta.hasResponse()).thenReturn(true);
             when(solicitudRespuesta.response()).thenReturn(response);
 
             Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
@@ -784,6 +792,7 @@ class ExtensionBurpIATest {
             HttpRequest request2 = crearProxyContadorToString(HttpRequest.class, new AtomicInteger(0), "GET /two HTTP/1.1");
             HttpResponse response1 = crearProxyContadorToString(HttpResponse.class, new AtomicInteger(0), "HTTP/1.1 200 OK");
             when(rr1.request()).thenReturn(request1);
+            when(rr1.hasResponse()).thenReturn(true);
             when(rr1.response()).thenReturn(response1);
             when(rr2.request()).thenReturn(request2);
             when(rr2.response()).thenReturn(null);
@@ -828,6 +837,7 @@ class ExtensionBurpIATest {
             HttpRequest request2 = crearProxyContadorToString(HttpRequest.class, new AtomicInteger(0), "POST /two HTTP/1.1");
             HttpResponse response1 = crearProxyContadorToString(HttpResponse.class, new AtomicInteger(0), "HTTP/1.1 200 OK");
             when(rr1.request()).thenReturn(request1);
+            when(rr1.hasResponse()).thenReturn(true);
             when(rr1.response()).thenReturn(response1);
             when(rr2.request()).thenReturn(request2);
             when(rr2.response()).thenReturn(null);
@@ -1152,6 +1162,120 @@ class ExtensionBurpIATest {
             Method metodo = ExtensionBurpIA.class.getDeclaredMethod("guardarConfiguracionSilenciosa", String.class);
             metodo.setAccessible(true);
             metodo.invoke(extension, origen);
+        }
+    }
+
+    @Nested
+    @DisplayName("Tests de segunda pasada de correcciones")
+    class SegundaPasadaTests {
+
+        @Test
+        @DisplayName("Enviar al Agente en modo detallado no aborta cuando el contexto de invocación es null")
+        void testEnviarAAgenteDetalladoSinContextoNoAborta() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            ConfiguracionAPI config = new ConfiguracionAPI();
+            config.establecerDetallado(true);
+            config.establecerAgenteHabilitado(true);
+            config.establecerAgentePrompt("Analiza esto");
+            establecerCampoConfigConRef(extension, config);
+
+            PestaniaPrincipal pestania = mock(PestaniaPrincipal.class);
+            PanelAgente panelAgente = mock(PanelAgente.class);
+            when(pestania.obtenerPanelAgente()).thenReturn(panelAgente);
+            when(panelAgente.inyectarComando(anyString(), eq(0)))
+                .thenReturn(PanelAgente.ResultadoInyeccion.INYECTADO);
+            establecerCampo(extension, "pestaniaPrincipal", pestania);
+
+            Method enviarAAgente = ExtensionBurpIA.class.getDeclaredMethod("enviarAAgente", HttpRequestResponse.class);
+            enviarAAgente.setAccessible(true);
+
+            // La sobrecarga de 1 arg pasa contextoInvocacion=null: antes el trazado
+            // detallado lanzaba NPE al formatear ACCION_INICIADA (la copia local de
+            // debeRegistrarContextoDetallado no validaba el contexto) y el catch
+            // genérico abortaba el envío como DESCARTADO.
+            Object resultado = enviarAAgente.invoke(extension, mock(HttpRequestResponse.class));
+
+            assertEquals(PanelAgente.ResultadoInyeccion.INYECTADO, resultado,
+                "Con contexto null el trazado debe omitirse sin abortar el envío al agente");
+            verify(panelAgente).inyectarComando(anyString(), eq(0));
+        }
+
+        @Test
+        @DisplayName("resolverFramePadre tolera ancestro JDialog sin ClassCastException")
+        void testResolverFramePadreConAncestroDialog() {
+            // Mocks vía Objenesis (sin constructor): seguros en entorno headless,
+            // donde instanciar JDialog/JFrame reales no es posible.
+            JDialog dialogo = mock(JDialog.class);
+            assertNull(ExtensionBurpIA.resolverFramePadre(dialogo),
+                "Un ancestro JDialog debe devolver null, no lanzar ClassCastException");
+        }
+
+        @Test
+        @DisplayName("resolverFramePadre devuelve el Frame cuando el ancestro lo es")
+        void testResolverFramePadreConAncestroFrame() {
+            JFrame frame = mock(JFrame.class);
+            assertSame(frame, ExtensionBurpIA.resolverFramePadre(frame),
+                "Un ancestro Frame debe devolverse tal cual");
+            assertNull(ExtensionBurpIA.resolverFramePadre(null),
+                "Sin ventana ancestro debe devolver null");
+        }
+
+        @Test
+        @DisplayName("PrintWriter de Montoya entrega texto UTF-8 intacto al sink")
+        void testPrintWriterMontoyaEntregaTextoUtf8Intacto() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            Method metodo = ExtensionBurpIA.class.getDeclaredMethod("crearPrintWriterMontoya", Consumer.class);
+            metodo.setAccessible(true);
+            List<String> recibidos = new ArrayList<>();
+            PrintWriter writer = (PrintWriter) metodo.invoke(extension, (Consumer<String>) recibidos::add);
+
+            // El writer codifica en UTF-8 explícito (OutputStreamWriter) para
+            // coincidir con la decodificación UTF-8 del buffer; en JDK 18+ el
+            // charset por defecto ya es UTF-8 (JEP 400), así que este test es
+            // una guarda de integridad de ida y vuelta, no del mismatch latente.
+            writer.println("Análisis con acentos: áéíóú ñ €");
+            writer.print("sin salto");
+            writer.flush();
+            assertEquals(List.of("Análisis con acentos: áéíóú ñ €", "sin salto"), recibidos,
+                "El sink debe recibir el texto UTF-8 intacto, línea a línea y al hacer flush");
+        }
+
+        @Test
+        @DisplayName("Unload registra el cierre definitivo antes de apagar la consola")
+        void testUnloadRegistraDescargaAntesDeShutdownConsola() throws Exception {
+            ExtensionBurpIA extension = new ExtensionBurpIA();
+            GestorConsolaGUI consola = mock(GestorConsolaGUI.class);
+            GestorLoggingUnificado logging = GestorLoggingUnificado.crear(consola, null, null, null, null);
+            establecerCampo(extension, "gestorLogging", logging);
+            establecerCampo(extension, "gestorConsola", consola);
+
+            extension.unload();
+
+            // Antes el log final de descarga se emitía DESPUÉS de consola.shutdown()
+            // y se perdía silenciosamente.
+            InOrder orden = inOrder(consola);
+            orden.verify(consola).registrarInfo(anyString(), eq(I18nLogs.Extension.DESCARGANDO()));
+            orden.verify(consola).registrarInfo(anyString(), eq(I18nLogs.Extension.DESCARGADA_OK()));
+            orden.verify(consola).shutdown();
+        }
+
+        @Test
+        @DisplayName("Mensajes de inicialización externalizados en español e inglés")
+        void testMensajesInicializacionLocalizados() {
+            assertEquals("Manejador HTTP registrado exitosamente",
+                I18nLogs.Inicializacion.MANEJADOR_HTTP_REGISTRADO(),
+                "Slot ES de MANEJADOR_HTTP_REGISTRADO");
+            assertEquals("Menu contextual de BurpIA registrado exitosamente",
+                I18nLogs.Inicializacion.MENU_CONTEXTUAL_REGISTRADO(),
+                "Slot ES de MENU_CONTEXTUAL_REGISTRADO");
+
+            I18nUI.establecerIdioma("en");
+            assertEquals("HTTP handler registered successfully",
+                I18nLogs.Inicializacion.MANEJADOR_HTTP_REGISTRADO(),
+                "Slot EN de MANEJADOR_HTTP_REGISTRADO");
+            assertEquals("BurpIA context menu registered successfully",
+                I18nLogs.Inicializacion.MENU_CONTEXTUAL_REGISTRADO(),
+                "Slot EN de MENU_CONTEXTUAL_REGISTRADO");
         }
     }
 

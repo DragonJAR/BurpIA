@@ -17,8 +17,6 @@ public final class ReparadorJson {
 
     private static final Pattern MARKDOWN_CODE_BLOCK_START_PATTERN = Pattern.compile("(?m)^```(?:json)?\\s*");
     private static final Pattern MARKDOWN_CODE_BLOCK_END_PATTERN = Pattern.compile("(?m)```\\s*$");
-    private static final Pattern COMILLA_ESCAPE_PATTERN = Pattern.compile(",\\s*([\\]}])");
-    private static final Pattern DOBLE_COMILLA_PATTERN = Pattern.compile("\"\\s+\"");
     private static final Pattern PATRON_VALOR_CAMPO = Pattern.compile(": \"(.*?)\"(?=\\s*[,\\}])", Pattern.DOTALL);
     private static final Pattern PATRON_PAR_STRING = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"([^\"]*)\"");
     private static final Pattern PATRON_PAR_BOOLEANO_NUMERO = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(true|false|\\d+)");
@@ -165,7 +163,7 @@ public final class ReparadorJson {
     private static String repararComillasEscapadas(String texto) {
         if (texto == null) return null;
 
-        String resultado = texto.replace("\\\\\"", "\\\"");
+        String resultado = colapsarEscapeDobleComilla(texto);
 
         resultado = repararCamposEvidenciaConHtml(resultado);
 
@@ -185,6 +183,36 @@ public final class ReparadorJson {
         matcher.appendTail(sb);
 
         return sb.toString();
+    }
+
+    /**
+     * Colapsa secuencias {@code \\\"} (backslash escapado + comilla) a {@code \"},
+     * pero SOLO cuando la comilla no actúa como cierre de un valor: si el carácter
+     * posterior es un delimitador de cierre ({@code ,} {@code }} {@code ]}) o el
+     * fin del texto, la secuencia es JSON legítimo (valor terminado en backslash)
+     * y colapsarla lo corrompería dejando el string sin cerrar.
+     */
+    private static String colapsarEscapeDobleComilla(String texto) {
+        final String patron = "\\\\\"";
+        StringBuilder resultado = new StringBuilder(texto.length());
+        int indice = 0;
+        while (indice < texto.length()) {
+            int pos = texto.indexOf(patron, indice);
+            if (pos == -1) {
+                resultado.append(texto, indice, texto.length());
+                break;
+            }
+            resultado.append(texto, indice, pos);
+            int posSiguiente = pos + patron.length();
+            char siguiente = posSiguiente < texto.length() ? texto.charAt(posSiguiente) : '\0';
+            if (siguiente == ',' || siguiente == '}' || siguiente == ']' || siguiente == '\0') {
+                resultado.append(patron);
+            } else {
+                resultado.append("\\\"");
+            }
+            indice = posSiguiente;
+        }
+        return resultado.toString();
     }
 
     private static String repararCamposEvidenciaConHtml(String texto) {
@@ -227,30 +255,34 @@ public final class ReparadorJson {
                 break;
             }
 
-            // posCampo incluye las comillas del nombre del campo
-            // Ejemplo: "evidencia" está en posCampo, el valor empieza después de ": "
-            // Buscar ": " después del campo
+            // posCampo incluye las comillas del nombre del campo.
+            // Buscar ':' después del campo con whitespace OPCIONAL tras los
+            // dos puntos (el LLM emite tanto "evidencia": "x" como
+            // "evidencia":"x" o "evidencia":  "x").
             int posDosPuntos = -1;
-            for (int i = posCampo + nombreCampo.length() + 2; i < texto.length() - 1; i++) {
-                if (texto.charAt(i) == ':' && texto.charAt(i + 1) == ' ') {
+            for (int i = posCampo + nombreCampo.length() + 2; i < texto.length(); i++) {
+                if (texto.charAt(i) == ':') {
                     posDosPuntos = i;
                     break;
                 }
             }
 
             if (posDosPuntos == -1) {
-                // Sin ": " encontrado para este campo: avanzar indice de forma
+                // Sin ':' para este campo: avanzar indice de forma
                 // segura sin exceder el límite del texto (evita offsets fuera de
                 // rango cuando el campo truncado está al final del payload LLM).
                 indice = Math.min(posCampo + nombreCampo.length() + 2, texto.length());
                 continue;
             }
 
-            // Agregar todo hasta después de ": "
-            resultado.append(texto.substring(indice, posDosPuntos + 2));
-            
-            // El valor empieza en posDosPuntos + 2 (después de ": ")
-            int posInicioValor = posDosPuntos + 2;
+            // El valor empieza en el primer no-espacio tras ':'
+            int posInicioValor = posDosPuntos + 1;
+            while (posInicioValor < texto.length() && Character.isWhitespace(texto.charAt(posInicioValor))) {
+                posInicioValor++;
+            }
+
+            // Agregar todo hasta el inicio del valor (incluye ':' y su whitespace)
+            resultado.append(texto.substring(indice, posInicioValor));
 
             if (posInicioValor >= texto.length() || texto.charAt(posInicioValor) != '"') {
                 indice = posInicioValor;
@@ -385,10 +417,104 @@ public final class ReparadorJson {
         return textoLimpio;
     }
 
+    /**
+     * Repara comas finales ({@code ,} antes de {@code }} o {@code ]}) y comas
+     * ausentes entre strings adyacentes ({@code "a" "b"} → {@code "a", "b"}).
+     * Usa un scanner de estado en lugar de regex para NO tocar el contenido
+     * dentro de strings (donde esas secuencias son texto legítimo).
+     */
     private static String repararComas(String texto) {
-        String res = COMILLA_ESCAPE_PATTERN.matcher(texto).replaceAll("$1");
-        res = DOBLE_COMILLA_PATTERN.matcher(res).replaceAll("\", \"");
-        return res;
+        return insertarComasEntreStrings(eliminarComasFinales(texto));
+    }
+
+    private static String eliminarComasFinales(String texto) {
+        StringBuilder resultado = new StringBuilder(texto.length());
+        boolean enComillas = false;
+        boolean escapado = false;
+        for (int i = 0; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+            if (escapado) {
+                resultado.append(c);
+                escapado = false;
+                continue;
+            }
+            if (c == '\\') {
+                resultado.append(c);
+                escapado = true;
+                continue;
+            }
+            if (c == '"') {
+                enComillas = !enComillas;
+                resultado.append(c);
+                continue;
+            }
+            if (!enComillas && c == ',') {
+                int j = i + 1;
+                while (j < texto.length() && Character.isWhitespace(texto.charAt(j))) {
+                    j++;
+                }
+                if (j < texto.length() && (texto.charAt(j) == '}' || texto.charAt(j) == ']')) {
+                    continue;
+                }
+            }
+            resultado.append(c);
+        }
+        return resultado.toString();
+    }
+
+    private static String insertarComasEntreStrings(String texto) {
+        StringBuilder resultado = new StringBuilder(texto.length() + 16);
+        boolean enComillas = false;
+        boolean escapado = false;
+        boolean huboEspaciosTrasCierre = false;
+        for (int i = 0; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+            if (escapado) {
+                resultado.append(c);
+                escapado = false;
+                continue;
+            }
+            if (c == '\\') {
+                resultado.append(c);
+                escapado = true;
+                continue;
+            }
+            if (!enComillas && Character.isWhitespace(c)) {
+                if (huboEspaciosTrasCierre || ultimoNoEspacioEsComillaCierre(resultado)) {
+                    huboEspaciosTrasCierre = true;
+                }
+                resultado.append(c);
+                continue;
+            }
+            if (c == '"' && !enComillas && huboEspaciosTrasCierre) {
+                // String nuevo tras whitespace que sigue a un cierre de string:
+                // falta la coma. Compactar el whitespace ya acumulado a ", ".
+                int ultimoNoEspacio = resultado.length() - 1;
+                while (ultimoNoEspacio >= 0 && Character.isWhitespace(resultado.charAt(ultimoNoEspacio))) {
+                    ultimoNoEspacio--;
+                }
+                resultado.setLength(ultimoNoEspacio + 1);
+                resultado.append(", ");
+                enComillas = true;
+                huboEspaciosTrasCierre = false;
+                resultado.append(c);
+                continue;
+            }
+            if (c == '"') {
+                enComillas = !enComillas;
+            }
+            huboEspaciosTrasCierre = false;
+            resultado.append(c);
+        }
+        return resultado.toString();
+    }
+
+    private static boolean ultimoNoEspacioEsComillaCierre(StringBuilder sb) {
+        int i = sb.length() - 1;
+        while (i >= 0 && Character.isWhitespace(sb.charAt(i))) {
+            i--;
+        }
+        return i >= 0 && sb.charAt(i) == '"';
     }
 
     private static String extraerParesClaveValor(String texto) {

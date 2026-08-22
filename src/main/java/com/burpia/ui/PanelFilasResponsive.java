@@ -83,9 +83,7 @@ final class PanelFilasResponsive extends JPanel {
 
     private void agregarComponentesFila(JPanel contenedor, List<JComponent> componentes) {
         for (JComponent componente : componentes) {
-            if (componente != null) {
-                contenedor.add(componente);
-            }
+            contenedor.add(componente);
         }
     }
 
@@ -95,7 +93,19 @@ final class PanelFilasResponsive extends JPanel {
             return copia;
         }
         for (List<JComponent> fila : filasOriginales) {
-            copia.add(fila == null ? List.of() : List.copyOf(fila));
+            if (fila == null) {
+                copia.add(List.of());
+                continue;
+            }
+            // Copia tolerante a nulls: List.copyOf lanza NPE ante elementos null.
+            // Filtrarlos aquí garantiza que agregarComponentesFila nunca ve nulls.
+            List<JComponent> filaLimpia = new ArrayList<>();
+            for (JComponent componente : fila) {
+                if (componente != null) {
+                    filaLimpia.add(componente);
+                }
+            }
+            copia.add(List.copyOf(filaLimpia));
         }
         return List.copyOf(copia);
     }

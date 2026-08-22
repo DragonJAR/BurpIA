@@ -312,10 +312,7 @@ public final class ProviderConfigManager {
         actualizandoProveedorUi = true;
         try {
             if (proveedorActualUi != null) {
-                EstadoProveedorUI estadoActual = extraerEstadoActualParaBorrador(proveedorActualUi);
-                if (estadoActual != null) {
-                    estadoProveedorTemporal.put(proveedorActualUi, estadoActual);
-                }
+                estadoProveedorTemporal.put(proveedorActualUi, extraerEstadoActualParaBorrador(proveedorActualUi));
             }
 
             // H4: fijar el nuevo proveedor ANTES de cargar su estado. Antes se
@@ -378,9 +375,6 @@ public final class ProviderConfigManager {
 
     private EstadoProveedorUI extraerEstadoActualParaBorrador(String proveedor) {
         EstadoProveedorUI estadoActual = extraerEstadoActualRapido();
-        if (estadoActual == null) {
-            return null;
-        }
 
         if (tieneTimeoutManualActual(proveedor, estadoActual.obtenerModelo())) {
             return estadoActual;
@@ -462,28 +456,25 @@ public final class ProviderConfigManager {
             }
         }
 
-        Integer timeout = parsearEntero(txtTimeoutModelo != null ? txtTimeoutModelo.getText() : null);
-        if (timeout == null) {
-            ConfigValidator.ValidationResult validacionTimeout = ConfigValidator.validarTimeoutModelo(0);
-            return ValidationResultEstadoProveedor.invalido(
-                    validacionTimeout.obtenerMensajeError(),
-                    validacionTimeout.obtenerCampo());
-        }
-        ConfigValidator.ValidationResult validacionTimeout = ConfigValidator.validarTimeoutModelo(timeout);
+        // validarEntero distingue campo vacío / no numérico / fuera de rango con
+        // mensajes específicos; antes se fabricaba un error de rango llamando al
+        // validador con 0, lo que reportaba "fuera de rango" para texto vacío.
+        ConfigValidator.ValidationResultEntero validacionTimeout = ConfigValidator.validarEntero(
+                txtTimeoutModelo != null ? txtTimeoutModelo.getText() : null,
+                "timeout",
+                ConfiguracionAPI.TIEMPO_ESPERA_MIN_SEGUNDOS,
+                ConfiguracionAPI.TIEMPO_ESPERA_MAX_SEGUNDOS);
         if (!validacionTimeout.esValido()) {
             return ValidationResultEstadoProveedor.invalido(
                     validacionTimeout.obtenerMensajeError(),
                     validacionTimeout.obtenerCampo());
         }
 
-        Integer maxTokens = parsearEntero(txtMaxTokens != null ? txtMaxTokens.getText() : null);
-        if (maxTokens == null) {
-            ConfigValidator.ValidationResult validacionTokens = ConfigValidator.validarMaxTokens(0);
-            return ValidationResultEstadoProveedor.invalido(
-                    validacionTokens.obtenerMensajeError(),
-                    validacionTokens.obtenerCampo());
-        }
-        ConfigValidator.ValidationResult validacionTokens = ConfigValidator.validarMaxTokens(maxTokens);
+        ConfigValidator.ValidationResultEntero validacionTokens = ConfigValidator.validarEntero(
+                txtMaxTokens != null ? txtMaxTokens.getText() : null,
+                "maxTokens",
+                ConfigValidator.MAX_TOKENS_MINIMO,
+                ConfigValidator.MAX_TOKENS_MAXIMO);
         if (!validacionTokens.esValido()) {
             return ValidationResultEstadoProveedor.invalido(
                     validacionTokens.obtenerMensajeError(),
@@ -955,10 +946,7 @@ public final class ProviderConfigManager {
     }
 
     private void actualizarBorradorProveedorActual() {
-        if (actualizandoCamposProveedorUi
-                || actualizandoProveedorUi
-                || actualizandoTimeoutModeloUi
-                || Normalizador.esVacio(proveedorActualUi)
+        if (Normalizador.esVacio(proveedorActualUi)
                 || txtTimeoutModelo == null) {
             return;
         }
@@ -969,15 +957,22 @@ public final class ProviderConfigManager {
     }
 
     private void programarActualizacionBorradorProveedorActual() {
-        SwingUtilities.invokeLater(this::actualizarBorradorProveedorActual);
+        // Los flags de actualización programática se capturan en el momento del
+        // evento: los setText programáticos los resetean de forma síncrona antes
+        // de que corra el runnable diferido, así que consultarlos dentro del
+        // runnable haría el guard inalcanzable (siempre false).
+        boolean suprimirPorActualizacionProgramatica = actualizandoCamposProveedorUi
+                || actualizandoProveedorUi
+                || actualizandoTimeoutModeloUi;
+        SwingUtilities.invokeLater(() -> {
+            if (!suprimirPorActualizacionProgramatica) {
+                actualizarBorradorProveedorActual();
+            }
+        });
     }
 
     private void sincronizarTimeoutModeloCustomActual() {
-        if (actualizandoCamposProveedorUi
-                || actualizandoProveedorUi
-                || actualizandoTimeoutModeloUi
-                || actualizandoModeloUi
-                || Normalizador.esVacio(proveedorActualUi)
+        if (Normalizador.esVacio(proveedorActualUi)
                 || comboModelo == null
                 || txtTimeoutModelo == null) {
             return;
@@ -994,7 +989,17 @@ public final class ProviderConfigManager {
     }
 
     private void programarSincronizacionTimeoutModeloCustomActual() {
-        SwingUtilities.invokeLater(this::sincronizarTimeoutModeloCustomActual);
+        // Misma razón que en programarActualizacionBorradorProveedorActual:
+        // capturar los flags en el evento, no en el runnable diferido.
+        boolean suprimirPorActualizacionProgramatica = actualizandoCamposProveedorUi
+                || actualizandoProveedorUi
+                || actualizandoTimeoutModeloUi
+                || actualizandoModeloUi;
+        SwingUtilities.invokeLater(() -> {
+            if (!suprimirPorActualizacionProgramatica) {
+                sincronizarTimeoutModeloCustomActual();
+            }
+        });
     }
 
     private boolean tieneTimeoutManualActual(String proveedor, String modelo) {
@@ -1017,9 +1022,7 @@ public final class ProviderConfigManager {
      * cancelada sin guardar.
      */
     public void reset() {
-        if (estadoProveedorTemporal != null) {
-            estadoProveedorTemporal.clear();
-        }
+        estadoProveedorTemporal.clear();
         limpiarTimeoutManualActual();
         proveedorActualUi = null;
     }
@@ -1110,16 +1113,5 @@ public final class ProviderConfigManager {
         }
         String limpio = modelo.trim();
         return ":".equals(limpio) ? "" : limpio;
-    }
-
-    private Integer parsearEntero(String valor) {
-        if (valor == null) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(valor.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 }

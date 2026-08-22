@@ -85,8 +85,8 @@ public final class FiltroContenidoAnalizable {
 
     /**
      * Verifica si el código de estado HTTP implica que hay contenido en el cuerpo.
-     * Los códigos 1xx (Informational), 204 (No Content) y 304 (Not Modified)
-     * no tienen cuerpo de respuesta.
+     * Los códigos 1xx (Informational), 204 (No Content), 205 (Reset Content) y
+     * 304 (Not Modified) no tienen cuerpo de respuesta (RFC 9110 §15.3).
      *
      * @param codigoEstado el código de estado HTTP
      * @return true si el código implica contenido en el cuerpo, false en caso contrario
@@ -95,7 +95,7 @@ public final class FiltroContenidoAnalizable {
         if (codigoEstado >= 100 && codigoEstado < 200) {
             return false;
         }
-        if (codigoEstado == 204 || codigoEstado == 304) {
+        if (codigoEstado == 204 || codigoEstado == 205 || codigoEstado == 304) {
             return false;
         }
         return true;

@@ -1,6 +1,5 @@
 package com.burpia.ui;
 
-import burp.api.montoya.MontoyaApi;
 import com.burpia.i18n.I18nUI;
 import com.burpia.i18n.IdiomaUI;
 import com.burpia.model.Hallazgo;
@@ -9,14 +8,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import javax.swing.SwingUtilities;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 /**
  * Tests unitarios para las funciones de exportación de PanelHallazgos.
@@ -26,10 +21,9 @@ import static org.mockito.Mockito.mock;
  * </p>
  */
 @DisplayName("PanelHallazgos Export Tests")
-class PanelHallazgosExportTest {
+class PanelHallazgosExportTest extends PanelTestBase {
 
     private IdiomaUI idiomaPrevio;
-    private final List<PanelHallazgos> panelesCreados = new ArrayList<>();
 
     @BeforeEach
     void fijarIdiomaIngles() {
@@ -49,20 +43,10 @@ class PanelHallazgosExportTest {
         }
     }
 
-    @AfterEach
-    void destruirPaneles() {
-        // Cada PanelHallazgos arranca un Timer y un executor; sin destruirlos
-        // cada test fuga hilos que sobreviven al final de la clase.
-        for (PanelHallazgos panel : panelesCreados) {
-            panel.destruir();
-        }
-        panelesCreados.clear();
-    }
-
     @Test
     @DisplayName("CSV escapa comillas, comas y saltos de linea")
     void testConstruirLineaCsvEscapaCamposEspeciales() throws Exception {
-        PanelHallazgos panel = crearPanel();
+        PanelHallazgos panel = crearPanelHallazgos(false);
         Hallazgo hallazgo = new Hallazgo(
             "10:00:00\nUTC",
             "https://example.com/a,b\"c",
@@ -81,7 +65,7 @@ class PanelHallazgosExportTest {
     @Test
     @DisplayName("JSON escapa todos los campos exportados")
     void testConstruirObjetoJsonEscapaTodosLosCampos() throws Exception {
-        PanelHallazgos panel = crearPanel();
+        PanelHallazgos panel = crearPanelHallazgos(false);
         Hallazgo hallazgo = new Hallazgo(
             "10:00\"\\\n\t",
             "https://example.com/p?q=\"v\"\n",
@@ -109,7 +93,7 @@ class PanelHallazgosExportTest {
         // (el setUp del test fijó EN; acá lo cambiamos puntualmente).
         I18nUI.establecerIdioma("es");
 
-        PanelHallazgos panel = crearPanel();
+        PanelHallazgos panel = crearPanelHallazgos(false);
         Hallazgo hallazgo = new Hallazgo(
             "10:00:00",
             "https://example.com/a",
@@ -131,31 +115,13 @@ class PanelHallazgosExportTest {
     @Test
     @DisplayName("Validación de exportación acepta nombres de archivo relativos")
     void testValidarArchivoExportacionAceptaRutaRelativa() throws Exception {
-        PanelHallazgos panel = crearPanel();
+        PanelHallazgos panel = crearPanelHallazgos(false);
         Method metodo = PanelHallazgos.class.getDeclaredMethod("validarArchivoExportacion", java.io.File.class);
         metodo.setAccessible(true);
 
         String resultado = (String) metodo.invoke(panel, new java.io.File("hallazgos-export.csv"));
 
         assertEquals(null, resultado, "assertEquals failed at PanelHallazgosExportTest.java:76");
-    }
-
-    /**
-     * Crea una instancia de PanelHallazgos para testing.
-     * <p>
-     * Utiliza invokeAndWait para asegurar que el componente Swing se crea
-     * en el Event Dispatch Thread (EDT).
-     * </p>
-     *
-     * @return PanelHallazgos configurado para testing
-     * @throws Exception si ocurre error en la creación del panel
-     */
-    private PanelHallazgos crearPanel() throws Exception {
-        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
-        final PanelHallazgos[] holder = new PanelHallazgos[1];
-        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, new ModeloTablaHallazgos(100), false));
-        panelesCreados.add(holder[0]);
-        return holder[0];
     }
 
     /**

@@ -113,9 +113,16 @@ class NormalizadorTest {
         }
 
         @Test
-        @DisplayName("Enmascara claves de 9 caracteres mostrando inicio y final")
-        void enmascaraClaves9Caracteres() {
-            assertEquals("1234****6789", Normalizador.sanitizarApiKey("123456789"), "assertEquals failed at NormalizadorTest.java:151");
+        @DisplayName("Enmascara completamente claves de 9 a 12 caracteres (casi toda la clave quedaría expuesta)")
+        void enmascaraClaves9a12Caracteres() {
+            assertEquals("****", Normalizador.sanitizarApiKey("123456789"), "assertEquals failed at NormalizadorTest.java:118");
+            assertEquals("****", Normalizador.sanitizarApiKey("123456789012"), "claves de 12 caracteres deben enmascararse por completo");
+        }
+
+        @Test
+        @DisplayName("Muestra inicio y final a partir de 13 caracteres")
+        void muestraInicioYFinalDesde13Caracteres() {
+            assertEquals("1234****0abc", Normalizador.sanitizarApiKey("1234567890abc"), "la frontera del enmascaramiento es 12 caracteres");
         }
     }
 

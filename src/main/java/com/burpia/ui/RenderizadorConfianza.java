@@ -10,8 +10,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.swing.JTable;
@@ -21,12 +19,13 @@ import javax.swing.table.DefaultTableCellRenderer;
 /**
  * Renderizador de celdas para mostrar niveles de confianza con estilo visual (texto + barra de segmentos).
  * Implementa el patrón DRY centralizando la configuración de colores y segmentos.
- * 
- * <p>Los niveles de confianza se muestran con colores coherentes al nivel:
+ *
+ * <p>Paleta propia de confianza (familia cian/azul, ver EstilosUI), deliberadamente
+ * distinta de la paleta de severidad (rojo/ámbar/verde) para evitar ambigüedad:
  * <ul>
- *   <li>ALTA (High) - Color rojo prominente</li>
- *   <li>MEDIA (Medium) - Color naranja intermedio</li>
- *   <li>BAJA (Low) - Color verde suave</li>
+ *   <li>ALTA (High) - teal</li>
+ *   <li>MEDIA (Medium) - azul</li>
+ *   <li>BAJA (Low) - azul lavanda</li>
  * </ul>
  */
 public class RenderizadorConfianza extends DefaultTableCellRenderer {
@@ -42,15 +41,9 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
     private static final int ALPHA_SEGMENTO_FONDO = 96;
     private static final int TOTAL_SEGMENTOS = 3;
 
-    // Cache LRU para segmentos calculados
+    // Cache LRU para segmentos calculados (helper compartido en UIUtils)
     private static final int MAX_CACHE_SEGMENTOS = 100;
-    private static final Map<String, Integer> SEGMENT_CACHE = Collections.synchronizedMap(
-            new LinkedHashMap<String, Integer>(16, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
-                    return size() > MAX_CACHE_SEGMENTOS;
-                }
-            });
+    private static final Map<String, Integer> SEGMENT_CACHE = UIUtils.crearCacheLru(MAX_CACHE_SEGMENTOS);
 
     private String confianzaStr = "";
     private boolean isIgnorado = false;
@@ -127,9 +120,7 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
 
         // Detectar "ignorado" aquí: el decorador RenderizadorHallazgoBorrado ya
         // aplicó/reseteó la fuente para esta fila, así que getFont() es correcto.
-        Font f = getFont();
-        Object strike = f.getAttributes().get(java.awt.font.TextAttribute.STRIKETHROUGH);
-        this.isIgnorado = java.awt.font.TextAttribute.STRIKETHROUGH_ON.equals(strike);
+        this.isIgnorado = UIUtils.esFuenteTachada(getFont());
 
         if (Normalizador.esVacio(confianzaStr)) return;
 
@@ -158,7 +149,9 @@ public class RenderizadorConfianza extends DefaultTableCellRenderer {
             int textWidth = fm.stringWidth(confianzaStr);
             int totalWidth = textWidth + ESPACIO_TEXTO_BARRA + ANCHO_BARRA;
 
-            int x = (getWidth() - totalWidth) / 2;
+            // Math.max: con celdas más angostas que el contenido, el centrado daría
+            // una x negativa y el texto quedaría recortado por la izquierda.
+            int x = Math.max(0, (getWidth() - totalWidth) / 2);
             int textY = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
 
             g2.setColor(textColor);

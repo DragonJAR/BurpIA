@@ -78,6 +78,28 @@ class EstadisticasTest {
     }
 
     @Nested
+    @DisplayName("Hallazgos creados")
+    class HallazgosCreados {
+        @Test
+        @DisplayName("Incrementa hallazgos creados y se refleja en el resumen")
+        void incrementaHallazgosCreados() {
+            stats.incrementarHallazgosCreados();
+            stats.incrementarHallazgosCreados();
+            assertEquals(2, stats.obtenerHallazgosCreados(), "El contador de hallazgos debe incrementar");
+            assertTrue(stats.generarResumen().contains("Hallazgos: 2"),
+                "El resumen debe reflejar los hallazgos creados");
+        }
+
+        @Test
+        @DisplayName("Reiniciar pone hallazgos creados a cero")
+        void reiniciarPoneHallazgosACero() {
+            stats.incrementarHallazgosCreados();
+            stats.reiniciar();
+            assertEquals(0, stats.obtenerHallazgosCreados(), "reiniciar debe limpiar hallazgosCreados");
+        }
+    }
+
+    @Nested
     @DisplayName("Resumen")
     class Resumen {
         @Test

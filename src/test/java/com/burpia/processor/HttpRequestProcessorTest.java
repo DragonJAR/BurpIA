@@ -360,7 +360,8 @@ class HttpRequestProcessorTest {
 
         when(solicitudRespuesta.request()).thenReturn(request);
         when(solicitudRespuesta.hasResponse()).thenReturn(false);
-        when(solicitudRespuesta.response()).thenReturn(null);
+        // Tras el fix de obtenerResponseSegura, response() no se consulta
+        // cuando hasResponse() es false (una sola llamada, sin doble acceso).
 
         HttpRequestProcessor.ResumenSolicitudContextual resumen =
             processor.inspeccionarSolicitudContextual(solicitudRespuesta);
@@ -399,7 +400,7 @@ class HttpRequestProcessorTest {
         when(conTodo.response()).thenReturn(response);
         when(sinResponse.request()).thenReturn(request);
         when(sinResponse.hasResponse()).thenReturn(false);
-        when(sinResponse.response()).thenReturn(null);
+        // response() no se invoca cuando hasResponse() es false (fix de llamada única).
         when(sinRequest.request()).thenReturn(null);
 
         List<HttpRequestResponse> solicitudes = List.of(conTodo, sinResponse, sinRequest);

@@ -247,6 +247,37 @@ class OSUtilsTest {
     }
 
     @Nested
+    @DisplayName("expandirRuta")
+    class ExpandirRuta {
+
+        @Test
+        @DisplayName("No expande ~otrousuario (solo ~, ~/ y ~\\ son home propio)")
+        void noExpandeTildeOtroUsuario() {
+            assertEquals("~otrousuario/bin/tool", OSUtils.expandirRuta("~otrousuario/bin/tool"),
+                "expandirRuta no debe mapear ~otrousuario al home propio");
+            assertEquals("~root/script.sh", OSUtils.expandirRuta("~root/script.sh"),
+                "expandirRuta no debe mapear ~root al home propio");
+        }
+
+        @Test
+        @DisplayName("Expande tilde seguida de separador de ruta")
+        void expandeTildeConSeparador() {
+            String home = System.getProperty("user.home");
+            assertEquals(home + "/bin/tool", OSUtils.expandirRuta("~/bin/tool"),
+                "~/ debe expandirse al home del usuario");
+            assertEquals(home + "\\bin\\tool", OSUtils.expandirRuta("~\\bin\\tool"),
+                "~\\ debe expandirse al home del usuario");
+        }
+
+        @Test
+        @DisplayName("cerrarVentanaAjustes no lanza excepciones fuera del EDT")
+        void cerrarVentanaAjustesNoLanza() {
+            assertDoesNotThrow(OSUtils::cerrarVentanaAjustes,
+                "cerrarVentanaAjustes debe ser best-effort aun sin ventanas abiertas");
+        }
+    }
+
+    @Nested
     @DisplayName("normalizarComandoParaShell")
     class NormalizarComandoParaShell {
 

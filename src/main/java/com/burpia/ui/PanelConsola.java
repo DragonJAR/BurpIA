@@ -53,13 +53,6 @@ public class PanelConsola extends JPanel {
     private int posicionUltimaBusqueda = -1;
 
     /**
-     * Flag para prevenir recursión en el listener del checkbox.
-     * Cuando se llama setSelected() programáticamente, el listener
-     * se dispararía de nuevo. Este flag previene esta recursión.
-     */
-    private boolean actualizandoAutoScroll = false;
-
-    /**
      * Última versión de consola conocida. No necesita ser volatile porque
      * todos los accesos están protegidos por el EDT (Event Dispatch Thread).
      */
@@ -164,12 +157,10 @@ public class PanelConsola extends JPanel {
         autoScrollActivo = false;
 
         // Listeners existentes
-        checkboxAutoScroll.addActionListener(e -> {
-            if (actualizandoAutoScroll) {
-                return;
-            }
-            UIUtils.ejecutarEnEdt(() -> aplicarAutoScrollEnEdt(checkboxAutoScroll.isSelected(), true));
-        });
+        // Nota: setSelected() programático NO dispara ActionEvent (solo ItemEvent/
+        // ChangeEvent), así que no hay recursión que guardar en este listener.
+        checkboxAutoScroll.addActionListener(e ->
+            UIUtils.ejecutarEnEdt(() -> aplicarAutoScrollEnEdt(checkboxAutoScroll.isSelected(), true)));
 
         botonLimpiar.addActionListener(e -> {
             int total = gestorConsola.obtenerTotalLogs();
@@ -254,7 +245,7 @@ public class PanelConsola extends JPanel {
             actualizarBotonesBusqueda(false);
 
             UIUtils.mostrarError(this,
-                I18nUI.General.TITULO_INFORMACION(),
+                I18nUI.tr("Error de búsqueda", "Search error"),
                 I18nUI.Consola.MSG_BUSQUEDA_REGEX_INVALIDA(textoBusqueda, e.getMessage()));
         }
     }
@@ -531,12 +522,7 @@ public class PanelConsola extends JPanel {
         autoScrollActivo = activo;
 
         if (cambioEstado) {
-            iniciarActualizacionAutoScroll();
-            try {
-                checkboxAutoScroll.setSelected(activo);
-            } finally {
-                finalizarActualizacionAutoScroll();
-            }
+            checkboxAutoScroll.setSelected(activo);
         }
 
         gestorConsola.establecerAutoScroll(activo);
@@ -544,14 +530,6 @@ public class PanelConsola extends JPanel {
         if (notificarCambio && cambioEstado && manejadorCambioAutoScroll != null) {
             manejadorCambioAutoScroll.accept(activo);
         }
-    }
-
-    private void iniciarActualizacionAutoScroll() {
-        actualizandoAutoScroll = true;
-    }
-
-    private void finalizarActualizacionAutoScroll() {
-        actualizandoAutoScroll = false;
     }
 
     private void refrescarResultadoBusqueda() {

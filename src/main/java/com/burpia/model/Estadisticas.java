@@ -75,6 +75,28 @@ public class Estadisticas {
     }
 
     /**
+     * Incrementa el contador de hallazgos creados.
+     * <p>
+     * Invocado por {@code TaskExecutionManager.ManejadorResultadoAI.alCompletarAnalisis}
+     * (paquete execution) una vez por cada hallazgo agregado a la tabla tras
+     * completar un análisis.
+     * </p>
+     */
+    public void incrementarHallazgosCreados() {
+        hallazgosCreados.incrementAndGet();
+        versionCambios.incrementAndGet();
+    }
+
+    /**
+     * Obtiene el total de hallazgos creados.
+     *
+     * @return número de hallazgos creados
+     */
+    public int obtenerHallazgosCreados() {
+        return hallazgosCreados.get();
+    }
+
+    /**
      * Incrementa el contador de errores de análisis.
      */
     public void incrementarErrores() {
@@ -140,7 +162,7 @@ public class Estadisticas {
             totalSolicitudes.get(),
             analizados.get(),
             obtenerTotalOmitidos(),
-            hallazgosCreados.get(),
+            obtenerHallazgosCreados(),
             errores.get()
         );
     }

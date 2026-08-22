@@ -78,9 +78,19 @@ public class ProbadorConexionAI {
             }
 
         } catch (Exception e) {
+            // OkHttp señala las interrupciones como InterruptedIOException y el
+            // runtime limpia el flag del hilo: restaurarlo para no tragar la
+            // cancelación que pida el llamador.
+            if (e instanceof java.io.InterruptedIOException || Thread.currentThread().isInterrupted()) {
+                Thread.currentThread().interrupt();
+            }
             return new ResultadoPrueba(false,
                     I18nUI.Conexion.ERROR_CONEXION() + Normalizador.describirError(e),
                     null);
+        } finally {
+            // El OkHttpClient se crea por instancia; sin este cierre su dispatcher
+            // y pool de conexiones quedan vivos tras cada prueba.
+            cerrar();
         }
     }
 
@@ -107,9 +117,7 @@ public class ProbadorConexionAI {
                 return new ResultadoHttpPrueba(preparada.endpoint, respuestaBody, preparada.modeloUsado, preparada.advertencia);
             }
 
-            String cuerpoError = respuesta.body() != null
-                    ? respuesta.body().string()
-                    : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+            String cuerpoError = ConstructorSolicitudesProveedor.leerCuerpoErrorLimitado(respuesta);
             throw new IOException(I18nUI.Conexion.DETALLE_HTTP(respuesta.code(), cuerpoError));
         }
     }

@@ -12,7 +12,6 @@ import java.awt.Component;
 import java.awt.Font;
 import java.awt.font.TextAttribute;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -80,9 +79,6 @@ class RenderizadorConfianzaTest {
         );
         
         assertNotNull(c, "assertNotNull failed at RenderizadorConfianzaTest.java:78");
-        assertDoesNotThrow(() -> {
-            flushEdt();
-        });
     }
 
     @Test
@@ -145,7 +141,8 @@ class RenderizadorConfianzaTest {
     void testConstructorAlineacion() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             RenderizadorConfianza r = new RenderizadorConfianza();
-            assertEquals(javax.swing.SwingConstants.CENTER, r.getHorizontalAlignment(), "assertEquals failed at RenderizadorConfianzaTest.java:238");
+            assertEquals(javax.swing.SwingConstants.CENTER, r.getHorizontalAlignment(),
+                "El constructor debe establecer alineación CENTER");
         });
         flushEdt();
     }
@@ -161,7 +158,7 @@ class RenderizadorConfianzaTest {
                 I18nUI.Hallazgos.CONFIANZA_BAJA(),
                 false, false, i % 5, 0
             );
-            assertNotNull(c, "assertNotNull failed at RenderizadorConfianzaTest.java:255 - iteración " + i);
+            assertNotNull(c, "El renderizador no debe devolver null - iteración " + i);
         }
     }
 

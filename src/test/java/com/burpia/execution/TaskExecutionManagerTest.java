@@ -2,6 +2,7 @@ package com.burpia.execution;
 
 import com.burpia.analyzer.AnalizadorAI;
 import com.burpia.config.ConfiguracionAPI;
+import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
@@ -39,6 +40,7 @@ class TaskExecutionManagerTest {
 
     private GestorTareas gestorTareas;
     private TaskExecutionManager manager;
+    private Estadisticas estadisticas;
 
     @AfterEach
     void tearDown() {
@@ -238,6 +240,102 @@ class TaskExecutionManagerTest {
         }
     }
 
+    @Test
+    @DisplayName("Completar con hallazgos incrementa el contador de hallazgos creados")
+    void testContadorHallazgosIncrementaTrasCompletarConHallazgos() throws Exception {
+        PestaniaPrincipal pestaniaPrincipal = mock(PestaniaPrincipal.class);
+        manager = crearManager(pestaniaPrincipal);
+
+        SolicitudAnalisis solicitud = new SolicitudAnalisis(
+            "https://example.com/api/stats",
+            "GET",
+            "GET /api/stats HTTP/1.1\nHost: example.com",
+            "",
+            "hash-task-stats"
+        );
+
+        AtomicReference<AnalizadorAI.Callback> callbackRef = new AtomicReference<>();
+        try (MockedConstruction<AnalizadorAI> construccion = mockConstruction(
+                AnalizadorAI.class,
+                (mock, context) -> callbackRef.set((AnalizadorAI.Callback) context.arguments().get(5)))) {
+            String tareaId = manager.programarAnalisis(solicitud, "Analisis HTTP");
+            flushEdt();
+
+            assertNotNull(tareaId, "assertNotNull failed at TaskExecutionManagerTest.java:stats:tareaId");
+            assertNotNull(callbackRef.get(), "assertNotNull failed at TaskExecutionManagerTest.java:stats:callback");
+            assertEquals(1, construccion.constructed().size(),
+                "Debe construirse un único AnalizadorAI para la tarea");
+
+            Hallazgo hallazgo1 = new Hallazgo(
+                "https://example.com/api/stats", "Titulo 1", "Descripcion 1",
+                Hallazgo.SEVERIDAD_HIGH, Hallazgo.CONFIANZA_ALTA);
+            Hallazgo hallazgo2 = new Hallazgo(
+                "https://example.com/api/stats", "Titulo 2", "Descripcion 2",
+                Hallazgo.SEVERIDAD_MEDIUM, Hallazgo.CONFIANZA_MEDIA);
+
+            callbackRef.get().alCompletarAnalisis(
+                new ResultadoAnalisisMultiple(
+                    solicitud.obtenerUrl(),
+                    List.of(hallazgo1, hallazgo2),
+                    solicitud.obtenerSolicitudHttp(),
+                    List.of()
+                )
+            );
+            flushEdt();
+
+            assertEquals(2, estadisticas.obtenerHallazgosCreados(),
+                "El contador debe reflejar cada hallazgo agregado tras completar el análisis");
+        }
+    }
+
+    @Test
+    @DisplayName("Resultado de tarea cancelada no incrementa el contador de hallazgos")
+    void testContadorHallazgosNoIncrementaSiTareaCancelada() throws Exception {
+        PestaniaPrincipal pestaniaPrincipal = mock(PestaniaPrincipal.class);
+        manager = crearManager(pestaniaPrincipal);
+
+        SolicitudAnalisis solicitud = new SolicitudAnalisis(
+            "https://example.com/api/cancelada",
+            "GET",
+            "GET /api/cancelada HTTP/1.1\nHost: example.com",
+            "",
+            "hash-task-cancelada"
+        );
+
+        AtomicReference<AnalizadorAI.Callback> callbackRef = new AtomicReference<>();
+        try (MockedConstruction<AnalizadorAI> construccion = mockConstruction(
+                AnalizadorAI.class,
+                (mock, context) -> callbackRef.set((AnalizadorAI.Callback) context.arguments().get(5)))) {
+            String tareaId = manager.programarAnalisis(solicitud, "Analisis HTTP");
+            flushEdt();
+
+            assertNotNull(callbackRef.get(), "assertNotNull failed at TaskExecutionManagerTest.java:cancel:callback");
+            assertEquals(1, construccion.constructed().size(),
+                "Debe construirse un único AnalizadorAI para la tarea cancelada");
+
+            // El usuario cancela en la ventana final del análisis: el resultado
+            // tardío debe descartarse completo (sin hallazgos fantasma ni conteo).
+            gestorTareas.actualizarTarea(tareaId, Tarea.ESTADO_CANCELADO, "Cancelada por el usuario");
+
+            Hallazgo hallazgo = new Hallazgo(
+                "https://example.com/api/cancelada", "Titulo", "Descripcion",
+                Hallazgo.SEVERIDAD_HIGH, Hallazgo.CONFIANZA_ALTA);
+
+            callbackRef.get().alCompletarAnalisis(
+                new ResultadoAnalisisMultiple(
+                    solicitud.obtenerUrl(),
+                    List.of(hallazgo),
+                    solicitud.obtenerSolicitudHttp(),
+                    List.of()
+                )
+            );
+            flushEdt();
+
+            assertEquals(0, estadisticas.obtenerHallazgosCreados(),
+                "Un resultado descartado por cancelación no debe contar hallazgos");
+        }
+    }
+
     private TaskExecutionManager crearManager() {
         return crearManager(null);
     }
@@ -246,6 +344,7 @@ class TaskExecutionManagerTest {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerMaximoConcurrente(1);
         gestorTareas = new GestorTareas(new ModeloTablaTareas(), mensaje -> { });
+        estadisticas = new Estadisticas();
         return new TaskExecutionManager(
             config,
             gestorTareas,
@@ -253,7 +352,8 @@ class TaskExecutionManagerTest {
             pestaniaPrincipal,
             new PrintWriter(new StringWriter(), true),
             new PrintWriter(new StringWriter(), true),
-            new LimitadorTasa(1)
+            new LimitadorTasa(1),
+            estadisticas
         );
     }
 

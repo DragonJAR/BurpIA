@@ -96,8 +96,8 @@ class PestaniaPrincipalTest {
     }
 
     @Test
-    @DisplayName("Seleccionar pestaña agente enfoca terminal correctamente")
-    void testSeleccionarPestaniaAgenteEnfocaTerminal() throws Exception {
+    @DisplayName("Seleccionar pestaña agente deja el panel de agente como componente seleccionado")
+    void testSeleccionarPestaniaAgenteSeleccionaComponente() throws Exception {
         CountDownLatch latchSeleccion = new CountDownLatch(1);
         SwingUtilities.invokeLater(() -> {
             pestaniaPrincipal.seleccionarPestaniaAgente();

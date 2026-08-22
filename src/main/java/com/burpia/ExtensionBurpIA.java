@@ -30,11 +30,14 @@ import com.burpia.util.GestorTareas;
 import com.burpia.util.LimitadorTasa;
 import com.burpia.util.Normalizador;
 import com.burpia.util.ProcesadorPromptHTTP;
+import com.burpia.util.TrazadorContextual;
 import com.burpia.util.VersionBurpIA;
 import javax.swing.*;
 import java.awt.Frame;
+import java.awt.Window;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
@@ -72,6 +75,7 @@ public class ExtensionBurpIA implements BurpExtension {
     private ModeloTablaTareas modeloTablaTareas;
     private FabricaMenuContextual fabricaMenuContextual;
     private HttpRequestProcessor httpRequestProcessor;
+    private TrazadorContextual trazadorContextual;
     private boolean esProfessional = false;
 
     public ExtensionBurpIA() {
@@ -146,19 +150,23 @@ public class ExtensionBurpIA implements BurpExtension {
         }
         api.http().registerHttpHandler(manejadorHttp);
         if (config.esDetallado()) {
-            registrar("Manejador HTTP registrado exitosamente");
+            registrar(I18nLogs.Inicializacion.MANEJADOR_HTTP_REGISTRADO());
         }
 
         registrarMenuContextual();
         if (config.esDetallado()) {
-            registrar("Menu contextual de BurpIA registrado exitosamente");
+            registrar(I18nLogs.Inicializacion.MENU_CONTEXTUAL_REGISTRADO());
         }
 
         registrar(I18nLogs.Inicializacion.INICIALIZACION_COMPLETA());
     }
 
     private PrintWriter crearPrintWriterMontoya(Consumer<String> sink) {
-        return new PrintWriter(new OutputStream() {
+        // El PrintWriter codifica lo escrito y flushBuffer decodifica como UTF-8;
+        // sin OutputStreamWriter explícito, PrintWriter(OutputStream) usa el
+        // charset por defecto de la plataforma y los acentos/emoji se corrompen
+        // en sistemas no UTF-8 (mojibake en la salida de Burp).
+        return new PrintWriter(new OutputStreamWriter(new OutputStream() {
             private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
             @Override
@@ -172,10 +180,12 @@ public class ExtensionBurpIA implements BurpExtension {
 
             @Override
             public void write(byte[] b, int off, int len) {
-                String texto = new String(b, off, len, StandardCharsets.UTF_8);
-                buffer.write(b, off, len);
-                if (texto.contains("\n")) {
-                    flushBuffer();
+                // OutputStreamWriter siempre escribe por chunks, nunca byte a byte:
+                // delegar en write(int) mantiene un solo framing (el '\n' cierra la
+                // línea sin quedar incluido). El volumen de logging es bajo, así que
+                // el bucle no es un costo relevante.
+                for (int i = off; i < off + len; i++) {
+                    write(b[i]);
                 }
             }
 
@@ -191,7 +201,7 @@ public class ExtensionBurpIA implements BurpExtension {
             public void flush() {
                 flushBuffer();
             }
-        }, true);
+        }, StandardCharsets.UTF_8), true);
     }
 
     private void analizarSolicitudManual(HttpRequest solicitud, boolean forzarAnalisis,
@@ -227,8 +237,17 @@ public class ExtensionBurpIA implements BurpExtension {
     }
     
     private Frame obtenerFramePadre() {
-        return pestaniaPrincipal != null ? 
-            (Frame) SwingUtilities.getWindowAncestor(pestaniaPrincipal) : null;
+        if (pestaniaPrincipal == null) {
+            return null;
+        }
+        return resolverFramePadre(SwingUtilities.getWindowAncestor(pestaniaPrincipal));
+    }
+
+    // El ancestro puede ser un JDialog (p. ej. con el diálogo de ajustes abierto);
+    // un cast directo a Frame lanzaba ClassCastException en ese caso. Estático y
+    // público para poder probarlo headless desde tests en paquetes hermanos.
+    public static Frame resolverFramePadre(Window ancestro) {
+        return ancestro instanceof Frame ? (Frame) ancestro : null;
     }
 
     private PanelAgente.ResultadoInyeccion enviarAAgente(HttpRequestResponse solicitudRespuesta,
@@ -317,15 +336,18 @@ public class ExtensionBurpIA implements BurpExtension {
         }
     }
 
-    // PMD no rastrea que this::enviarAAgente (línea 215) resuelve a esta
-    // sobrecarga de 1 arg vía PredicateAgenteSolicitud; es un falso positivo.
+    // PMD no rastrea el uso por reflexión desde ExtensionBurpIATest: la
+    // referencia this::enviarAAgente de registrarMenuContextual resuelve a la
+    // sobrecarga de 2 args (PredicateAgenteSolicitud); esta de 1 arg solo la
+    // invocan los tests. No eliminar.
     @SuppressWarnings("PMD.UnusedPrivateMethod")
     private PanelAgente.ResultadoInyeccion enviarAAgente(HttpRequestResponse solicitudRespuesta) {
         return enviarAAgente(solicitudRespuesta, null);
     }
 
-    // PMD no rastrea que this::enviarFlujoAAgente (línea 216) resuelve a esta
-    // sobrecarga de 1 arg vía PredicateAgenteFlujo; es un falso positivo.
+    // Ídem: this::enviarFlujoAAgente resuelve a la sobrecarga de 2 args
+    // (PredicateAgenteFlujo); esta de 1 arg solo la invocan los tests por
+    // reflexión. No eliminar.
     @SuppressWarnings("PMD.UnusedPrivateMethod")
     private PanelAgente.ResultadoInyeccion enviarFlujoAAgente(List<HttpRequestResponse> solicitudesRespuesta) {
         return enviarFlujoAAgente(solicitudesRespuesta, null);
@@ -859,7 +881,7 @@ public class ExtensionBurpIA implements BurpExtension {
             registrar(I18nLogs.Inicializacion.SECCION_RENDIMIENTO());
             registrar("  " + I18nLogs.Inicializacion.CONCURRENCIA_MAX(String.valueOf(config.obtenerMaximoConcurrente())));
             registrar("  " + I18nLogs.Inicializacion.MAX_TAREAS(String.valueOf(config.obtenerMaximoTareasTabla())));
-            registrar("  " + I18nLogs.Inicializacion.RETENCION(String.valueOf(2000)));
+            registrar("  " + I18nLogs.Inicializacion.RETENCION(String.valueOf(GestorTareas.MAX_TAREAS_FINALIZADAS_RETENIDAS_POR_DEFECTO)));
 
             // Agent details
             registrar(I18nLogs.Inicializacion.SECCION_AGENTE());
@@ -885,9 +907,15 @@ public class ExtensionBurpIA implements BurpExtension {
     }
 
     private void rastrearContextual(String mensaje) {
-        if (config == null || !config.esDetallado() || Normalizador.esVacio(mensaje)) {
-            return;
-        }
+        obtenerTrazadorContextual().rastrearContextual(mensaje);
+    }
+
+    /**
+     * Destino verbose para las trazas contextuales: consola unificada si existe,
+     * stdout de Montoya como fallback. El gating de modo detallado lo hace
+     * TrazadorContextual; aquí solo se escribe.
+     */
+    private void escribirTrazaContextual(String mensaje) {
         if (gestorLogging != null) {
             gestorLogging.verbose(mensaje);
         } else if (stdout != null) {
@@ -896,58 +924,40 @@ public class ExtensionBurpIA implements BurpExtension {
         }
     }
 
+    /**
+     * Lazy: los tests inyectan config/stdout/gestorLogging por reflexión tras
+     * construir la instancia, así que los suppliers leen los campos vivos en
+     * cada llamada en vez de capturar referencias en initialize().
+     */
+    private TrazadorContextual obtenerTrazadorContextual() {
+        if (trazadorContextual == null) {
+            trazadorContextual = new TrazadorContextual(
+                    () -> config,
+                    this::obtenerProcesadorSolicitudes,
+                    this::escribirTrazaContextual);
+        }
+        return trazadorContextual;
+    }
+
     private void registrarInicioContextualDetallado(String accion,
             FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
-        if (!debeRegistrarContextoDetallado(contextoInvocacion)) {
-            return;
-        }
-        rastrearContextual(I18nLogs.ContextoMenu.ACCION_INICIADA(
-            accion,
-            contextoInvocacion.obtenerTipoInvocacion(),
-            contextoInvocacion.obtenerTipoHerramienta(),
-            contextoInvocacion.obtenerCantidadSeleccionada()
-        ));
+        obtenerTrazadorContextual().registrarInicioContextualDetallado(accion, contextoInvocacion);
     }
 
     private void registrarResumenSeleccionContextualDetallado(List<HttpRequestResponse> solicitudes) {
-        if (config == null || !config.esDetallado()) {
-            return;
-        }
-        HttpRequestProcessor procesador = obtenerProcesadorSolicitudes();
-        int total = solicitudes != null ? solicitudes.size() : 0;
-        int sinRequest = procesador.contarSolicitudesSinRequest(solicitudes);
-        int validas = Math.max(0, total - sinRequest);
-        int sinResponse = procesador.contarSolicitudesSinResponse(solicitudes);
-        rastrearContextual(I18nLogs.ContextoMenu.RESUMEN_SELECCION(total, validas, sinRequest, sinResponse));
+        obtenerTrazadorContextual().registrarResumenSeleccionContextualDetallado(solicitudes);
     }
 
     private void registrarSolicitudesContextualesDetalladas(List<HttpRequestResponse> solicitudes) {
-        if (config == null || !config.esDetallado() || Normalizador.esVacia(solicitudes)) {
-            return;
-        }
-        for (HttpRequestResponse solicitud : solicitudes) {
-            registrarSolicitudContextualDetallada(solicitud);
-        }
+        obtenerTrazadorContextual().registrarSolicitudesContextualesDetalladas(solicitudes);
     }
 
     private void registrarSolicitudContextualDetallada(HttpRequestResponse solicitud) {
-        if (config == null || !config.esDetallado() || solicitud == null) {
-            return;
-        }
-        HttpRequestProcessor.ResumenSolicitudContextual resumen =
-            obtenerProcesadorSolicitudes().inspeccionarSolicitudContextual(solicitud);
-        if (!resumen.esValida()) {
-            return;
-        }
-        for (String traza : obtenerProcesadorSolicitudes().construirTrazasDetalleContextual(resumen)) {
-            rastrearContextual(traza);
-        }
+        obtenerTrazadorContextual().registrarSolicitudContextualDetallada(solicitud);
     }
 
     private void registrarBypassContextualDetallado(String mensaje) {
-        if (debeRegistrarContextoDetallado(null)) {
-            rastrearContextual(mensaje);
-        }
+        obtenerTrazadorContextual().registrarBypassContextualDetallado(mensaje);
     }
 
     private void registrarPromptAgenteDetallado(String prompt) {
@@ -1009,10 +1019,6 @@ public class ExtensionBurpIA implements BurpExtension {
             }
         }
         return total;
-    }
-
-    private boolean debeRegistrarContextoDetallado(FabricaMenuContextual.ContextoInvocacion contextoInvocacion) {
-        return config != null && config.esDetallado();
     }
 
     private HttpRequestProcessor obtenerProcesadorSolicitudes() {
@@ -1215,6 +1221,11 @@ public class ExtensionBurpIA implements BurpExtension {
             pestaniaPrincipal = null;
         }
 
+        // El cierre definitivo se registra ANTES de gestorConsola.shutdown():
+        // registrar() enruta por gestorLogging hacia la consola, y cualquier log
+        // posterior al shutdown se pierde silenciosamente.
+        registrar(I18nLogs.Extension.DESCARGADA_OK());
+
         if (gestorConsola != null) {
             gestorConsola.shutdown();
             gestorConsola = null;
@@ -1232,15 +1243,13 @@ public class ExtensionBurpIA implements BurpExtension {
             gestorTareas = null;
         }
 
-        if (limitador != null) {
-            limitador = null;
-        }
+        // LimitadorTasa no retiene threads ni recursos: basta con soltar la
+        // referencia al salir; no requiere cierre explícito.
+        limitador = null;
 
         // Cerrar dispatchers y connection pools de OkHttpClient cacheados estáticamente,
         // evitando leak de threads al recargar la extensión.
         AnalizadorHTTP.limpiarClientes();
-
-        registrar(I18nLogs.Extension.DESCARGADA_OK());
     }
 
     public static burp.api.montoya.scanner.audit.issues.AuditIssue crearAuditIssueDesdeHallazgo(Hallazgo hallazgo) {

@@ -4,12 +4,10 @@ import com.burpia.config.ConfiguracionAPI;
 import com.burpia.model.ResultadoAnalisisMultiple;
 import com.burpia.model.SolicitudAnalisis;
 import com.burpia.util.LimitadorTasa;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -206,45 +204,5 @@ class AnalizadorAITest {
             null,
             null
         ), "El constructor no debe lanzar excepción con dependencias nulas");
-    }
-
-    @Test
-    @DisplayName("AnalizadorHTTP resuelve cliente HTTP según la configuración actual")
-    @Disabled("Campo analizadorHTTP eliminado en v1.6.1 — el HTTP client se crea internamente por OrquestadorAnalisis")
-    void testResuelveClienteHttpSegunConfiguracionActual() throws Exception {
-        ConfiguracionAPI config = crearConfiguracionBasica(PROVEEDOR_ZAI);
-        config.establecerModeloParaProveedor(PROVEEDOR_ZAI, MODELO_GLM5);
-        config.establecerTiempoEsperaAI(60);
-        config.establecerTiempoEsperaParaModelo(PROVEEDOR_ZAI, MODELO_GLM5, 180);
-
-        SolicitudAnalisis solicitud = crearSolicitudBasica("https://example.com", "GET", "hash-timeout");
-        AnalizadorAI analizador = crearAnalizadorParaTest(config, solicitud);
-
-        // Acceder al campo analizadorHTTP mediante reflexión
-        Field campoAnalizadorHTTP = AnalizadorAI.class.getDeclaredField("analizadorHTTP");
-        campoAnalizadorHTTP.setAccessible(true);
-        Object analizadorHTTP = campoAnalizadorHTTP.get(analizador);
-
-        // Acceder al método obtenerClienteHttp del AnalizadorHTTP
-        Class<?> claseAnalizadorHTTP = Class.forName("com.burpia.analyzer.AnalizadorHTTP");
-        Method metodoObtener = claseAnalizadorHTTP.getDeclaredMethod("obtenerClienteHttp");
-        metodoObtener.setAccessible(true);
-        okhttp3.OkHttpClient clienteInicial = (okhttp3.OkHttpClient) metodoObtener.invoke(analizadorHTTP);
-        assertEquals(180_000, clienteInicial.readTimeoutMillis(),
-            "El timeout inicial debe respetar la configuración del modelo");
-
-        ConfiguracionAPI configActualizada = crearConfiguracionBasica(PROVEEDOR_OPENAI);
-        configActualizada.establecerModeloParaProveedor(PROVEEDOR_OPENAI, "gpt-5-mini");
-        configActualizada.establecerTiempoEsperaAI(45);
-        configActualizada.establecerTiempoEsperaParaModelo(PROVEEDOR_OPENAI, "gpt-5-mini", 45);
-
-        // Actualizar el campo config del analizadorHTTP
-        Field campoConfig = claseAnalizadorHTTP.getDeclaredField("config");
-        campoConfig.setAccessible(true);
-        campoConfig.set(analizadorHTTP, configActualizada);
-
-        okhttp3.OkHttpClient clienteActualizado = (okhttp3.OkHttpClient) metodoObtener.invoke(analizadorHTTP);
-        assertEquals(45_000, clienteActualizado.readTimeoutMillis(),
-            "El timeout debe recalcularse si cambia la configuración efectiva");
     }
 }

@@ -24,9 +24,12 @@ import java.util.List;
 public class ParseadorRespuestasAI {
     private static final String ORIGEN_LOG = "ParseadorRespuestasAI";
 
-    private static final java.util.regex.Pattern PATRON_ETIQUETA_TITULO = java.util.regex.Pattern.compile("(?i)(título:|title:)");
-    private static final java.util.regex.Pattern PATRON_ETIQUETA_SEVERIDAD = java.util.regex.Pattern.compile("(?i)(severidad:|severity:)");
-    private static final java.util.regex.Pattern PATRON_ETIQUETA_DESCRIPCION = java.util.regex.Pattern.compile("(?i)(vulnerabilidad|descripcion:|description:)");
+    // Etiquetas ancladas al inicio de línea y con ':' obligatorio: la palabra
+    // suelta "vulnerabilidad" (sin ancla ni dos puntos) borraba texto legítimo
+    // de la descripción al hacer replaceAll sobre líneas que solo la mencionan.
+    private static final java.util.regex.Pattern PATRON_ETIQUETA_TITULO = java.util.regex.Pattern.compile("(?i)^\\s*(?:título|title)\\s*:");
+    private static final java.util.regex.Pattern PATRON_ETIQUETA_SEVERIDAD = java.util.regex.Pattern.compile("(?i)^\\s*(?:severidad|severity)\\s*:");
+    private static final java.util.regex.Pattern PATRON_ETIQUETA_DESCRIPCION = java.util.regex.Pattern.compile("(?i)^\\s*(?:vulnerabilidad|descripcion|description)\\s*:");
 
     private final GestorLoggingUnificado gestorLogging;
     private final Gson gson;
@@ -148,9 +151,14 @@ public class ParseadorRespuestasAI {
                 ? e.getMessage()
                 : I18nUI.Tareas.MSG_ERROR_DESCONOCIDO();
             String errorDesc = I18nUI.trf("Error al parsear respuesta: %s", "Error parsing response: %s", errorMsg);
+            // solicitud puede ser null (callers tolerantes): el catch no debe
+            // lanzar un NPE propio ocultando la excepción original.
+            String urlContexto = solicitud != null
+                ? solicitud.obtenerUrl()
+                : "(solicitud no disponible)";
             gestorLogging.error(ORIGEN_LOG,
                 I18nLogs.tr("Error crítico al parsear respuesta de API para") + " "
-                        + I18nLogs.trTecnico(solicitud.obtenerUrl()),
+                        + I18nLogs.trTecnico(urlContexto),
                 e);
             throw new ParseExceptionAI(errorDesc, e);
         }

@@ -560,4 +560,45 @@ class ConstructorSolicitudesProveedorTest {
         config.establecerMaxTokensParaProveedor(proveedor != null ? proveedor : "OpenAI", 4096);
         return config;
     }
+
+    @Nested
+    @DisplayName("Caps defensivos y encoding de path")
+    class CapsYEncoding {
+
+        @Test
+        @DisplayName("Cuerpo de error gigante queda limitado a 64 KB en el mensaje de IOException")
+        void cuerpoErrorGiganteEsTruncado() throws Exception {
+            String cuerpoGigante = "E".repeat(1024 * 1024);
+            servidor.enqueue(new MockResponse().setResponseCode(500).setBody(cuerpoGigante));
+            servidor.start();
+
+            IOException error = assertThrows(IOException.class, () ->
+                ConstructorSolicitudesProveedor.listarModelosGemini(
+                    servidor.url("/v1beta").toString(), "test-key", clienteHttp));
+
+            assertTrue(error.getMessage().length()
+                    < ConstructorSolicitudesProveedor.MAX_BYTES_CUERPO_ERROR + 4096,
+                "El body de error no debe volcarse completo en la excepción");
+        }
+
+        @Test
+        @DisplayName("Espacios en nombre de modelo Gemini se codifican como %20 (no '+') en el path")
+        void espaciosEnModeloGeminiSeCodificanComoPorcentaje20() throws Exception {
+            // El listado de modelos falla (500) → construirSolicitud conserva el
+            // modelo configurado (best-effort documentado en el propio método).
+            servidor.enqueue(new MockResponse().setResponseCode(500).setBody("error"));
+            servidor.start();
+
+            ConfiguracionAPI config = crearConfiguracionTest(
+                "Gemini", "gemini 2.5 pro", servidor.url("/v1beta").toString(), "test-key");
+
+            ConstructorSolicitudesProveedor.SolicitudPreparada solicitud =
+                ConstructorSolicitudesProveedor.construirSolicitud(config, "Test prompt", clienteHttp);
+
+            assertTrue(solicitud.endpoint.contains("/models/gemini%202.5%20pro:generateContent"),
+                "El espacio debe codificarse como %20 en el path segment, fue: " + solicitud.endpoint);
+            assertFalse(solicitud.endpoint.contains("gemini+2.5"),
+                "URLEncoder '+' no es válido en path segments");
+        }
+    }
 }

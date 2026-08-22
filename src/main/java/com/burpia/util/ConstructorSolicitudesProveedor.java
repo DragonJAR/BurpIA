@@ -40,6 +40,43 @@ public final class ConstructorSolicitudesProveedor {
     private ConstructorSolicitudesProveedor() {
     }
 
+    /**
+     * Tope defensivo para leer cuerpos de respuesta de error: un servidor
+     * defectuoso o malicioso podría devolver un body gigante y agotar memoria
+     * si se leyera sin límite con {@code ResponseBody.string()}.
+     */
+    public static final int MAX_BYTES_CUERPO_ERROR = 64 * 1024;
+
+    /**
+     * Lee el cuerpo de una respuesta de error con un tope de
+     * {@value #MAX_BYTES_CUERPO_ERROR} bytes.
+     *
+     * @param respuesta respuesta HTTP (puede ser null o sin body)
+     * @return el cuerpo truncado al tope, o el mensaje "sin cuerpo" localizado
+     * @throws IOException si falla la lectura del stream
+     */
+    public static String leerCuerpoErrorLimitado(Response respuesta) throws IOException {
+        if (respuesta == null || respuesta.body() == null) {
+            return I18nUI.Conexion.DETALLE_SIN_CUERPO();
+        }
+        java.io.InputStream stream = respuesta.body().byteStream();
+        if (stream == null) {
+            return I18nUI.Conexion.DETALLE_SIN_CUERPO();
+        }
+        java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream(4096);
+        byte[] bloque = new byte[4096];
+        int totalLeidos = 0;
+        while (totalLeidos < MAX_BYTES_CUERPO_ERROR) {
+            int leidos = stream.read(bloque, 0, Math.min(bloque.length, MAX_BYTES_CUERPO_ERROR - totalLeidos));
+            if (leidos == -1) {
+                break;
+            }
+            buffer.write(bloque, 0, leidos);
+            totalLeidos += leidos;
+        }
+        return buffer.toString(StandardCharsets.UTF_8);
+    }
+
     public static List<String> listarModelosRemotosProveedor(String proveedor,
                                                              String urlBase,
                                                              String apiKey,
@@ -124,8 +161,15 @@ public final class ConstructorSolicitudesProveedor {
                 // Best-effort: continuar con el modelo configurado.
                 modeloUsado = modeloConfigurado;
             }
+            // URLEncoder codifica espacios como '+' (sintaxis de query/form), pero
+            // esto es un path segment: un nombre de modelo con espacios llegaría
+            // corrupto al endpoint. '%20' es la codificación correcta en paths.
+            // Un '+' literal del modelo ya quedó como "%2B", así que el replace
+            // solo afecta a los espacios.
+            String modeloEnPath = URLEncoder.encode(modeloUsado, StandardCharsets.UTF_8)
+                .replace("+", "%20");
             endpoint = ConfiguracionAPI.extraerUrlBase(config.obtenerUrlApi()) +
-                "/models/" + URLEncoder.encode(modeloUsado, StandardCharsets.UTF_8) + ":generateContent";
+                "/models/" + modeloEnPath + ":generateContent";
             JsonArray contenidos = new JsonArray();
             JsonObject contenido = new JsonObject();
             JsonArray partes = new JsonArray();
@@ -260,7 +304,7 @@ public final class ConstructorSolicitudesProveedor {
 
         try (Response response = clienteHttp.newCall(request).execute()) {
             if (!response.isSuccessful()) {
-                String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+                String err = leerCuerpoErrorLimitado(response);
                 throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));
             }
             String body = response.body() != null ? response.body().string() : "{}";
@@ -352,7 +396,7 @@ public final class ConstructorSolicitudesProveedor {
 
         try (Response response = clienteHttp.newCall(builder.build()).execute()) {
             if (!response.isSuccessful()) {
-                String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+                String err = leerCuerpoErrorLimitado(response);
                 throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));
             }
             String body = response.body() != null ? response.body().string() : "{}";
@@ -384,7 +428,7 @@ public final class ConstructorSolicitudesProveedor {
 
         try (Response response = clienteHttp.newCall(builder.build()).execute()) {
             if (!response.isSuccessful()) {
-                String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+                String err = leerCuerpoErrorLimitado(response);
                 throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));
             }
             String body = response.body() != null ? response.body().string() : "{}";
@@ -415,7 +459,7 @@ public final class ConstructorSolicitudesProveedor {
 
         try (Response response = clienteHttp.newCall(builder.build()).execute()) {
             if (!response.isSuccessful()) {
-                String err = response.body() != null ? response.body().string() : I18nUI.Conexion.DETALLE_SIN_CUERPO();
+                String err = leerCuerpoErrorLimitado(response);
                 throw new IOException(I18nUI.Conexion.DETALLE_HTTP(response.code(), err));
             }
             String body = response.body() != null ? response.body().string() : "{}";

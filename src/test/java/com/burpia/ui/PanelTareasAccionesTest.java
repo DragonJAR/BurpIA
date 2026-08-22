@@ -15,9 +15,7 @@ import javax.swing.JTable;
 import javax.swing.table.JTableHeader;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
-import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
-import java.awt.event.MouseEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -32,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("PanelTareas Acciones Tests")
-class PanelTareasAccionesTest {
+class PanelTareasAccionesTest extends PanelTestBase {
 
     // Ventana de espera para que el diálogo se muestre en el EDT y sea capturado;
     // 150 ms no bastan bajo la carga de la suite completa.
@@ -355,15 +353,11 @@ class PanelTareasAccionesTest {
     }
 
     private JButton obtenerBotonPrincipal() throws Exception {
-        Field field = PanelTareas.class.getDeclaredField("botonPausarReanudar");
-        field.setAccessible(true);
-        return (JButton) field.get(panel);
+        return obtenerCampo(panel, "botonPausarReanudar", JButton.class);
     }
 
     private JButton obtenerBotonCancelar() throws Exception {
-        Field field = PanelTareas.class.getDeclaredField("botonCancelar");
-        field.setAccessible(true);
-        return (JButton) field.get(panel);
+        return obtenerCampo(panel, "botonCancelar", JButton.class);
     }
 
     private Method obtenerMetodoActualizarEstadisticas() throws Exception {
@@ -373,36 +367,11 @@ class PanelTareasAccionesTest {
     }
 
     private JPanel obtenerPanelControles() throws Exception {
-        Field field = PanelTareas.class.getDeclaredField("panelControles");
-        field.setAccessible(true);
-        return (JPanel) field.get(panel);
-    }
-
-    private void assertTooltipEncabezado(JTableHeader encabezado, int columnaVista, String esperado) throws Exception {
-        Rectangle rect = encabezado.getHeaderRect(columnaVista);
-        MouseEvent evento = new MouseEvent(
-                encabezado,
-                MouseEvent.MOUSE_MOVED,
-                System.currentTimeMillis(),
-                0,
-                rect.x + Math.max(1, rect.width / 2),
-                rect.y + Math.max(1, rect.height / 2),
-                0,
-                false);
-        SwingUtilities.invokeAndWait(() -> {
-            for (var listener : encabezado.getMouseMotionListeners()) {
-                listener.mouseMoved(evento);
-            }
-        });
-        assertEquals(esperado, encabezado.getToolTipText(), "assertEquals failed at PanelTareasAccionesTest.java:286");
-    }
-
-    private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {});
+        return obtenerCampo(panel, "panelControles", JPanel.class);
     }
 
     /**
-     * Construye un menÃº contextual de una sola tarea por reflexiÃ³n, para una
+     * Construye un menú contextual de una sola tarea por reflexión, para una
      * tarea con el estado indicado. Devuelve el JPopupMenu resultante.
      */
     private JPopupMenu construirMenuUnaTarea(String tareaId, String estado, String url) throws Exception {
@@ -419,7 +388,7 @@ class PanelTareasAccionesTest {
     }
 
     /**
-     * Busca y devuelve el primer JMenuItem del menÃº cuyo texto contiene el fragmento.
+     * Busca y devuelve el primer JMenuItem del menú cuyo texto contiene el fragmento.
      */
     private JMenuItem buscarMenuItem(JPopupMenu menu, String fragmento) {
         for (Component componente : menu.getComponents()) {
@@ -434,7 +403,7 @@ class PanelTareasAccionesTest {
     }
 
     @Test
-    @DisplayName("F5: 'Eliminar de la lista' pide confirmaciÃ³n antes de quitar la tarea")
+    @DisplayName("F5: 'Eliminar de la lista' pide confirmación antes de quitar la tarea")
     void testEliminarUnaTareaPideConfirmacion() throws Exception {
         TestDialogUtils.registrarCapturaDialogos();
         try {
@@ -444,19 +413,19 @@ class PanelTareasAccionesTest {
 
             JPopupMenu menu = construirMenuUnaTarea(tareaId, Tarea.ESTADO_COMPLETADO, "https://example.com/done");
             JMenuItem itemEliminar = buscarMenuItem(menu, I18nUI.Tareas.MENU_ELIMINAR_LISTA());
-            assertNotNull(itemEliminar, "El menÃº de una tarea completada debe incluir 'Eliminar de la lista'");
+            assertNotNull(itemEliminar, "El menú de una tarea completada debe incluir 'Eliminar de la lista'");
 
             TestDialogUtils.reiniciarDialogosMensajeCapturados();
             TestDialogUtils.ejecutarConDialogoAutoCerrado(() ->
                 itemEliminar.getActionListeners()[0].actionPerformed(new ActionEvent(itemEliminar, 0, "")), ESPERA_CAPTURA_DIALOGO_MS);
 
-            // Debe haberse mostrado un diÃ¡logo de confirmaciÃ³n (tÃ­tulo "Confirmar eliminaciÃ³n").
+            // Debe haberse mostrado un diálogo de confirmación (título "Confirmar eliminación").
             assertTrue(TestDialogUtils.seCapturoDialogoMensaje(),
-                "Eliminar una tarea debe pedir confirmaciÃ³n (F5)");
+                "Eliminar una tarea debe pedir confirmación (F5)");
             TestDialogUtils.DialogoMensajeCapturado capturado = TestDialogUtils.obtenerUltimoDialogoMensajeCapturado();
-            assertNotNull(capturado, "Debe capturarse el diÃ¡logo de confirmaciÃ³n");
+            assertNotNull(capturado, "Debe capturarse el diálogo de confirmación");
             assertEquals(I18nUI.Tareas.TITULO_CONFIRMAR_ELIMINACION(), capturado.obtenerTitulo(),
-                "El tÃ­tulo del diÃ¡logo debe ser el de confirmaciÃ³n de eliminaciÃ³n");
+                "El título del diálogo debe ser el de confirmación de eliminación");
         } finally {
             TestDialogUtils.desregistrarCapturaDialogos();
         }
@@ -467,7 +436,7 @@ class PanelTareasAccionesTest {
     void testPausarTareaNoPausableMuestraFeedback() throws Exception {
         TestDialogUtils.registrarCapturaDialogos();
         try {
-            // Tarea en COLA: pausable, pero forzamos el rechazo limpiÃ¡ndola antes
+            // Tarea en COLA: pausable, pero forzamos el rechazo limpiándola antes
             // para que pausarTarea devuelva false y se muestre el feedback (F6).
             Tarea tarea = gestor.crearTarea("A", "https://example.com/run", Tarea.ESTADO_EN_COLA, "");
             flushEdt();
@@ -475,9 +444,9 @@ class PanelTareasAccionesTest {
 
             JPopupMenu menu = construirMenuUnaTarea(tareaId, Tarea.ESTADO_EN_COLA, "https://example.com/run");
             JMenuItem itemPausar = buscarMenuItem(menu, I18nUI.Tareas.MENU_PAUSAR());
-            assertNotNull(itemPausar, "El menÃº de una tarea en cola debe incluir 'Pausar'");
+            assertNotNull(itemPausar, "El menú de una tarea en cola debe incluir 'Pausar'");
 
-            // Limpiar la tarea subyacente: pausarTarea ya no la encontrarÃ¡ y devolverÃ¡ false.
+            // Limpiar la tarea subyacente: pausarTarea ya no la encontrará y devolverá false.
             gestor.limpiarTarea(tareaId);
             flushEdt();
 
@@ -489,7 +458,7 @@ class PanelTareasAccionesTest {
             assertTrue(TestDialogUtils.seCapturoDialogoMensaje(),
                 "Pausar una tarea que falla debe mostrar feedback al usuario (F6)");
             TestDialogUtils.DialogoMensajeCapturado capturado = TestDialogUtils.obtenerUltimoDialogoMensajeCapturado();
-            assertNotNull(capturado, "Debe capturarse el diÃ¡logo de feedback");
+            assertNotNull(capturado, "Debe capturarse el diálogo de feedback");
             assertTrue(capturado.obtenerMensaje().contains(I18nUI.Tareas.MSG_NO_PAUSADA().split("\\(")[0]),
                 "El mensaje de feedback debe indicar que no se pudo pausar la tarea");
         } finally {

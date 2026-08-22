@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("DialogoDetalleHallazgo Tests")
-class DialogoDetalleHallazgoTest {
+class DialogoDetalleHallazgoTest extends PanelTestBase {
 
     @BeforeEach
     void setUp() {
@@ -449,16 +449,5 @@ class DialogoDetalleHallazgoTest {
             }
         }
         throw new RuntimeException("No se encontró botón con textos: " + String.join(", ", textosEsperados));
-    }
-
-    /**
-     * Fuerza el procesamiento de todos los eventos pendientes en el EDT.
-     * El cuerpo vacío del Runnable es intencional: invokeAndWait bloquea hasta
-     * que todos los eventos pendientes se procesen, sincronizando el estado de la UI.
-     */
-    private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {
-            // Cuerpo vacío intencional: fuerza el procesamiento de eventos pendientes
-        });
     }
 }

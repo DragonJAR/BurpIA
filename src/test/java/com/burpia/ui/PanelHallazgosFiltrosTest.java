@@ -17,11 +17,8 @@ import javax.swing.table.JTableHeader;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
-import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -36,23 +33,11 @@ import static org.mockito.Mockito.mock;
 
 
 @DisplayName("PanelHallazgos Filtros Tests")
-class PanelHallazgosFiltrosTest {
-
-    private final List<PanelHallazgos> panelesCreados = new ArrayList<>();
+class PanelHallazgosFiltrosTest extends PanelTestBase {
 
     @AfterEach
     void resetIdioma() {
         I18nUI.establecerIdioma("es");
-    }
-
-    @AfterEach
-    void destruirPaneles() {
-        // Cada PanelHallazgos arranca un Timer y un executor; sin destruirlos
-        // cada test fuga hilos que sobreviven al final de la clase.
-        for (PanelHallazgos panel : panelesCreados) {
-            panel.destruir();
-        }
-        panelesCreados.clear();
     }
 
     @Test
@@ -63,7 +48,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         modelo.agregarHallazgos(List.of(
             new Hallazgo("https://example.com/a", "TA", "Hallazgo A", "High", "High"),
@@ -91,7 +76,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         modelo.agregarHallazgos(List.of(
             new Hallazgo("https://example.com/login", "Pantalla Login", "Fuga de stack trace", "Low", "Medium"),
@@ -115,7 +100,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         JCheckBox checkbox = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
@@ -195,7 +180,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         JComboBox<?> comboSeveridad = obtenerCampo(panel, "comboSeveridad", JComboBox.class);
         SwingUtilities.invokeAndWait(() -> {
@@ -220,7 +205,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
 
@@ -244,7 +229,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         JComboBox<?> comboSeveridad = obtenerCampo(panel, "comboSeveridad", JComboBox.class);
         AtomicReference<Throwable> error = new AtomicReference<>();
@@ -276,7 +261,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         JTable tabla = obtenerCampo(panel, "tabla", JTable.class);
         JTableHeader encabezado = tabla.getTableHeader();
@@ -296,7 +281,7 @@ class PanelHallazgosFiltrosTest {
     void testCapturaEntradasAccionToleraUrlInvalida() throws Exception {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         modelo.agregarHallazgo(new Hallazgo("://url-invalida", "T", "H", "Low", "Low"));
         flushEdt();
@@ -313,7 +298,7 @@ class PanelHallazgosFiltrosTest {
         I18nUI.establecerIdioma("es");
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         modelo.agregarHallazgos(List.of(
             new Hallazgo("https://example.com/a", "TA", "Hallazgo A", "High", "High"),
@@ -349,7 +334,7 @@ class PanelHallazgosFiltrosTest {
     void testPopupFueraFilasLimpiaSeleccionPrevia() throws Exception {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         modelo.agregarHallazgos(List.of(
             new Hallazgo("https://example.com/a", "TA", "Hallazgo A", "High", "High"),
@@ -401,7 +386,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerTextoFiltroHallazgos("sql");
@@ -427,7 +412,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         modelo.agregarHallazgos(List.of(
             new Hallazgo("https://example.com/a", "TA", "Hallazgo A", "High", "High"),
@@ -462,7 +447,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerPersistirFiltroSeveridadHallazgos(true);
@@ -493,7 +478,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         JPanel panelFiltros = obtenerCampo(panel, "panelFiltros", JPanel.class);
         JPanel panelResponsive = (JPanel) panelFiltros.getComponent(0);
@@ -518,7 +503,7 @@ class PanelHallazgosFiltrosTest {
         ModeloTablaHallazgos modelo = new ModeloTablaHallazgos(100);
         MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
 
-        PanelHallazgos panel = crearPanel(modelo, api);
+        PanelHallazgos panel = crearPanelHallazgos(api, modelo, true);
 
         JPanel panelFiltros = obtenerCampo(panel, "panelFiltros", JPanel.class);
         JPanel panelGuardarProyecto = obtenerCampo(panel, "panelGuardarProyecto", JPanel.class);
@@ -535,42 +520,5 @@ class PanelHallazgosFiltrosTest {
             EstilosUI.ratioContraste(etiquetaBusqueda.getForeground(), fondoPanel) >= EstilosUI.CONTRASTE_AA_NORMAL,
             "assertTrue failed at PanelHallazgosFiltrosTest.java:393");
         assertFalse(chkGuardarEnIssues.isOpaque(), "assertFalse failed at PanelHallazgosFiltrosTest.java:394");
-    }
-
-    private PanelHallazgos crearPanel(ModeloTablaHallazgos modelo, MontoyaApi api) throws Exception {
-        final PanelHallazgos[] holder = new PanelHallazgos[1];
-        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, modelo, true));
-        panelesCreados.add(holder[0]);
-        return holder[0];
-    }
-
-    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
-    private <T> T obtenerCampo(Object target, String nombre, Class<T> tipo) throws Exception {
-        Field field = target.getClass().getDeclaredField(nombre);
-        field.setAccessible(true);
-        return (T) field.get(target);
-    }
-
-    private void assertTooltipEncabezado(JTableHeader encabezado, int columnaVista, String esperado) throws Exception {
-        Rectangle rect = encabezado.getHeaderRect(columnaVista);
-        MouseEvent evento = new MouseEvent(
-                encabezado,
-                MouseEvent.MOUSE_MOVED,
-                System.currentTimeMillis(),
-                0,
-                rect.x + Math.max(1, rect.width / 2),
-                rect.y + Math.max(1, rect.height / 2),
-                0,
-                false);
-        SwingUtilities.invokeAndWait(() -> {
-            for (var listener : encabezado.getMouseMotionListeners()) {
-                listener.mouseMoved(evento);
-            }
-        });
-        assertEquals(esperado, encabezado.getToolTipText(), "assertEquals failed at PanelHallazgosFiltrosTest.java:430");
-    }
-
-    private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {});
     }
 }

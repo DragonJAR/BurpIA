@@ -23,7 +23,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.net.URI;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.awt.font.TextAttribute;
 import java.util.concurrent.atomic.AtomicReference;
@@ -75,6 +76,43 @@ public final class UIUtils {
     }
 
     private UIUtils() {
+    }
+
+    /**
+     * Crea un caché LRU thread-safe (LinkedHashMap access-order sincronizado) que
+     * desaloja el elemento menos usado recientemente al superar la capacidad.
+     * DRY: patrón antes duplicado en RenderizadorConfianza y RenderizadorSeveridad.
+     *
+     * @param capacidadMaxima número máximo de entradas antes de desalojar
+     * @param <K> tipo de clave
+     * @param <V> tipo de valor
+     * @return mapa sincronizado con desalojo LRU
+     */
+    public static <K, V> Map<K, V> crearCacheLru(int capacidadMaxima) {
+        return Collections.synchronizedMap(new LinkedHashMap<K, V>(16, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+                return size() > capacidadMaxima;
+            }
+        });
+    }
+
+    /**
+     * Indica si la fuente tiene el atributo STRIKETHROUGH activo.
+     * DRY: lo usan los renderizadores decorados por RenderizadorHallazgoBorrado
+     * para detectar filas ignoradas. Debe consultarse durante el paint (no en
+     * getTableCellRendererComponent) porque el decorador aplica la fuente
+     * tachada DESPUÉS de ese método.
+     *
+     * @param fuente fuente a inspeccionar (puede ser null)
+     * @return true si la fuente está tachada
+     */
+    public static boolean esFuenteTachada(Font fuente) {
+        if (fuente == null) {
+            return false;
+        }
+        Object strike = fuente.getAttributes().get(TextAttribute.STRIKETHROUGH);
+        return TextAttribute.STRIKETHROUGH_ON.equals(strike);
     }
 
     public static void ejecutarEnEdtYEsperar(Runnable accion) {
@@ -140,34 +178,6 @@ public final class UIUtils {
             menuItem.addActionListener(accion);
         }
         return menuItem;
-    }
-
-    /**
-     * Crea un JMenu con texto y fuente estándar aplicada.
-     *
-     * @param texto Texto del menú
-     * @return JMenu configurado con FUENTE_ESTANDAR
-     */
-    public static JMenu crearMenu(String texto) {
-        JMenu menu = new JMenu(texto);
-        menu.setFont(EstilosUI.FUENTE_ESTANDAR);
-        return menu;
-    }
-
-    /**
-     * Agrega un JMenuItem a un JMenu existente con texto, tooltip y acción.
-     *
-     * @param menu   Menú padre al que agregar el item
-     * @param texto  Texto del item
-     * @param tooltip Tooltip del item
-     * @param accion ActionListener a ejecutar (puede ser null)
-     * @return El JMenuItem creado y agregado
-     */
-    public static JMenuItem agregarMenuItemAlMenu(JMenu menu, String texto, String tooltip,
-            java.awt.event.ActionListener accion) {
-        JMenuItem item = crearMenuItemContextual(texto, tooltip, accion);
-        menu.add(item);
-        return item;
     }
 
     public static void instalarTooltipsEncabezadoTabla(JTable tabla, String... tooltipsPorModelo) {
@@ -621,60 +631,6 @@ public final class UIUtils {
                 .getMaximumWindowBounds().contains(punto);
     }
 
-    public static void mostrarErrorBinarioAgenteNoEncontrado(Component parent,
-            String titulo,
-            String mensajePrincipal,
-            String textoEnlace,
-            String urlEnlace) {
-        ejecutarEnEdt(() -> {
-            JPanel panel = new JPanel(new BorderLayout(0, 6));
-            panel.setOpaque(false);
-            panel.add(crearAreaMensajeDialogo(mensajePrincipal), BorderLayout.NORTH);
-            if (Normalizador.noEsVacio(urlEnlace)
-                    && Normalizador.noEsVacio(textoEnlace)) {
-                String textoVisible = extraerTextoVisibleEnlace(textoEnlace);
-                JButton enlace = new JButton(textoVisible);
-                enlace.setFont(resolverFuenteUI("Label.font", EstilosUI.FUENTE_ESTANDAR));
-                enlace.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                Color fondoReferencia = panel.getBackground();
-                if (fondoReferencia == null) {
-                    fondoReferencia = EstilosUI.obtenerFondoPanel();
-                }
-                enlace.setForeground(EstilosUI.colorEnlaceAccesible(fondoReferencia));
-                enlace.setBorderPainted(false);
-                enlace.setContentAreaFilled(false);
-                enlace.setFocusPainted(false);
-                enlace.setOpaque(false);
-                enlace.setHorizontalAlignment(SwingConstants.LEFT);
-                enlace.addActionListener(e -> abrirUrlEnNavegador(urlEnlace));
-                Font fuenteNormal = enlace.getFont();
-                Font fuenteSubrayada = crearFuenteSubrayada(fuenteNormal);
-                enlace.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseEntered(MouseEvent e) {
-                        enlace.setFont(fuenteSubrayada);
-                    }
-
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        enlace.setFont(fuenteNormal);
-                    }
-                });
-
-                JPanel panelEnlace = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-                panelEnlace.setOpaque(false);
-                panelEnlace.add(enlace);
-                panel.add(panelEnlace, BorderLayout.SOUTH);
-            }
-            mostrarDialogoConContenido(
-                    parent,
-                    titulo,
-                    new DialogoContenido(panel, null),
-                    JOptionPane.ERROR_MESSAGE,
-                    JOptionPane.DEFAULT_OPTION);
-        });
-    }
-
     public static String construirMensajeBinarioAgenteNoEncontrado(String nombreAgente, String comandoConfigurado) {
         String ejecutableDetectado = OSUtils.resolverEjecutableComando(comandoConfigurado);
         String rutaMensaje = Normalizador.esVacio(ejecutableDetectado) ? comandoConfigurado : ejecutableDetectado;
@@ -686,32 +642,6 @@ public final class UIUtils {
             mensaje = mensaje + "\n" + I18nUI.Configuracion.Agentes.MSG_COMANDO_CONFIGURADO(comandoConfigurado);
         }
         return mensaje;
-    }
-
-    static String extraerTextoVisibleEnlace(String textoEnlace) {
-        if (Normalizador.esVacio(textoEnlace)) {
-            return "";
-        }
-        String texto = textoEnlace.trim();
-        String sinAnchor = texto.replaceAll("(?is)<a\\b[^>]*>(.*?)</a>", "$1");
-        String sinHtml = sinAnchor.replaceAll("(?is)<[^>]+>", "").trim();
-        return Normalizador.esVacio(sinHtml) ? texto : sinHtml;
-    }
-
-    private static Font crearFuenteSubrayada(Font fuenteBase) {
-        if (fuenteBase == null) {
-            return null;
-        }
-        Map<TextAttribute, Object> atributos = new HashMap<>();
-        for (Map.Entry<?, ?> entry : fuenteBase.getAttributes().entrySet()) {
-            Object key = entry.getKey();
-            Object value = entry.getValue();
-            if (key instanceof TextAttribute) {
-                atributos.put((TextAttribute) key, value);
-            }
-        }
-        atributos.put(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON);
-        return fuenteBase.deriveFont(atributos);
     }
 
     public static boolean abrirUrlEnNavegador(String url) {

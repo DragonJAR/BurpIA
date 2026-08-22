@@ -179,14 +179,16 @@ public class AnalizadorHTTP {
             try (Response respuesta = call.execute()) {
                 int codigoRespuesta = respuesta.code();
                 gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Código de respuesta de API: %d", codigoRespuesta));
-                gestorLogging.info(ORIGEN_LOG, I18nLogs.trf("Encabezados de respuesta de API: %s", respuesta.headers()));
+                // Headers a verbose (verboseTecnico: no pasar por el diccionario
+                // i18n, que corrompería nombres de headers). A INFO ruido por intento.
+                gestorLogging.verboseTecnico(ORIGEN_LOG, "Encabezados de respuesta de API: " + respuesta.headers());
 
                 if (!respuesta.isSuccessful()) {
                     String cuerpoError = "";
                     ResponseBody bodyError = respuesta.body();
                     if (bodyError != null) {
                         try {
-                            cuerpoError = bodyError.string();
+                            cuerpoError = ConstructorSolicitudesProveedor.leerCuerpoErrorLimitado(respuesta);
                         } catch (IOException e) {
                             gestorLogging.error(ORIGEN_LOG,
                                 I18nLogs.tr("No se pudo leer cuerpo de error"), e);

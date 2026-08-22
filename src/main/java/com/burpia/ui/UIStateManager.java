@@ -197,9 +197,13 @@ public final class UIStateManager {
                 }
             }
             
-            // Si no se encontró, usar la pestaña por defecto
-            // Validar rango para evitar IndexOutOfBoundsException
+            // Si no se encontró, usar la pestaña por defecto.
+            // Guard temprano: con 0 pestañas cualquier setSelectedIndex lanza
+            // IndexOutOfBoundsException (Math.min con tabCount-1 = -1 no basta).
             int tabCount = tabbedPane.getTabCount();
+            if (tabCount == 0) {
+                return;
+            }
             int indiceValido = Math.max(0, Math.min(pestaniaPorDefecto, tabCount - 1));
             tabbedPane.setSelectedIndex(indiceValido);
             

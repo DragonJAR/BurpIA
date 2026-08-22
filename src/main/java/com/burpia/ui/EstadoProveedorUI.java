@@ -78,12 +78,12 @@ public final class EstadoProveedorUI {
                               String timeoutTexto,
                               int maxTokens,
                               int timeout) {
-        // Inmutabilidad defensiva: crear copias de strings
-        this.apiKey = apiKey != null ? new String(apiKey) : "";
-        this.modelo = modelo != null ? new String(modelo) : "";
-        this.baseUrl = baseUrl != null ? new String(baseUrl) : "";
-        this.maxTokensTexto = maxTokensTexto != null ? new String(maxTokensTexto) : "";
-        this.timeoutTexto = timeoutTexto != null ? new String(timeoutTexto) : "";
+        // String es inmutable: no se hacen copias defensivas (new String(...) era no-op).
+        this.apiKey = apiKey != null ? apiKey : "";
+        this.modelo = modelo != null ? modelo : "";
+        this.baseUrl = baseUrl != null ? baseUrl : "";
+        this.maxTokensTexto = maxTokensTexto != null ? maxTokensTexto : "";
+        this.timeoutTexto = timeoutTexto != null ? timeoutTexto : "";
 
         // Validación de rangos con valores por defecto
         this.maxTokens = normalizarPositivo(maxTokens, MAX_TOKENS_POR_DEFECTO);

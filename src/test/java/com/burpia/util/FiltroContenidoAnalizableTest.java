@@ -131,6 +131,13 @@ class FiltroContenidoAnalizableTest {
         }
 
         @Test
+        @DisplayName("Código 205 (Reset Content) no es analizable (RFC 9110)")
+        void codigo205_noEsAnalizable() {
+            assertFalse(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 205),
+                "205 Reset Content no lleva cuerpo según RFC 9110 §15.3.6");
+        }
+
+        @Test
         @DisplayName("Código 304 (Not Modified) no es analizable")
         void codigo304_noEsAnalizable() {
             assertFalse(FiltroContenidoAnalizable.esAnalizable("text/html", "GET", 304), "assertFalse failed at FiltroContenidoAnalizableTest.java:136");

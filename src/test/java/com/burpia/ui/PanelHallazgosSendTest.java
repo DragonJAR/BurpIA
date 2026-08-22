@@ -20,7 +20,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.JTable;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -51,7 +50,7 @@ import static org.mockito.Mockito.when;
  * </p>
  */
 @DisplayName("PanelHallazgos Send Tests")
-class PanelHallazgosSendTest {
+class PanelHallazgosSendTest extends PanelTestBase {
 
     private static final int TIMEOUT_VERIFICACION_MS = 1000;
     private static final int TIMEOUT_LATCH_SEGUNDOS = 1;
@@ -65,15 +64,12 @@ class PanelHallazgosSendTest {
     void setUp() throws Exception {
         TestDialogUtils.registrarCapturaDialogos();
         api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
-        panel = crearPanel(api, true);
+        panel = crearPanelHallazgos(api, new ModeloTablaHallazgos(100), true);
     }
 
     @AfterEach
     void tearDown() {
-        if (panel != null) {
-            panel.destruir();
-            panel = null;
-        }
+        // La destrucción del panel la gestiona PanelTestBase.
         TestDialogUtils.desregistrarCapturaDialogos();
     }
 
@@ -316,33 +312,29 @@ class PanelHallazgosSendTest {
     @Test
     @DisplayName("Community no activa auto-guardado de Issues")
     void testCommunityNoActivaAutoGuardadoIssues() throws Exception {
-        PanelHallazgos panelCommunity = crearPanel(api, false);
-        try {
-            AtomicInteger guardados = new AtomicInteger(0);
-            panelCommunity.establecerManejadorGuardarIssue(hallazgo -> {
-                guardados.incrementAndGet();
-                return true;
-            });
-            SwingUtilities.invokeAndWait(() -> panelCommunity.establecerGuardadoAutomaticoIssuesActivo(true));
-            assertFalse(panelCommunity.isGuardadoAutomaticoIssuesActivo(),
-                "Community no debe activar el auto-guardado de Issues");
+        PanelHallazgos panelCommunity = crearPanelHallazgos(api, new ModeloTablaHallazgos(100), false);
+        AtomicInteger guardados = new AtomicInteger(0);
+        panelCommunity.establecerManejadorGuardarIssue(hallazgo -> {
+            guardados.incrementAndGet();
+            return true;
+        });
+        SwingUtilities.invokeAndWait(() -> panelCommunity.establecerGuardadoAutomaticoIssuesActivo(true));
+        assertFalse(panelCommunity.isGuardadoAutomaticoIssuesActivo(),
+            "Community no debe activar el auto-guardado de Issues");
 
-            HttpRequest request = mock(HttpRequest.class);
-            when(request.url()).thenReturn("https://example.com/community");
-            agregarHallazgo(panelCommunity, new Hallazgo(
-                "https://example.com/community",
-                "Titulo",
-                "Descripcion",
-                "High",
-                "High",
-                request
-            ));
-            Thread.sleep(DELAY_ESPERA_FILAS_MS * 2L);
+        HttpRequest request = mock(HttpRequest.class);
+        when(request.url()).thenReturn("https://example.com/community");
+        agregarHallazgo(panelCommunity, new Hallazgo(
+            "https://example.com/community",
+            "Titulo",
+            "Descripcion",
+            "High",
+            "High",
+            request
+        ));
+        Thread.sleep(DELAY_ESPERA_FILAS_MS * 2L);
 
-            assertEquals(0, guardados.get(), "Community no debe intentar guardar Issues");
-        } finally {
-            panelCommunity.destruir();
-        }
+        assertEquals(0, guardados.get(), "Community no debe intentar guardar Issues");
     }
 
     @Test
@@ -476,7 +468,7 @@ class PanelHallazgosSendTest {
     }
 
     @Test
-    @DisplayName("Clic derecho sobre una fila muestra el menÃº contextual con las acciones de envÃ­o")
+    @DisplayName("Clic derecho sobre una fila muestra el menú contextual con las acciones de envío")
     void testClicDerechoMuestraMenuContextualConAcciones() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
         panel.establecerConfiguracion(config);
@@ -487,7 +479,7 @@ class PanelHallazgosSendTest {
         flushEdt();
 
         JTable tabla = obtenerTabla(panel);
-        // El menÃº necesita la tabla visible (JPopupMenu.show lo requiere).
+        // El menú necesita la tabla visible (JPopupMenu.show lo requiere).
         javax.swing.JFrame frame = new javax.swing.JFrame();
         try {
             SwingUtilities.invokeAndWait(() -> {
@@ -497,12 +489,12 @@ class PanelHallazgosSendTest {
             });
             flushEdt();
 
-            // Sin selecciÃ³n previa: el clic derecho debe seleccionar la fila y construir el menÃº.
+            // Sin selección previa: el clic derecho debe seleccionar la fila y construir el menú.
             SwingUtilities.invokeAndWait(() -> tabla.clearSelection());
             flushEdt();
-            assertEquals(0, tabla.getSelectedRowCount(), "No debe haber selecciÃ³n inicial");
+            assertEquals(0, tabla.getSelectedRowCount(), "No debe haber selección inicial");
 
-            // Simular el clic derecho (popup trigger) sobre la fila 0, como lo harÃ­a
+            // Simular el clic derecho (popup trigger) sobre la fila 0, como lo haría
             // UIUtils.instalarMenuContextualTabla en el listener real.
             Rectangle celda = tabla.getCellRect(0, 0, false);
             SwingUtilities.invokeAndWait(() -> {
@@ -520,11 +512,11 @@ class PanelHallazgosSendTest {
             assertEquals(1, tabla.getSelectedRowCount(),
                 "El clic derecho debe seleccionar la fila bajo el cursor");
 
-            // Y el menÃº contextual debe construirse con las acciones de envÃ­o (no solo "Agregar").
+            // Y el menú contextual debe construirse con las acciones de envío (no solo "Agregar").
             Method metodo = PanelHallazgos.class.getDeclaredMethod("construirMenuContextualDinamico");
             metodo.setAccessible(true);
             javax.swing.JPopupMenu menu = (javax.swing.JPopupMenu) metodo.invoke(panel);
-            assertNotNull(menu, "El menÃº contextual no debe ser null");
+            assertNotNull(menu, "El menú contextual no debe ser null");
 
             int items = 0;
             for (java.awt.Component componente : menu.getComponents()) {
@@ -532,16 +524,16 @@ class PanelHallazgosSendTest {
                     items++;
                 }
             }
-            // Con selecciÃ³n debe haber al menos: Agregar + Repeater + Intruder (+ otros).
+            // Con selección debe haber al menos: Agregar + Repeater + Intruder (+ otros).
             assertTrue(items >= 3,
-                "El menÃº tras clic derecho debe incluir varias acciones, encontradas: " + items);
+                "El menú tras clic derecho debe incluir varias acciones, encontradas: " + items);
         } finally {
             SwingUtilities.invokeAndWait(() -> frame.dispose());
         }
     }
 
     @Test
-    @DisplayName("Clic derecho en espacio vacÃ­o limpia selecciÃ³n pero sigue mostrando 'Agregar hallazgo'")
+    @DisplayName("Clic derecho en espacio vacío limpia selección pero sigue mostrando 'Agregar hallazgo'")
     void testClicDerechoEspacioVacioMuestraMenuConAgregar() throws Exception {
         ConfiguracionAPI config = new ConfiguracionAPI();
         panel.establecerConfiguracion(config);
@@ -561,12 +553,12 @@ class PanelHallazgosSendTest {
             });
             flushEdt();
 
-            // SelecciÃ³n previa para verificar que se limpia.
+            // Selección previa para verificar que se limpia.
             SwingUtilities.invokeAndWait(() -> tabla.setRowSelectionInterval(0, 0));
             flushEdt();
             assertEquals(1, tabla.getSelectedRowCount());
 
-            // Clic derecho DEBAJO de la Ãºltima fila (espacio vacÃ­o): rowAtPoint < 0.
+            // Clic derecho DEBAJO de la última fila (espacio vacío): rowAtPoint < 0.
             int yFueraFilas = tabla.getHeight() + 50;
             SwingUtilities.invokeAndWait(() -> {
                 MouseEvent popup = new MouseEvent(
@@ -579,16 +571,16 @@ class PanelHallazgosSendTest {
             });
             flushEdt();
 
-            // La selecciÃ³n previa debe quedar limpia.
+            // La selección previa debe quedar limpia.
             assertEquals(0, tabla.getSelectedRowCount(),
-                "El clic en espacio vacÃ­o debe limpiar la selecciÃ³n previa");
+                "El clic en espacio vacío debe limpiar la selección previa");
 
-            // Pero el menÃº debe seguir construyÃ©ndose con la opciÃ³n 'Agregar hallazgo',
-            // ya que esa opciÃ³n no depende de selecciÃ³n (regresiÃ³n del refactor D4).
+            // Pero el menú debe seguir construyéndose con la opción 'Agregar hallazgo',
+            // ya que esa opción no depende de selección (regresión del refactor D4).
             Method metodo = PanelHallazgos.class.getDeclaredMethod("construirMenuContextualDinamico");
             metodo.setAccessible(true);
             javax.swing.JPopupMenu menu = (javax.swing.JPopupMenu) metodo.invoke(panel);
-            assertNotNull(menu, "El menÃº debe construirse aÃºn sin selecciÃ³n");
+            assertNotNull(menu, "El menú debe construirse aún sin selección");
 
             boolean tieneAgregar = false;
             for (java.awt.Component componente : menu.getComponents()) {
@@ -601,7 +593,7 @@ class PanelHallazgosSendTest {
                 }
             }
             assertTrue(tieneAgregar,
-                "El menÃº en espacio vacÃ­o debe incluir 'Agregar hallazgo'");
+                "El menú en espacio vacío debe incluir 'Agregar hallazgo'");
         } finally {
             SwingUtilities.invokeAndWait(() -> frame.dispose());
         }
@@ -631,23 +623,6 @@ class PanelHallazgosSendTest {
             assertSame(construido, solicitud,
                 "Sin request en memoria, la solicitud se construye desde la URL del hallazgo");
         }
-    }
-
-    /**
-     * Crea una instancia de PanelHallazgos para testing.
-     *
-     * @param api                 MontoyaApi mockeado
-     * @param esBurpProfessional  Si es Burp Professional
-     * @return PanelHallazgos configurado para testing
-     * @throws Exception si ocurre error en la creación del panel
-     */
-    private PanelHallazgos crearPanel(MontoyaApi api, boolean esBurpProfessional) throws Exception {
-        assertNotNull(api, "La API no puede ser null");
-        final PanelHallazgos[] holder = new PanelHallazgos[1];
-        SwingUtilities.invokeAndWait(() -> 
-            holder[0] = new PanelHallazgos(api, new ModeloTablaHallazgos(100), esBurpProfessional)
-        );
-        return holder[0];
     }
 
     /**
@@ -705,15 +680,6 @@ class PanelHallazgosSendTest {
     }
 
     /**
-     * Fuerza la ejecución de todas las tareas pendientes en el EDT.
-     *
-     * @throws Exception si ocurre error al sincronizar con el EDT
-     */
-    private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {});
-    }
-
-    /**
      * Espera a que el panel tenga al menos el número mínimo de filas.
      *
      * @param panel  Panel a verificar
@@ -764,29 +730,7 @@ class PanelHallazgosSendTest {
      * @return Valor del campo como List
      * @throws Exception si ocurre error al acceder al campo
      */
-    @SuppressWarnings("unchecked")
     private List<?> obtenerCampoLista(Object objeto, String nombreCampo) throws Exception {
-        assertNotNull(objeto, "El objeto no puede ser null");
-        Field field = objeto.getClass().getDeclaredField(nombreCampo);
-        field.setAccessible(true);
-        return (List<?>) field.get(objeto);
-    }
-
-    /**
-     * Obtiene un campo de un objeto mediante reflexión.
-     *
-     * @param objeto      Objeto del cual obtener el campo
-     * @param nombreCampo Nombre del campo
-     * @param tipoEsperado Clase del tipo esperado
-     * @param <T> Tipo del campo
-     * @return Valor del campo
-     * @throws Exception si ocurre error al acceder al campo
-     */
-    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
-    private <T> T obtenerCampo(Object objeto, String nombreCampo, Class<T> tipoEsperado) throws Exception {
-        assertNotNull(objeto, "El objeto no puede ser null");
-        Field field = objeto.getClass().getDeclaredField(nombreCampo);
-        field.setAccessible(true);
-        return (T) field.get(objeto);
+        return obtenerCampo(objeto, nombreCampo, List.class);
     }
 }

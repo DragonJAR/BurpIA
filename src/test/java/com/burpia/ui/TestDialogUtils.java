@@ -230,22 +230,6 @@ public class TestDialogUtils {
         return VENTANAS_CAPTURADAS.size();
     }
 
-    /**
-     * Cuenta el numero de ventanas visibles actualmente.
-     * Util para debugging y validacion de limpieza.
-     *
-     * @return Numero de ventanas visibles
-     */
-    public static int contarVentanasVisibles() {
-        int count = 0;
-        for (Window ventana : Window.getWindows()) {
-            if (ventana != null && ventana.isVisible()) {
-                count++;
-            }
-        }
-        return count;
-    }
-
     private static void capturarDialogoMensajeSiAplica(JDialog dialogo) {
         if (dialogo == null || DIALOGOS_MENSAJE_PROCESADOS.contains(dialogo)) {
             return;

@@ -26,9 +26,11 @@ public class GestorConsolaGUI {
         ERROR
     }
 
-    private JTextPane consola;
-    private StyledDocument documento;
-    private boolean autoScroll;
+    // Escritos desde hilos de logging y leídos en el EDT (flushPendientesEnEdt):
+    // volatile garantiza visibilidad entre ambos.
+    private volatile JTextPane consola;
+    private volatile StyledDocument documento;
+    private volatile boolean autoScroll;
     private final AtomicInteger contadorInfo;
     private final AtomicInteger contadorVerbose;
     private final AtomicInteger contadorError;
@@ -437,6 +439,10 @@ public class GestorConsolaGUI {
         logsPendientes.set(0);
         stdoutOriginal = null;
         stderrOriginal = null;
+        // Invalidar referencias al documento/componente: un flush tardío en el
+        // EDT no debe seguir escribiendo en una consola ya desechada.
+        documento = null;
+        consola = null;
     }
 
     private void programarFlush() {

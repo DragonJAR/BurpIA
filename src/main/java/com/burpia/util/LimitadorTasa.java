@@ -148,7 +148,10 @@ public class LimitadorTasa {
      * en entornos multi-hilo.
      * </p>
      *
-     * @return el número de permisos disponibles, puede ser negativo si hay hilos esperando
+     * @return el número de permisos disponibles; puede ser negativo solo tras
+     *         {@link #ajustarMaximoConcurrente(int)} reducir el límite por debajo
+     *         de las operaciones actualmente en curso (los hilos en espera no
+     *         afectan a este valor)
      */
     public int permisosDisponibles() {
         return semaforo.availablePermits();

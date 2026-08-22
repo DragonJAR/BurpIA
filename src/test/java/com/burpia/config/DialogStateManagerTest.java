@@ -83,11 +83,30 @@ class DialogStateManagerTest {
     }
 
     @Test
+    void testConstructorRechazaGestorLoggingNulo() {
+        assertThrows(IllegalArgumentException.class, () -> new DialogStateManager(null),
+            "El constructor debe validar gestorLogging como hace ProviderConfigManager");
+    }
+
+    @Test
+    void testSnapshotUsaTimeoutPorDefectoSinBorradorNiConfig() {
+        // Sin borrador y con config sin timeout (mock devuelve 0), el snapshot
+        // debe usar EstadoProveedorUI.TIMEOUT_POR_DEFECTO, no un literal suelto.
+        when(uiProvider.obtenerEstadoProveedorActual()).thenReturn(null);
+
+        DialogStateManager.EstadoEdicionDialogo estado = stateManager.capturarEstadoActual(uiProvider);
+
+        DialogStateManager.EstadoProveedorSnapshot snapshot = estado.estadosProveedor().get("OpenAI");
+        assertNotNull(snapshot, "Debe existir snapshot para OpenAI");
+        assertEquals(EstadoProveedorUI.TIMEOUT_POR_DEFECTO, snapshot.timeout(),
+            "El timeout por defecto debe venir de EstadoProveedorUI.TIMEOUT_POR_DEFECTO");
+    }
+
+    @Test
     void testCapturarEstadoInicial() {
         stateManager.capturarEstadoInicial(uiProvider);
-        
+
         verify(gestorLogging).info(eq("DialogStateManager"), contains("Estado inicial capturado"));
-        assertEquals("OpenAI", stateManager.obtenerProveedorActual());
     }
 
     @Test
@@ -108,7 +127,6 @@ class DialogStateManagerTest {
     @Test
     void testCapturarEstadoInicialConUiProviderNuloNoLanza() {
         assertDoesNotThrow(() -> stateManager.capturarEstadoInicial(null));
-        assertNull(stateManager.obtenerProveedorActual());
         verify(gestorLogging).error(eq("DialogStateManager"), eq("UIProvider es nulo"));
     }
 

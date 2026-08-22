@@ -615,6 +615,32 @@ class ExtractorCamposRobustoTest {
         }
     }
 
+    @Nested
+    @DisplayName("Comillas escapadas en valores")
+    class ComillasEscapadas {
+
+        @Test
+        @DisplayName("No trunca el valor en comillas escapadas internas")
+        void noTruncaEnComillasEscapadas() {
+            String bloque = "{\"descripcion\": \"El parametro \\\"id\\\" es vulnerable a IDOR\"}";
+
+            String valor = ExtractorCamposRobusto.extraerCampoDeBloque(
+                ExtractorCamposRobusto.CamposHallazgo.DESCRIPCION, bloque);
+
+            assertTrue(valor.contains("id"), "El valor debe conservar el contenido entre comillas escapadas");
+            assertTrue(valor.contains("vulnerable"),
+                "El valor no debe truncarse en la primera comilla escapada");
+        }
+
+        @Test
+        @DisplayName("obtenerVariaciones es case-insensitive sin depender del Locale por defecto")
+        void obtenerVariacionesCaseInsensitive() {
+            String[] variaciones = ExtractorCamposRobusto.CamposHallazgo.obtenerVariaciones("DesCrIpCiOn");
+            assertTrue(contiene(variaciones, "descripcion"),
+                "Debe resolver el campo sin toLowerCase() dependiente de Locale");
+        }
+    }
+
     // Helper method
     private boolean contiene(String[] array, String valor) {
         for (String s : array) {

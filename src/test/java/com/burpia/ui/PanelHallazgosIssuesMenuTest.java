@@ -1,6 +1,5 @@
 package com.burpia.ui;
 
-import burp.api.montoya.MontoyaApi;
 import com.burpia.i18n.I18nUI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -8,10 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.swing.JCheckBox;
 import javax.swing.SwingUtilities;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,32 +15,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
 
 @DisplayName("PanelHallazgos Issues Menu Tests")
-class PanelHallazgosIssuesMenuTest {
-
-    private final List<PanelHallazgos> panelesCreados = new ArrayList<>();
+class PanelHallazgosIssuesMenuTest extends PanelTestBase {
 
     @AfterEach
     void resetIdioma() {
         I18nUI.establecerIdioma("es");
     }
 
-    @AfterEach
-    void destruirPaneles() {
-        // Cada PanelHallazgos arranca un Timer y un executor; sin destruirlos
-        // cada test fuga hilos que sobreviven al final de la clase.
-        for (PanelHallazgos panel : panelesCreados) {
-            panel.destruir();
-        }
-        panelesCreados.clear();
-    }
-
     @Test
     @DisplayName("Toggle de guardado automatico sincroniza estado interno y checkbox")
     void testToggleGuardadoAutomaticoSincronizaEstado() throws Exception {
-        PanelHallazgos panel = crearPanel(true);
+        PanelHallazgos panel = crearPanelHallazgos(true);
 
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
@@ -68,12 +51,12 @@ class PanelHallazgosIssuesMenuTest {
         Method metodo = PanelHallazgos.class.getDeclaredMethod("obtenerEtiquetaMenuIssues");
         metodo.setAccessible(true);
 
-        PanelHallazgos panelPro = crearPanel(true);
+        PanelHallazgos panelPro = crearPanelHallazgos(true);
         String etiquetaPro = (String) metodo.invoke(panelPro);
         assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES(), etiquetaPro,
             "En Burp Professional la etiqueta debe ser la estándar de envío a Issues");
 
-        PanelHallazgos panelCommunity = crearPanel(false);
+        PanelHallazgos panelCommunity = crearPanelHallazgos(false);
         String etiquetaCommunity = (String) metodo.invoke(panelCommunity);
         assertEquals(I18nUI.Hallazgos.MENU_ENVIAR_ISSUES_SOLO_PRO(), etiquetaCommunity,
             "En Community la etiqueta debe indicar que requiere Burp Professional");
@@ -82,7 +65,7 @@ class PanelHallazgosIssuesMenuTest {
     @Test
     @DisplayName("Permite establecer autoguardado de Issues programáticamente")
     void testSetterProgramaticoAutoguardadoIssues() throws Exception {
-        PanelHallazgos panel = crearPanel(true);
+        PanelHallazgos panel = crearPanelHallazgos(true);
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
         SwingUtilities.invokeAndWait(() -> panel.establecerGuardadoAutomaticoIssuesActivo(false));
@@ -99,7 +82,7 @@ class PanelHallazgosIssuesMenuTest {
     @Test
     @DisplayName("Community deshabilita integracion de Issues y muestra etiqueta solo Pro")
     void testCommunityDeshabilitaIntegracionIssues() throws Exception {
-        PanelHallazgos panel = crearPanel(false);
+        PanelHallazgos panel = crearPanelHallazgos(false);
 
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
@@ -116,7 +99,7 @@ class PanelHallazgosIssuesMenuTest {
     @DisplayName("Checkbox y etiquetas cambian idioma con aplicarIdioma")
     void testAplicarIdiomaActualizaEtiquetasIssues() throws Exception {
         I18nUI.establecerIdioma("es");
-        PanelHallazgos panel = crearPanel(true);
+        PanelHallazgos panel = crearPanelHallazgos(true);
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
 
         String etiquetaEspaniol = checkAutoIssues.getText();
@@ -138,7 +121,7 @@ class PanelHallazgosIssuesMenuTest {
     @Test
     @DisplayName("Setter de autoguardado es seguro fuera del EDT")
     void testSetterAutoguardadoSeguroFueraDelEdt() throws Exception {
-        PanelHallazgos panel = crearPanel(true);
+        PanelHallazgos panel = crearPanelHallazgos(true);
         JCheckBox checkAutoIssues = obtenerCampo(panel, "chkGuardarEnIssues", JCheckBox.class);
         AtomicReference<Throwable> error = new AtomicReference<>();
 
@@ -157,41 +140,5 @@ class PanelHallazgosIssuesMenuTest {
         assertNull(error.get(), "assertNull failed at PanelHallazgosIssuesMenuTest.java:141");
         assertFalse(panel.isGuardadoAutomaticoIssuesActivo(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:142");
         assertFalse(checkAutoIssues.isSelected(), "assertFalse failed at PanelHallazgosIssuesMenuTest.java:143");
-    }
-
-    /**
-     * Crea una instancia de PanelHallazgos con configuración mock.
-     *
-     * @param esBurpProfessional true para simular Burp Professional, false para Community
-     * @return instancia de PanelHallazgos creada en el EDT
-     */
-    private PanelHallazgos crearPanel(boolean esBurpProfessional) throws Exception {
-        MontoyaApi api = mock(MontoyaApi.class, org.mockito.Answers.RETURNS_DEEP_STUBS);
-        final PanelHallazgos[] holder = new PanelHallazgos[1];
-        SwingUtilities.invokeAndWait(() -> holder[0] = new PanelHallazgos(api, new ModeloTablaHallazgos(100), esBurpProfessional));
-        panelesCreados.add(holder[0]);
-        return holder[0];
-    }
-
-    /**
-     * Obtiene el valor de un campo privado mediante reflexión.
-     *
-     * @param target objeto del que obtener el campo
-     * @param nombre nombre del campo
-     * @param tipo   clase del tipo esperado
-     * @return valor del campo casteado al tipo especificado
-     */
-    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
-    private <T> T obtenerCampo(Object target, String nombre, Class<T> tipo) throws Exception {
-        Field field = target.getClass().getDeclaredField(nombre);
-        field.setAccessible(true);
-        return (T) field.get(target);
-    }
-
-    /**
-     * Espera a que todos los eventos pendientes en el EDT sean procesados.
-     */
-    private void flushEdt() throws Exception {
-        SwingUtilities.invokeAndWait(() -> {});
     }
 }

@@ -11,7 +11,6 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -96,12 +95,6 @@ class I18nReflectiveCoverageTest {
         if (valorEn != null && valorEn.isEmpty()) {
             fallas.add(ruta + " — slot EN vacío");
         }
-
-        // Verifica que NO sea el mismo string si es un par "real" (es != en).
-        // Permitimos identidad cuando ambos son símbolos/tokens (Ctrl+C, URL, etc.).
-        // No imponemos diferencia obligatoria — eso lo cubre el código de revisión.
-        // Solo verificamos no-vacío, que es el guardrail crítico.
-        assertTrue(true, "guard pasa si llegamos aquí sin agregar fallas");
     }
 
     private String invocar(Method metodo, String ruta, List<String> fallas) {

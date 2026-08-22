@@ -137,9 +137,10 @@ public final class ExtractorCamposRobusto {
                 return new String[0];
             }
 
-            String nombreLower = nombreCampo.toLowerCase();
+            // equalsIgnoreCase ya compara sin case: el toLowerCase() previo era
+            // redundante y, sin Locale.ROOT, susceptible al problema turco/azerí.
             for (Campo campo : TODOS) {
-                if (campo.obtenerNombre().equalsIgnoreCase(nombreLower)) {
+                if (campo.obtenerNombre().equalsIgnoreCase(nombreCampo)) {
                     return campo.obtenerVariaciones();
                 }
             }
@@ -321,9 +322,23 @@ public final class ExtractorCamposRobusto {
             return texto != null ? texto.length() : 0;
         }
 
-        int finComilla = texto.indexOf('"', inicio);
-        if (finComilla >= 0) {
-            return finComilla;
+        // Scanner con estado de escape: una comilla escapada (\") dentro del
+        // valor NO termina el campo; indexOf('"') la tomaba como cierre y
+        // truncaba el valor.
+        boolean escapado = false;
+        for (int i = inicio; i < texto.length(); i++) {
+            char actual = texto.charAt(i);
+            if (escapado) {
+                escapado = false;
+                continue;
+            }
+            if (actual == '\\') {
+                escapado = true;
+                continue;
+            }
+            if (actual == '"') {
+                return i;
+            }
         }
 
         return encontrarProximoCampo(texto, inicio);

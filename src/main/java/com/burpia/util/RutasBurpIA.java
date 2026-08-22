@@ -33,9 +33,6 @@ public final class RutasBurpIA {
     // obtenerNombreArchivoConfig no está sincronizada.
     private static volatile String configSuffixCache;
 
-    /** Nombre del directorio para almacenar evidencias HTTP. */
-    private static final String DIRECTORIO_EVIDENCIA = "evidence";
-
     /** Cache del directorio home del usuario para evitar llamadas repetidas a System.getProperty(). */
     private static volatile String cacheHomeUsuario;
 
@@ -92,18 +89,6 @@ public final class RutasBurpIA {
             suffix = "-" + suffix;
         }
         return suffix.isEmpty() ? ARCHIVO_CONFIG : "config" + suffix + ".json";
-    }
-
-    /**
-     * Obtiene la ruta al directorio donde se almacenan las evidencias HTTP.
-     * <p>
-     * El directorio de evidencias se encuentra en {@code ~/.burpia/evidence/}.
-     * </p>
-     *
-     * @return la ruta absoluta al directorio de evidencias
-     */
-    public static Path obtenerDirectorioEvidencia() {
-        return obtenerDirectorioBase().resolve(DIRECTORIO_EVIDENCIA);
     }
 
     /**

@@ -263,4 +263,65 @@ class ReparadorJsonTest {
             assertTrue(ReparadorJson.esJsonValido(resultado), "assertTrue failed at ReparadorJsonTest.java:263");
         }
     }
+
+    @Nested
+    @DisplayName("Heuristicas de reparacion (segunda pasada)")
+    class HeuristicasReparacion {
+
+        @Test
+        @DisplayName("No colapsa backslash escapado legitimo antes de delimitador de cierre")
+        void noColapsaBackslashEscapadoLegitimo() {
+            // Valor que termina en backslash ("C:\temp\") + coma final: el colapso
+            // \\" → \" dejaba el string sin cerrar y el JSON irreparable.
+            String json = "{\"ruta\": \"C:\\\\temp\\\\\", }";
+            String resultado = ReparadorJson.repararJson(json);
+            assertNotNull(resultado, "El JSON debe ser reparable conservando el backslash final");
+            assertTrue(ReparadorJson.esJsonValido(resultado), "El resultado debe ser JSON válido");
+            assertTrue(resultado.contains("temp"), "El valor debe conservar su contenido");
+        }
+
+        @Test
+        @DisplayName("Sigue colapsando doble escape cuando la comilla no cierra el valor")
+        void colapsaDobleEscapeCuandoNoEsCierre() {
+            // \" dentro del valor (seguido de más texto): sí debe colapsar a \"
+            String json = "{\"nota\": \"x\\\\\"y\", }";
+            String resultado = ReparadorJson.repararJson(json);
+            assertNotNull(resultado, "El JSON debe ser reparable colapsando el doble escape interno");
+            assertTrue(ReparadorJson.esJsonValido(resultado), "El resultado debe ser JSON válido");
+        }
+
+        @Test
+        @DisplayName("repararComas respeta comas y llaves dentro de strings")
+        void repararComasRespetaContenidoDeStrings() {
+            // La coma antes de } dentro del string es texto legitimo; la regex
+            // anterior la eliminaba corrompiendo el valor. Solo la coma final
+            // fuera del string debe eliminarse.
+            String json = "{\"nota\": \"ver items: a, }\", \"titulo\": \"x\", }";
+            String resultado = ReparadorJson.repararJson(json);
+            assertNotNull(resultado, "El JSON debe ser reparable");
+            assertTrue(ReparadorJson.esJsonValido(resultado), "El resultado debe ser JSON válido");
+            assertTrue(resultado.contains("a, }"), "El contenido del string no debe modificarse");
+        }
+
+        @Test
+        @DisplayName("repararComas inserta coma ausente entre strings adyacentes")
+        void repararComasInsertaComaEntreStrings() {
+            String json = "{\"a\": \"1\"  \"b\": \"2\"}";
+            String resultado = ReparadorJson.repararJson(json);
+            assertNotNull(resultado, "El JSON debe ser reparable insertando la coma ausente");
+            assertTrue(ReparadorJson.esJsonValido(resultado), "El resultado debe ser JSON válido");
+        }
+
+        @Test
+        @DisplayName("Repara campo evidencia con whitespace variable tras los dos puntos")
+        void reparaEvidenciaSinEspacioTrasDosPuntos() {
+            // Antes se exigía exactamente ": " → con ":  " (dos espacios) o ":"
+            // pegado no se reparaban las comillas sin escapar del HTML.
+            String conHtml = "{\"titulo\": \"XSS\", \"evidencia\":  \"<a href=\"test\">link</a>\"}";
+            String resultado = ReparadorJson.repararJson(conHtml);
+            assertNotNull(resultado, "El JSON debe ser reparable aun con whitespace extra tras ':'");
+            assertTrue(ReparadorJson.esJsonValido(resultado), "El resultado debe ser JSON válido");
+            assertTrue(resultado.contains("href"), "La evidencia HTML debe conservarse");
+        }
+    }
 }

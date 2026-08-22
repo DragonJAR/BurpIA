@@ -175,9 +175,9 @@ public class PanelTareas extends JPanel {
     }
 
     /**
-     * Construye el menÃº contextual segÃºn la selecciÃ³n actual de la tabla.
+     * Construye el menú contextual según la selección actual de la tabla.
      *
-     * @return el JPopupMenu a mostrar, o null si no hay selecciÃ³n vÃ¡lida.
+     * @return el JPopupMenu a mostrar, o null si no hay selección válida.
      */
     private JPopupMenu construirMenuContextualDinamico() {
         int[] filas = tabla.getSelectedRows();
@@ -445,18 +445,18 @@ public class PanelTareas extends JPanel {
     }
 
     /**
-     * PatrÃ³n unificado de confirmaciÃ³n + acciÃ³n sobre un lote de tareas.
+     * Patrón unificado de confirmación + acción sobre un lote de tareas.
      *
      * <p>Reemplaza la secuencia repetida "verificar total â si cero, info â confirmar â
-     * ejecutar" que vivÃ­a copiada en los botones de cancelar/limpiar y en las
-     * acciones de lote del menÃº contextual.
+     * ejecutar" que vivía copiada en los botones de cancelar/limpiar y en las
+     * acciones de lote del menú contextual.
      *
      * @param total            Cantidad de tareas candidatas; si es â¤ 0, muestra info y retorna.
      * @param msgSinTareas     Mensaje informativo cuando no hay tareas.
-     * @param tituloConfirmar  TÃ­tulo del diÃ¡logo de confirmaciÃ³n.
-     * @param msgConfirmar     Mensaje del diÃ¡logo de confirmaciÃ³n.
+     * @param tituloConfirmar  Título del diálogo de confirmación.
+     * @param msgConfirmar     Mensaje del diálogo de confirmación.
      * @param esAdvertencia    Si true usa confirmarAdvertencia; si false, confirmarPregunta.
-     * @param accion           AcciÃ³n a ejecutar tras confirmar.
+     * @param accion           Acción a ejecutar tras confirmar.
      */
     private void confirmarYEjecutarLote(int total, String msgSinTareas, String tituloConfirmar,
             String msgConfirmar, boolean esAdvertencia, Runnable accion) {
@@ -534,7 +534,7 @@ public class PanelTareas extends JPanel {
     }
 
     private void actualizarEstadisticas(boolean forzar) {
-        int versionActual = modelo != null ? modelo.obtenerVersion() : -1;
+        int versionActual = modelo.obtenerVersion();
         if (!forzar && versionActual == ultimaVersionTareas) {
             return;
         }
@@ -554,12 +554,9 @@ public class PanelTareas extends JPanel {
     }
 
     /**
-     * DRY: Obtiene estadísticas de forma segura, manejando null en modelo o en el resultado.
+     * DRY: Obtiene estadísticas de forma segura, manejando null en el resultado.
      */
     private ContadorEstadosTareas obtenerEstadisticasSeguras() {
-        if (modelo == null) {
-            return ContadorEstadosTareas.vacio();
-        }
         ContadorEstadosTareas resultado = modelo.contarEstados();
         return resultado != null ? resultado : ContadorEstadosTareas.vacio();
     }

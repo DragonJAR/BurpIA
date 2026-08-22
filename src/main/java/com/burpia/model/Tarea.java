@@ -220,15 +220,18 @@ public class Tarea {
     }
 
     public static String formatearDuracion(long milisegundos) {
-        long segundos = milisegundos / 1000;
-        long minutos = segundos / 60;
-        segundos = segundos % 60;
+        long totalSegundos = milisegundos / 1000;
+        long horas = totalSegundos / 3600;
+        long minutos = (totalSegundos % 3600) / 60;
+        long segundos = totalSegundos % 60;
 
+        if (horas > 0) {
+            return String.format("%dh %dm %ds", horas, minutos, segundos);
+        }
         if (minutos > 0) {
             return String.format("%dm %ds", minutos, segundos);
-        } else {
-            return String.format("%ds", segundos);
         }
+        return String.format("%ds", segundos);
     }
 
     public Object[] aFilaTabla() {

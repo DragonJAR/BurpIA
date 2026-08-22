@@ -42,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -1483,5 +1484,13 @@ class DialogoConfiguracionTimeoutPorModeloTest {
         SwingUtilities.invokeAndWait(() -> {
             // Cuerpo vacío intencional: fuerza el procesamiento de eventos pendientes
         });
+    }
+
+    @Test
+    @DisplayName("mostrarDialogo() fue eliminado por orphan (sin callers, retorno siempre true)")
+    void testMostrarDialogoEliminado() {
+        assertThrows(NoSuchMethodException.class,
+            () -> DialogoConfiguracion.class.getMethod("mostrarDialogo"),
+            "mostrarDialogo() no debe reintroducirse: el diálogo se abre con setVisible(true)");
     }
 }

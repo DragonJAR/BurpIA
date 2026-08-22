@@ -29,19 +29,23 @@ public final class FlowAnalysisRequestBuilder {
         StringBuilder encabezadosBuilder = new StringBuilder();
         StringBuilder cuerpoBuilder = new StringBuilder();
 
+        // Contador propio: numerar solo las entradas válidas, sin huecos
+        // cuando la lista contiene nulls.
+        int numeroPeticion = 0;
         for (int i = 0; i < solicitudes.size(); i++) {
             SolicitudAnalisis solicitud = solicitudes.get(i);
             if (solicitud == null) {
                 continue;
             }
+            numeroPeticion++;
 
-            encabezadosBuilder.append("[PETICIÓN ").append(i + 1).append("]\n");
+            encabezadosBuilder.append("[PETICIÓN ").append(numeroPeticion).append("]\n");
             encabezadosBuilder.append(solicitud.obtenerMetodo()).append(" ").append(solicitud.obtenerUrl()).append("\n");
             encabezadosBuilder.append(solicitud.obtenerEncabezados()).append("\n\n");
 
             String cuerpo = solicitud.obtenerCuerpo();
             if (Normalizador.noEsVacio(cuerpo)) {
-                cuerpoBuilder.append("[BODY PETICIÓN ").append(i + 1).append("]\n");
+                cuerpoBuilder.append("[BODY PETICIÓN ").append(numeroPeticion).append("]\n");
                 cuerpoBuilder.append(cuerpo).append("\n\n");
             }
         }

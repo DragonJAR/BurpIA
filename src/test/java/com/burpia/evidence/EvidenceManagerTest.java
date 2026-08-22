@@ -1,7 +1,6 @@
 package com.burpia.evidence;
 
 import burp.api.montoya.MontoyaApi;
-import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.logging.Logging;
 import burp.api.montoya.sitemap.SiteMap;
 import com.burpia.ExtensionBurpIA;
@@ -18,25 +17,17 @@ import static org.mockito.Mockito.*;
 
 public class EvidenceManagerTest {
 
-    private EvidenceManager evidenceManager;
     private MontoyaApi mockApi;
     private SiteMap mockSiteMap;
-    private HttpRequest mockRequest;
     private Hallazgo mockHallazgo;
 
     @BeforeEach
     void setUp() {
         mockApi = mock(MontoyaApi.class);
         mockSiteMap = mock(SiteMap.class);
-        mockRequest = mock(HttpRequest.class);
         mockHallazgo = mock(Hallazgo.class);
 
         when(mockApi.siteMap()).thenReturn(mockSiteMap);
-
-        try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
-            mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
-            evidenceManager = new EvidenceManager(mockApi);
-        }
     }
 
     @Test
@@ -138,6 +129,45 @@ public class EvidenceManagerTest {
 
             evidenceManagerPro.guardarHallazgosComoIssues(mockApi, Arrays.asList(hallazgo1, hallazgo2));
 
+            mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
+                any(MontoyaApi.class), any(Hallazgo.class)), times(2)
+            );
+        }
+    }
+
+    @Test
+    void guardarHallazgosComoIssues_conBurpCommunity_noIntentaNingunGuardado() {
+        // Early-return con un solo warning: en Community no debe iterar ni
+        // invocar el guardado por hallazgo.
+        MontoyaApi mockApiCommunity = mock(MontoyaApi.class);
+        when(mockApiCommunity.siteMap()).thenReturn(null);
+
+        try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
+            mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(false);
+
+            EvidenceManager evidenceManagerCommunity = new EvidenceManager(mockApiCommunity);
+            evidenceManagerCommunity.guardarHallazgosComoIssues(mockApiCommunity,
+                Arrays.asList(mock(Hallazgo.class), mock(Hallazgo.class), mock(Hallazgo.class)));
+
+            mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
+                any(MontoyaApi.class), any(Hallazgo.class)), never()
+            );
+        }
+    }
+
+    @Test
+    void guardarHallazgosComoIssues_conNullsEnLista_soloIntentaLosValidos() {
+        try (MockedStatic<ExtensionBurpIA> mockedExtension = mockStatic(ExtensionBurpIA.class)) {
+            mockedExtension.when(() -> ExtensionBurpIA.esBurpProfessional(any())).thenReturn(true);
+            mockedExtension.when(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(any(), any()))
+                          .thenReturn(true);
+
+            EvidenceManager evidenceManagerPro = new EvidenceManager(mockApi);
+
+            evidenceManagerPro.guardarHallazgosComoIssues(mockApi,
+                Arrays.asList(mock(Hallazgo.class), null, mock(Hallazgo.class)));
+
+            // Solo los 2 hallazgos no-null deben intentarse
             mockedExtension.verify(() -> ExtensionBurpIA.guardarAuditIssueDesdeHallazgo(
                 any(MontoyaApi.class), any(Hallazgo.class)), times(2)
             );

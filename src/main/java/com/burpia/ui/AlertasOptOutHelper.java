@@ -66,10 +66,10 @@ public final class AlertasOptOutHelper {
     }
 
     /**
-     * Registra que el usuario ha desactivado una alerta especÃ­fica.
+     * Registra que el usuario ha desactivado una alerta específica.
      *
-     * @param claveAlerta clave Ãºnica de la alerta (ver constantes de clase)
-     * @param config      configuraciÃ³n activa
+     * @param claveAlerta clave única de la alerta (ver constantes de clase)
+     * @param config      configuración activa
      */
     public static void registrarDeshabilitacion(String claveAlerta, ConfiguracionAPI config) {
         if (config == null || Normalizador.esVacio(claveAlerta)) {
@@ -79,14 +79,14 @@ public final class AlertasOptOutHelper {
     }
 
     /**
-     * EvalÃºa si las alertas de "enviar a" deben mostrarse, combinando el flag
-     * global de config con el opt-out especÃ­fico de la clave.
+     * Evalúa si las alertas de "enviar a" deben mostrarse, combinando el flag
+     * global de config con el opt-out específico de la clave.
      *
      * <p>Unifica el wrapper privado duplicado en FabricaMenuContextual y
      * PanelHallazgos.
      *
      * @param claveAlerta        Clave de opt-out (p.ej. {@link #ALERTA_MENU_ENVIAR_A}).
-     * @param config             ConfiguraciÃ³n activa (null-safe).
+     * @param config             Configuración activa (null-safe).
      * @param flagHabilitado     Supplier que indica si el flag global de config deja
      *                           mostrar la alerta; se invoca solo si config no es null.
      * @return {@code true} si la alerta debe mostrarse.
@@ -105,7 +105,7 @@ public final class AlertasOptOutHelper {
      * PanelHallazgos.
      *
      * @param claveAlerta        Clave de opt-out.
-     * @param config             ConfiguraciÃ³n activa.
+     * @param config             Configuración activa.
      * @param flagEstaba         Estado actual del flag global; si es false, no hace nada.
      * @param onChange           Callback a ejecutar tras deshabilitar (puede ser null).
      */
@@ -122,7 +122,7 @@ public final class AlertasOptOutHelper {
     }
 
     // alertasEnviarAHabilitadas(String, ConfiguracionAPI) removed (orphan):
-    // mÃ©todo estÃ¡tico bypassed por wrappers privados (sin args) en
+    // método estático bypassed por wrappers privados (sin args) en
     // FabricaMenuContextual y PanelHallazgos. Los callers reales usan
     // debeMostrarAlerta(claveAlerta, config) directamente, lo que hace este
     // wrapper redundante.

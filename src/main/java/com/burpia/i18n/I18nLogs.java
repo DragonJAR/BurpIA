@@ -557,6 +557,40 @@ public final class I18nLogs {
             return I18nUI.tr("No se pudo crear solicitud de análisis de flujo",
                     "Could not create flow analysis request");
         }
+
+        public static String ERROR_CREAR_SOLICITUD_FORZADA() {
+            return I18nUI.tr("No se pudo crear solicitud de análisis forzada",
+                    "Could not create forced analysis request");
+        }
+
+        public static String CAPTURA_PAUSADA() {
+            return I18nUI.tr("Captura pausada por usuario", "Capture paused by user");
+        }
+
+        public static String CAPTURA_REANUDADA() {
+            return I18nUI.tr("Captura reanudada por usuario", "Capture resumed by user");
+        }
+
+        public static String ERROR_CAMBIO_CONFIG_AGOTADO(int intentos) {
+            return I18nUI.trf("No se pudo aplicar el cambio de configuración tras %d reintentos por contención concurrente",
+                    "Could not apply configuration change after %d retries due to concurrent contention",
+                    intentos);
+        }
+
+        public static String TRAZA_RESPUESTA_RECIBIDA(String metodo, String url, int codigoEstado) {
+            return I18nUI.trf("Respuesta recibida: %s %s (estado: %d)",
+                    "Response received: %s %s (status: %d)", metodo, url, codigoEstado);
+        }
+
+        public static String TRAZA_SOLICITUD_DUPLICADA_OMITIDA(String url) {
+            return I18nUI.trf("Solicitud duplicada omitida: %s",
+                    "Skipped duplicate request: %s", url);
+        }
+
+        public static String TRAZA_NUEVA_SOLICITUD_REGISTRADA(String url, String hashAbreviado) {
+            return I18nUI.trf("Nueva solicitud registrada: %s (hash: %s...)",
+                    "New request recorded: %s (hash: %s...)", url, hashAbreviado);
+        }
     }
 
     /**
@@ -1031,6 +1065,16 @@ public final class I18nLogs {
         public static String INICIALIZACION_COMPLETA() {
             return tr("Inicialización completada exitosamente");
         }
+
+        public static String MANEJADOR_HTTP_REGISTRADO() {
+            return I18nUI.tr("Manejador HTTP registrado exitosamente",
+                    "HTTP handler registered successfully");
+        }
+
+        public static String MENU_CONTEXTUAL_REGISTRADO() {
+            return I18nUI.tr("Menu contextual de BurpIA registrado exitosamente",
+                    "BurpIA context menu registered successfully");
+        }
     }
 
     /**
@@ -1185,20 +1229,6 @@ public final class I18nLogs {
         public static String PROVEEDOR_AGREGADO_PRIMERA_POSICION(String proveedor) {
             return I18nUI.trf("Proveedor '%s' agregado a la primera posición en lista multi-proveedor",
                     "Provider '%s' added to first position in multi-provider list", proveedor);
-        }
-
-        public static String ERROR_VALIDACION_API_KEY(String proveedor, String prefijo) {
-            return I18nUI.trf(
-                    "Formato de API key inválido para %s. Debe comenzar con '%s' y no contener espacios",
-                    "Invalid API key format for %s. Must start with '%s' and contain no spaces",
-                    proveedor, prefijo);
-        }
-
-        public static String ERROR_BINARIO_SEGMENTOS_INVALIDOS() {
-            return I18nUI.tr(
-                    "El ejecutable contiene segmentos inválidos (..)",
-                    "Executable contains invalid segments (..)"
-            );
         }
     }
 

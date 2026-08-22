@@ -41,8 +41,11 @@ public class EstilosUI {
     public static Font FUENTE_MONO = new Font(FUENTE_POR_DEFECTO, Font.PLAIN, TAMANIO_MONO_POR_DEFECTO);
     public static Font FUENTE_MONO_NEGRITA = new Font(FUENTE_POR_DEFECTO, Font.BOLD, TAMANIO_MONO_POR_DEFECTO);
 
-    // Aliases para semántica - referencian las bases (se actualizan en actualizarFuentes)
-    public static Font FUENTE_TABLA = FUENTE_ESTANDAR;
+    // Aliases para semántica - referencian las bases (se actualizan en actualizarFuentes).
+    // FUENTE_TABLA deriva de FUENTE_MONO también en la inicialización: actualizarFuentes
+    // siempre la deriva de la fuente mono (alineación tabular de columnas numéricas);
+    // inicializarla como alias de FUENTE_ESTANDAR contradecía ese contrato.
+    public static Font FUENTE_TABLA = FUENTE_MONO;
     public static Font FUENTE_CAMPO_TEXTO = FUENTE_ESTANDAR;
     public static Font FUENTE_BOTON_PRINCIPAL = FUENTE_MONO_NEGRITA;
     public static Font FUENTE_TITULO_BANNER = new Font(FUENTE_POR_DEFECTO, Font.BOLD, (int) (TAMANIO_ESTANDAR_POR_DEFECTO * PROPORCION_BANNER));

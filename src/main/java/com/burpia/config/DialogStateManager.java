@@ -28,6 +28,10 @@ public final class DialogStateManager {
     // (orphan): solo los usaban los métodos que también eran orphan.
 
     public DialogStateManager(GestorLoggingUnificado gestorLogging) {
+        if (gestorLogging == null) {
+            throw new IllegalArgumentException(
+                    com.burpia.i18n.I18nUI.General.ERROR_ARGUMENTO_NULO("gestorLogging"));
+        }
         this.gestorLogging = gestorLogging;
     }
 
@@ -161,12 +165,9 @@ public final class DialogStateManager {
         return !estadoInicial.equals(estadoActual);
     }
 
-    /**
-     * Obtiene el proveedor actual seleccionado en la UI.
-     */
-    public String obtenerProveedorActual() {
-        return proveedorActualUi;
-    }
+    // obtenerProveedorActual() removido (orphan): no tenía callers en producción
+    // (solo tests) y su valor quedaba desactualizado tras capturas posteriores,
+    // lo que lo hacía potencialmente engañoso.
 
     // Métodos removidos (orphan): obtenerCambiosDetectados,
     // gestionarCambioProveedor, guardarEstadoTemporalProveedor,
@@ -206,7 +207,7 @@ public final class DialogStateManager {
 
         int maxTokens = maxTokensConfigurado != null ? maxTokensConfigurado : 
                         configProveedor != null ? configProveedor.obtenerMaxTokensPorDefecto() : 0;
-        int timeout = timeoutConfigurado > 0 ? timeoutConfigurado : 120;
+        int timeout = timeoutConfigurado > 0 ? timeoutConfigurado : EstadoProveedorUI.TIMEOUT_POR_DEFECTO;
 
         String baseUrl = configuracion.obtenerUrlBaseParaProveedor(proveedor);
         if (Normalizador.esVacio(baseUrl) && configProveedor != null) {

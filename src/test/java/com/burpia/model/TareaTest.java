@@ -402,6 +402,14 @@ class TareaTest {
         }
 
         @Test
+        @DisplayName("formatearDuracion estatico con horas")
+        void testFormatearDuracionEstaticoHoras() {
+            assertEquals("1h 0m 0s", Tarea.formatearDuracion(3600000), "1 hora exacta debe formatearse con horas");
+            assertEquals("1h 15m 30s", Tarea.formatearDuracion(4530000), "Debe combinar horas, minutos y segundos");
+            assertEquals("2h 5m 0s", Tarea.formatearDuracion(7500000), "125 minutos no deben mostrarse como '125m'");
+        }
+
+        @Test
         @DisplayName("formatearDuracion de instancia")
         void testFormatearDuracionInstancia() throws InterruptedException {
             Tarea tarea = new Tarea("1", "Test", "url", Tarea.ESTADO_EN_COLA);

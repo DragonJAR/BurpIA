@@ -5,13 +5,11 @@ import com.burpia.i18n.I18nUI;
 import com.burpia.model.Estadisticas;
 import com.burpia.model.Hallazgo;
 import burp.api.montoya.MontoyaApi;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
-import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -27,7 +25,7 @@ import static org.mockito.Mockito.when;
  * 3. Limpiar la tabla
  */
 @DisplayName("PanelEstadisticas Integración Eliminación Tests")
-class PanelEstadisticasEliminacionTest {
+class PanelEstadisticasEliminacionTest extends PanelTestBase {
 
     private ModeloTablaHallazgos modelo;
     private PanelHallazgos panelHallazgos;
@@ -56,19 +54,11 @@ class PanelEstadisticasEliminacionTest {
             );
             panelHallazgos.establecerManejadorFiltrosAplicados(panelEstadisticas::actualizarForzado);
         });
-    }
 
-    @AfterEach
-    void tearDown() {
-        // Ambos paneles arrancan Timers/executors; destruirlos evita fugas de hilos.
-        if (panelEstadisticas != null) {
-            panelEstadisticas.destruir();
-            panelEstadisticas = null;
-        }
-        if (panelHallazgos != null) {
-            panelHallazgos.destruir();
-            panelHallazgos = null;
-        }
+        // Ambos paneles arrancan Timers/executors; la base los destruye al
+        // final de cada test para evitar fugas de hilos.
+        registrarDestruccion(panelEstadisticas::destruir);
+        registrarDestruccion(panelHallazgos::destruir);
     }
 
     @Test
@@ -254,16 +244,10 @@ class PanelEstadisticasEliminacionTest {
     }
 
     private String obtenerTextoEtiqueta(PanelEstadisticas panel, String nombreCampo) throws Exception {
-        Field field = PanelEstadisticas.class.getDeclaredField(nombreCampo);
-        field.setAccessible(true);
-        JLabel etiqueta = (JLabel) field.get(panel);
-        return etiqueta.getText();
+        return obtenerCampo(panel, nombreCampo, JLabel.class).getText();
     }
 
-    @SuppressWarnings({"unchecked", "PMD.UnusedFormalParameter"})
     private <T> T obtenerCampoPanelHallazgos(String nombreCampo, Class<T> tipoEsperado) throws Exception {
-        Field field = PanelHallazgos.class.getDeclaredField(nombreCampo);
-        field.setAccessible(true);
-        return (T) field.get(panelHallazgos);
+        return obtenerCampo(panelHallazgos, nombreCampo, tipoEsperado);
     }
 }

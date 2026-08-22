@@ -31,7 +31,7 @@ public class GestorTareas {
 
     private static final long INTERVALO_VERIFICACION_MS = 30000;
     private static final long TAREA_ATASCADA_MS = 300000;
-    private static final int MAX_TAREAS_FINALIZADAS_RETENIDAS_POR_DEFECTO = 2000;
+    public static final int MAX_TAREAS_FINALIZADAS_RETENIDAS_POR_DEFECTO = 2000;
 
     public GestorTareas(ModeloTablaTareas modeloTabla, Consumer<String> logger) {
         this(modeloTabla, logger, MAX_TAREAS_FINALIZADAS_RETENIDAS_POR_DEFECTO);

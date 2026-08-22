@@ -250,4 +250,41 @@ class ConfigValidatorTest {
 
         assertTrue(resultado.esValido(), "assertTrue failed at ConfigValidatorTest.java:125");
     }
+
+    @Test
+    @DisplayName("OpenAI permite HTTP para loopback IPv6 con corchetes")
+    void testValidarUrlApiPermiteLoopbackIpv6ConCorchetes() {
+        // URI.getHost() devuelve "[::1]" CON corchetes para la forma literal;
+        // la comparación solo contra "::1" nunca matcheaba y exigía HTTPS.
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "http://[::1]:8080/v1",
+            "OpenAI"
+        );
+
+        assertTrue(resultado.esValido(), "http://[::1] debe reconocerse como loopback HTTP permitido");
+    }
+
+    @Test
+    @DisplayName("OpenAI sigue exigiendo HTTPS para hosts remotos")
+    void testValidarUrlApiExigeHttpsParaHostRemoto() {
+        ConfigValidator.ValidationResult resultado = ConfigValidator.validarUrlApi(
+            "http://example.com/v1",
+            "OpenAI"
+        );
+
+        assertFalse(resultado.esValido(), "HTTP remoto debe seguir rechazándose para OpenAI");
+    }
+
+    @Test
+    @DisplayName("validarMaxTokens usa el rango canónico MAX_TOKENS_MINIMO/MAXIMO")
+    void testValidarMaxTokensRangoCanonico() {
+        assertFalse(ConfigValidator.validarMaxTokens(ConfigValidator.MAX_TOKENS_MINIMO - 1).esValido(),
+            "Un valor bajo el mínimo canónico debe ser inválido");
+        assertTrue(ConfigValidator.validarMaxTokens(ConfigValidator.MAX_TOKENS_MINIMO).esValido(),
+            "El mínimo canónico debe ser válido");
+        assertTrue(ConfigValidator.validarMaxTokens(ConfigValidator.MAX_TOKENS_MAXIMO).esValido(),
+            "El máximo canónico debe ser válido");
+        assertFalse(ConfigValidator.validarMaxTokens(ConfigValidator.MAX_TOKENS_MAXIMO + 1).esValido(),
+            "Un valor sobre el máximo canónico debe ser inválido");
+    }
 }

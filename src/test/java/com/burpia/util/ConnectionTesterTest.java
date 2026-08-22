@@ -26,7 +26,6 @@ class ConnectionTesterTest {
 
     private MockWebServer mockWebServer;
     private ConnectionTester connectionTester;
-    private ConfiguracionAPI config;
     private boolean servidorActivo;
 
     @BeforeEach
@@ -36,11 +35,6 @@ class ConnectionTesterTest {
         servidorActivo = true;
 
         connectionTester = new ConnectionTester();
-        config = new ConfiguracionAPI();
-        config.establecerProveedorAI("OpenAI");
-        config.establecerClaveApi("test-key");
-        config.establecerUrlApi(mockWebServer.url("/v1/models").toString());
-        config.establecerModelo("gpt-3.5-turbo");
     }
 
     @AfterEach

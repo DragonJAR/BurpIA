@@ -1,6 +1,5 @@
 package com.burpia.config;
 
-import com.burpia.i18n.I18nLogs;
 import com.burpia.i18n.I18nUI;
 import com.burpia.util.GestorLoggingUnificado;
 import com.burpia.util.Normalizador;
@@ -25,6 +24,13 @@ import static com.burpia.util.Normalizador.esVacio;
 public final class ConfigValidator {
 
     private static final String ORIGEN_LOG = "ConfigValidator";
+
+    /**
+     * Rango canónico de maxTokens. Hogar único del rango 1..200000:
+     * lo referencian la vista (input verifier) y el controlador (validación de borradores).
+     */
+    public static final int MAX_TOKENS_MINIMO = 1;
+    public static final int MAX_TOKENS_MAXIMO = 200000;
 
     // Prefijos de API key por proveedor
     private static final String OPENAI_API_KEY_PREFIX = "sk-";
@@ -169,7 +175,7 @@ public final class ConfigValidator {
         }
 
         return ValidationResult.invalido(
-            I18nLogs.Configuracion.ERROR_VALIDACION_API_KEY(proveedor, prefijoEsperado),
+            I18nUI.Configuracion.ERROR_VALIDACION_API_KEY(proveedor, prefijoEsperado),
             "apiKey"
         );
     }
@@ -260,7 +266,12 @@ public final class ConfigValidator {
         }
         try {
             String host = new URI(url).getHost();
-            return "localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host) || "::1".equals(host);
+            // URI.getHost() puede devolver IPv6 con corchetes ("[::1]") según la
+            // forma literal de la URL; aceptar ambas representaciones de loopback.
+            return "localhost".equalsIgnoreCase(host)
+                    || "127.0.0.1".equals(host)
+                    || "::1".equals(host)
+                    || "[::1]".equals(host);
         } catch (URISyntaxException e) {
             return false;
         }
@@ -328,23 +339,6 @@ public final class ConfigValidator {
     }
 
     /**
-     * Valida el número máximo de tareas en tabla.
-     *
-     * @param maximoTareas el valor a validar
-     * @return resultado de la validación
-     */
-    public static ValidationResult validarMaximoTareas(int maximoTareas) {
-        return validarRangoEntero(
-            maximoTareas,
-            ConfiguracionAPI.MINIMO_TAREAS_TABLA,
-            ConfiguracionAPI.MAXIMO_TAREAS_TABLA,
-            I18nUI.trf("Máximo de tareas debe estar entre %d y %d", "Max tasks must be between %d and %d", 
-                        ConfiguracionAPI.MINIMO_TAREAS_TABLA, ConfiguracionAPI.MAXIMO_TAREAS_TABLA),
-            "maximoTareas"
-        );
-    }
-
-    /**
      * Valida el timeout en segundos para un modelo.
      *
      * @param timeoutSegundos el valor a validar
@@ -369,9 +363,10 @@ public final class ConfigValidator {
     public static ValidationResult validarMaxTokens(int maxTokens) {
         return validarRangoEntero(
             maxTokens,
-            1,
-            200000,
-            I18nUI.trf("Máximo de tokens debe estar entre %d y %d", "Max tokens must be between %d and %d", 1, 200000),
+            MAX_TOKENS_MINIMO,
+            MAX_TOKENS_MAXIMO,
+            I18nUI.trf("Máximo de tokens debe estar entre %d y %d", "Max tokens must be between %d and %d",
+                    MAX_TOKENS_MINIMO, MAX_TOKENS_MAXIMO),
             "maxTokens"
         );
     }
@@ -428,39 +423,6 @@ public final class ConfigValidator {
         return ValidationResult.valido();
     }
 
-    /**
-     * Valida un prompt de agente (preflight o principal).
-     *
-     * @param promptAgente el prompt del agente a validar
-     * @return resultado de la validación
-     */
-    public static ValidationResult validarPromptAgente(String promptAgente) {
-        if (esVacio(promptAgente)) {
-            return ValidationResult.invalido(
-                I18nUI.tr("El prompt del agente no puede estar vacío", "Agent prompt cannot be empty"), 
-                "promptAgente"
-            );
-        }
-
-        String promptNormalizado = Normalizador.normalizarTexto(promptAgente);
-        
-        if (promptNormalizado.length() < 5) {
-            return ValidationResult.invalido(
-                I18nUI.tr("El prompt del agente es demasiado corto. Mínimo 5 caracteres", "Agent prompt too short. Minimum 5 characters"), 
-                "promptAgente"
-            );
-        }
-
-        if (promptNormalizado.length() > 5000) {
-            return ValidationResult.invalido(
-                I18nUI.tr("El prompt del agente es demasiado largo. Máximo 5000 caracteres", "Agent prompt too long. Maximum 5000 characters"), 
-                "promptAgente"
-            );
-        }
-
-        return ValidationResult.valido();
-    }
-
     // ============ VALIDACIÓN DE COMANDOS/RUTAS DE BINARIOS ============
 
     /**
@@ -498,7 +460,7 @@ public final class ConfigValidator {
 
         if (contieneSegmentoTraversal(ejecutable) || contieneSegmentoTraversal(ejecutableResuelto)) {
             return ValidationResult.invalido(
-                I18nLogs.Configuracion.ERROR_BINARIO_SEGMENTOS_INVALIDOS(),
+                I18nUI.Configuracion.ERROR_BINARIO_SEGMENTOS_INVALIDOS(),
                 "rutaBinario"
             );
         }
@@ -521,47 +483,6 @@ public final class ConfigValidator {
     }
 
     // ============ VALIDACIÓN DE CONFIGURACIÓN COMPLETA ============
-
-    /**
-     * Valida una configuración completa de proveedor.
-     *
-     * @param configuracion la configuración a validar
-     * @return resultado de la validación
-     */
-    public static ValidationResult validarConfiguracionProveedor(ConfiguracionAPI configuracion) {
-        if (configuracion == null) {
-            return ValidationResult.invalido(
-                I18nUI.Configuracion.MSG_CONFIGURACION_NULA(), 
-                "configuracion"
-            );
-        }
-
-        String proveedor = configuracion.obtenerProveedorAI();
-        ValidationResult resultadoProveedor = validarProveedor(proveedor);
-        if (!resultadoProveedor.esValido()) {
-            return resultadoProveedor;
-        }
-
-        String apiKey = configuracion.obtenerClaveApi();
-        ValidationResult resultadoApiKey = validarApiKey(apiKey, proveedor);
-        if (!resultadoApiKey.esValido()) {
-            return resultadoApiKey;
-        }
-
-        String url = configuracion.obtenerUrlApi();
-        ValidationResult resultadoUrl = validarUrlApi(url, proveedor);
-        if (!resultadoUrl.esValido()) {
-            return resultadoUrl;
-        }
-
-        String modelo = configuracion.obtenerModelo();
-        ValidationResult resultadoModelo = validarModelo(modelo, proveedor);
-        if (!resultadoModelo.esValido()) {
-            return resultadoModelo;
-        }
-
-        return ValidationResult.valido();
-    }
 
     /**
      * Valida que un proveedor sea válido.
