@@ -149,8 +149,10 @@ El proyecto usa **español** para casi todo, siguiendo estas reglas:
 ### Internacionalización (i18n)
 
 BurpIA es multi-idioma. **NUNCA** uses strings "hardcoded" para mensajes de usuario o logs:
-- Usa `I18nUI.obtenerMensaje("clave")` para la interfaz.
-- Usa `I18nLogs.obtenerLog("clave")` para la consola y logs.
+- Usa los métodos estáticos de `I18nUI` (clases internas como `I18nUI.Configuracion`, o `I18nUI.tr(es, en)` / `I18nUI.trf(...)` para pares español/inglés) para la interfaz.
+- Usa `I18nLogs.tr(mensaje)` / `I18nLogs.trf(formato, args)` para la consola y logs.
+
+Consulta la sección 7 de `AGENTS.md` para las reglas completas de internacionalización.
 
 ## 🧪 Calidad y Tests
 
