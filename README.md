@@ -37,9 +37,11 @@ This extension turns passive HTTP traffic into actionable security findings. It 
 | Requirement | Detail |
 |-------------|--------|
 | Burp Suite | Community or Professional |
+| Operating system | macOS, Linux, or Windows |
 | Java | 17+ (bundled JRE in native Burp installers works) |
 | LLM access | API key for a cloud provider, local Ollama, or LM Studio |
 | CLI agent (optional) | One of: droid, claude, agy, opencode, grok, codex |
+| UI language | Spanish or English (switchable in settings) |
 
 ## 🚀 Quick Start (3 minutes)
 
@@ -106,6 +108,41 @@ Autonomous validation agents integrated with Burp Suite MCP:
 
 If you omit these tokens, BurpIA automatically appends a security block (fallback) to keep minimum context and enforce the configured language.
 
+## 🚀 Usage Example
+
+Custom prompt targeting an authentication flow (2 requests analyzed as one):
+
+```
+You are a web security auditor. Focus ONLY on authentication and session logic.
+
+Request 1 (login):
+{REQUEST_1}
+Response 1:
+{RESPONSE_1}
+
+Request 2 (password change):
+{REQUEST_2}
+Response 2:
+{RESPONSE_2}
+
+Report findings in {OUTPUT_LANGUAGE} with severity, confidence, and remediation.
+```
+
+Typical finding produced by BurpIA (rendered in the results table):
+
+```
+Title:    Password change endpoint accepts old password indefinitely
+Severity: High · Confidence: Certain
+Endpoint: POST /api/v2/account/password  (200 OK)
+Evidence: The password-change flow succeeded using the pre-login session
+          token, indicating missing re-authentication and no rotation of
+          existing sessions.
+Remedy:   Require current-password verification and invalidate all active
+          sessions after a successful change.
+```
+
+From the table you can send it to **Burp Repeater** for manual validation, export it (CSV/JSON), or dispatch it to a CLI agent for deeper validation via Burp MCP.
+
 ## 📸 Screenshots
 
 | Dashboard (ES) | Agent validation | Validated findings in Repeater |
@@ -116,6 +153,8 @@ If you omit these tokens, BurpIA automatically appends a security block (fallbac
 
 - **New LLM providers:** DeepSeek (v4-flash/v4-pro), xAI Grok (grok-4.3/4), Ollama Cloud, Sakana Fugu.
 - **New CLI agent:** Grok CLI with binary auto-detection and controlled permissions.
+
+Full release history: see the [releases page](https://github.com/DragonJAR/BurpIA/releases) and `git tag` history.
 
 ## 💡 Best Practices
 

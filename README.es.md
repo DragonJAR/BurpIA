@@ -37,9 +37,11 @@ Esta extensión convierte tráfico HTTP pasivo en hallazgos de seguridad acciona
 | Requisito | Detalle |
 |-----------|---------|
 | Burp Suite | Community o Professional |
+| Sistema operativo | macOS, Linux o Windows |
 | Java | 17+ (el JRE incluido en los instaladores nativos de Burp funciona) |
 | Acceso a LLM | API key de un proveedor cloud, Ollama local, o LM Studio |
 | Agente CLI (opcional) | Uno de: droid, claude, agy, opencode, grok, codex |
+| Idioma de la interfaz | Español o inglés (intercambiable en ajustes) |
 
 ## 🚀 Inicio rápido (3 minutos)
 
@@ -106,6 +108,41 @@ Agentes de validación autónomos integrados con Burp Suite MCP:
 
 Si omites estos tokens, BurpIA agrega automáticamente un bloque de seguridad (fallback) para mantener el contexto mínimo y forzar el idioma configurado.
 
+## 🚀 Ejemplo de uso
+
+Prompt personalizado para un flujo de autenticación (2 peticiones analizadas como una sola):
+
+```
+Eres un auditor de seguridad web. Céntrate SOLO en lógica de autenticación y sesión.
+
+Petición 1 (login):
+{REQUEST_1}
+Respuesta 1:
+{RESPONSE_1}
+
+Petición 2 (cambio de contraseña):
+{REQUEST_2}
+Respuesta 2:
+{RESPONSE_2}
+
+Reporta los hallazgos en {OUTPUT_LANGUAGE} con severidad, confianza y remediación.
+```
+
+Hallazgo típico producido por BurpIA (tal como se ve en la tabla de resultados):
+
+```
+Título:    El endpoint de cambio de contraseña acepta la contraseña antigua indefinidamente
+Severidad: Alta · Confianza: Cierta
+Endpoint:  POST /api/v2/account/password  (200 OK)
+Evidencia: El flujo de cambio de contraseña se completó usando el token de
+           sesión pre-login, lo que indica ausencia de re-autenticación y de
+           rotación de sesiones activas.
+Remedio:   Exigir verificación de la contraseña actual e invalidar todas las
+           sesiones activas tras un cambio exitoso.
+```
+
+Desde la tabla puedes enviarlo a **Burp Repeater** para validación manual, exportarlo (CSV/JSON) o despacharlo a un agente CLI para validación más profunda vía Burp MCP.
+
 ## 📸 Capturas
 
 | Panel principal (ES) | Validación con agente | Hallazgos validados en Repeater |
@@ -116,6 +153,8 @@ Si omites estos tokens, BurpIA agrega automáticamente un bloque de seguridad (f
 
 - **Nuevos proveedores LLM:** DeepSeek (v4-flash/v4-pro), xAI Grok (grok-4.3/4), Ollama Cloud, Sakana Fugu.
 - **Nuevo agente CLI:** Grok CLI con detección automática de binario y permisos controlados.
+
+Historial completo de versiones: consulta la [página de releases](https://github.com/DragonJAR/BurpIA/releases) y los tags de git.
 
 ## 💡 Buenas prácticas
 
