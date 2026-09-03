@@ -230,7 +230,7 @@ class GestorConfiguracionTest {
             "assertTrue failed at GestorConfiguracionTest.java:208");
         assertFalse(cargada.agenteHabilitado(AgenteTipo.FACTORY_DROID.name()),
             "assertFalse failed at GestorConfiguracionTest.java:210");
-        assertFalse(cargada.agenteHabilitado(AgenteTipo.GEMINI_CLI.name()),
+        assertFalse(cargada.agenteHabilitado(AgenteTipo.ANTIGRAVITY_CLI.name()),
             "assertFalse failed at GestorConfiguracionTest.java:212");
         assertFalse(cargada.agenteHabilitado(AgenteTipo.OPEN_CODE.name()),
             "assertFalse failed at GestorConfiguracionTest.java:214");

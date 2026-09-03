@@ -68,14 +68,14 @@ class SubmitSequenceFactoryTest {
     }
 
     @Nested
-    @DisplayName("construir para Gemini CLI")
-    class GeminiCliTests {
+    @DisplayName("construir para Antigravity CLI")
+    class AntigravityCliTests {
 
         @Test
         @DisplayName("usa SMART_FALLBACK igual que Factory Droid")
         void usaSmartFallback() {
             SubmitSequenceFactory.SubmitSequence secuencia = SubmitSequenceFactory.construir(
-                AgenteTipo.GEMINI_CLI,
+                AgenteTipo.ANTIGRAVITY_CLI,
                 SubmitSequenceFactory.Plataforma.LINUX
             );
 

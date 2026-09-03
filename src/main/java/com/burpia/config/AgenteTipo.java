@@ -19,12 +19,18 @@ public enum AgenteTipo {
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-CLAUDE-ES.md",
             "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-CLAUDE-EN.md"
     ),
-    GEMINI_CLI(
-            "Gemini CLI",
-            "~/.local/bin/gemini --yolo",
-            "%USERPROFILE%\\bin\\gemini.exe --yolo",
-            "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-ES.md",
-            "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-GEMINI-EN.md"
+    // Antigravity CLI (Google). Sin flag CLI de permisos: la autonomía se
+    // configura con la lista "allow" de ~/.gemini/antigravity-cli/settings.json
+    // (motor fine-grained deny>ask>allow; p.ej. mcp(*) y command(*)).
+    // Rutas oficiales del instalador: ~/.local/bin/agy (Unix) y
+    // %LOCALAPPDATA%\agy\bin (Windows). TUI estándar: cae al submit sequence
+    // por defecto como Grok/OpenCode.
+    ANTIGRAVITY_CLI(
+            "Antigravity CLI",
+            "~/.local/bin/agy",
+            "%USERPROFILE%\\AppData\\Local\\agy\\bin\\agy.exe",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-ANTIGRAVITY-ES.md",
+            "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-ANTIGRAVITY-EN.md"
     ),
     OPEN_CODE(
             "Open Code",
@@ -47,7 +53,7 @@ public enum AgenteTipo {
     // Codex CLI (OpenAI). --yolo equivale a approval_policy="never" +
     // sandbox_mode="danger-full-access" (autonomía total sin prompts).
     // Config en ~/.codex/config.toml. TUI estándar (Rust): cae al submit
-    // sequence por defecto como Grok/Gemini/OpenCode.
+    // sequence por defecto como Grok/Antigravity/OpenCode.
     CODEX_CLI(
             "Codex CLI",
             "~/.local/bin/codex --yolo",

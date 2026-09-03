@@ -518,12 +518,12 @@ class PanelAgenteTransporteTest {
         config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
         config.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
         config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
-        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.ANTIGRAVITY_CLI.name(), true);
         config.establecerAgenteHabilitado(AgenteTipo.OPEN_CODE.name(), true);
         String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
         config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), binarioExistente);
-        config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.ANTIGRAVITY_CLI.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), binarioExistente);
 
         PanelAgente panel = crearPanelSinConsola(config);
@@ -536,7 +536,7 @@ class PanelAgenteTransporteTest {
             assertEquals(AgenteTipo.CLAUDE_CODE.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:268");
 
             invocarCambiarAgenteRapido(panel);
-            assertEquals(AgenteTipo.GEMINI_CLI.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:272");
+            assertEquals(AgenteTipo.ANTIGRAVITY_CLI.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:272");
 
             invocarCambiarAgenteRapido(panel);
             assertEquals(AgenteTipo.OPEN_CODE.name(), config.obtenerTipoAgente(), "assertEquals failed at PanelAgenteTransporteTest.java:276");
@@ -557,11 +557,11 @@ class PanelAgenteTransporteTest {
         String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
         config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
         config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
-        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.ANTIGRAVITY_CLI.name(), true);
         config.establecerAgenteHabilitado(AgenteTipo.OPEN_CODE.name(), true);
         config.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
         config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), binarioExistente);
-        config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), "/ruta/inexistente/gemini");
+        config.establecerRutaBinarioAgente(AgenteTipo.ANTIGRAVITY_CLI.name(), "/ruta/inexistente/agy");
         config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), "/ruta/inexistente/opencode");
         config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), binarioExistente);
 
@@ -592,11 +592,11 @@ class PanelAgenteTransporteTest {
         config.establecerAgenteHabilitado(AgenteTipo.OPEN_CODE.name(), true);
         config.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
         config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
-        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.ANTIGRAVITY_CLI.name(), true);
         config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), "/ruta/inexistente/droid");
         config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), "/ruta/inexistente/claude");
-        config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), "/ruta/inexistente/gemini");
+        config.establecerRutaBinarioAgente(AgenteTipo.ANTIGRAVITY_CLI.name(), "/ruta/inexistente/agy");
 
         PanelAgente panel = crearPanelSinConsola(config);
         try {
@@ -623,17 +623,17 @@ class PanelAgenteTransporteTest {
         String binarioExistente = OSUtils.esWindows() ? "cmd.exe" : "sh";
         config.establecerTipoAgente(AgenteTipo.FACTORY_DROID.name());
         config.establecerAgenteHabilitado(AgenteTipo.FACTORY_DROID.name(), true);
-        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), true);
+        config.establecerAgenteHabilitado(AgenteTipo.ANTIGRAVITY_CLI.name(), true);
         config.establecerRutaBinarioAgente(AgenteTipo.FACTORY_DROID.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.CLAUDE_CODE.name(), "/ruta/inexistente/claude");
-        config.establecerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name(), binarioExistente);
+        config.establecerRutaBinarioAgente(AgenteTipo.ANTIGRAVITY_CLI.name(), binarioExistente);
         config.establecerRutaBinarioAgente(AgenteTipo.OPEN_CODE.name(), "/ruta/inexistente/opencode");
 
         PanelAgente panel = crearPanelSinConsola(config);
         try {
             invocarCambiarAgenteRapido(panel);
 
-            assertEquals(AgenteTipo.GEMINI_CLI.name(), config.obtenerTipoAgente(),
+            assertEquals(AgenteTipo.ANTIGRAVITY_CLI.name(), config.obtenerTipoAgente(),
                 "assertEquals failed at PanelAgenteTransporteTest.java:521");
             assertEquals(0, TestDialogUtils.contarVentanasPendientes(),
                 "assertEquals failed at PanelAgenteTransporteTest.java:523");
@@ -750,16 +750,16 @@ class PanelAgenteTransporteTest {
                 invocarResolverUrlGuia(panel)
             , "assertEquals failed at PanelAgenteTransporteTest.java:351");
 
-            config.establecerTipoAgente(AgenteTipo.GEMINI_CLI.name());
+            config.establecerTipoAgente(AgenteTipo.ANTIGRAVITY_CLI.name());
             config.establecerIdiomaUi("es");
             assertEquals(
-                "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-GEMINI-ES.md",
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENTE-ANTIGRAVITY-ES.md",
                 invocarResolverUrlGuia(panel)
             , "assertEquals failed at PanelAgenteTransporteTest.java:358");
 
             config.establecerIdiomaUi("en");
             assertEquals(
-                "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-GEMINI-EN.md",
+                "https://github.com/DragonJAR/BurpIA/blob/main/AGENT-ANTIGRAVITY-EN.md",
                 invocarResolverUrlGuia(panel)
             , "assertEquals failed at PanelAgenteTransporteTest.java:364");
 

@@ -3607,14 +3607,14 @@ public final class I18nUI {
             }
 
             public static String SELECCIONAR_AGENTE() {
-                return I18nUI.tr("Selecciona el perfil de agente (ej. Droid, Claude Code, Gemini, Open Code, Grok) a configurar.",
-                        "Select the agent profile (e.g. Droid, Claude Code, Gemini, Open Code, Grok) to configure.");
+                return I18nUI.tr("Selecciona el perfil de agente (ej. Droid, Claude Code, Antigravity, Open Code, Grok) a configurar.",
+                        "Select the agent profile (e.g. Droid, Claude Code, Antigravity, Open Code, Grok) to configure.");
             }
 
             public static String BINARIO_AGENTE() {
                 return I18nUI.tr(
-                        "Ruta o comando del agente (ej. droid, claude --dangerously-skip-permissions, gemini --yolo, grok).",
-                        "Agent path or command (e.g. droid, claude --dangerously-skip-permissions, gemini --yolo, grok).");
+                        "Ruta o comando del agente (ej. droid, claude --dangerously-skip-permissions, agy, grok).",
+                        "Agent path or command (e.g. droid, claude --dangerously-skip-permissions, agy, grok).");
             }
 
             public static String PROMPT_AGENTE() {

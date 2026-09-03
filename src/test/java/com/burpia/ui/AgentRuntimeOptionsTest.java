@@ -28,8 +28,8 @@ class AgentRuntimeOptionsTest {
     @Test
     @DisplayName("Cargar con codigo de agente valido")
     void cargarConCodigoAgenteValido() {
-        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar("GEMINI_CLI");
-        assertEquals(AgenteTipo.GEMINI_CLI, opciones.tipoAgente(), "assertEquals failed at AgentRuntimeOptionsTest.java:32");
+        AgentRuntimeOptions.EnterOptions opciones = AgentRuntimeOptions.cargar("ANTIGRAVITY_CLI");
+        assertEquals(AgenteTipo.ANTIGRAVITY_CLI, opciones.tipoAgente(), "assertEquals failed at AgentRuntimeOptionsTest.java:32");
         assertEquals(800, opciones.delaySubmitPostPasteMs(), "assertEquals failed at AgentRuntimeOptionsTest.java:33");
     }
 

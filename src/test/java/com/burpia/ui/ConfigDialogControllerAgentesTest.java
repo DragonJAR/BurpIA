@@ -71,7 +71,7 @@ class ConfigDialogControllerAgentesTest {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerRutaBinarioAgente("FACTORY_DROID", binarioValido.toString());
         config.establecerRutaBinarioAgente("CLAUDE_CODE", "/ruta/inexistente/claude");
-        config.establecerRutaBinarioAgente("GEMINI_CLI", "");
+        config.establecerRutaBinarioAgente("ANTIGRAVITY_CLI", "");
 
         crearArchivoConfiguracion(config);
 
@@ -89,19 +89,19 @@ class ConfigDialogControllerAgentesTest {
                 "Los agentes disponibles deben priorizarse al inicio");
 
             boolean tieneClaudeCode = false;
-            boolean tieneGeminiCli = false;
+            boolean tieneAntigravityCli = false;
             for (int i = 0; i < comboAgente.getItemCount(); i++) {
                 String item = comboAgente.getItemAt(i);
                 if ("CLAUDE_CODE".equals(item)) {
                     tieneClaudeCode = true;
                 }
-                if ("GEMINI_CLI".equals(item)) {
-                    tieneGeminiCli = true;
+                if ("ANTIGRAVITY_CLI".equals(item)) {
+                    tieneAntigravityCli = true;
                 }
             }
 
             assertTrue(tieneClaudeCode, "Debe mostrar CLAUDE_CODE aunque requiera reparación de ruta");
-            assertTrue(tieneGeminiCli, "Debe mostrar GEMINI_CLI aunque aún no tenga binario configurado");
+            assertTrue(tieneAntigravityCli, "Debe mostrar ANTIGRAVITY_CLI aunque aún no tenga binario configurado");
         } finally {
             dialogo.dispose();
         }
@@ -200,7 +200,7 @@ class ConfigDialogControllerAgentesTest {
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerTipoAgente(AgenteTipo.CLAUDE_CODE.name());
         config.establecerAgenteHabilitado(AgenteTipo.CLAUDE_CODE.name(), true);
-        config.establecerAgenteHabilitado(AgenteTipo.GEMINI_CLI.name(), false);
+        config.establecerAgenteHabilitado(AgenteTipo.ANTIGRAVITY_CLI.name(), false);
 
         crearArchivoConfiguracion(config);
 
@@ -219,7 +219,7 @@ class ConfigDialogControllerAgentesTest {
                 assertTrue(chkAgenteHabilitado.isSelected(),
                     "assertTrue failed at ConfigDialogControllerAgentesTest.java:206");
 
-                comboAgente.setSelectedItem(AgenteTipo.GEMINI_CLI.name());
+                comboAgente.setSelectedItem(AgenteTipo.ANTIGRAVITY_CLI.name());
                 assertFalse(chkAgenteHabilitado.isSelected(),
                     "assertFalse failed at ConfigDialogControllerAgentesTest.java:210");
             });
@@ -447,7 +447,7 @@ class ConfigDialogControllerAgentesTest {
     @DisplayName("Guardar no muestra error si el agente seleccionado es invalido pero queda deshabilitado")
     void testGuardarNoMuestraErrorSiAgenteSeleccionadoInvalidoQuedaDeshabilitado() throws Exception {
         Path binarioClaude = crearBinarioClaudeEnHomeActual();
-        String comandoGeminiInvalido = "~/.local/bin/binario-gemini-no-existe --sandbox";
+        String comandoAntigravityInvalido = "~/.local/bin/binario-antigravity-no-existe --sandbox";
 
         ConfiguracionAPI config = new ConfiguracionAPI();
         config.establecerProveedorAI("Z.ai");
@@ -487,9 +487,9 @@ class ConfigDialogControllerAgentesTest {
                 chkAgenteHabilitado.setSelected(true);
                 txtAgenteBinario.setText(binarioClaude.toString());
 
-                comboAgente.setSelectedItem(AgenteTipo.GEMINI_CLI.name());
+                comboAgente.setSelectedItem(AgenteTipo.ANTIGRAVITY_CLI.name());
                 chkAgenteHabilitado.setSelected(false);
-                txtAgenteBinario.setText(comandoGeminiInvalido);
+                txtAgenteBinario.setText(comandoAntigravityInvalido);
             });
             flushEdt();
 
@@ -505,9 +505,9 @@ class ConfigDialogControllerAgentesTest {
                 "assertEquals failed at ConfigDialogControllerAgentesTest.java:426");
             assertTrue(config.agenteHabilitado(AgenteTipo.CLAUDE_CODE.name()),
                 "assertTrue failed at ConfigDialogControllerAgentesTest.java:428");
-            assertFalse(config.agenteHabilitado(AgenteTipo.GEMINI_CLI.name()),
+            assertFalse(config.agenteHabilitado(AgenteTipo.ANTIGRAVITY_CLI.name()),
                 "assertFalse failed at ConfigDialogControllerAgentesTest.java:430");
-            assertEquals(comandoGeminiInvalido, config.obtenerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name()),
+            assertEquals(comandoAntigravityInvalido, config.obtenerRutaBinarioAgente(AgenteTipo.ANTIGRAVITY_CLI.name()),
                 "assertEquals failed at ConfigDialogControllerAgentesTest.java:432");
 
             ConfiguracionAPI recargada = gestor.cargarConfiguracion();
@@ -517,9 +517,9 @@ class ConfigDialogControllerAgentesTest {
                 "assertEquals failed at ConfigDialogControllerAgentesTest.java:437");
             assertTrue(recargada.agenteHabilitado(AgenteTipo.CLAUDE_CODE.name()),
                 "assertTrue failed at ConfigDialogControllerAgentesTest.java:439");
-            assertFalse(recargada.agenteHabilitado(AgenteTipo.GEMINI_CLI.name()),
+            assertFalse(recargada.agenteHabilitado(AgenteTipo.ANTIGRAVITY_CLI.name()),
                 "assertFalse failed at ConfigDialogControllerAgentesTest.java:441");
-            assertEquals(comandoGeminiInvalido, recargada.obtenerRutaBinarioAgente(AgenteTipo.GEMINI_CLI.name()),
+            assertEquals(comandoAntigravityInvalido, recargada.obtenerRutaBinarioAgente(AgenteTipo.ANTIGRAVITY_CLI.name()),
                 "assertEquals failed at ConfigDialogControllerAgentesTest.java:443");
         } finally {
             dialogo.dispose();

@@ -4,229 +4,125 @@
   <img src="src/assets/logo.png" alt="BurpIA Logo" width="200"/>
 </p>
 
-BurpIA es una extensión para Burp Suite que analiza tráfico HTTP con LLMs para ayudarte a detectar hallazgos potenciales de seguridad en menos tiempo.
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.7.0-green.svg)](VERSION.txt)
+[![Burp Suite](https://img.shields.io/badge/works%20on-Community%20%26%20Pro-ff6633.svg)](https://portswigger.net/burp/communitydownload)
+[![Author](https://img.shields.io/badge/author-DragonJAR-orange.svg)](https://www.DragonJAR.org)
+[![Español](https://img.shields.io/badge/read%20in-Espa%C3%B1ol-blue.svg)](README.es.md)
+
+> BurpIA turns Burp Suite into an AI-assisted web security testing environment. It analyzes real HTTP traffic with LLMs (12+ providers or local models), validates findings with autonomous CLI agents over Burp MCP, and keeps every result traceable — **works on Burp Suite Community and Professional**.
+
+## 🎯 What BurpIA Does
+
+This extension turns passive HTTP traffic into actionable security findings. It can:
 
-**Versión actual:** `1.7.0`
+- **Analyze traffic with LLMs:** automatic passive scanning or manual analysis via context menu, using real evidence (`request` + `response`).
+- **Analyze request flows:** contextual analysis of 2–4 related requests as a single flow, ideal for state and logic vulnerabilities.
+- **Validate with CLI agents:** send findings or flows to autonomous agents (Factory Droid, Claude Code, Antigravity, Open Code, Grok, Codex) integrated with Burp Suite MCP for deep manual validation.
+- **Triage at speed:** send findings directly to **Burp Repeater** from the centralized results table, or save them to the Burp project Issues.
+- **Manage findings intelligently:** severity/confidence prioritization, text and severity filters, CSV/JSON export.
+- **Stay in control:** request deduplication (SHA-256, TTL 15 min, LRU 10k), configurable concurrency (1–10), static-resource filtering, bilingual UI (Spanish/English), native Dark/Light theme.
 
-English version: [README.en.md](README.en.md)
+> **Important:** AI findings are hints, not verdicts. Always validate before reporting — false positives are possible.
 
----
+## 📦 Installation
 
-## Capturas clave
+1. Download `BurpIA-1.7.0.jar` from the [releases](https://github.com/DragonJAR/BurpIA/releases) page.
+2. In Burp Suite: `Extensions` tab → `Add` → select the JAR file.
+3. Configure your provider in the BurpIA tab: **LLM Provider**, **API Key** (if applicable), **Model**, **Language**.
+4. Use **Test Connection** to validate the endpoint before capturing traffic.
 
+## ⚙️ Prerequisites
 
-### 1) Vista general de BurpIA (ES)
-![BurpIA en Español](src/assets/ES.png)
+| Requirement | Detail |
+|-------------|--------|
+| Burp Suite | Community or Professional |
+| Java | 17+ (bundled JRE in native Burp installers works) |
+| LLM access | API key for a cloud provider, local Ollama, or LM Studio |
+| CLI agent (optional) | One of: droid, claude, agy, opencode, grok, codex |
 
-- Muestra el tablero central con el recuento de hallazgos por severidad y estado operativo.
-- Facilita la localización de las pestañas principales: tareas, hallazgos, agente y consola.
-- Ilustra el flujo de trabajo integral, desde la detección hasta la validación manual.
+## 🚀 Quick Start (3 minutes)
 
+1. Load the extension (see Installation).
+2. Select your **LLM Provider** and enter the **API Key**.
+3. Click **Test Connection** to validate endpoint and model.
+4. Browse through Burp Proxy — findings appear in the BurpIA tab as traffic is analyzed.
+5. Right-click any request → `Analyze request with BurpIA` (or `🤖 Analyze with {Agent}` for agent validation).
 
-### 2) Validación manual con agente
-![Consola del agente en BurpIA](src/assets/Agente.png)
+## 🔄 How It Works
 
-- Presenta el flujo dinámico basado en agentes sobre tráfico HTTP real.
-- Permite visualizar la línea base, los payloads ejecutados, observaciones y hallazgos secundarios en una misma salida.
-- Agiliza la revisión de la evidencia técnica antes de reportar un hallazgo.
+### Passive flow
 
+1. BurpIA intercepts an HTTP exchange.
+2. It checks the **Scope**, applies filters, and **deduplicates**.
+3. The task is queued in the analysis manager.
+4. The prompt is built by injecting `request` and `response`.
+5. The AI response is parsed and findings are normalized.
+6. The results table, statistics, and (if enabled) Burp **Issues** are updated.
 
-### 3) Hallazgos validados en Repeater
-![Hallazgos validados en Burp Repeater](src/assets/Fallos-Validados.png)
+### Manual flow
 
-- Demuestra cómo BurpIA deja trazabilidad de validaciones manuales en pestañas de Repeater.
-- Acelera el triage al mantener requests/responses reproducibles para cada caso validado.
-- Mejora la colaboración al dejar evidencia directa lista para revisión del equipo.
+1. Select one or more requests (2–4 for flow analysis) in any Burp tab.
+2. Right-click:
+   - **1 request:** `Analyze request with BurpIA` or `🤖 Analyze with {Agent}`.
+   - **2–4 requests:** `🔍 Analyze this flow` or `🤖 Analyze this flow with {Agent}`.
+3. The finding appears in the table to be edited, exported, or sent to Repeater.
 
+## 🔌 Supported LLM Providers
 
----
+| Provider | Notes |
+|----------|-------|
+| Ollama | Local models: Gemma 3, DeepSeek v3, Phi-4, Llama 3.3, etc. |
+| Ollama Cloud | Cloud models at `ollama.com` — requires API key |
+| OpenAI | o1, GPT-4o, etc. |
+| Claude | Anthropic: Sonnet 3.5/3.6, Opus |
+| Gemini | Google: 1.5 Pro/Flash (native support) |
+| Moonshot (Kimi) | k2.5 and earlier |
+| Z.ai / Minimax | GLM and MiniMax models |
+| DeepSeek | v4-flash, v4-pro — OpenAI-compatible API |
+| xAI Grok | grok-4.3, grok-4 — OpenAI-compatible API |
+| Sakana Fugu | fugu, fugu-ultra |
+| LM Studio | Local server, OpenAI-compatible |
+| Custom | Up to 3 profiles for any OpenAI-compatible API |
 
-## Qué obtienes con BurpIA
+## 🤖 CLI Agents
 
-- **Análisis Híbrido con IA:** Escaneo pasivo automático o manual (vía menú contextual) sobre evidencia HTTP real (`request` + `response`).
-- **Análisis de Flujos:** Análisis contextual de 2 a 4 peticiones relacionadas como un único flujo, con envío directo al agente CLI para validación profunda.
-- **Triage de Alta Velocidad:** Envío directo de hallazgos a **Burp Repeater** desde la tabla centralizada de resultados.
-- **Gestión Inteligente de Hallazgos:** Priorización por severidad/confianza con filtros por texto y severidad, y opción de envío directo al proyecto de Burp Suite.
-- **Interfaz Adaptativa:** Soporte nativo para modo **Dark/Light** de Burp, ventana responsive y personalización de tipografías (estándar y mono).
-- **Deduplicación y Control de Carga:** Sistema de colas con límite de concurrencia configurable (1–10), hashes SHA-256, TTL de 15 min y LRU de 10 000 entradas para evitar re-análisis redundantes; filtrado automático de recursos estáticos.
-- **Exportación Flexible:** Soporte para volcado de hallazgos en formatos CSV y JSON para informes externos.
-- **Experiencia de Usuario:** Interfaz bilingüe (Español/Inglés), supresión individual de alertas con persistencia ("No volver a mostrar"), y persistencia de filtros y ajustes.
-- **Menú Contextual Avanzado:** Opciones de análisis individual ("Analizar solicitud con BurpIA"), análisis de flujo ("🔍 Analizar este flujo" para 2–4 peticiones), e integración directa con agentes CLI ("🤖 Analizar con {Agente}").
+Autonomous validation agents integrated with Burp Suite MCP:
 
-## Guías de agentes
+| Agent | Binary | Guide |
+|-------|--------|-------|
+| Factory Droid | `droid` | [EN](AGENT-DROID-EN.md) · [ES](AGENTE-DROID-ES.md) |
+| Claude Code | `claude` | [EN](AGENT-CLAUDE-EN.md) · [ES](AGENTE-CLAUDE-ES.md) |
+| Antigravity CLI | `agy` | [EN](AGENT-ANTIGRAVITY-EN.md) · [ES](AGENTE-ANTIGRAVITY-ES.md) |
+| Open Code | `opencode` | [EN](AGENT-OPENCODE-EN.md) · [ES](AGENTE-OPENCODE-ES.md) |
+| Grok CLI | `grok` | [EN](AGENT-GROK-EN.md) · [ES](AGENTE-GROK-ES.md) |
+| Codex CLI | `codex` | [EN](AGENT-CODEX-EN.md) · [ES](AGENTE-CODEX-ES.md) |
 
-- Factory Droid: [ES](AGENTE-DROID-ES.md) | [EN](AGENT-DROID-EN.md)
-- Claude Code: [ES](AGENTE-CLAUDE-ES.md) | [EN](AGENT-CLAUDE-EN.md)
-- Gemini CLI: [ES](AGENTE-GEMINI-ES.md) | [EN](AGENT-GEMINI-EN.md)
-- OpenCode: [ES](AGENTE-OPENCODE-ES.md) | [EN](AGENT-OPENCODE-EN.md)
-- Grok Build: [ES](AGENTE-GROK-ES.md) | [EN](AGENT-GROK-EN.md)
+## 🧠 Custom Prompt Tokens
 
+- `{REQUEST}` / `{RESPONSE}`: normalized HTTP request/response.
+- `{REQUEST_1}`…`{REQUEST_N}` / `{RESPONSE_1}`…`{RESPONSE_N}`: Nth element of a flow.
+- `{OUTPUT_LANGUAGE}`: expected output language for finding descriptions.
 
----
+If you omit these tokens, BurpIA automatically appends a security block (fallback) to keep minimum context and enforce the configured language.
 
-## Estado actual (v1.7.0)
+## 📸 Screenshots
 
-BurpIA está actualmente en `v1.7.0`.
-Consulta el resumen de cambios en **Historial de versiones**.
+| Dashboard (ES) | Agent validation | Validated findings in Repeater |
+|----------------|------------------|--------------------------------|
+| ![BurpIA dashboard](src/assets/ES.png) | ![Agent console](src/assets/Agente.png) | ![Validated findings](src/assets/Fallos-Validados.png) |
 
+## 🆕 What's New in v1.7.0
 
----
+- **New LLM providers:** DeepSeek (v4-flash/v4-pro), xAI Grok (grok-4.3/4), Ollama Cloud, Sakana Fugu.
+- **New CLI agent:** Grok CLI with binary auto-detection and controlled permissions.
 
-## Historial de versiones
+## 💡 Best Practices
 
-### v1.7.0
+- Enable **Auto-save to Issues** only if you want direct persistence in the Burp project file.
+- **Manually validate** every finding before reporting; AI can hallucinate.
+- With cloud providers, review your data policy before sending traffic containing sensitive data.
 
-**Nuevos proveedores LLM:**
-- **DeepSeek** (modelos `deepseek-v4-flash`, `deepseek-v4-pro` y legacy chat/reasoner — API compatible con OpenAI, `Authorization: Bearer`).
-- **xAI Grok** (modelos `grok-4.3`, `grok-4`, `grok-3`, `grok-2`/`grok-2-vision` — API compatible con OpenAI).
-- **Ollama Cloud** (modelos cloud en `https://ollama.com` con `Authorization: Bearer`, HTTPS obligatorio).
-- **Sakana Fugu** (modelos `fugu`, `fugu-ultra` — API compatible con OpenAI).
+## 📜 License
 
-**Nuevo agente CLI:**
-- **Grok CLI** (`GROK_BUILD`): integración del agente Grok de xAI en la pestaña Agentes, con detección automática de binario en `~/.grok/bin/grok` (Unix) o `%USERPROFILE%\.grok\bin\grok.exe` (Windows). Permisos controlados vía `~/.grok/config.toml` (`permission_mode = "always-approve"`).
-
-### v1.5.0
-
-- **Análisis de flujo contextual:** analiza múltiples peticiones HTTP como un flujo completo en una sola consulta al LLM, incluyendo ahora tanto peticiones como respuestas.
-- **Envío de flujo al agente:** envía el flujo completo (peticiones + respuestas) al agente CLI con prompt especializado para validación profunda.
-- **Correlación de flujos en menú contextual:** permite seleccionar y analizar de forma conjunta hasta 4 peticiones del Proxy History mediante las nuevas opciones "🔍 Analizar este flujo" y "🤖 Enviar este flujo al agente", optimizando la detección de vulnerabilidades de estado o flujos lógicos.
-- **Mejoras visuales y UI:** soporte nativo para los temas Dark y Light de Burp Suite, ventana de ajustes responsive y personalización de fuentes (estándar y mono).
-- **Gestión de alertas:** nueva opción para omitir mensajes de confirmación ("No volver a mostrar") para agilizar el flujo de trabajo.
-- **Nuevos Agentes:** integración oficial con **Gemini CLI** y **Open Code**, junto a mejoras de estabilidad en **Claude Code** y **Factory Droid**.
-- **Nuevos Proveedores y Flexibilidad:** mayor catálogo de proveedores soportados y capacidad de configurar hasta 3 perfiles personalizados independientes (compatibles con la API de OpenAI) para máxima versatilidad.
-- **Mejoras de I18n:** refinamiento completo de las traducciones en español e inglés y mejoras en la documentación técnica.
-
-
-### v1.0.2
-
-- **Sistema Multi-proveedor:** capacidad de consultar peticiones utilizando múltiples proveedores configurados simultáneamente.
-- **Notificaciones de Actualización:** nuevo motor de aviso para nuevas versiones disponibles.
-- **Experiencia de Usuario:** optimizaciones en la navegación y usabilidad general.
-- **Personalización de Interfaz:** mejoras en la customización del entorno visual.
-- **Rendimiento:** optimización de tiempos de respuesta y carga.
-
-### v1.0.1
-
-- **Pruebas Agénticas Dinámicas:** integración con Factory Droid, Claude Code y el MCP de Burp Suite para validación manual avanzada.
-- **Nuevo Proveedor:** soporte oficial para Moonshot AI.
-- **Interacionalización:** refinamiento de traducciones y usabilidad multilingüe.
-- **Eficiencia General:** mejoras estructurales en el rendimiento del plugin.
-
-### v1.0.0
-
-- **Análisis Híbrido:** base funcional para escaneo pasivo y manual de tráfico HTTP.
-- **Gestión de Tareas:** orquestación centralizada de hallazgos y cola de análisis.
-- **Integración LLM:** compatibilidad inicial con los principales proveedores de modelos de lenguaje.
-- **Exportación:** soporte para descarga de resultados en formatos estándar.
-
-
----
-
-## Inicio rápido (3 minutos)
-
-1. Descarga el archivo `BurpIA-1.7.0.jar`.
-2. Carga la extensión en Burp Suite:
-    - Ve a la pestaña `Extensions` -> `Add`.
-    - Selecciona el archivo `BurpIA-1.7.0.jar`.
-3. Configura BurpIA en la pestaña del plugin:
-    - Selecciona tu **Proveedor LLM**.
-    - Ingresa la **API Key** (si aplica).
-    - Elige el **Modelo**.
-    - Configura el **Idioma de interfaz** y el **Prompt personalizado**.
-4. Usa el botón **Probar Conexión** para validar el endpoint y el modelo antes de capturar tráfico.
-
-
----
-
-## Proveedores LLM soportados
-
-- **Ollama** (Modelos locales: Gemma 3, DeepSeek v3, Phi-4, Llama 3.3, etc.).
-- **Ollama Cloud** (Modelos cloud en `https://ollama.com` — requiere API key).
-- **OpenAI** (Modelos o1, GPT-4o, etc.).
-- **Claude** (Anthropic: Sonnet 3.5/3.6, Opus).
-- **Gemini** (Google: 1.5 Pro/Flash con soporte nativo).
-- **Moonshot (Kimi)** (Modelos k2.5 y anteriores).
-- **Z.ai** / **Minimax**.
-- **DeepSeek** (Modelos v4-flash, v4-pro — API compatible con OpenAI).
-- **xAI Grok** (Modelos grok-4.3, grok-4 — API compatible con OpenAI).
-- **Sakana Fugu** (Modelos fugu, fugu-ultra — API compatible con OpenAI).
-- **LM Studio** (Servidor LLM local compatible con OpenAI).
-- **Custom** (Hasta 3 perfiles personalizados para cualquier API compatible con OpenAI).
-
-> **Nota:** DeepSeek se puede utilizar a través de Ollama o mediante un perfil Custom con la API compatible con OpenAI.
-> **Nota sobre Grok:** **xAI Grok** está soportado tanto como proveedor LLM (API compatible con OpenAI) como agente CLI autónomo — ver [AGENTE-GROK-ES.md](AGENTE-GROK-ES.md) para la configuración del CLI de Grok con Burp MCP.
-
-
-> [!TIP]
-> Si vas a usar Z.ai o Minimax, aquí tienes opciones de compra con descuento:
-> - [Z.ai con descuento](https://z.ai/subscribe?ic=FXSFEPRECU)
-> - [Minimax con descuento](https://platform.minimax.io/subscribe/coding-plan?code=GdktCUVh7E&source=link)
-
-
----
-
-## Cómo funciona
-
-
-### Flujo pasivo
-1. BurpIA intercepta una respuesta HTTP.
-2. Verifica el **Scope**, aplica filtros y realiza la **deduplicación**.
-3. Encola la tarea en el gestor de análisis.
-4. Construye el prompt inyectando la `request` y `response`.
-5. Parsea la respuesta de la IA y normaliza los hallazgos.
-6. Actualiza la tabla de resultados, estadísticas y (si está activo) guarda en **Issues**.
-
-
-### Flujo manual
-1. Selecciona una o varias solicitudes (2–4 para flujo) en cualquier pestaña de Burp.
-2. Clic derecho:
-   - **1 solicitud:** `Analizar solicitud con BurpIA` o `🤖 Analizar con {Agente}`.
-   - **2–4 solicitudes:** `🔍 Analizar este flujo` o `🤖 Analizar este flujo con {Agente}`.
-3. BurpIA analiza la solicitud/flujo y sus respuestas asociadas.
-4. El hallazgo aparece en la tabla para ser editado, exportado o enviado a Repeater.
-
-
----
-
-## Prompt personalizado
-
-BurpIA soporta los siguientes tokens para personalizar el análisis:
-
-### Análisis individual
-- `{REQUEST}`: Inserta la solicitud HTTP normalizada.
-- `{RESPONSE}`: Inserta la respuesta HTTP (si existe).
-- `{OUTPUT_LANGUAGE}`: Indica el idioma de salida esperado para la descripción del hallazgo.
-
-### Análisis de flujo (2–4 peticiones)
-- `{REQUEST_1}`, `{REQUEST_2}`, ... : Inserta la N-ésima solicitud del flujo.
-- `{RESPONSE_1}`, `{RESPONSE_2}`, ... : Inserta la N-ésima respuesta del flujo.
-- `{REQUEST}`: Inserta todas las solicitudes del flujo concatenadas.
-- `{OUTPUT_LANGUAGE}`: Idioma de salida (igual que análisis individual).
-
-*Si omites estos tokens, BurpIA aplicará un bloque de contexto mínimo para mantener consistencia y el idioma de salida configurado.*
-
-
----
-
-## Requisitos
-
-- **Java 17** o superior.
-- **Burp Suite** (Community o Professional).
-- Conectividad al proveedor de IA configurado (local o remoto).
-
-
----
-
-## Buenas prácticas
-
-- Activa **"Guardar automáticamente en Issues"** solo si deseas persistencia directa en el archivo de proyecto de Burp.
-- **Valida manualmente** cada hallazgo antes de reportarlo; la IA puede alucinar.
-- Si usas proveedores en la nube, revisa tu política de privacidad antes de enviar tráfico con datos sensibles.
-
-
----
-
-## Limitaciones
-
-- Puede generar falsos positivos; siempre requiere validación humana experta.
-- Si un análisis manual no tiene una respuesta asociada, el modelo analizará únicamente la solicitud (`{REQUEST}`).
+MIT — see [LICENSE](LICENSE).
