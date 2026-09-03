@@ -72,15 +72,15 @@ This extension turns passive HTTP traffic into actionable security findings. It 
 
 | Provider | Notes |
 |----------|-------|
-| Ollama | Local models: Gemma 3, DeepSeek v3, Phi-4, Llama 3.3, etc. |
+| Ollama | Local models: Qwen 3.8, Llama 4, Gemma 4, DeepSeek v4, Phi-4, etc. |
 | Ollama Cloud | Cloud models at `ollama.com` — requires API key |
-| OpenAI | o1, GPT-4o, etc. |
-| Claude | Anthropic: Sonnet 3.5/3.6, Opus |
-| Gemini | Google: 1.5 Pro/Flash (native support) |
-| Moonshot (Kimi) | k2.5 and earlier |
-| Z.ai / Minimax | GLM and MiniMax models |
-| DeepSeek | v4-flash, v4-pro — OpenAI-compatible API |
-| xAI Grok | grok-4.3, grok-4 — OpenAI-compatible API |
+| OpenAI | GPT-5.6 (+ Luna/Sol/Terra/Cyber variants) |
+| Claude | Anthropic: Fable 5.1, Opus 5, Sonnet 5 |
+| Gemini | Google: 3.8 Flash (GA), 3.7/3.6 Flash, 2.5 Pro |
+| Moonshot (Kimi) | K3, K2.7 and earlier |
+| Z.ai / Minimax | GLM 5.3 and MiniMax H3 |
+| DeepSeek | v4-pro, v4-flash — OpenAI-compatible API |
+| xAI Grok | grok-4.6, grok-4.5 — OpenAI-compatible API |
 | Sakana Fugu | fugu, fugu-ultra |
 | LM Studio | Local server, OpenAI-compatible |
 | Custom | Up to 3 profiles for any OpenAI-compatible API |

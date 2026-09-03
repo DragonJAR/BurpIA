@@ -1908,7 +1908,8 @@ public class ConfiguracionAPI {
         if (m.contains("gpt-4")) return 8192;
         if (m.contains("gpt-3.5-turbo-16k")) return 16384;
         if (m.contains("gpt-3.5")) return 4096;
-        if (m.contains("claude-fable") || m.contains("claude-opus-4")
+        if (m.contains("claude-fable") || m.contains("claude-opus-5")
+                || m.contains("claude-opus-4") || m.contains("claude-sonnet-5")
                 || m.contains("claude-sonnet-4") || m.contains("claude-haiku-4")) return 200000;
         if (m.contains("claude-3-5-sonnet") || m.contains("claude-3-opus")) return 200000;
         if (m.contains("claude-3-haiku")) return 200000;
@@ -1921,17 +1922,18 @@ public class ConfiguracionAPI {
         if (m.contains("gemini")) return 32000;
         if (m.contains("glm-5")) return 1000000;
         if (m.contains("glm")) return 200000;
-        if (m.contains("grok-4.3")) return 1000000;
+        if (m.contains("grok-4.6") || m.contains("grok-4.5")) return 2000000;
         if (m.contains("grok-4")) return 256000;
         if (m.contains("grok")) return 131072;
         if (m.contains("deepseek-v4")) return 1000000;
         if (m.contains("deepseek")) return 131072;
         if (m.contains("kimi") || m.contains("moonshot")) return 262144;
-        if (m.contains("minimax-m3")) return 1000000;
+        if (m.contains("minimax-h3") || m.contains("minimax-m3")) return 1000000;
         if (m.contains("minimax")) return 200000;
         if (m.contains("qwen")) return 131072;
         if (m.contains("gemma")) return 131072;
         if (m.contains("fugu")) return 200000;
+        if (m.contains("llama-4") || m.contains("llama4")) return 128000;
         if (m.contains("llama-3") || m.contains("llama3")) return 8000;
         if (m.contains("llama")) return 4096;
         if (m.contains("mistral-large")) return 128000;

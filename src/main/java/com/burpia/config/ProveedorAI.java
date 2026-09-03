@@ -127,13 +127,19 @@ public final class ProveedorAI {
     static {
         PROVEEDORES.put("Ollama", new ConfiguracionProveedor(
                 "http://localhost:11434",
-                "qwen3",
+                "qwen3.8",
                 Arrays.asList(
-                        "qwen3",
+                        "qwen3.8",
+                        "qwen3.6",
+                        "qwen3.5",
                         "qwen3-coder",
+                        "qwen3",
+                        "llama4",
                         "llama3.3",
+                        "gemma4",
                         "gemma3",
-                        "deepseek-r1", "deepseek-v3.2",
+                        "deepseek-v4-flash", "deepseek-v4-pro",
+                        "deepseek-r1",
                         "phi4",
                         "mistral"),
                 false,
@@ -145,12 +151,14 @@ public final class ProveedorAI {
         // Authorization: Bearer.
         PROVEEDORES.put("Ollama Cloud", new ConfiguracionProveedor(
                 "https://ollama.com",
-                "qwen3",
+                "qwen3.8",
                 Arrays.asList(
+                        "qwen3.8",
                         "qwen3",
-                        "llama3.3",
-                        "gemma3",
-                        "deepseek-v3.2",
+                        "llama4",
+                        "gemma4",
+                        "deepseek-v4-flash",
+                        "deepseek-v4-pro",
                         "deepseek-r1",
                         "mistral"),
                 true,
@@ -158,40 +166,49 @@ public final class ProveedorAI {
 
         PROVEEDORES.put("OpenAI", new ConfiguracionProveedor(
                 "https://api.openai.com/v1",
-                "gpt-5.5",
+                "gpt-5.6",
                 Arrays.asList(
+                        "gpt-5.6",
+                        "gpt-5.6-terra",
+                        "gpt-5.6-sol",
+                        "gpt-5.6-luna",
+                        "gpt-5.6-cyber",
                         "gpt-5.5",
                         "gpt-5.5-pro",
                         "gpt-5.4",
                         "gpt-5.4-mini",
                         "gpt-5.4-nano",
                         "gpt-5.3-codex",
-                        "gpt-5.2",
-                        "gpt-4o", "gpt-4o-mini"),
+                        "gpt-5.2"),
                 true,
                 4096));
 
         PROVEEDORES.put("Claude", new ConfiguracionProveedor(
                 "https://api.anthropic.com/v1",
-                "claude-fable-5",
+                "claude-fable-5-1",
                 Arrays.asList(
+                        "claude-fable-5-1",
                         "claude-fable-5",
+                        "claude-opus-5",
+                        "claude-sonnet-5",
                         "claude-opus-4-8",
                         "claude-sonnet-4-6",
-                        "claude-haiku-4-5-20251001",
-                        "claude-3-5-sonnet-20241022",
-                        "claude-3-5-haiku-20241022"),
+                        "claude-haiku-4-5-20251001"),
                 true,
                 8192));
 
         PROVEEDORES.put("Gemini", new ConfiguracionProveedor(
                 "https://generativelanguage.googleapis.com/v1beta",
-                "gemini-3.5-flash",
+                "gemini-3.8-flash",
                 Arrays.asList(
+                        "gemini-3.8-flash",
+                        "gemini-3.7-flash",
+                        "gemini-3.6-flash",
                         "gemini-3.5-flash",
+                        "gemini-3.5-flash-lite",
                         "gemini-3.1-pro-preview",
-                        "gemini-3-flash-preview",
                         "gemini-3.1-flash-lite",
+                        "gemini-3-flash-preview",
                         "gemini-2.5-pro",
                         "gemini-2.5-flash",
                         "gemini-2.5-flash-lite"),
@@ -200,8 +217,10 @@ public final class ProveedorAI {
 
         PROVEEDORES.put("Z.ai", new ConfiguracionProveedor(
                 "https://api.z.ai/api/paas/v4",
-                "glm-5.2",
+                "glm-5.3",
                 Arrays.asList(
+                        "glm-5.3",
+                        "glm-5.3-flash",
                         "glm-5.2",
                         "glm-5.1",
                         "glm-5-turbo",
@@ -215,8 +234,9 @@ public final class ProveedorAI {
 
         PROVEEDORES.put("minimax", new ConfiguracionProveedor(
                 "https://api.minimax.io/v1",
-                "minimax-m3",
+                "minimax-h3",
                 Arrays.asList(
+                        "minimax-h3",
                         "minimax-m3",
                         "minimax-m2.7",
                         "minimax-m2.5",
@@ -227,15 +247,14 @@ public final class ProveedorAI {
 
         PROVEEDORES.put("Moonshot (Kimi)", new ConfiguracionProveedor(
                 "https://api.moonshot.ai/v1",
-                "kimi-k2.6",
+                "kimi-k3",
                 Arrays.asList(
+                        "kimi-k3",
                         "kimi-k2.7",
+                        "kimi-k2.7-code-highspeed",
                         "kimi-k2.6",
                         "kimi-k2.5",
-                        "kimi-latest",
-                        "moonshot-v1-128k",
-                        "moonshot-v1-32k",
-                        "moonshot-v1-8k"),
+                        "kimi-latest"),
                 true,
                 4096));
 
@@ -256,8 +275,10 @@ public final class ProveedorAI {
         // Endpoint /chat/completions. Bearer auth.
         PROVEEDORES.put("xAI", new ConfiguracionProveedor(
                 "https://api.x.ai/v1",
-                "grok-4.3",
+                "grok-4.6",
                 Arrays.asList(
+                        "grok-4.6",
+                        "grok-4.5",
                         "grok-4.3",
                         "grok-4.20-0309-reasoning",
                         "grok-4.20-0309-non-reasoning",
@@ -287,11 +308,12 @@ public final class ProveedorAI {
         // tiene un formato de request/response distinto).
         PROVEEDORES.put("LM Studio", new ConfiguracionProveedor(
                 "http://localhost:1234/v1",
-                "qwen3-8b",
+                "qwen3.8-8b",
                 Arrays.asList(
-                        "qwen3-8b",
-                        "qwen2.5-coder-7b-instruct",
-                        "llama-3.3-8b-instruct",
+                        "qwen3.8-8b",
+                        "qwen3-coder",
+                        "llama4-8b",
+                        "gemma4-9b",
                         "phi-4",
                         "mistral-7b-instruct",
                         "deepseek-r1-distill-qwen-7b"),

@@ -72,15 +72,15 @@ Esta extensión convierte tráfico HTTP pasivo en hallazgos de seguridad acciona
 
 | Proveedor | Notas |
 |-----------|-------|
-| Ollama | Modelos locales: Gemma 3, DeepSeek v3, Phi-4, Llama 3.3, etc. |
+| Ollama | Modelos locales: Qwen 3.8, Llama 4, Gemma 4, DeepSeek v4, Phi-4, etc. |
 | Ollama Cloud | Modelos cloud en `ollama.com` — requiere API key |
-| OpenAI | o1, GPT-4o, etc. |
-| Claude | Anthropic: Sonnet 3.5/3.6, Opus |
-| Gemini | Google: 1.5 Pro/Flash (soporte nativo) |
-| Moonshot (Kimi) | k2.5 y anteriores |
-| Z.ai / Minimax | Modelos GLM y MiniMax |
-| DeepSeek | v4-flash, v4-pro — API compatible con OpenAI |
-| xAI Grok | grok-4.3, grok-4 — API compatible con OpenAI |
+| OpenAI | GPT-5.6 (+ variantes Luna/Sol/Terra/Cyber) |
+| Claude | Anthropic: Fable 5.1, Opus 5, Sonnet 5 |
+| Gemini | Google: 3.8 Flash (GA), 3.7/3.6 Flash, 2.5 Pro |
+| Moonshot (Kimi) | K3, K2.7 y anteriores |
+| Z.ai / Minimax | GLM 5.3 y MiniMax H3 |
+| DeepSeek | v4-pro, v4-flash — API compatible con OpenAI |
+| xAI Grok | grok-4.6, grok-4.5 — API compatible con OpenAI |
 | Sakana Fugu | fugu, fugu-ultra |
 | LM Studio | Servidor local, compatible con OpenAI |
 | Personalizado | Hasta 3 perfiles para cualquier API compatible con OpenAI |
