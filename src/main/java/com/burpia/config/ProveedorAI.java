@@ -232,12 +232,15 @@ public final class ProveedorAI {
                 true,
                 4096));
 
+        // MiniMax — casing oficial del API (docs: MiniMax-H3, MiniMax-M3,
+        // MiniMax-M2). Las sub-variantes m2.x son legacy del catálogo previo;
+        // su casing no se pudo verificar en la documentación accesible.
         PROVEEDORES.put("minimax", new ConfiguracionProveedor(
                 "https://api.minimax.io/v1",
-                "minimax-h3",
+                "MiniMax-H3",
                 Arrays.asList(
-                        "minimax-h3",
-                        "minimax-m3",
+                        "MiniMax-H3",
+                        "MiniMax-M3",
                         "minimax-m2.7",
                         "minimax-m2.5",
                         "minimax-m2.5-highspeed",

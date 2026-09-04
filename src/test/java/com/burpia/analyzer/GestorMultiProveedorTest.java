@@ -130,7 +130,7 @@ class GestorMultiProveedorTest {
         config.establecerModeloParaProveedor("Z.ai", "glm-5");
         config.establecerApiKeyParaProveedor("Z.ai", "z-key");
         config.establecerUrlBaseParaProveedor("Z.ai", "https://api.z.ai/api/paas/v4");
-        config.establecerModeloParaProveedor("minimax", "minimax-m3");
+        config.establecerModeloParaProveedor("minimax", "MiniMax-M3");
         config.establecerApiKeyParaProveedor("minimax", "mm-key");
         config.establecerUrlBaseParaProveedor("minimax", "https://api.minimax.io/v1");
 

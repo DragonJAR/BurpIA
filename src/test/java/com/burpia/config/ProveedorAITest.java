@@ -209,6 +209,28 @@ class ProveedorAITest {
         }
 
         @Test
+        @DisplayName("Cada modelo del catalogo devuelve ventana de contexto coherente")
+        void cadaModeloDelCatalogoDevuelveVentanaCoherente() {
+            // Root-cause fix N8: 4000 es el fallback final de estimarContextWindow;
+            // todo modelo del catalogo debe caer en una rama explicita (> 4000).
+            // Si el catalogo crece sin actualizar el estimador, este test rompe
+            // antes de mergear (evita regresiones tipo N1/N2).
+            List<String> nombres = ProveedorAI.obtenerNombresProveedores();
+            for (String nombre : nombres) {
+                if (ProveedorAI.esProveedorCustom(nombre)) continue;
+                List<String> modelos = ProveedorAI.obtenerModelosDisponibles(nombre);
+                for (String modelo : modelos) {
+                    int ventana = ConfiguracionAPI.estimarContextWindow(modelo);
+                    assertTrue(ventana > 4000,
+                        nombre + "/" + modelo + ": ventana " + ventana + " = fallback final del estimador"
+                        + " (falta rama explicita en ConfiguracionAPI.estimarContextWindow)");
+                    assertTrue(ventana <= 20000000,
+                        nombre + "/" + modelo + ": ventana estimada " + ventana + " supera el techo del estimador (20M)");
+                }
+            }
+        }
+
+        @Test
         @DisplayName("Proveedor inexistente retorna lista vacía")
         void proveedorInexistenteRetornaListaVacia() {
             List<String> modelos = ProveedorAI.obtenerModelosDisponibles("NoExiste");

@@ -1903,6 +1903,7 @@ public class ConfiguracionAPI {
         // ponytail: estimación por familia (no exacto); el primer match gana y el
         // fallback final es 4000. Familias nuevas (jun-2026) antes de los catch-all.
         if (m.contains("gpt-5")) return 400000;
+        if (m.contains("gpt-4.1")) return 1000000;
         if (m.contains("gpt-4o") || m.contains("gpt-4-32k")) return 128000;
         if (m.contains("gpt-4-turbo")) return 128000;
         if (m.contains("gpt-4")) return 8192;
@@ -1922,7 +1923,9 @@ public class ConfiguracionAPI {
         if (m.contains("gemini")) return 32000;
         if (m.contains("glm-5")) return 1000000;
         if (m.contains("glm")) return 200000;
-        if (m.contains("grok-4.6") || m.contains("grok-4.5")) return 2000000;
+        if (m.contains("grok-4.6") || m.contains("grok-4.5")) return 500000;
+        if (m.contains("grok-4.20-multi-agent")) return 1000000;
+        if (m.contains("grok-4.3")) return 1000000;
         if (m.contains("grok-4")) return 256000;
         if (m.contains("grok")) return 131072;
         if (m.contains("deepseek-v4")) return 1000000;
@@ -1932,6 +1935,7 @@ public class ConfiguracionAPI {
         if (m.contains("minimax")) return 200000;
         if (m.contains("qwen")) return 131072;
         if (m.contains("gemma")) return 131072;
+        if (m.contains("phi")) return 131072;
         if (m.contains("fugu")) return 200000;
         if (m.contains("llama-4") || m.contains("llama4")) return 128000;
         if (m.contains("llama-3") || m.contains("llama3")) return 8000;
